@@ -13,4 +13,4 @@
 
 ## Rascunho por mensagem
 - [x] Adicionar interpretação com Lovable AI e revisão antes de preencher pedido.
-- [ ] Validar interpretação real, preenchimento e salvamento.
+- [x] Validar interpretação real, revisão, preenchimento, salvamento e leitura com sessão do proprietário; pedido temporário removido e 12 testes aprovados.
