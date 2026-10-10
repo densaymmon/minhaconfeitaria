@@ -14,7 +14,326 @@ export type Database = {
   }
   public: {
     Tables: {
-      [_ in never]: never
+      clientes: {
+        Row: {
+          created_at: string
+          endereco: string | null
+          id: string
+          nome: string
+          observacoes: string | null
+          telefone: string | null
+          user_id: string
+        }
+        Insert: {
+          created_at?: string
+          endereco?: string | null
+          id?: string
+          nome: string
+          observacoes?: string | null
+          telefone?: string | null
+          user_id?: string
+        }
+        Update: {
+          created_at?: string
+          endereco?: string | null
+          id?: string
+          nome?: string
+          observacoes?: string | null
+          telefone?: string | null
+          user_id?: string
+        }
+        Relationships: []
+      }
+      configuracoes: {
+        Row: {
+          imposto_pct: number
+          taxa_credito: number
+          taxa_debito: number
+          taxa_dinheiro: number
+          taxa_outros: number
+          taxa_pix: number
+          user_id: string
+        }
+        Insert: {
+          imposto_pct?: number
+          taxa_credito?: number
+          taxa_debito?: number
+          taxa_dinheiro?: number
+          taxa_outros?: number
+          taxa_pix?: number
+          user_id?: string
+        }
+        Update: {
+          imposto_pct?: number
+          taxa_credito?: number
+          taxa_debito?: number
+          taxa_dinheiro?: number
+          taxa_outros?: number
+          taxa_pix?: number
+          user_id?: string
+        }
+        Relationships: []
+      }
+      despesas: {
+        Row: {
+          categoria: string
+          created_at: string
+          data: string
+          descricao: string
+          id: string
+          user_id: string
+          valor: number
+        }
+        Insert: {
+          categoria?: string
+          created_at?: string
+          data?: string
+          descricao: string
+          id?: string
+          user_id?: string
+          valor?: number
+        }
+        Update: {
+          categoria?: string
+          created_at?: string
+          data?: string
+          descricao?: string
+          id?: string
+          user_id?: string
+          valor?: number
+        }
+        Relationships: []
+      }
+      insumos: {
+        Row: {
+          created_at: string
+          id: string
+          nome: string
+          preco_unidade: number
+          tipo: string
+          unidade: string
+          updated_at: string
+          user_id: string
+        }
+        Insert: {
+          created_at?: string
+          id?: string
+          nome: string
+          preco_unidade?: number
+          tipo?: string
+          unidade?: string
+          updated_at?: string
+          user_id?: string
+        }
+        Update: {
+          created_at?: string
+          id?: string
+          nome?: string
+          preco_unidade?: number
+          tipo?: string
+          unidade?: string
+          updated_at?: string
+          user_id?: string
+        }
+        Relationships: []
+      }
+      pedido_itens: {
+        Row: {
+          custo_unitario: number
+          descricao: string
+          id: string
+          pedido_id: string
+          preco_unitario: number
+          produto_id: string | null
+          quantidade: number
+          quantidade_produzida: number
+          user_id: string
+        }
+        Insert: {
+          custo_unitario?: number
+          descricao: string
+          id?: string
+          pedido_id: string
+          preco_unitario?: number
+          produto_id?: string | null
+          quantidade?: number
+          quantidade_produzida?: number
+          user_id?: string
+        }
+        Update: {
+          custo_unitario?: number
+          descricao?: string
+          id?: string
+          pedido_id?: string
+          preco_unitario?: number
+          produto_id?: string | null
+          quantidade?: number
+          quantidade_produzida?: number
+          user_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "pedido_itens_pedido_id_fkey"
+            columns: ["pedido_id"]
+            isOneToOne: false
+            referencedRelation: "pedidos"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "pedido_itens_produto_id_fkey"
+            columns: ["produto_id"]
+            isOneToOne: false
+            referencedRelation: "produtos"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      pedidos: {
+        Row: {
+          cliente_id: string | null
+          created_at: string
+          data_entrega: string
+          desconto: number
+          forma_pagamento: string
+          hora_entrega: string | null
+          id: string
+          numero: number
+          observacoes: string | null
+          saldo_quitado: boolean
+          status: string
+          taxa_entrega: number
+          user_id: string
+          valor_entrada: number
+        }
+        Insert: {
+          cliente_id?: string | null
+          created_at?: string
+          data_entrega: string
+          desconto?: number
+          forma_pagamento?: string
+          hora_entrega?: string | null
+          id?: string
+          numero?: never
+          observacoes?: string | null
+          saldo_quitado?: boolean
+          status?: string
+          taxa_entrega?: number
+          user_id?: string
+          valor_entrada?: number
+        }
+        Update: {
+          cliente_id?: string | null
+          created_at?: string
+          data_entrega?: string
+          desconto?: number
+          forma_pagamento?: string
+          hora_entrega?: string | null
+          id?: string
+          numero?: never
+          observacoes?: string | null
+          saldo_quitado?: boolean
+          status?: string
+          taxa_entrega?: number
+          user_id?: string
+          valor_entrada?: number
+        }
+        Relationships: [
+          {
+            foreignKeyName: "pedidos_cliente_id_fkey"
+            columns: ["cliente_id"]
+            isOneToOne: false
+            referencedRelation: "clientes"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      produtos: {
+        Row: {
+          ativo: boolean
+          categoria: string
+          created_at: string
+          custo_energia: number
+          custo_gas: number
+          custo_mao_obra: number
+          id: string
+          margem_desejada: number
+          modo_preparo: string | null
+          nome: string
+          preco_venda: number
+          rendimento: number
+          user_id: string
+        }
+        Insert: {
+          ativo?: boolean
+          categoria?: string
+          created_at?: string
+          custo_energia?: number
+          custo_gas?: number
+          custo_mao_obra?: number
+          id?: string
+          margem_desejada?: number
+          modo_preparo?: string | null
+          nome: string
+          preco_venda?: number
+          rendimento?: number
+          user_id?: string
+        }
+        Update: {
+          ativo?: boolean
+          categoria?: string
+          created_at?: string
+          custo_energia?: number
+          custo_gas?: number
+          custo_mao_obra?: number
+          id?: string
+          margem_desejada?: number
+          modo_preparo?: string | null
+          nome?: string
+          preco_venda?: number
+          rendimento?: number
+          user_id?: string
+        }
+        Relationships: []
+      }
+      receita_itens: {
+        Row: {
+          id: string
+          insumo_id: string
+          produto_id: string
+          quantidade: number
+          user_id: string
+        }
+        Insert: {
+          id?: string
+          insumo_id: string
+          produto_id: string
+          quantidade?: number
+          user_id?: string
+        }
+        Update: {
+          id?: string
+          insumo_id?: string
+          produto_id?: string
+          quantidade?: number
+          user_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "receita_itens_insumo_id_fkey"
+            columns: ["insumo_id"]
+            isOneToOne: false
+            referencedRelation: "insumos"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "receita_itens_produto_id_fkey"
+            columns: ["produto_id"]
+            isOneToOne: false
+            referencedRelation: "produtos"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
     }
     Views: {
       [_ in never]: never
