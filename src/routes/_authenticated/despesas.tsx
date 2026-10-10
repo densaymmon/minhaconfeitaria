@@ -1,3 +1,4 @@
+import * as appQueries from "@/lib/queries";
 import { createFileRoute } from '@tanstack/react-router';
 import { useSuspenseQuery,useQueryClient } from '@tanstack/react-query';
 import { useState } from 'react';
@@ -10,7 +11,11 @@ import { supabase } from '@/integrations/supabase/client';
 import { PageHeader,Field,NativeSelect,Empty } from '@/components/app/ui';
 import { Input } from '@/components/ui/input';
 import { Button } from '@/components/ui/button';
-export const Route=createFileRoute('/_authenticated/despesas')({head:()=>({meta:[{title:'Despesas — Doce Gestão'},{name:'description',content:'Registro de despesas e gastos operacionais.'},{property:'og:title',content:'Despesas — Doce Gestão'},{property:'og:description',content:'Registro de despesas e gastos operacionais.'},{property:'og:type',content:'website'},{name:'twitter:card',content:'summary_large_image'}]}),component:Despesas});
+export const Route=createFileRoute('/_authenticated/despesas')({
+ loader: async ({ context }) => { await Promise.all([context.queryClient.ensureQueryData(appQueries.despesasQ)]); },
+ errorComponent: ({error}) => <p role="alert" className="py-8 text-destructive">{error instanceof Error ? error.message : "Não foi possível carregar os registros."}</p>,
+ notFoundComponent: () => <p>Registro não encontrado.</p>,
+head:()=>({meta:[{title:'Despesas — Doce Gestão'},{name:'description',content:'Registro de despesas e gastos operacionais.'},{property:'og:title',content:'Despesas — Doce Gestão'},{property:'og:description',content:'Registro de despesas e gastos operacionais.'},{property:'og:type',content:'website'},{name:'twitter:card',content:'summary_large_image'}]}),component:Despesas});
 function Despesas(){
  const {data}=useSuspenseQuery(despesasQ);const qc=useQueryClient();const blank={data:hojeISO(),descricao:'',categoria:'Outros',valor:''};const [f,setF]=useState(blank);const [id,setId]=useState<string|null>(null);const [busy,setBusy]=useState(false);
  async function salvar(e:React.FormEvent){e.preventDefault();if(!f.descricao.trim()||parseNum(f.valor)<=0){toast.error('Informe descrição e valor positivo.');return;}setBusy(true);const payload={...f,descricao:f.descricao.trim(),valor:parseNum(f.valor)};const {error}=id?await supabase.from('despesas').update(payload).eq('id',id):await supabase.from('despesas').insert(payload);setBusy(false);if(error){toast.error(error.message);return;}await qc.invalidateQueries({queryKey:['despesas']});setF(blank);setId(null);toast.success('Despesa salva!');}

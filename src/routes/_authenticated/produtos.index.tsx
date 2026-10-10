@@ -1,3 +1,4 @@
+import * as appQueries from "@/lib/queries";
 import { createFileRoute, Link } from "@tanstack/react-router";
 import { useQueryClient } from "@tanstack/react-query";
 import { useState } from "react";
@@ -15,6 +16,10 @@ import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import type { Insumo } from "@/lib/queries";
 
 export const Route = createFileRoute("/_authenticated/produtos/")({
+ loader: async ({ context }) => { await Promise.all([context.queryClient.ensureQueryData(appQueries.produtosQ),context.queryClient.ensureQueryData(appQueries.insumosQ)]); },
+ errorComponent: ({error}) => <p role="alert" className="py-8 text-destructive">{error instanceof Error ? error.message : "Não foi possível carregar os registros."}</p>,
+ notFoundComponent: () => <p>Registro não encontrado.</p>,
+
   head: () => ({
     meta: [
       { property: "og:type", content: "website" },

@@ -1,3 +1,4 @@
+import * as appQueries from "@/lib/queries";
 import { createFileRoute,Link } from '@tanstack/react-router';
 import { useSuspenseQuery } from '@tanstack/react-query';
 import { useMemo } from 'react';
@@ -10,6 +11,10 @@ import { PageHeader,Field,Stat,Row,Empty } from '@/components/app/ui';
 import { Input } from '@/components/ui/input';
 import { Button } from '@/components/ui/button';
 export const Route=createFileRoute('/_authenticated/relatorios')({
+ loader: async ({ context }) => { await Promise.all([context.queryClient.ensureQueryData(appQueries.pedidosQ),context.queryClient.ensureQueryData(appQueries.configQ),context.queryClient.ensureQueryData(appQueries.despesasQ)]); },
+ errorComponent: ({error}) => <p role="alert" className="py-8 text-destructive">{error instanceof Error ? error.message : "Não foi possível carregar os registros."}</p>,
+ notFoundComponent: () => <p>Registro não encontrado.</p>,
+
  validateSearch:(s:Record<string,unknown>)=>({inicio:typeof s['inicio']==='string'&&/^\d{4}-\d{2}-\d{2}$/.test(s['inicio'])?s['inicio']:mesISO()+'-01',fim:typeof s['fim']==='string'&&/^\d{4}-\d{2}-\d{2}$/.test(s['fim'])?s['fim']:hojeISO()}),
  head:()=>({meta:[{title:'Relatórios — Doce Gestão'},{name:'description',content:'Vendas, lucros e valores a receber por período.'},{property:'og:title',content:'Relatórios — Doce Gestão'},{property:'og:description',content:'Vendas, lucros e valores a receber por período.'},{property:'og:type',content:'website'},{name:'twitter:card',content:'summary_large_image'}]}),component:Relatorios});
 function Relatorios(){
