@@ -130,32 +130,17 @@ function PedidoForm() {
         taxa_entrega: parseNum(f.taxa_entrega),
         observacoes: f.observacoes.trim() || null,
       };
-      let pedidoId = existente?.id;
-      if (pedidoId) {
-        const { error } = await supabase.from("pedidos").update(payload).eq("id", pedidoId);
-        if (error) throw error;
-        const { error: e2 } = await supabase.from("pedido_itens").delete().eq("pedido_id", pedidoId);
-        if (e2) throw e2;
-      } else {
-        const { data, error } = await supabase.from("pedidos").insert(payload).select("id, numero").single();
-        if (error) throw error;
-        pedidoId = data.id;
-      }
-      const { error: e3 } = await supabase.from("pedido_itens").insert(
-        itens.map((i) => {
-          const qtd = parseNum(i.quantidade);
-          return {
-            pedido_id: pedidoId ?? "",
-            produto_id: i.produto_id,
-            descricao: i.descricao.trim(),
-            quantidade: qtd,
-            preco_unitario: parseNum(i.preco_unitario),
-            custo_unitario: i.custo_unitario,
-            quantidade_produzida: Math.min(i.quantidade_produzida, qtd),
-          };
-        }),
-      );
-      if (e3) throw e3;
+      const { error } = await supabase.rpc("salvar_pedido", {
+        payload,
+        itens: itens.map((i) => ({
+          produto_id: i.produto_id, descricao: i.descricao.trim(),
+          quantidade: parseNum(i.quantidade), preco_unitario: parseNum(i.preco_unitario),
+          custo_unitario: i.custo_unitario,
+          quantidade_produzida: Math.min(i.quantidade_produzida, parseNum(i.quantidade)),
+        })),
+        ...(existente ? { registro_id: existente.id } : {}),
+      });
+      if (error) throw error;
       await qc.invalidateQueries({ queryKey: ["pedidos"] });
       toast.success(novo ? "Pedido criado!" : "Pedido atualizado!");
       navigate({ to: "/pedidos" });

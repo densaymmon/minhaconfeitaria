@@ -78,21 +78,11 @@ function ProdutoForm() {
         modo_preparo: f.modo_preparo.trim() || null,
         ativo: f.ativo,
       };
-      let pid = p?.id;
-      if (pid) {
-        const { error } = await supabase.from("produtos").update(payload).eq("id", pid);
-        if (error) throw error;
-        const { error: e2 } = await supabase.from("receita_itens").delete().eq("produto_id", pid);
-        if (e2) throw e2;
-      } else {
-        const { data, error } = await supabase.from("produtos").insert(payload).select("id").single();
-        if (error) throw error;
-        pid = data.id;
-      }
-      if (itensNum.length) {
-        const { error } = await supabase.from("receita_itens").insert(itensNum.map((i) => ({ ...i, produto_id: pid ?? "" })));
-        if (error) throw error;
-      }
+      const { error } = await supabase.rpc("salvar_produto", {
+        payload, itens: itensNum,
+        ...(p ? { registro_id: p.id } : {}),
+      });
+      if (error) throw error;
       await qc.invalidateQueries({ queryKey: ["produtos"] });
       toast.success("Produto salvo!");
       navigate({ to: "/produtos" });
