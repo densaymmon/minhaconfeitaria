@@ -1,12 +1,12 @@
 import { createOpenAICompatible } from "@ai-sdk/openai-compatible";
 
-import { createLovableAiGatewayRunIdFetch } from "./run-id.ts";
+import { createLovableAiGatewayRunIdFetch } from "./run-id.server.ts";
 export {
   createLovableAiGatewayRunIdFetch,
   getLovableAiGatewayRunId,
   getLovableAiGatewayResponseHeaders,
   withLovableAiGatewayRunIdHeader,
-} from "./run-id.ts";
+} from "./run-id.server.ts";
 
 export function createLovableAiGatewayProvider(
   lovableApiKey: string,

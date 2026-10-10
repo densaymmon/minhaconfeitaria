@@ -10,3 +10,7 @@
 - [x] Validar catálogo, bloqueio sem OAuth e consulta autenticada no servidor local.
 - [x] Testar autorizar e recusar com serviço real e adaptação de origem apenas no navegador de teste.
 - [ ] Verificar consentimento no endereço publicado — aguarda publicação autorizada pelo usuário.
+
+## Rascunho por mensagem
+- [x] Adicionar interpretação com Lovable AI e revisão antes de preencher pedido.
+- [ ] Validar interpretação real, preenchimento e salvamento.
