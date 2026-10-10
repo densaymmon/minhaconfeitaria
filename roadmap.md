@@ -1,4 +1,9 @@
 # Finalização
+## Custos proporcionais dos ingredientes
+- [ ] Adicionar embalagem, medidas da receita e validações, preservando dados existentes.
+- [ ] Atualizar cadastro, cálculo, sinalização de custos e consultas de receitas.
+- [ ] Testar quatro exemplos, conversões inválidas e fluxo autenticado de atualização.
+
 - [x] Relatórios financeiros, despesas e taxas.
 - [x] Corrigir formulários e validar registros no banco.
 - [x] Testar cálculos, exportação e acesso protegido no celular.
