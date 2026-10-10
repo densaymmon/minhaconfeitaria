@@ -1,3 +1,4 @@
+import * as appQueries from "@/lib/queries";
 import { createFileRoute } from '@tanstack/react-router';
 import { useSuspenseQuery,useQueryClient } from '@tanstack/react-query';
 import { useState } from 'react';
@@ -8,7 +9,11 @@ import { supabase } from '@/integrations/supabase/client';
 import { PageHeader,Field } from '@/components/app/ui';
 import { Input } from '@/components/ui/input';
 import { Button } from '@/components/ui/button';
-export const Route=createFileRoute('/_authenticated/configuracoes')({head:()=>({meta:[{title:'Taxas — Doce Gestão'},{name:'description',content:'Taxas de pagamento e impostos da confeitaria.'},{property:'og:title',content:'Taxas — Doce Gestão'},{property:'og:description',content:'Taxas de pagamento e impostos da confeitaria.'},{property:'og:type',content:'website'},{name:'twitter:card',content:'summary_large_image'}]}),component:ConfigPage});
+export const Route=createFileRoute('/_authenticated/configuracoes')({
+ loader: async ({ context }) => { await Promise.all([context.queryClient.ensureQueryData(appQueries.configQ)]); },
+ errorComponent: ({error}) => <p role="alert" className="py-8 text-destructive">{error instanceof Error ? error.message : "Não foi possível carregar os registros."}</p>,
+ notFoundComponent: () => <p>Registro não encontrado.</p>,
+head:()=>({meta:[{title:'Taxas — Doce Gestão'},{name:'description',content:'Taxas de pagamento e impostos da confeitaria.'},{property:'og:title',content:'Taxas — Doce Gestão'},{property:'og:description',content:'Taxas de pagamento e impostos da confeitaria.'},{property:'og:type',content:'website'},{name:'twitter:card',content:'summary_large_image'}]}),component:ConfigPage});
 function ConfigPage(){
  const {data}=useSuspenseQuery(configQ);const {user}=Route.useRouteContext();const qc=useQueryClient();
  const [f,setF]=useState(()=>Object.fromEntries(Object.entries(data).map(([k,v])=>[k,String(v)])));const [busy,setBusy]=useState(false);

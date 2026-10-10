@@ -1,3 +1,4 @@
+import * as appQueries from "@/lib/queries";
 import { createFileRoute, Link, useNavigate } from "@tanstack/react-router";
 import { useQueryClient, useSuspenseQuery } from "@tanstack/react-query";
 import { useState } from "react";
@@ -12,6 +13,10 @@ import { Button } from "@/components/ui/button";
 import { ClienteDialog } from "./clientes.index";
 
 export const Route = createFileRoute("/_authenticated/clientes/$id")({
+ loader: async ({ context }) => { await Promise.all([context.queryClient.ensureQueryData(appQueries.clientesQ),context.queryClient.ensureQueryData(appQueries.pedidosQ),context.queryClient.ensureQueryData(appQueries.configQ)]); },
+ errorComponent: ({error}) => <p role="alert" className="py-8 text-destructive">{error instanceof Error ? error.message : "Não foi possível carregar os registros."}</p>,
+ notFoundComponent: () => <p>Registro não encontrado.</p>,
+
   head: () => ({
     meta: [
       { property: "og:type", content: "website" },
