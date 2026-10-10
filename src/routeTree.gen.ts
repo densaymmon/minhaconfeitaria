@@ -12,13 +12,16 @@ import { Route as rootRouteImport } from './routes/__root'
 import { Route as IndexRouteImport } from './routes/index'
 import { Route as AuthenticatedRouteRouteImport } from './routes/_authenticated/route'
 import { Route as AuthRouteImport } from './routes/auth'
+import { Route as McpRouteImport } from './routes/mcp'
 import { Route as ResetPasswordRouteImport } from './routes/reset-password'
+import { Route as Char91DotwellKnownChar93OauthProtectedResourceRouteImport } from './routes/[.well-known]/oauth-protected-resource'
 import { Route as AuthenticatedConfiguracoesRouteImport } from './routes/_authenticated/configuracoes'
 import { Route as AuthenticatedDespesasRouteImport } from './routes/_authenticated/despesas'
 import { Route as AuthenticatedMaisRouteImport } from './routes/_authenticated/mais'
 import { Route as AuthenticatedPainelRouteImport } from './routes/_authenticated/painel'
 import { Route as AuthenticatedProducaoRouteImport } from './routes/_authenticated/producao'
 import { Route as AuthenticatedRelatoriosRouteImport } from './routes/_authenticated/relatorios'
+import { Route as DotlovableOauthConsentRouteImport } from './routes/[.]lovable.oauth.consent'
 import { Route as AuthenticatedClientesIndexRouteImport } from './routes/_authenticated/clientes.index'
 import { Route as AuthenticatedClientesIdRouteImport } from './routes/_authenticated/clientes.$id'
 import { Route as AuthenticatedPedidosIndexRouteImport } from './routes/_authenticated/pedidos.index'
@@ -40,11 +43,22 @@ const AuthRoute = AuthRouteImport.update({
   path: '/auth',
   getParentRoute: () => rootRouteImport,
 } as any)
+const McpRoute = McpRouteImport.update({
+  id: '/mcp',
+  path: '/mcp',
+  getParentRoute: () => rootRouteImport,
+} as any)
 const ResetPasswordRoute = ResetPasswordRouteImport.update({
   id: '/reset-password',
   path: '/reset-password',
   getParentRoute: () => rootRouteImport,
 } as any)
+const Char91DotwellKnownChar93OauthProtectedResourceRoute =
+  Char91DotwellKnownChar93OauthProtectedResourceRouteImport.update({
+    id: '/.well-known/oauth-protected-resource',
+    path: '/.well-known/oauth-protected-resource',
+    getParentRoute: () => rootRouteImport,
+  } as any)
 const AuthenticatedConfiguracoesRoute =
   AuthenticatedConfiguracoesRouteImport.update({
     id: '/configuracoes',
@@ -75,6 +89,11 @@ const AuthenticatedRelatoriosRoute = AuthenticatedRelatoriosRouteImport.update({
   id: '/relatorios',
   path: '/relatorios',
   getParentRoute: () => AuthenticatedRouteRoute,
+} as any)
+const DotlovableOauthConsentRoute = DotlovableOauthConsentRouteImport.update({
+  id: '/.lovable/oauth/consent',
+  path: '/.lovable/oauth/consent',
+  getParentRoute: () => rootRouteImport,
 } as any)
 const AuthenticatedClientesIndexRoute =
   AuthenticatedClientesIndexRouteImport.update({
@@ -113,13 +132,16 @@ const AuthenticatedProdutosIdRoute = AuthenticatedProdutosIdRouteImport.update({
 export interface FileRoutesByFullPath {
   '/': typeof IndexRoute
   '/auth': typeof AuthRoute
+  '/mcp': typeof McpRoute
   '/reset-password': typeof ResetPasswordRoute
+  '/.well-known/oauth-protected-resource': typeof Char91DotwellKnownChar93OauthProtectedResourceRoute
   '/configuracoes': typeof AuthenticatedConfiguracoesRoute
   '/despesas': typeof AuthenticatedDespesasRoute
   '/mais': typeof AuthenticatedMaisRoute
   '/painel': typeof AuthenticatedPainelRoute
   '/producao': typeof AuthenticatedProducaoRoute
   '/relatorios': typeof AuthenticatedRelatoriosRoute
+  '/.lovable/oauth/consent': typeof DotlovableOauthConsentRoute
   '/clientes/$id': typeof AuthenticatedClientesIdRoute
   '/pedidos/$id': typeof AuthenticatedPedidosIdRoute
   '/produtos/$id': typeof AuthenticatedProdutosIdRoute
@@ -130,13 +152,16 @@ export interface FileRoutesByFullPath {
 export interface FileRoutesByTo {
   '/': typeof IndexRoute
   '/auth': typeof AuthRoute
+  '/mcp': typeof McpRoute
   '/reset-password': typeof ResetPasswordRoute
+  '/.well-known/oauth-protected-resource': typeof Char91DotwellKnownChar93OauthProtectedResourceRoute
   '/configuracoes': typeof AuthenticatedConfiguracoesRoute
   '/despesas': typeof AuthenticatedDespesasRoute
   '/mais': typeof AuthenticatedMaisRoute
   '/painel': typeof AuthenticatedPainelRoute
   '/producao': typeof AuthenticatedProducaoRoute
   '/relatorios': typeof AuthenticatedRelatoriosRoute
+  '/.lovable/oauth/consent': typeof DotlovableOauthConsentRoute
   '/clientes/$id': typeof AuthenticatedClientesIdRoute
   '/pedidos/$id': typeof AuthenticatedPedidosIdRoute
   '/produtos/$id': typeof AuthenticatedProdutosIdRoute
@@ -149,13 +174,16 @@ export interface FileRoutesById {
   '/': typeof IndexRoute
   '/_authenticated': typeof AuthenticatedRouteRouteWithChildren
   '/auth': typeof AuthRoute
+  '/mcp': typeof McpRoute
   '/reset-password': typeof ResetPasswordRoute
+  '/.well-known/oauth-protected-resource': typeof Char91DotwellKnownChar93OauthProtectedResourceRoute
   '/_authenticated/configuracoes': typeof AuthenticatedConfiguracoesRoute
   '/_authenticated/despesas': typeof AuthenticatedDespesasRoute
   '/_authenticated/mais': typeof AuthenticatedMaisRoute
   '/_authenticated/painel': typeof AuthenticatedPainelRoute
   '/_authenticated/producao': typeof AuthenticatedProducaoRoute
   '/_authenticated/relatorios': typeof AuthenticatedRelatoriosRoute
+  '/.lovable/oauth/consent': typeof DotlovableOauthConsentRoute
   '/_authenticated/clientes/$id': typeof AuthenticatedClientesIdRoute
   '/_authenticated/pedidos/$id': typeof AuthenticatedPedidosIdRoute
   '/_authenticated/produtos/$id': typeof AuthenticatedProdutosIdRoute
@@ -168,13 +196,16 @@ export interface FileRouteTypes {
   fullPaths:
     | '/'
     | '/auth'
+    | '/mcp'
     | '/reset-password'
+    | '/.well-known/oauth-protected-resource'
     | '/configuracoes'
     | '/despesas'
     | '/mais'
     | '/painel'
     | '/producao'
     | '/relatorios'
+    | '/.lovable/oauth/consent'
     | '/clientes/$id'
     | '/pedidos/$id'
     | '/produtos/$id'
@@ -185,13 +216,16 @@ export interface FileRouteTypes {
   to:
     | '/'
     | '/auth'
+    | '/mcp'
     | '/reset-password'
+    | '/.well-known/oauth-protected-resource'
     | '/configuracoes'
     | '/despesas'
     | '/mais'
     | '/painel'
     | '/producao'
     | '/relatorios'
+    | '/.lovable/oauth/consent'
     | '/clientes/$id'
     | '/pedidos/$id'
     | '/produtos/$id'
@@ -203,13 +237,16 @@ export interface FileRouteTypes {
     | '/'
     | '/_authenticated'
     | '/auth'
+    | '/mcp'
     | '/reset-password'
+    | '/.well-known/oauth-protected-resource'
     | '/_authenticated/configuracoes'
     | '/_authenticated/despesas'
     | '/_authenticated/mais'
     | '/_authenticated/painel'
     | '/_authenticated/producao'
     | '/_authenticated/relatorios'
+    | '/.lovable/oauth/consent'
     | '/_authenticated/clientes/$id'
     | '/_authenticated/pedidos/$id'
     | '/_authenticated/produtos/$id'
@@ -222,7 +259,10 @@ export interface RootRouteChildren {
   IndexRoute: typeof IndexRoute
   AuthenticatedRouteRoute: typeof AuthenticatedRouteRouteWithChildren
   AuthRoute: typeof AuthRoute
+  McpRoute: typeof McpRoute
   ResetPasswordRoute: typeof ResetPasswordRoute
+  Char91DotwellKnownChar93OauthProtectedResourceRoute: typeof Char91DotwellKnownChar93OauthProtectedResourceRoute
+  DotlovableOauthConsentRoute: typeof DotlovableOauthConsentRoute
 }
 
 declare module '@tanstack/react-router' {
@@ -248,11 +288,25 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof AuthRouteImport
       parentRoute: typeof rootRouteImport
     }
+    '/mcp': {
+      id: '/mcp'
+      path: '/mcp'
+      fullPath: '/mcp'
+      preLoaderRoute: typeof McpRouteImport
+      parentRoute: typeof rootRouteImport
+    }
     '/reset-password': {
       id: '/reset-password'
       path: '/reset-password'
       fullPath: '/reset-password'
       preLoaderRoute: typeof ResetPasswordRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/.well-known/oauth-protected-resource': {
+      id: '/.well-known/oauth-protected-resource'
+      path: '/.well-known/oauth-protected-resource'
+      fullPath: '/.well-known/oauth-protected-resource'
+      preLoaderRoute: typeof Char91DotwellKnownChar93OauthProtectedResourceRouteImport
       parentRoute: typeof rootRouteImport
     }
     '/_authenticated/configuracoes': {
@@ -296,6 +350,13 @@ declare module '@tanstack/react-router' {
       fullPath: '/relatorios'
       preLoaderRoute: typeof AuthenticatedRelatoriosRouteImport
       parentRoute: typeof AuthenticatedRouteRoute
+    }
+    '/.lovable/oauth/consent': {
+      id: '/.lovable/oauth/consent'
+      path: '/.lovable/oauth/consent'
+      fullPath: '/.lovable/oauth/consent'
+      preLoaderRoute: typeof DotlovableOauthConsentRouteImport
+      parentRoute: typeof rootRouteImport
     }
     '/_authenticated/clientes/': {
       id: '/_authenticated/clientes/'
@@ -379,7 +440,11 @@ const rootRouteChildren: RootRouteChildren = {
   IndexRoute: IndexRoute,
   AuthenticatedRouteRoute: AuthenticatedRouteRouteWithChildren,
   AuthRoute: AuthRoute,
+  McpRoute: McpRoute,
   ResetPasswordRoute: ResetPasswordRoute,
+  Char91DotwellKnownChar93OauthProtectedResourceRoute:
+    Char91DotwellKnownChar93OauthProtectedResourceRoute,
+  DotlovableOauthConsentRoute: DotlovableOauthConsentRoute,
 }
 export const routeTree = rootRouteImport
   ._addFileChildren(rootRouteChildren)
