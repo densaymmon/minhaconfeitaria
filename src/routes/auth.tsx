@@ -1,4 +1,4 @@
-import { createFileRoute, useNavigate } from "@tanstack/react-router";
+import { createFileRoute } from "@tanstack/react-router";
 import { useState } from "react";
 import { toast } from "sonner";
 import { CakeSlice } from "lucide-react";
@@ -6,10 +6,12 @@ import { supabase } from "@/integrations/supabase/client";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import bakeryImage from "@/assets/confeitaria.jpg";
+import { oauthReturnPath } from "@/lib/oauth-return-path";
 import { Field } from "@/components/app/ui";
 
 export const Route = createFileRoute("/auth")({
   ssr: false,
+  validateSearch: (s: Record<string, unknown>) => ({ next: oauthReturnPath(s.next) }),
   head: () => ({
     meta: [
       { property: "og:type", content: "website" },
@@ -26,7 +28,9 @@ export const Route = createFileRoute("/auth")({
 type Modo = "entrar" | "criar" | "esqueci";
 
 function AuthPage() {
-  const navigate = useNavigate();
+  const { next } = Route.useSearch();
+  const destination = next === "/" ? "/painel" : next;
+  function finishLogin() { window.location.assign(destination); }
   const [modo, setModo] = useState<Modo>("entrar");
   const [email, setEmail] = useState("");
   const [senha, setSenha] = useState("");
@@ -41,19 +45,19 @@ function AuthPage() {
       if (modo === "entrar") {
         const { error } = await supabase.auth.signInWithPassword({ email, password: senha });
         if (error) throw new Error(error.message.includes("Invalid") ? "E-mail ou senha incorretos." : error.message);
-        navigate({ to: "/painel" });
+        finishLogin();
       } else if (modo === "criar") {
         if (senha.length < 8) throw new Error("A senha precisa ter pelo menos 8 caracteres.");
         const { data, error } = await supabase.auth.signUp({
           email,
           password: senha,
-          options: { emailRedirectTo: window.location.origin },
+          options: { emailRedirectTo: new URL(destination, window.location.origin).href },
         });
         if (error)
           throw new Error(
             error.message.includes("Database error") ? "O sistema já tem uma proprietária cadastrada." : error.message,
           );
-        if (data.session) navigate({ to: "/painel" });
+        if (data.session) finishLogin();
         else setAviso("Conta criada! Abra seu e-mail e clique no link de confirmação para entrar.");
       } else {
         const { error } = await supabase.auth.resetPasswordForEmail(email, {
