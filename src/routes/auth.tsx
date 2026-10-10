@@ -11,7 +11,7 @@ import { Field } from "@/components/app/ui";
 
 export const Route = createFileRoute("/auth")({
   ssr: false,
-  validateSearch: (s: Record<string, unknown>) => ({ next: oauthReturnPath(s.next) }),
+  validateSearch: (s: Record<string, unknown>): { next?: string } => ({ next: oauthReturnPath(s["next"]) }),
   head: () => ({
     meta: [
       { property: "og:type", content: "website" },
@@ -29,7 +29,7 @@ type Modo = "entrar" | "criar" | "esqueci";
 
 function AuthPage() {
   const { next } = Route.useSearch();
-  const destination = next === "/" ? "/painel" : next;
+  const destination = !next || next === "/" ? "/painel" : next;
   function finishLogin() { window.location.assign(destination); }
   const [modo, setModo] = useState<Modo>("entrar");
   const [email, setEmail] = useState("");

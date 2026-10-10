@@ -4,7 +4,7 @@ import type { Database } from '@/integrations/supabase/types';
 
 function env(name: string) { return process.env[name]?.trim(); }
 function projectUrl() {
-  const url = env('SUPABASE_URL') ?? env('VITE_SUPABASE_URL') ?? import.meta.env.VITE_SUPABASE_URL;
+  const url = env('SUPABASE_URL') ?? env('VITE_SUPABASE_URL') ?? import.meta.env['VITE_SUPABASE_URL'];
   if (!url) throw new ToolError('Serviço de dados indisponível.');
   return url;
 }
@@ -21,7 +21,7 @@ function publishableKey() {
       }
     } catch { /* Try legacy public key. */ }
   }
-  const key = env('SUPABASE_ANON_KEY') ?? env('VITE_SUPABASE_ANON_KEY') ?? import.meta.env.VITE_SUPABASE_PUBLISHABLE_KEY;
+  const key = env('SUPABASE_ANON_KEY') ?? env('VITE_SUPABASE_ANON_KEY') ?? import.meta.env['VITE_SUPABASE_PUBLISHABLE_KEY'];
   if (!key) throw new ToolError('Serviço de dados indisponível.');
   return key;
 }

@@ -3,7 +3,7 @@ import pedidos from './tools/listar-pedidos';
 import clientes from './tools/listar-clientes';
 import produtos from './tools/listar-produtos';
 import despesas from './tools/listar-despesas';
-const projectRef = import.meta.env.VITE_SUPABASE_PROJECT_ID ?? 'project-ref-unset';
+const projectRef = import.meta.env['VITE_SUPABASE_PROJECT_ID'] ?? 'project-ref-unset';
 export default defineMcp({
   name: 'confeitaria-maestro',
   title: 'Confeitaria Maestro',

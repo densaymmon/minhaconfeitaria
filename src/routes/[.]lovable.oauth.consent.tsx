@@ -6,7 +6,7 @@ import { Button } from '@/components/ui/button';
 
 export const Route = createFileRoute('/.lovable/oauth/consent')({
   ssr: false,
-  validateSearch: (s: Record<string, unknown>) => ({ authorization_id: typeof s.authorization_id === 'string' ? s.authorization_id : '' }),
+  validateSearch: (s: Record<string, unknown>) => ({ authorization_id: typeof s['authorization_id'] === 'string' ? s['authorization_id'] : '' }),
   head: () => ({ meta: [
     { title: 'Autorizar agente — Confeitaria Maestro' },
     { name: 'description', content: 'Autorize ou recuse o acesso de um agente aos dados da sua confeitaria.' },
@@ -29,7 +29,7 @@ export const Route = createFileRoute('/.lovable/oauth/consent')({
     return data;
   },
   component: Consent,
-  errorComponent: ({ error }) => <main className="mx-auto max-w-md px-5 py-16"><h1 className="text-xl font-semibold">Autorização indisponível</h1><p role="alert" className="mt-4 text-muted-foreground">{error.message}</p></main>,
+  errorComponent: ({ error }) => <main className="mx-auto max-w-md px-5 py-16"><h1 className="text-xl font-semibold">Autorização indisponível</h1><p role="alert" className="mt-4 text-muted-foreground">{error instanceof Error ? error.message : "Não foi possível carregar a autorização."}</p></main>,
 });
 function Consent() {
   const details = Route.useLoaderData();
