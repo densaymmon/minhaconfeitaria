@@ -13,6 +13,8 @@ import { cn } from "@/lib/utils";
 export const Route = createFileRoute("/_authenticated/producao")({
   head: () => ({
     meta: [
+      { property: "og:type", content: "website" },
+      { name: "twitter:card", content: "summary_large_image" },
       { title: "Produção — Doce Gestão" },
       { name: "description", content: "Agenda de produção por data de entrega." },
       { property: "og:title", content: "Produção — Doce Gestão" },
@@ -58,13 +60,13 @@ function Producao() {
   async function ajustar(itemId: string, valor: number, max: number) {
     const v = Math.max(0, Math.min(max, valor));
     const { error } = await supabase.from("pedido_itens").update({ quantidade_produzida: v }).eq("id", itemId);
-    if (error) return toast.error(error.message);
+    if (error) return void toast.error(error.message);
     qc.invalidateQueries({ queryKey: ["pedidos"] });
   }
 
   async function mudarStatus(p: PedidoCalc, status: string) {
     const { error } = await supabase.from("pedidos").update({ status }).eq("id", p.id);
-    if (error) return toast.error(error.message);
+    if (error) return void toast.error(error.message);
     if (status === "pronto") {
       await Promise.all(
         p.pedido_itens.map((i) => supabase.from("pedido_itens").update({ quantidade_produzida: i.quantidade }).eq("id", i.id)),

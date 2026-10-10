@@ -11,6 +11,8 @@ export const Route = createFileRoute("/auth")({
   ssr: false,
   head: () => ({
     meta: [
+      { property: "og:type", content: "website" },
+      { name: "twitter:card", content: "summary_large_image" },
       { title: "Entrar — Doce Gestão" },
       { name: "description", content: "Acesso exclusivo da proprietária ao sistema da confeitaria." },
       { property: "og:title", content: "Entrar — Doce Gestão" },

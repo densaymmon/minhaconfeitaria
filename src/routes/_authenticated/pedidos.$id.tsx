@@ -17,6 +17,8 @@ import { Switch } from "@/components/ui/switch";
 export const Route = createFileRoute("/_authenticated/pedidos/$id")({
   head: () => ({
     meta: [
+      { property: "og:type", content: "website" },
+      { name: "twitter:card", content: "summary_large_image" },
       { title: "Pedido — Doce Gestão" },
       { name: "description", content: "Cadastro e edição de encomenda." },
       { property: "og:title", content: "Pedido — Doce Gestão" },
@@ -112,8 +114,8 @@ function PedidoForm() {
   );
 
   async function salvar() {
-    if (itens.length === 0) return toast.error("Adicione pelo menos um item.");
-    if (itens.some((i) => !i.descricao.trim() || parseNum(i.quantidade) <= 0)) return toast.error("Confira os itens: descrição e quantidade são obrigatórias.");
+    if (itens.length === 0) return void toast.error("Adicione pelo menos um item.");
+    if (itens.some((i) => !i.descricao.trim() || parseNum(i.quantidade) <= 0)) return void toast.error("Confira os itens: descrição e quantidade são obrigatórias.");
     setSalvando(true);
     try {
       const payload = {
@@ -143,7 +145,7 @@ function PedidoForm() {
         itens.map((i) => {
           const qtd = parseNum(i.quantidade);
           return {
-            pedido_id: pedidoId!,
+            pedido_id: pedidoId ?? "",
             produto_id: i.produto_id,
             descricao: i.descricao.trim(),
             quantidade: qtd,
@@ -167,7 +169,7 @@ function PedidoForm() {
   async function excluir() {
     if (!existente || !confirm(`Excluir o pedido #${existente.numero}?`)) return;
     const { error } = await supabase.from("pedidos").delete().eq("id", existente.id);
-    if (error) return toast.error(error.message);
+    if (error) return void toast.error(error.message);
     await qc.invalidateQueries({ queryKey: ["pedidos"] });
     toast.success("Pedido excluído.");
     navigate({ to: "/pedidos" });
@@ -178,7 +180,7 @@ function PedidoForm() {
 
   return (
     <>
-      <PageHeader title={novo ? "Novo pedido" : `Pedido #${existente!.numero}`} back="/pedidos" />
+      <PageHeader title={novo ? "Novo pedido" : `Pedido #${existente?.numero}`} back="/pedidos" />
       <div className="space-y-4">
         <Card className="space-y-3">
           <Field label="Cliente">

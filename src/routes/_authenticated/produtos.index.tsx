@@ -17,6 +17,8 @@ import type { Insumo } from "@/lib/queries";
 export const Route = createFileRoute("/_authenticated/produtos/")({
   head: () => ({
     meta: [
+      { property: "og:type", content: "website" },
+      { name: "twitter:card", content: "summary_large_image" },
       { title: "Produtos e insumos — Doce Gestão" },
       { name: "description", content: "Produtos, receitas e preços dos insumos." },
       { property: "og:title", content: "Produtos e insumos — Doce Gestão" },
@@ -105,9 +107,9 @@ function Insumos({ insumos }: { insumos: Insumo[] }) {
 
   async function adicionar(e: React.FormEvent) {
     e.preventDefault();
-    if (!novo.nome.trim()) return toast.error("Informe o nome do insumo.");
+    if (!novo.nome.trim()) return void toast.error("Informe o nome do insumo.");
     const { error } = await supabase.from("insumos").insert({ nome: novo.nome.trim(), tipo: novo.tipo, unidade: novo.unidade, preco_unidade: parseNum(novo.preco) });
-    if (error) return toast.error(error.message);
+    if (error) return void toast.error(error.message);
     setNovo({ ...novo, nome: "", preco: "" });
     qc.invalidateQueries({ queryKey: ["insumos"] });
     toast.success("Insumo adicionado!");
@@ -117,7 +119,7 @@ function Insumos({ insumos }: { insumos: Insumo[] }) {
     const v = precos[i.id];
     if (v === undefined || parseNum(v) === Number(i.preco_unidade)) return;
     const { error } = await supabase.from("insumos").update({ preco_unidade: parseNum(v) }).eq("id", i.id);
-    if (error) return toast.error(error.message);
+    if (error) return void toast.error(error.message);
     await qc.invalidateQueries({ queryKey: ["insumos"] });
     toast.success(`Preço de ${i.nome} atualizado — custos recalculados.`);
   }
@@ -125,7 +127,7 @@ function Insumos({ insumos }: { insumos: Insumo[] }) {
   async function excluir(i: Insumo) {
     if (!confirm(`Excluir ${i.nome}?`)) return;
     const { error } = await supabase.from("insumos").delete().eq("id", i.id);
-    if (error) return toast.error(error.message.includes("foreign") ? "Este insumo está em uma receita. Remova-o da receita primeiro." : error.message);
+    if (error) return void toast.error(error.message.includes("foreign") ? "Este insumo está em uma receita. Remova-o da receita primeiro." : error.message);
     qc.invalidateQueries({ queryKey: ["insumos"] });
   }
 

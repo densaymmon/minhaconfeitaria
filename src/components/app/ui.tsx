@@ -11,8 +11,8 @@ export function PageHeader({
   action,
 }: {
   title: string;
-  subtitle?: string;
-  back?: string;
+  subtitle?: string | undefined;
+  back?: "/pedidos" | "/clientes" | "/produtos" | "/mais";
   action?: ReactNode;
 }) {
   return (
@@ -112,7 +112,7 @@ export function StatusBadge({ status }: { status: string }) {
   );
 }
 
-export function Row({ label, value, strong, tone }: { label: string; value: ReactNode; strong?: boolean; tone?: "success" | "danger" }) {
+export function Row({ label, value, strong, tone }: { label: string; value: ReactNode; strong?: boolean; tone?: "success" | "danger" | undefined }) {
   return (
     <div className={cn("flex justify-between py-1 text-sm", strong && "font-bold")}>
       <span className={cn(!strong && "text-muted-foreground")}>{label}</span>

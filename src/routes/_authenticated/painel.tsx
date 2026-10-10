@@ -12,6 +12,8 @@ import { ptBR } from "date-fns/locale";
 export const Route = createFileRoute("/_authenticated/painel")({
   head: () => ({
     meta: [
+      { property: "og:type", content: "website" },
+      { name: "twitter:card", content: "summary_large_image" },
       { title: "Painel — Doce Gestão" },
       { name: "description", content: "Resumo do dia e do mês da confeitaria." },
       { property: "og:title", content: "Painel — Doce Gestão" },

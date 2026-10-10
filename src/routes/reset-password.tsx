@@ -10,6 +10,8 @@ export const Route = createFileRoute("/reset-password")({
   ssr: false,
   head: () => ({
     meta: [
+      { property: "og:type", content: "website" },
+      { name: "twitter:card", content: "summary_large_image" },
       { title: "Nova senha — Doce Gestão" },
       { name: "description", content: "Defina uma nova senha de acesso." },
       { property: "og:title", content: "Nova senha — Doce Gestão" },
@@ -25,11 +27,11 @@ function Reset() {
   const [loading, setLoading] = useState(false);
   async function salvar(e: React.FormEvent) {
     e.preventDefault();
-    if (senha.length < 8) return toast.error("Use pelo menos 8 caracteres.");
+    if (senha.length < 8) return void toast.error("Use pelo menos 8 caracteres.");
     setLoading(true);
     const { error } = await supabase.auth.updateUser({ password: senha });
     setLoading(false);
-    if (error) return toast.error(error.message);
+    if (error) return void toast.error(error.message);
     toast.success("Senha alterada!");
     navigate({ to: "/painel" });
   }

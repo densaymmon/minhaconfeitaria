@@ -16,6 +16,8 @@ import { Switch } from "@/components/ui/switch";
 export const Route = createFileRoute("/_authenticated/produtos/$id")({
   head: () => ({
     meta: [
+      { property: "og:type", content: "website" },
+      { name: "twitter:card", content: "summary_large_image" },
       { title: "Produto e receita — Doce Gestão" },
       { name: "description", content: "Receita, custos e precificação do produto." },
       { property: "og:title", content: "Produto e receita — Doce Gestão" },
@@ -35,7 +37,7 @@ function ProdutoForm() {
 
   const [f, setF] = useState(() => ({
     nome: p?.nome ?? "",
-    categoria: p?.categoria ?? CATEGORIAS[0],
+    categoria: p?.categoria ?? "Bolos caseiros",
     rendimento: String(p?.rendimento ?? "1"),
     custo_gas: String(p?.custo_gas ?? "0"),
     custo_energia: String(p?.custo_energia ?? "0"),
@@ -64,7 +66,7 @@ function ProdutoForm() {
   const preco = parseNum(f.preco_venda);
 
   async function salvar() {
-    if (!f.nome.trim()) return toast.error("Informe o nome do produto.");
+    if (!f.nome.trim()) return void toast.error("Informe o nome do produto.");
     setSalvando(true);
     try {
       const payload = {
@@ -88,7 +90,7 @@ function ProdutoForm() {
         pid = data.id;
       }
       if (itensNum.length) {
-        const { error } = await supabase.from("receita_itens").insert(itensNum.map((i) => ({ ...i, produto_id: pid! })));
+        const { error } = await supabase.from("receita_itens").insert(itensNum.map((i) => ({ ...i, produto_id: pid ?? "" })));
         if (error) throw error;
       }
       await qc.invalidateQueries({ queryKey: ["produtos"] });
@@ -104,14 +106,14 @@ function ProdutoForm() {
   async function excluir() {
     if (!p || !confirm(`Excluir ${p.nome}? Pedidos antigos continuam com o nome do item.`)) return;
     const { error } = await supabase.from("produtos").delete().eq("id", p.id);
-    if (error) return toast.error(error.message);
+    if (error) return void toast.error(error.message);
     await qc.invalidateQueries({ queryKey: ["produtos"] });
     navigate({ to: "/produtos" });
   }
 
   return (
     <>
-      <PageHeader title={novo ? "Novo produto" : p!.nome} back="/produtos" />
+      <PageHeader title={novo ? "Novo produto" : p?.nome ?? "Produto"} back="/produtos" />
       <div className="space-y-4">
         <Card className="space-y-3">
           <Field label="Nome do produto">
