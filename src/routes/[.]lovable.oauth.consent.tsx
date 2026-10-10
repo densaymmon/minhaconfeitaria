@@ -20,8 +20,9 @@ export const Route = createFileRoute('/.lovable/oauth/consent')({
     if (error) throw new Error('Não foi possível verificar seu login. Tente novamente.');
     if (!data.session) throw redirect({ to: '/auth', search: { next: location.pathname + location.searchStr } });
   },
-  loader: async ({ location }) => {
-    const id = new URLSearchParams(location.searchStr).get('authorization_id');
+  loaderDeps: ({ search }) => ({ authorization_id: search.authorization_id }),
+  loader: async ({ deps }) => {
+    const id = deps.authorization_id;
     if (!id) throw new Error('Solicitação de autorização ausente.');
     const { data, error } = await supabase.auth.oauth.getAuthorizationDetails(id);
     if (error || !data) throw new Error('Esta solicitação expirou ou não é válida. Inicie a conexão novamente.');
