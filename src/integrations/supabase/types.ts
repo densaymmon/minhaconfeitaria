@@ -137,6 +137,21 @@ export type Database = {
         }
         Relationships: []
       }
+      owner_claim: {
+        Row: {
+          slot: boolean
+          user_id: string
+        }
+        Insert: {
+          slot?: boolean
+          user_id: string
+        }
+        Update: {
+          slot?: boolean
+          user_id?: string
+        }
+        Relationships: []
+      }
       pedido_itens: {
         Row: {
           custo_unitario: number
@@ -339,7 +354,14 @@ export type Database = {
       [_ in never]: never
     }
     Functions: {
-      [_ in never]: never
+      salvar_pedido: {
+        Args: { itens: Json; payload: Json; registro_id?: string }
+        Returns: string
+      }
+      salvar_produto: {
+        Args: { itens: Json; payload: Json; registro_id?: string }
+        Returns: string
+      }
     }
     Enums: {
       [_ in never]: never

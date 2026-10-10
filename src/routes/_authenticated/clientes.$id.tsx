@@ -14,6 +14,8 @@ import { ClienteDialog } from "./clientes.index";
 export const Route = createFileRoute("/_authenticated/clientes/$id")({
   head: () => ({
     meta: [
+      { property: "og:type", content: "website" },
+      { name: "twitter:card", content: "summary_large_image" },
       { title: "Cliente — Doce Gestão" },
       { name: "description", content: "Dados e histórico de pedidos do cliente." },
       { property: "og:title", content: "Cliente — Doce Gestão" },
@@ -40,9 +42,9 @@ function ClienteDetalhe() {
   const tel = c.telefone?.replace(/\D/g, "").replace(/^55/, "");
 
   async function excluir() {
-    if (!confirm(`Excluir ${c!.nome}? Os pedidos serão mantidos sem cliente.`)) return;
+    if (!confirm(`Excluir ${c?.nome}? Os pedidos serão mantidos sem cliente.`)) return;
     const { error } = await supabase.from("clientes").delete().eq("id", id);
-    if (error) return toast.error(error.message);
+    if (error) return void toast.error(error.message);
     await qc.invalidateQueries({ queryKey: ["clientes"] });
     qc.invalidateQueries({ queryKey: ["pedidos"] });
     navigate({ to: "/clientes" });

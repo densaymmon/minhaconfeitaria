@@ -17,6 +17,8 @@ import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/u
 export const Route = createFileRoute("/_authenticated/clientes/")({
   head: () => ({
     meta: [
+      { property: "og:type", content: "website" },
+      { name: "twitter:card", content: "summary_large_image" },
       { title: "Clientes — Doce Gestão" },
       { name: "description", content: "Cadastro de clientes da confeitaria." },
       { property: "og:title", content: "Clientes — Doce Gestão" },
@@ -37,7 +39,7 @@ export function ClienteDialog({ cliente, open, onOpenChange }: { cliente?: Clien
   const [loading, setLoading] = useState(false);
   async function salvar(e: React.FormEvent) {
     e.preventDefault();
-    if (!f.nome.trim()) return toast.error("Informe o nome.");
+    if (!f.nome.trim()) return void toast.error("Informe o nome.");
     setLoading(true);
     const payload = {
       nome: f.nome.trim().slice(0, 120),
@@ -49,7 +51,7 @@ export function ClienteDialog({ cliente, open, onOpenChange }: { cliente?: Clien
       ? await supabase.from("clientes").update(payload).eq("id", cliente.id)
       : await supabase.from("clientes").insert(payload);
     setLoading(false);
-    if (error) return toast.error(error.message);
+    if (error) return void toast.error(error.message);
     await qc.invalidateQueries({ queryKey: ["clientes"] });
     qc.invalidateQueries({ queryKey: ["pedidos"] });
     toast.success("Cliente salvo!");

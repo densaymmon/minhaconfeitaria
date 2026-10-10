@@ -13,8 +13,12 @@ import { Route as IndexRouteImport } from './routes/index'
 import { Route as AuthenticatedRouteRouteImport } from './routes/_authenticated/route'
 import { Route as AuthRouteImport } from './routes/auth'
 import { Route as ResetPasswordRouteImport } from './routes/reset-password'
+import { Route as AuthenticatedConfiguracoesRouteImport } from './routes/_authenticated/configuracoes'
+import { Route as AuthenticatedDespesasRouteImport } from './routes/_authenticated/despesas'
+import { Route as AuthenticatedMaisRouteImport } from './routes/_authenticated/mais'
 import { Route as AuthenticatedPainelRouteImport } from './routes/_authenticated/painel'
 import { Route as AuthenticatedProducaoRouteImport } from './routes/_authenticated/producao'
+import { Route as AuthenticatedRelatoriosRouteImport } from './routes/_authenticated/relatorios'
 import { Route as AuthenticatedClientesIndexRouteImport } from './routes/_authenticated/clientes.index'
 import { Route as AuthenticatedClientesIdRouteImport } from './routes/_authenticated/clientes.$id'
 import { Route as AuthenticatedPedidosIndexRouteImport } from './routes/_authenticated/pedidos.index'
@@ -41,6 +45,22 @@ const ResetPasswordRoute = ResetPasswordRouteImport.update({
   path: '/reset-password',
   getParentRoute: () => rootRouteImport,
 } as any)
+const AuthenticatedConfiguracoesRoute =
+  AuthenticatedConfiguracoesRouteImport.update({
+    id: '/configuracoes',
+    path: '/configuracoes',
+    getParentRoute: () => AuthenticatedRouteRoute,
+  } as any)
+const AuthenticatedDespesasRoute = AuthenticatedDespesasRouteImport.update({
+  id: '/despesas',
+  path: '/despesas',
+  getParentRoute: () => AuthenticatedRouteRoute,
+} as any)
+const AuthenticatedMaisRoute = AuthenticatedMaisRouteImport.update({
+  id: '/mais',
+  path: '/mais',
+  getParentRoute: () => AuthenticatedRouteRoute,
+} as any)
 const AuthenticatedPainelRoute = AuthenticatedPainelRouteImport.update({
   id: '/painel',
   path: '/painel',
@@ -49,6 +69,11 @@ const AuthenticatedPainelRoute = AuthenticatedPainelRouteImport.update({
 const AuthenticatedProducaoRoute = AuthenticatedProducaoRouteImport.update({
   id: '/producao',
   path: '/producao',
+  getParentRoute: () => AuthenticatedRouteRoute,
+} as any)
+const AuthenticatedRelatoriosRoute = AuthenticatedRelatoriosRouteImport.update({
+  id: '/relatorios',
+  path: '/relatorios',
   getParentRoute: () => AuthenticatedRouteRoute,
 } as any)
 const AuthenticatedClientesIndexRoute =
@@ -89,8 +114,12 @@ export interface FileRoutesByFullPath {
   '/': typeof IndexRoute
   '/auth': typeof AuthRoute
   '/reset-password': typeof ResetPasswordRoute
+  '/configuracoes': typeof AuthenticatedConfiguracoesRoute
+  '/despesas': typeof AuthenticatedDespesasRoute
+  '/mais': typeof AuthenticatedMaisRoute
   '/painel': typeof AuthenticatedPainelRoute
   '/producao': typeof AuthenticatedProducaoRoute
+  '/relatorios': typeof AuthenticatedRelatoriosRoute
   '/clientes/$id': typeof AuthenticatedClientesIdRoute
   '/pedidos/$id': typeof AuthenticatedPedidosIdRoute
   '/produtos/$id': typeof AuthenticatedProdutosIdRoute
@@ -102,8 +131,12 @@ export interface FileRoutesByTo {
   '/': typeof IndexRoute
   '/auth': typeof AuthRoute
   '/reset-password': typeof ResetPasswordRoute
+  '/configuracoes': typeof AuthenticatedConfiguracoesRoute
+  '/despesas': typeof AuthenticatedDespesasRoute
+  '/mais': typeof AuthenticatedMaisRoute
   '/painel': typeof AuthenticatedPainelRoute
   '/producao': typeof AuthenticatedProducaoRoute
+  '/relatorios': typeof AuthenticatedRelatoriosRoute
   '/clientes/$id': typeof AuthenticatedClientesIdRoute
   '/pedidos/$id': typeof AuthenticatedPedidosIdRoute
   '/produtos/$id': typeof AuthenticatedProdutosIdRoute
@@ -117,8 +150,12 @@ export interface FileRoutesById {
   '/_authenticated': typeof AuthenticatedRouteRouteWithChildren
   '/auth': typeof AuthRoute
   '/reset-password': typeof ResetPasswordRoute
+  '/_authenticated/configuracoes': typeof AuthenticatedConfiguracoesRoute
+  '/_authenticated/despesas': typeof AuthenticatedDespesasRoute
+  '/_authenticated/mais': typeof AuthenticatedMaisRoute
   '/_authenticated/painel': typeof AuthenticatedPainelRoute
   '/_authenticated/producao': typeof AuthenticatedProducaoRoute
+  '/_authenticated/relatorios': typeof AuthenticatedRelatoriosRoute
   '/_authenticated/clientes/$id': typeof AuthenticatedClientesIdRoute
   '/_authenticated/pedidos/$id': typeof AuthenticatedPedidosIdRoute
   '/_authenticated/produtos/$id': typeof AuthenticatedProdutosIdRoute
@@ -132,8 +169,12 @@ export interface FileRouteTypes {
     | '/'
     | '/auth'
     | '/reset-password'
+    | '/configuracoes'
+    | '/despesas'
+    | '/mais'
     | '/painel'
     | '/producao'
+    | '/relatorios'
     | '/clientes/$id'
     | '/pedidos/$id'
     | '/produtos/$id'
@@ -145,8 +186,12 @@ export interface FileRouteTypes {
     | '/'
     | '/auth'
     | '/reset-password'
+    | '/configuracoes'
+    | '/despesas'
+    | '/mais'
     | '/painel'
     | '/producao'
+    | '/relatorios'
     | '/clientes/$id'
     | '/pedidos/$id'
     | '/produtos/$id'
@@ -159,8 +204,12 @@ export interface FileRouteTypes {
     | '/_authenticated'
     | '/auth'
     | '/reset-password'
+    | '/_authenticated/configuracoes'
+    | '/_authenticated/despesas'
+    | '/_authenticated/mais'
     | '/_authenticated/painel'
     | '/_authenticated/producao'
+    | '/_authenticated/relatorios'
     | '/_authenticated/clientes/$id'
     | '/_authenticated/pedidos/$id'
     | '/_authenticated/produtos/$id'
@@ -206,6 +255,27 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof ResetPasswordRouteImport
       parentRoute: typeof rootRouteImport
     }
+    '/_authenticated/configuracoes': {
+      id: '/_authenticated/configuracoes'
+      path: '/configuracoes'
+      fullPath: '/configuracoes'
+      preLoaderRoute: typeof AuthenticatedConfiguracoesRouteImport
+      parentRoute: typeof AuthenticatedRouteRoute
+    }
+    '/_authenticated/despesas': {
+      id: '/_authenticated/despesas'
+      path: '/despesas'
+      fullPath: '/despesas'
+      preLoaderRoute: typeof AuthenticatedDespesasRouteImport
+      parentRoute: typeof AuthenticatedRouteRoute
+    }
+    '/_authenticated/mais': {
+      id: '/_authenticated/mais'
+      path: '/mais'
+      fullPath: '/mais'
+      preLoaderRoute: typeof AuthenticatedMaisRouteImport
+      parentRoute: typeof AuthenticatedRouteRoute
+    }
     '/_authenticated/painel': {
       id: '/_authenticated/painel'
       path: '/painel'
@@ -218,6 +288,13 @@ declare module '@tanstack/react-router' {
       path: '/producao'
       fullPath: '/producao'
       preLoaderRoute: typeof AuthenticatedProducaoRouteImport
+      parentRoute: typeof AuthenticatedRouteRoute
+    }
+    '/_authenticated/relatorios': {
+      id: '/_authenticated/relatorios'
+      path: '/relatorios'
+      fullPath: '/relatorios'
+      preLoaderRoute: typeof AuthenticatedRelatoriosRouteImport
       parentRoute: typeof AuthenticatedRouteRoute
     }
     '/_authenticated/clientes/': {
@@ -266,8 +343,12 @@ declare module '@tanstack/react-router' {
 }
 
 interface AuthenticatedRouteRouteChildren {
+  AuthenticatedConfiguracoesRoute: typeof AuthenticatedConfiguracoesRoute
+  AuthenticatedDespesasRoute: typeof AuthenticatedDespesasRoute
+  AuthenticatedMaisRoute: typeof AuthenticatedMaisRoute
   AuthenticatedPainelRoute: typeof AuthenticatedPainelRoute
   AuthenticatedProducaoRoute: typeof AuthenticatedProducaoRoute
+  AuthenticatedRelatoriosRoute: typeof AuthenticatedRelatoriosRoute
   AuthenticatedClientesIdRoute: typeof AuthenticatedClientesIdRoute
   AuthenticatedPedidosIdRoute: typeof AuthenticatedPedidosIdRoute
   AuthenticatedProdutosIdRoute: typeof AuthenticatedProdutosIdRoute
@@ -277,8 +358,12 @@ interface AuthenticatedRouteRouteChildren {
 }
 
 const AuthenticatedRouteRouteChildren: AuthenticatedRouteRouteChildren = {
+  AuthenticatedConfiguracoesRoute: AuthenticatedConfiguracoesRoute,
+  AuthenticatedDespesasRoute: AuthenticatedDespesasRoute,
+  AuthenticatedMaisRoute: AuthenticatedMaisRoute,
   AuthenticatedPainelRoute: AuthenticatedPainelRoute,
   AuthenticatedProducaoRoute: AuthenticatedProducaoRoute,
+  AuthenticatedRelatoriosRoute: AuthenticatedRelatoriosRoute,
   AuthenticatedClientesIdRoute: AuthenticatedClientesIdRoute,
   AuthenticatedPedidosIdRoute: AuthenticatedPedidosIdRoute,
   AuthenticatedProdutosIdRoute: AuthenticatedProdutosIdRoute,

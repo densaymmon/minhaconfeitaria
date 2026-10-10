@@ -17,6 +17,8 @@ import { Switch } from "@/components/ui/switch";
 export const Route = createFileRoute("/_authenticated/pedidos/$id")({
   head: () => ({
     meta: [
+      { property: "og:type", content: "website" },
+      { name: "twitter:card", content: "summary_large_image" },
       { title: "Pedido — Doce Gestão" },
       { name: "description", content: "Cadastro e edição de encomenda." },
       { property: "og:title", content: "Pedido — Doce Gestão" },
@@ -112,8 +114,8 @@ function PedidoForm() {
   );
 
   async function salvar() {
-    if (itens.length === 0) return toast.error("Adicione pelo menos um item.");
-    if (itens.some((i) => !i.descricao.trim() || parseNum(i.quantidade) <= 0)) return toast.error("Confira os itens: descrição e quantidade são obrigatórias.");
+    if (itens.length === 0) return void toast.error("Adicione pelo menos um item.");
+    if (itens.some((i) => !i.descricao.trim() || parseNum(i.quantidade) <= 0)) return void toast.error("Confira os itens: descrição e quantidade são obrigatórias.");
     setSalvando(true);
     try {
       const payload = {
@@ -128,32 +130,17 @@ function PedidoForm() {
         taxa_entrega: parseNum(f.taxa_entrega),
         observacoes: f.observacoes.trim() || null,
       };
-      let pedidoId = existente?.id;
-      if (pedidoId) {
-        const { error } = await supabase.from("pedidos").update(payload).eq("id", pedidoId);
-        if (error) throw error;
-        const { error: e2 } = await supabase.from("pedido_itens").delete().eq("pedido_id", pedidoId);
-        if (e2) throw e2;
-      } else {
-        const { data, error } = await supabase.from("pedidos").insert(payload).select("id, numero").single();
-        if (error) throw error;
-        pedidoId = data.id;
-      }
-      const { error: e3 } = await supabase.from("pedido_itens").insert(
-        itens.map((i) => {
-          const qtd = parseNum(i.quantidade);
-          return {
-            pedido_id: pedidoId!,
-            produto_id: i.produto_id,
-            descricao: i.descricao.trim(),
-            quantidade: qtd,
-            preco_unitario: parseNum(i.preco_unitario),
-            custo_unitario: i.custo_unitario,
-            quantidade_produzida: Math.min(i.quantidade_produzida, qtd),
-          };
-        }),
-      );
-      if (e3) throw e3;
+      const { error } = await supabase.rpc("salvar_pedido", {
+        payload,
+        itens: itens.map((i) => ({
+          produto_id: i.produto_id, descricao: i.descricao.trim(),
+          quantidade: parseNum(i.quantidade), preco_unitario: parseNum(i.preco_unitario),
+          custo_unitario: i.custo_unitario,
+          quantidade_produzida: Math.min(i.quantidade_produzida, parseNum(i.quantidade)),
+        })),
+        ...(existente ? { registro_id: existente.id } : {}),
+      });
+      if (error) throw error;
       await qc.invalidateQueries({ queryKey: ["pedidos"] });
       toast.success(novo ? "Pedido criado!" : "Pedido atualizado!");
       navigate({ to: "/pedidos" });
@@ -167,7 +154,7 @@ function PedidoForm() {
   async function excluir() {
     if (!existente || !confirm(`Excluir o pedido #${existente.numero}?`)) return;
     const { error } = await supabase.from("pedidos").delete().eq("id", existente.id);
-    if (error) return toast.error(error.message);
+    if (error) return void toast.error(error.message);
     await qc.invalidateQueries({ queryKey: ["pedidos"] });
     toast.success("Pedido excluído.");
     navigate({ to: "/pedidos" });
@@ -178,7 +165,7 @@ function PedidoForm() {
 
   return (
     <>
-      <PageHeader title={novo ? "Novo pedido" : `Pedido #${existente!.numero}`} back="/pedidos" />
+      <PageHeader title={novo ? "Novo pedido" : `Pedido #${existente?.numero}`} back="/pedidos" />
       <div className="space-y-4">
         <Card className="space-y-3">
           <Field label="Cliente">

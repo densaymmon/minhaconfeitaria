@@ -5,6 +5,8 @@ export const Route = createFileRoute("/")({
   ssr: false,
   head: () => ({
     meta: [
+      { property: "og:type", content: "website" },
+      { name: "twitter:card", content: "summary_large_image" },
       { title: "Doce Gestão — Sistema da confeitaria" },
       { name: "description", content: "Pedidos, produção, receitas e finanças da sua confeitaria artesanal em um só lugar." },
       { property: "og:title", content: "Doce Gestão — Sistema da confeitaria" },

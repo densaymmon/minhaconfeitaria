@@ -5,12 +5,15 @@ import { CakeSlice } from "lucide-react";
 import { supabase } from "@/integrations/supabase/client";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
+import bakeryImage from "@/assets/confeitaria.jpg";
 import { Field } from "@/components/app/ui";
 
 export const Route = createFileRoute("/auth")({
   ssr: false,
   head: () => ({
     meta: [
+      { property: "og:type", content: "website" },
+      { name: "twitter:card", content: "summary_large_image" },
       { title: "Entrar — Doce Gestão" },
       { name: "description", content: "Acesso exclusivo da proprietária ao sistema da confeitaria." },
       { property: "og:title", content: "Entrar — Doce Gestão" },
@@ -67,16 +70,17 @@ function AuthPage() {
   }
 
   return (
-    <div className="min-h-screen bg-hero px-5 py-10">
+    <div className="min-h-screen bg-background px-5 py-10">
       <div className="mx-auto max-w-sm">
-        <div className="mb-8 text-center text-primary-foreground">
-          <div className="mx-auto mb-3 grid size-16 place-items-center rounded-2xl bg-primary-foreground/15">
+        <div className="mb-8 text-center text-foreground">
+          <div className="mx-auto mb-3 grid size-16 place-items-center rounded-2xl bg-accent text-primary">
             <CakeSlice className="size-8" />
           </div>
           <h1 className="text-3xl font-semibold">Doce Gestão</h1>
           <p className="mt-1 text-sm opacity-80">O caderno digital da sua confeitaria</p>
         </div>
-        <form onSubmit={enviar} className="space-y-4 rounded-2xl bg-card p-5 shadow-soft">
+        <img src={bakeryImage} width={1152} height={576} alt="Bolo caseiro, pão italiano e baguetes artesanais" className="mb-6 w-full rounded-lg" />
+        <form onSubmit={enviar} className="space-y-4">
           <h2 className="text-xl font-semibold">
             {modo === "entrar" ? "Entrar" : modo === "criar" ? "Primeiro acesso" : "Recuperar senha"}
           </h2>
@@ -106,17 +110,17 @@ function AuthPage() {
           </Button>
           <div className="flex justify-between text-sm">
             {modo !== "entrar" ? (
-              <button type="button" className="text-primary" onClick={() => setModo("entrar")}>
+              <Button variant="link" type="button" onClick={() => setModo("entrar")}>
                 Voltar para entrar
-              </button>
+              </Button>
             ) : (
               <>
-                <button type="button" className="text-muted-foreground" onClick={() => setModo("esqueci")}>
+                <Button variant="link" type="button" onClick={() => setModo("esqueci")}>
                   Esqueci a senha
-                </button>
-                <button type="button" className="text-primary" onClick={() => setModo("criar")}>
+                </Button>
+                <Button variant="link" type="button" onClick={() => setModo("criar")}>
                   Primeiro acesso
-                </button>
+                </Button>
               </>
             )}
           </div>

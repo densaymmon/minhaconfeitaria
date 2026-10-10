@@ -12,6 +12,8 @@ import { cn } from "@/lib/utils";
 export const Route = createFileRoute("/_authenticated/pedidos/")({
   head: () => ({
     meta: [
+      { property: "og:type", content: "website" },
+      { name: "twitter:card", content: "summary_large_image" },
       { title: "Pedidos — Doce Gestão" },
       { name: "description", content: "Lista e busca de encomendas." },
       { property: "og:title", content: "Pedidos — Doce Gestão" },

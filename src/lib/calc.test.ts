@@ -63,3 +63,9 @@ describe("utilitários", () => {
     expect(parseNum("3.75")).toBe(3.75);
   });
 });
+
+describe("proteção do CSV", () => {
+ it("neutraliza fórmulas em campos de texto", () => {
+  expect(toCSV(["Nome"], [["=HYPERLINK(1)"]])).toContain("'=HYPERLINK(1)");
+ });
+});
