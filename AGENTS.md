@@ -17,3 +17,5 @@
 
 - Expose read-only MCP tools through the SDK TanStack plugin with OAuth caller tokens and a shared RLS client; agents must never bypass owner isolation.
 - Preserve canonical same-origin OAuth consent return paths through login and signup so external authorization can complete safely.
+
+- Interpret order messages through an authenticated server function with strict structured output and server-scoped product matching; apply only after review and save through the existing transactional order RPC.

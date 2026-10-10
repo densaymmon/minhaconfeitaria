@@ -1,3 +1,5 @@
+import { OrderMessage } from "@/components/app/order-message";
+import type { OrderDraft } from "@/lib/order-draft";
 import * as appQueries from "@/lib/queries";
 import { createFileRoute, Link, useNavigate } from "@tanstack/react-router";
 import { useQueryClient, useSuspenseQuery } from "@tanstack/react-query";
@@ -118,7 +120,25 @@ function PedidoForm() {
     config,
   );
 
+  function aplicarRascunho(draft: OrderDraft) {
+    if (itens.length && !confirm("Substituir os itens atuais pelo rascunho da mensagem?")) return;
+    setItens(draft.itens.map(item => {
+      const product = produtos.find(p => p.id === item.produto_id);
+      return {
+        produto_id: product?.id ?? null,
+        descricao: [item.produto, item.personalizacao].filter(Boolean).join(" — "),
+        quantidade: item.quantidade === null ? "" : String(item.quantidade),
+        preco_unitario: String(product?.preco_venda ?? 0),
+        custo_unitario: product ? +(custo.get(product.id) ?? 0).toFixed(4) : 0,
+        quantidade_produzida: 0,
+      };
+    }));
+    setF(current => ({ ...current, data_entrega: draft.data_desejada ?? "", hora_entrega: draft.horario ?? "", observacoes: [draft.observacoes, draft.duvidas.length ? "A confirmar: " + draft.duvidas.join(" ") : null].filter(Boolean).join("\n") }));
+    toast.success("Rascunho preenchido. Revise os dados antes de salvar.");
+  }
+
   async function salvar() {
+    if (!f.data_entrega) return void toast.error("Informe a data de entrega antes de salvar.");
     if (itens.length === 0) return void toast.error("Adicione pelo menos um item.");
     if (itens.some((i) => !i.descricao.trim() || parseNum(i.quantidade) <= 0)) return void toast.error("Confira os itens: descrição e quantidade são obrigatórias.");
     setSalvando(true);
@@ -171,6 +191,7 @@ function PedidoForm() {
   return (
     <>
       <PageHeader title={novo ? "Novo pedido" : `Pedido #${existente?.numero}`} back="/pedidos" />
+      {novo && <OrderMessage onApply={aplicarRascunho} />}
       <div className="space-y-4">
         <Card className="space-y-3">
           <Field label="Cliente">
