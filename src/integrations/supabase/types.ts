@@ -109,9 +109,12 @@ export type Database = {
           created_at: string
           id: string
           nome: string
+          preco_embalagem: number | null
           preco_unidade: number
+          quantidade_embalagem: number | null
           tipo: string
           unidade: string
+          unidade_embalagem: string | null
           updated_at: string
           user_id: string
         }
@@ -119,9 +122,12 @@ export type Database = {
           created_at?: string
           id?: string
           nome: string
+          preco_embalagem?: number | null
           preco_unidade?: number
+          quantidade_embalagem?: number | null
           tipo?: string
           unidade?: string
+          unidade_embalagem?: string | null
           updated_at?: string
           user_id?: string
         }
@@ -129,9 +135,12 @@ export type Database = {
           created_at?: string
           id?: string
           nome?: string
+          preco_embalagem?: number | null
           preco_unidade?: number
+          quantidade_embalagem?: number | null
           tipo?: string
           unidade?: string
+          unidade_embalagem?: string | null
           updated_at?: string
           user_id?: string
         }
@@ -267,6 +276,7 @@ export type Database = {
           ativo: boolean
           categoria: string
           created_at: string
+          custo_alterado_em: string | null
           custo_energia: number
           custo_gas: number
           custo_mao_obra: number
@@ -282,6 +292,7 @@ export type Database = {
           ativo?: boolean
           categoria?: string
           created_at?: string
+          custo_alterado_em?: string | null
           custo_energia?: number
           custo_gas?: number
           custo_mao_obra?: number
@@ -297,6 +308,7 @@ export type Database = {
           ativo?: boolean
           categoria?: string
           created_at?: string
+          custo_alterado_em?: string | null
           custo_energia?: number
           custo_gas?: number
           custo_mao_obra?: number
@@ -316,6 +328,8 @@ export type Database = {
           insumo_id: string
           produto_id: string
           quantidade: number
+          quantidade_utilizada: number | null
+          unidade_receita: string | null
           user_id: string
         }
         Insert: {
@@ -323,6 +337,8 @@ export type Database = {
           insumo_id: string
           produto_id: string
           quantidade?: number
+          quantidade_utilizada?: number | null
+          unidade_receita?: string | null
           user_id?: string
         }
         Update: {
@@ -330,6 +346,8 @@ export type Database = {
           insumo_id?: string
           produto_id?: string
           quantidade?: number
+          quantidade_utilizada?: number | null
+          unidade_receita?: string | null
           user_id?: string
         }
         Relationships: [
@@ -354,6 +372,8 @@ export type Database = {
       [_ in never]: never
     }
     Functions: {
+      medida_base: { Args: { u: string }; Returns: string }
+      medida_fator: { Args: { u: string }; Returns: number }
       salvar_pedido: {
         Args: { itens: Json; payload: Json; registro_id?: string }
         Returns: string
