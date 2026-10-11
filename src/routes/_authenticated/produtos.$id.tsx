@@ -168,7 +168,7 @@ function ProdutoForm() {
                   <Input inputMode="decimal" value={it.quantidade} onChange={(e) => setItens((s) => s.map((x,j) => j === i ? { ...x, quantidade: e.target.value } : x))} className="h-11" />
                 </Field>
                 <Field label="Unidade utilizada">
-                  <NativeSelect value={it.unidade_receita} onChange={(e) => setItens((s) => s.map((x,j) => j === i ? { ...x, unidade_receita: e.target.value } : x))}>
+                  <NativeSelect aria-label="Unidade utilizada" value={it.unidade_receita} onChange={(e) => { const value = e.target.value; setItens((s) => s.map((x,j) => j === i ? { ...x, unidade_receita: value } : x)); }}>
                     {medidasCompativeis(ins?.unidade_embalagem ?? ins?.unidade ?? "un").map((u) => <option key={u} value={u}>{medidaLabel(u)}</option>)}
                   </NativeSelect>
                 </Field>
