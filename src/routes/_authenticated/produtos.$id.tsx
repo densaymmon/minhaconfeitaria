@@ -139,12 +139,7 @@ function ProdutoForm() {
         </Card>
 
         <Card className="space-y-3">
-          <div className="flex items-center justify-between">
-            <h2 className="text-lg font-semibold">Ingredientes e embalagens</h2>
-            <Button size="sm" variant="outline" disabled={insumos.length === 0} onClick={() => setItens((s) => [...s, { insumo_id: insumos[0]?.id ?? "", quantidade: "", unidade_receita: insumos[0]?.unidade_embalagem ?? insumos[0]?.unidade ?? "un" }])}>
-              <Plus className="size-4" /> Insumo
-            </Button>
-          </div>
+          <h2 className="text-lg font-semibold">Ingredientes e embalagens</h2>
           {insumos.length === 0 && (
             <p className="text-sm text-muted-foreground">
               Cadastre os insumos primeiro na aba <Link to="/produtos" className="text-primary">Insumos</Link>.
@@ -177,6 +172,9 @@ function ProdutoForm() {
               </div>
             );
           })}
+          <Button size="sm" variant="outline" disabled={insumos.length === 0} onClick={() => setItens((s) => [...s, { insumo_id: insumos[0]?.id ?? "", quantidade: "", unidade_receita: insumos[0]?.unidade_embalagem ?? insumos[0]?.unidade ?? "un" }])}>
+            <Plus className="size-4" /> Insumo
+          </Button>
           {erroReceita && <p role="alert" className="text-sm text-destructive">{erroReceita}</p>}
         </Card>
 
