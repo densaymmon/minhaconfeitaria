@@ -10,6 +10,7 @@
 <!-- LOVABLE:END -->
 
 ## Application rules
+- Ingredient costs use precise package price/quantity and explicit recipe units through the shared pure conversion module; legacy numeric projections remain for compatibility, and database triggers validate dimensions and flag affected recipes without touching order snapshots.
 - Keep private pages under the authenticated layout and prefill TanStack Query caches in loaders; private reads remain scoped by database RLS.
 - Save orders and recipe ingredients through transactional, invoker-security database RPCs; partial saves must never delete previous items.
 - Preserve order item cost snapshots when ingredient prices change; historical profitability must not change with current supplier prices.
