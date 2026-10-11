@@ -1,7 +1,13 @@
 // Cálculos de custo, preço e lucro — funções puras (testadas em calc.test.ts).
 
-export type InsumoLite = { id: string; preco_unidade: number };
-export type ReceitaItemLite = { insumo_id: string; quantidade: number };
+import { custoProporcional, type Embalagem } from "./ingredient-cost";
+export type InsumoLite = Embalagem & { id: string };
+export type ReceitaItemLite = { insumo_id: string; quantidade: number; quantidade_utilizada?: number | null; unidade_receita?: string | null };
+export function custoItemReceita(item: ReceitaItemLite, ins: InsumoLite | undefined) {
+  if (!ins) return 0;
+  if (!ins.unidade && !ins.unidade_embalagem) return item.quantidade * ins.preco_unidade;
+  return custoProporcional(ins, item.quantidade_utilizada ?? item.quantidade, item.unidade_receita ?? ins.unidade ?? ins.unidade_embalagem ?? "un");
+}
 export type ProdutoLite = {
   rendimento: number;
   custo_gas: number;
@@ -19,7 +25,7 @@ export function custoReceita(
   insumos: Map<string, InsumoLite>,
 ) {
   const ingredientes = itens.reduce(
-    (s, i) => s + n(i.quantidade) * n(insumos.get(i.insumo_id)?.preco_unidade),
+    (s, i) => s + custoItemReceita(i, insumos.get(i.insumo_id)),
     0,
   );
   const operacionais = n(produto.custo_gas) + n(produto.custo_energia) + n(produto.custo_mao_obra);

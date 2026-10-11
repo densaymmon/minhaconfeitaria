@@ -6,12 +6,13 @@ import { toast } from "sonner";
 import { Plus, Trash2 } from "lucide-react";
 import { supabase } from "@/integrations/supabase/client";
 import { useCustos } from "@/lib/hooks";
-import { custoReceita, margemReal, precoSugerido } from "@/lib/calc";
-import { CATEGORIAS, brl, parseNum, pct } from "@/lib/format";
+import { custoReceita, custoItemReceita, margemReal, precoSugerido } from "@/lib/calc";
+import { CATEGORIAS, brl, parseNum, pct, dataBR } from "@/lib/format";
 import { Card, Field, NativeSelect, PageHeader, Row } from "@/components/app/ui";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Textarea } from "@/components/ui/textarea";
+import { medidasCompativeis, medidaLabel, numeroIngrediente, custoPorMedida } from "@/lib/ingredient-cost";
 import { Switch } from "@/components/ui/switch";
 
 export const Route = createFileRoute("/_authenticated/produtos/$id")({
@@ -52,7 +53,7 @@ function ProdutoForm() {
     modo_preparo: p?.modo_preparo ?? "",
     ativo: p?.ativo ?? true,
   }));
-  const [itens, setItens] = useState(() => p?.receita_itens.map((i) => ({ insumo_id: i.insumo_id, quantidade: String(i.quantidade) })) ?? []);
+  const [itens, setItens] = useState(() => p?.receita_itens.map((i) => ({ insumo_id: i.insumo_id, quantidade: String(i.quantidade_utilizada ?? i.quantidade), unidade_receita: i.unidade_receita ?? mapIns.get(i.insumo_id)?.unidade ?? "un" })) ?? []);
   const [salvando, setSalvando] = useState(false);
 
   if (!novo && !p) return <p className="py-16 text-center text-muted-foreground">Produto não encontrado. <Link to="/produtos" className="text-primary">Voltar</Link></p>;
@@ -64,14 +65,20 @@ function ProdutoForm() {
     custo_energia: parseNum(f.custo_energia),
     custo_mao_obra: parseNum(f.custo_mao_obra),
   };
-  const itensNum = itens.filter((i) => i.insumo_id).map((i) => ({ insumo_id: i.insumo_id, quantidade: parseNum(i.quantidade) }));
-  const cr = custoReceita(prodNum, itensNum, mapIns);
+  const itensNum = itens.filter((i) => i.insumo_id).map((i) => ({ insumo_id: i.insumo_id, quantidade: numeroIngrediente(i.quantidade), quantidade_utilizada: numeroIngrediente(i.quantidade), unidade_receita: i.unidade_receita }));
+  let erroReceita = "";
+  let cr = { ingredientes: 0, operacionais: 0, total: 0 };
+  try {
+    cr = custoReceita(prodNum, itensNum, mapIns);
+    if (itensNum.some((i) => !Number.isFinite(i.quantidade) || i.quantidade <= 0)) erroReceita = "Informe quantidade utilizada maior que zero para cada ingrediente.";
+  } catch (e) { erroReceita = e instanceof Error ? e.message : "Confira as medidas da receita."; }
   const unit = cr.total / prodNum.rendimento;
   const sugerido = precoSugerido(unit, parseNum(f.margem_desejada));
   const preco = parseNum(f.preco_venda);
 
   async function salvar() {
     if (!f.nome.trim()) return void toast.error("Informe o nome do produto.");
+    if (erroReceita) return void toast.error(erroReceita);
     setSalvando(true);
     try {
       const payload = {
@@ -110,6 +117,7 @@ function ProdutoForm() {
     <>
       <PageHeader title={novo ? "Novo produto" : p?.nome ?? "Produto"} back="/produtos" />
       <div className="space-y-4">
+        {p?.custo_alterado_em && <p className="text-sm text-warning-foreground">Custo dos ingredientes atualizado em {dataBR(p.custo_alterado_em)}.</p>}
         <Card className="space-y-3">
           <Field label="Nome do produto">
             <Input value={f.nome} onChange={(e) => set("nome", e.target.value)} className="h-11" placeholder="Ex.: Bolo de cenoura com chocolate" />
@@ -133,7 +141,7 @@ function ProdutoForm() {
         <Card className="space-y-3">
           <div className="flex items-center justify-between">
             <h2 className="text-lg font-semibold">Ingredientes e embalagens</h2>
-            <Button size="sm" variant="outline" disabled={insumos.length === 0} onClick={() => setItens((s) => [...s, { insumo_id: insumos[0]?.id ?? "", quantidade: "" }])}>
+            <Button size="sm" variant="outline" disabled={insumos.length === 0} onClick={() => setItens((s) => [...s, { insumo_id: insumos[0]?.id ?? "", quantidade: "", unidade_receita: insumos[0]?.unidade_embalagem ?? insumos[0]?.unidade ?? "un" }])}>
               <Plus className="size-4" /> Insumo
             </Button>
           </div>
@@ -144,35 +152,32 @@ function ProdutoForm() {
           )}
           {itens.map((it, i) => {
             const ins = mapIns.get(it.insumo_id);
-            const meta = insumos.find((x) => x.id === it.insumo_id);
+            let valor: number | null = null;
+            try { valor = custoItemReceita({ insumo_id: it.insumo_id, quantidade: numeroIngrediente(it.quantidade), unidade_receita: it.unidade_receita }, ins); } catch { /* pending invalid input */ }
+            const u = ins ? custoPorMedida(ins) : null;
             return (
-              <div key={i} className="flex items-end gap-2">
-                <div className="flex-1">
-                  <NativeSelect value={it.insumo_id} onChange={(e) => setItens((s) => s.map((x, j) => (j === i ? { ...x, insumo_id: e.target.value } : x)))}>
-                    {insumos.map((x) => <option key={x.id} value={x.id}>{x.nome}</option>)}
+              <div key={i} className="space-y-2 border-b pb-3">
+                <div className="flex gap-2">
+                  <NativeSelect aria-label="Ingrediente da receita" value={it.insumo_id} onChange={(e) => {
+                    const id = e.target.value;
+                    setItens((s) => s.map((x, j) => j === i ? { ...x, insumo_id: id, unidade_receita: mapIns.get(id)?.unidade_embalagem ?? mapIns.get(id)?.unidade ?? "un" } : x));
+                  }}>{insumos.map((x) => <option key={x.id} value={x.id}>{x.nome}</option>)}</NativeSelect>
+                  <Button size="icon" variant="ghost" className="h-11 w-11 shrink-0" onClick={() => setItens((s) => s.filter((_, j) => j !== i))} aria-label="Remover"><Trash2 className="size-4 text-destructive" /></Button>
+                </div>
+                <Field label="Quantidade utilizada na receita">
+                  <Input inputMode="decimal" value={it.quantidade} onChange={(e) => setItens((s) => s.map((x,j) => j === i ? { ...x, quantidade: e.target.value } : x))} className="h-11" />
+                </Field>
+                <Field label="Unidade utilizada">
+                  <NativeSelect aria-label="Unidade utilizada" value={it.unidade_receita} onChange={(e) => { const value = e.target.value; setItens((s) => s.map((x,j) => j === i ? { ...x, unidade_receita: value } : x)); }}>
+                    {medidasCompativeis(ins?.unidade_embalagem ?? ins?.unidade ?? "un").map((u) => <option key={u} value={u}>{medidaLabel(u)}</option>)}
                   </NativeSelect>
-                  <div className="mt-0.5 text-[11px] text-muted-foreground">
-                    {brl(parseNum(it.quantidade) * (ins?.preco_unidade ?? 0))}
-                  </div>
-                </div>
-                <div className="w-24">
-                  <Input
-                    inputMode="decimal"
-                    placeholder={meta?.unidade}
-                    value={it.quantidade}
-                    onChange={(e) => setItens((s) => s.map((x, j) => (j === i ? { ...x, quantidade: e.target.value } : x)))}
-                    className="h-11"
-                    aria-label="Quantidade"
-                  />
-                  <div className="mt-0.5 text-center text-[11px] text-muted-foreground">{meta?.unidade}</div>
-                </div>
-                <Button size="icon" variant="ghost" className="mb-5" onClick={() => setItens((s) => s.filter((_, j) => j !== i))} aria-label="Remover">
-                  <Trash2 className="size-4 text-destructive" />
-                </Button>
+                </Field>
+                {u && <p className="text-xs text-muted-foreground">Custo unitário: {brl(u.custo)} / {medidaLabel(u.unidade)}</p>}
+                <p className="text-sm font-medium">Custo na receita: {valor === null ? "—" : brl(valor)}</p>
               </div>
             );
           })}
-          <p className="text-xs text-muted-foreground">Informe a quantidade na mesma unidade do insumo (ex.: 0,5 kg de farinha).</p>
+          {erroReceita && <p role="alert" className="text-sm text-destructive">{erroReceita}</p>}
         </Card>
 
         <Card className="space-y-3">

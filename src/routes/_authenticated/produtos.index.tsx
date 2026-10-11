@@ -3,15 +3,16 @@ import { createFileRoute, Link } from "@tanstack/react-router";
 import { useQueryClient } from "@tanstack/react-query";
 import { useState } from "react";
 import { toast } from "sonner";
-import { Download, Plus, Trash2 } from "lucide-react";
+import { Download, Plus, Trash2, Pencil } from "lucide-react";
 import { supabase } from "@/integrations/supabase/client";
 import { useCustos } from "@/lib/hooks";
 import { margemReal } from "@/lib/calc";
-import { UNIDADES, brl, hojeISO, parseNum, pct } from "@/lib/format";
+import { brl, hojeISO, pct, dataBR } from "@/lib/format";
+import { custoPorMedida, medidaLabel } from "@/lib/ingredient-cost";
+import { IngredientForm } from "@/components/app/ingredient-form";
 import { baixarCSV } from "@/lib/csv";
-import { Card, Empty, Field, NativeSelect, PageHeader } from "@/components/app/ui";
+import { Card, Empty, PageHeader } from "@/components/app/ui";
 import { Button } from "@/components/ui/button";
-import { Input } from "@/components/ui/input";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import type { Insumo } from "@/lib/queries";
 
@@ -82,6 +83,7 @@ function Produtos() {
                         <div className="min-w-0">
                           <div className="truncate font-semibold">{p.nome}</div>
                           <div className="text-xs text-muted-foreground">{p.categoria}{!p.ativo && " · inativo"}</div>
+                           {p.custo_alterado_em && <div className="mt-1 text-xs text-warning-foreground">Custo atualizado em {dataBR(p.custo_alterado_em)}</div>}
                         </div>
                         <div className="text-right font-semibold">{brl(preco)}</div>
                       </div>
@@ -107,27 +109,7 @@ function Produtos() {
 
 function Insumos({ insumos }: { insumos: Insumo[] }) {
   const qc = useQueryClient();
-  const [novo, setNovo] = useState({ nome: "", tipo: "ingrediente", unidade: "kg", preco: "" });
-  const [precos, setPrecos] = useState<Record<string, string>>({});
-
-  async function adicionar(e: React.FormEvent) {
-    e.preventDefault();
-    if (!novo.nome.trim()) return void toast.error("Informe o nome do insumo.");
-    const { error } = await supabase.from("insumos").insert({ nome: novo.nome.trim(), tipo: novo.tipo, unidade: novo.unidade, preco_unidade: parseNum(novo.preco) });
-    if (error) return void toast.error(error.message);
-    setNovo({ ...novo, nome: "", preco: "" });
-    qc.invalidateQueries({ queryKey: ["insumos"] });
-    toast.success("Insumo adicionado!");
-  }
-
-  async function atualizarPreco(i: Insumo) {
-    const v = precos[i.id];
-    if (v === undefined || parseNum(v) === Number(i.preco_unidade)) return;
-    const { error } = await supabase.from("insumos").update({ preco_unidade: parseNum(v) }).eq("id", i.id);
-    if (error) return void toast.error(error.message);
-    await qc.invalidateQueries({ queryKey: ["insumos"] });
-    toast.success(`Preço de ${i.nome} atualizado — custos recalculados.`);
-  }
+  const [editando, setEditando] = useState<string | null>(null);
 
   async function excluir(i: Insumo) {
     if (!confirm(`Excluir ${i.nome}?`)) return;
@@ -139,55 +121,28 @@ function Insumos({ insumos }: { insumos: Insumo[] }) {
   return (
     <>
       <Card className="mb-4">
-        <form onSubmit={adicionar} className="space-y-3">
-          <h2 className="font-semibold">Novo insumo</h2>
-          <Input placeholder="Ex.: Farinha de trigo, Caixa de bolo, Ovos" value={novo.nome} onChange={(e) => setNovo({ ...novo, nome: e.target.value })} className="h-11" />
-          <div className="grid grid-cols-3 gap-2">
-            <Field label="Tipo">
-              <NativeSelect value={novo.tipo} onChange={(e) => setNovo({ ...novo, tipo: e.target.value })}>
-                <option value="ingrediente">Ingrediente</option>
-                <option value="embalagem">Embalagem</option>
-              </NativeSelect>
-            </Field>
-            <Field label="Unidade">
-              <NativeSelect value={novo.unidade} onChange={(e) => setNovo({ ...novo, unidade: e.target.value })}>
-                {UNIDADES.map((u) => <option key={u}>{u}</option>)}
-              </NativeSelect>
-            </Field>
-            <Field label="R$ / unid.">
-              <Input inputMode="decimal" value={novo.preco} onChange={(e) => setNovo({ ...novo, preco: e.target.value })} className="h-11" placeholder="0,00" />
-            </Field>
-          </div>
-          <Button className="h-11 w-full"><Plus className="size-4" /> Adicionar</Button>
-        </form>
+        <h2 className="mb-3 font-semibold">Novo insumo</h2>
+        <IngredientForm />
       </Card>
       {insumos.length === 0 ? (
         <Empty>Nenhum insumo cadastrado.</Empty>
       ) : (
         <div className="space-y-2">
-          {insumos.map((i) => (
-            <Card key={i.id} className="flex items-center gap-2 p-3">
-              <div className="min-w-0 flex-1">
-                <div className="truncate font-medium">{i.nome}</div>
-                <div className="text-xs text-muted-foreground">{i.tipo === "embalagem" ? "Embalagem" : "Ingrediente"} · por {i.unidade}</div>
+          {insumos.map((i) => {
+            const u = custoPorMedida(i);
+            return <Card key={i.id} className="p-3">
+              <div className="flex items-center gap-2">
+                <div className="min-w-0 flex-1">
+                  <div className="break-words font-medium">{i.nome}</div>
+                  <div className="text-xs text-muted-foreground">{brl(i.preco_embalagem ?? i.preco_unidade)} / {i.quantidade_embalagem ?? 1} {medidaLabel(i.unidade_embalagem ?? i.unidade)}</div>
+                  <div className="text-xs text-muted-foreground">Custo unitário: {brl(u.custo)} / {medidaLabel(u.unidade)}</div>
+                </div>
+                <Button size="icon" variant="ghost" onClick={() => setEditando(editando === i.id ? null : i.id)} aria-label={`Editar ${i.nome}`}><Pencil className="size-4" /></Button>
+                <Button size="icon" variant="ghost" onClick={() => excluir(i)} aria-label={`Excluir ${i.nome}`}><Trash2 className="size-4 text-destructive" /></Button>
               </div>
-              <div className="relative w-28">
-                <span className="absolute top-2.5 left-2 text-xs text-muted-foreground">R$</span>
-                <Input
-                  inputMode="decimal"
-                  aria-label={`Preço de ${i.nome}`}
-                  className="h-10 pl-7 text-right"
-                  value={precos[i.id] ?? String(Number(i.preco_unidade)).replace(".", ",")}
-                  onChange={(e) => setPrecos({ ...precos, [i.id]: e.target.value })}
-                  onBlur={() => atualizarPreco(i)}
-                />
-              </div>
-              <Button size="icon" variant="ghost" onClick={() => excluir(i)} aria-label="Excluir">
-                <Trash2 className="size-4 text-destructive" />
-              </Button>
-            </Card>
-          ))}
-          <p className="pt-1 text-center text-xs text-muted-foreground">Altere o preço e toque fora do campo para salvar.</p>
+              {editando === i.id && <div className="mt-3 border-t pt-3"><IngredientForm insumo={i} onDone={() => setEditando(null)} /></div>}
+            </Card>;
+          })}
         </div>
       )}
     </>
