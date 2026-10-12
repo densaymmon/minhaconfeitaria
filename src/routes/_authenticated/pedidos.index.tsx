@@ -37,7 +37,7 @@ function Pedidos() {
   const lista = useMemo(() => {
     const q = busca.trim().toLowerCase();
     return pedidos.filter((p) => {
-      if (status === "abertos" && ["entregue", "cancelado"].includes(p.status)) return false;
+      if (status === "abertos" && ["finalizado", "entregue", "cancelado"].includes(p.status)) return false;
       if (status !== "abertos" && status !== "todos" && p.status !== status) return false;
       if (!q) return true;
       return (
@@ -116,13 +116,16 @@ function Pedidos() {
       ) : (
         <div className="space-y-2">
           {lista.map((p) => {
-            const atrasado = p.data_entrega < hoje && !["entregue", "cancelado"].includes(p.status);
+            const atrasado = p.data_entrega < hoje && !["finalizado", "entregue", "cancelado"].includes(p.status);
             return (
               <Link key={p.id} to="/pedidos/$id" params={{ id: p.id }} className="block">
                 <Card className="p-3.5">
                   <div className="flex items-center justify-between gap-2">
                     <div className="font-semibold">#{p.numero} · {p.clientes?.nome ?? "Sem cliente"}</div>
-                    <StatusBadge status={p.status} />
+                    <div className="flex shrink-0 items-center gap-1.5">
+                      {p.t.venda > 0 && p.t.saldo <= 0 && <span className="rounded-full bg-success/15 px-2 py-0.5 text-xs font-semibold text-success">Pago</span>}
+                      <StatusBadge status={p.status} />
+                    </div>
                   </div>
                   <div className="mt-1 truncate text-xs text-muted-foreground">
                     {p.pedido_itens.map((i) => `${Number(i.quantidade)}× ${i.descricao}`).join(", ") || "Sem itens"}
