@@ -15,7 +15,6 @@ import { Card, Field, NativeSelect, PageHeader, Row } from "@/components/app/ui"
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Textarea } from "@/components/ui/textarea";
-import { Switch } from "@/components/ui/switch";
 
 export const Route = createFileRoute("/_authenticated/pedidos/$id")({
  loader: async ({ context }) => { await Promise.all([context.queryClient.ensureQueryData(appQueries.pedidosQ),context.queryClient.ensureQueryData(appQueries.configQ),context.queryClient.ensureQueryData(appQueries.clientesQ),context.queryClient.ensureQueryData(appQueries.produtosQ),context.queryClient.ensureQueryData(appQueries.insumosQ)]); },
@@ -276,14 +275,6 @@ function PedidoForm() {
                 <Field label="Preço un.">
                   <Input inputMode="decimal" value={it.preco_unitario} onChange={(e) => setItem(i, { preco_unitario: e.target.value })} className="h-11 bg-card" />
                 </Field>
-                <Field label="Custo un.">
-                  <Input
-                    inputMode="decimal"
-                    value={String(it.custo_unitario)}
-                    onChange={(e) => setItem(i, { custo_unitario: parseNum(e.target.value) })}
-                    className="h-11 bg-card"
-                  />
-                </Field>
               </div>
               <div className="text-right text-xs text-muted-foreground">
                 Total {brl(parseNum(it.quantidade) * parseNum(it.preco_unitario))}
@@ -305,7 +296,7 @@ function PedidoForm() {
             </NativeSelect>
           </Field>
           <div className="grid grid-cols-3 gap-2">
-            <Field label="Entrada R$">
+            <Field label="Valor pago R$">
               <Input inputMode="decimal" value={f.valor_entrada} onChange={(e) => set("valor_entrada", e.target.value)} className="h-11" />
             </Field>
             <Field label="Frete R$">
@@ -315,23 +306,15 @@ function PedidoForm() {
               <Input inputMode="decimal" value={f.desconto} onChange={(e) => set("desconto", e.target.value)} className="h-11" />
             </Field>
           </div>
-          <label className="flex items-center justify-between rounded-xl bg-muted/60 p-3">
-            <span className="text-sm font-medium">Saldo restante já foi pago</span>
-            <Switch checked={f.saldo_quitado} onCheckedChange={(v) => set("saldo_quitado", v)} />
-          </label>
         </Card>
 
         <Card>
-          <h2 className="mb-2 text-lg font-semibold">Resumo e lucro</h2>
-          <Row label="Subtotal dos itens" value={brl(t.subtotal)} />
-          <Row label="Valor vendido" value={brl(t.venda)} strong />
-          <Row label="Custo de produção" value={`− ${brl(t.custo)}`} />
-          <Row label="Lucro bruto" value={brl(t.lucroBruto)} tone={t.lucroBruto >= 0 ? "success" : "danger"} />
-          <Row label="Taxas e impostos" value={`− ${brl(t.taxas)}`} />
-          <Row label="Lucro líquido estimado" value={brl(t.lucroLiquido)} strong tone={t.lucroLiquido >= 0 ? "success" : "danger"} />
+          <h2 className="mb-2 text-lg font-semibold">Resumo do pedido</h2>
+          <Row label="Subtotal dos produtos" value={brl(t.subtotal)} />
+          <Row label="Frete" value={brl(parseNum(f.taxa_entrega))} />
+          <Row label="Descontos" value={`− ${brl(parseNum(f.desconto))}`} />
           <div className="my-2 border-t" />
-          <Row label="Recebido" value={brl(t.recebido)} />
-          <Row label="Saldo a receber" value={brl(t.saldo)} strong tone={t.saldo > 0 ? "danger" : undefined} />
+          <Row label="Total" value={brl(t.venda)} strong />
         </Card>
 
         <Card>
