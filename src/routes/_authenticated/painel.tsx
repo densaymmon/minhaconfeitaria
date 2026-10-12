@@ -39,6 +39,12 @@ function Painel() {
   const conta = (s: string[]) => pedidos.filter((p) => s.includes(p.status)).length;
 
   const faturamento = doMes.reduce((s, p) => s + p.t.venda, 0);
+  // "Finalizado" representa pedido entregue. Só contabiliza no caixa o valor efetivamente recebido desses pedidos.
+  const valorEmCaixa = ativos
+    .filter((p) => ["finalizado", "entregue"].includes(p.status))
+    .reduce((s, p) => s + p.t.recebido, 0);
+  // Saldo em aberto de todos os pedidos não cancelados, incluindo pedidos já finalizados com pagamento pendente.
+  const pedidosAReceber = ativos.reduce((s, p) => s + p.t.saldo, 0);
   const despesasMes = despesas.filter((d) => d.data.startsWith(mes)).reduce((s, d) => s + Number(d.valor), 0);
   const custos = doMes.reduce((s, p) => s + p.t.custo + p.t.taxas, 0) + despesasMes;
   const lucro = faturamento - custos;
@@ -85,6 +91,8 @@ function Painel() {
       )}
 
       <div className="mb-4 grid grid-cols-2 gap-3">
+        <Stat label="Valor em caixa" value={brl(valorEmCaixa)} tone="success" />
+        <Stat label="Pedidos a receber" value={brl(pedidosAReceber)} tone="primary" />
         <Stat label="Entregas hoje" value={doDia.length} />
         <Stat label="Pedidos no mês" value={doMes.length} />
         <Stat label="Recebidos" value={conta(["recebido"])} />
