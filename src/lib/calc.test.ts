@@ -1,7 +1,7 @@
 import { describe, expect, it } from "vitest";
 import { custoReceita, custoUnitario, margemReal, precoSugerido, totaisPedido, CONFIG_PADRAO } from "./calc";
 import { toCSV } from "./csv";
-import { parseNum } from "./format";
+import { parseNum, STATUS, statusLabel } from "./format";
 
 const insumos = new Map([
   ["farinha", { id: "farinha", preco_unidade: 6 }], // R$/kg
@@ -54,6 +54,11 @@ describe("pedido", () => {
 });
 
 describe("utilitários", () => {
+  it("usa entregue como status persistido e mantém o rótulo Finalizado", () => {
+    expect(STATUS.find((status) => status.label === "Finalizado")?.value).toBe("entregue");
+    expect(statusLabel("entregue")).toBe("Finalizado");
+    expect(statusLabel("finalizado")).toBe("Finalizado");
+  });
   it("CSV com ; e vírgula decimal", () => {
     expect(toCSV(["a", "b"], [["x;y", 1.5]])).toBe('a;b\r\n"x;y";1,5');
   });
