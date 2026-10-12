@@ -11,6 +11,11 @@ import { Input } from "@/components/ui/input";
 import { cn } from "@/lib/utils";
 
 export const Route = createFileRoute("/_authenticated/pedidos/")({
+ validateSearch: (search: Record<string, unknown>) => ({
+   filtro: typeof search.filtro === "string" ? search.filtro : undefined,
+   dataInicial: typeof search.dataInicial === "string" ? search.dataInicial : undefined,
+   dataFinal: typeof search.dataFinal === "string" ? search.dataFinal : undefined,
+ }),
  loader: async ({ context }) => { await Promise.all([context.queryClient.ensureQueryData(appQueries.pedidosQ),context.queryClient.ensureQueryData(appQueries.configQ)]); },
  errorComponent: ({error}) => <p role="alert" className="py-8 text-destructive">{error instanceof Error ? error.message : "Não foi possível carregar os registros."}</p>,
  notFoundComponent: () => <p>Registro não encontrado.</p>,
@@ -30,10 +35,11 @@ export const Route = createFileRoute("/_authenticated/pedidos/")({
 
 function Pedidos() {
   const pedidos = usePedidosCalc();
+  const search = Route.useSearch();
   const [busca, setBusca] = useState("");
-  const [status, setStatus] = useState<string>("abertos");
-  const [dataInicial, setDataInicial] = useState("");
-  const [dataFinal, setDataFinal] = useState("");
+  const [status, setStatus] = useState<string>(search.filtro === "em_andamento" ? "em_andamento" : search.filtro === "mes" ? "todos" : search.filtro === "todos" ? "todos" : "abertos");
+  const [dataInicial, setDataInicial] = useState(search.dataInicial ?? "");
+  const [dataFinal, setDataFinal] = useState(search.dataFinal ?? "");
   const hoje = hojeISO();
 
   const lista = useMemo(() => {
@@ -42,7 +48,8 @@ function Pedidos() {
       if (dataInicial && p.data_entrega < dataInicial) return false;
       if (dataFinal && p.data_entrega > dataFinal) return false;
       if (status === "abertos" && ["finalizado", "entregue", "cancelado"].includes(p.status)) return false;
-      if (status !== "abertos" && status !== "todos" && p.status !== status) return false;
+      if (status === "em_andamento" && !["recebido", "confirmado", "em_producao", "pronto"].includes(p.status)) return false;
+      if (status !== "abertos" && status !== "todos" && status !== "em_andamento" && p.status !== status) return false;
       if (!q) return true;
       return (
         String(p.numero) === q.replace("#", "") ||
@@ -77,7 +84,7 @@ function Pedidos() {
     );
   }
 
-  const filtros = [{ value: "abertos", label: "Em aberto" }, { value: "todos", label: "Todos" }, ...STATUS];
+  const filtros = [{ value: "abertos", label: "Em aberto" }, { value: "em_andamento", label: "Recebidos e em produção" }, { value: "todos", label: "Todos" }, ...STATUS];
 
   return (
     <>
