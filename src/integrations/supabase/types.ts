@@ -146,6 +146,12 @@ export type Database = {
         }
         Relationships: []
       }
+      compras: {
+        Row: { id: string; user_id: string; fornecedor: string | null; data_compra: string; numero_documento: string | null; chave_nfe: string | null; origem: string; status: string; subtotal: number; desconto: number; frete: number; total: number; observacoes: string | null; created_at: string; updated_at: string }
+        Insert: { id?: string; user_id?: string; fornecedor?: string | null; data_compra?: string; numero_documento?: string | null; chave_nfe?: string | null; origem?: string; status?: string; subtotal?: number; desconto?: number; frete?: number; total?: number; observacoes?: string | null; created_at?: string; updated_at?: string }
+        Update: { id?: string; user_id?: string; fornecedor?: string | null; data_compra?: string; numero_documento?: string | null; chave_nfe?: string | null; origem?: string; status?: string; subtotal?: number; desconto?: number; frete?: number; total?: number; observacoes?: string | null; created_at?: string; updated_at?: string }
+        Relationships: []
+      }
       owner_claim: {
         Row: {
           slot: boolean
