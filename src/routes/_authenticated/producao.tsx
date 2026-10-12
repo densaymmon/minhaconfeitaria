@@ -121,13 +121,13 @@ function Producao() {
   }, [pedidosAtivos]);
 
   const contagens = useMemo(() => ({
-    fila: pedidosOrdenados.filter((p) => STATUS_ATIVOS.includes(p.status)).length,
-    aProduzir: pedidosOrdenados.filter((p) => ["recebido", "confirmado"].includes(p.status)).length,
-    emProducao: pedidosOrdenados.filter((p) => p.status === "em_producao").length,
-    atrasados: pedidosOrdenados.filter((p) => estaAtrasado(p, agora)).length,
-    prontos: pedidosOrdenados.filter((p) => p.status === "pronto").length,
-    finalizados: pedidosOrdenados.filter((p) => STATUS_FINAIS.includes(p.status)).length,
-  }), [pedidosOrdenados, agora]);
+    fila: pedidosNoPeriodo.filter((p) => STATUS_ATIVOS.includes(p.status)).length,
+    aProduzir: pedidosNoPeriodo.filter((p) => ["recebido", "confirmado"].includes(p.status)).length,
+    emProducao: pedidosNoPeriodo.filter((p) => p.status === "em_producao").length,
+    atrasados: pedidosNoPeriodo.filter((p) => estaAtrasado(p, agora)).length,
+    prontos: pedidosNoPeriodo.filter((p) => p.status === "pronto").length,
+    finalizados: pedidosNoPeriodo.filter((p) => STATUS_FINAIS.includes(p.status)).length,
+  }), [pedidosNoPeriodo, agora]);
 
   const porData = useMemo(() => {
     const mapa = new Map<string, PedidoCalc[]>();
@@ -172,7 +172,7 @@ function Producao() {
     { value: "prontos", label: "Prontos", count: contagens.prontos },
     { value: "atrasados", label: "Atrasados", count: contagens.atrasados },
     { value: "finalizados", label: "Finalizados", count: contagens.finalizados },
-    { value: "todos", label: "Todos", count: pedidosOrdenados.length },
+    { value: "todos", label: "Todos", count: pedidosNoPeriodo.length },
   ];
 
   return (
@@ -308,7 +308,6 @@ function Producao() {
                   const atrasado = estaAtrasado(p, agora);
                   const total = p.pedido_itens.reduce((s, i) => s + Number(i.quantidade), 0);
                   const feito = p.pedido_itens.reduce((s, i) => s + Number(i.quantidade_produzida), 0);
-                  const pendente = Math.max(0, total - feito);
                   const percentual = total > 0 ? Math.min(100, (feito / total) * 100) : 0;
                   const ativo = STATUS_ATIVOS.includes(p.status);
                   return (
