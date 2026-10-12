@@ -3,7 +3,7 @@ import { createFileRoute, Link, useNavigate } from "@tanstack/react-router";
 import { useQueryClient } from "@tanstack/react-query";
 import { useState } from "react";
 import { toast } from "sonner";
-import { Plus, Trash2 } from "lucide-react";
+import { Copy, Plus, Trash2 } from "lucide-react";
 import { supabase } from "@/integrations/supabase/client";
 import { useCustos } from "@/lib/hooks";
 import { custoReceita, custoItemReceita, margemReal, precoSugerido } from "@/lib/calc";
@@ -55,6 +55,7 @@ function ProdutoForm() {
   }));
   const [itens, setItens] = useState(() => p?.receita_itens.map((i) => ({ insumo_id: i.insumo_id, quantidade: String(i.quantidade_utilizada ?? i.quantidade), unidade_receita: i.unidade_receita ?? mapIns.get(i.insumo_id)?.unidade ?? "un" })) ?? []);
   const [salvando, setSalvando] = useState(false);
+  const [duplicando, setDuplicando] = useState(false);
 
   if (!novo && !p) return <p className="py-16 text-center text-muted-foreground">Produto não encontrado. <Link to="/produtos" className="text-primary">Voltar</Link></p>;
 
@@ -92,11 +93,11 @@ function ProdutoForm() {
       };
       const { error } = await supabase.rpc("salvar_produto", {
         payload, itens: itensNum,
-        ...(p ? { registro_id: p.id } : {}),
+        ...(p && !duplicando ? { registro_id: p.id } : {}),
       });
       if (error) throw error;
       await qc.invalidateQueries({ queryKey: ["produtos"] });
-      toast.success("Produto salvo!");
+      toast.success(duplicando ? "Cópia criada com sucesso!" : "Produto salvo!");
       navigate({ to: "/produtos" });
     } catch (e) {
       toast.error((e as Error).message);
@@ -115,7 +116,7 @@ function ProdutoForm() {
 
   return (
     <>
-      <PageHeader title={novo ? "Novo produto" : p?.nome ?? "Produto"} back="/produtos" />
+      <PageHeader title={duplicando ? "Duplicar produto" : novo ? "Novo produto" : p?.nome ?? "Produto"} back="/produtos" />
       <div className="space-y-4">
         {p?.custo_alterado_em && <p className="text-sm text-warning-foreground">Custo dos ingredientes atualizado em {dataBR(p.custo_alterado_em)}.</p>}
         <Card className="space-y-3">
@@ -215,11 +216,32 @@ function ProdutoForm() {
           </Field>
         </Card>
 
-        <div className="flex gap-2">
-          {!novo && (
-            <Button variant="outline" className="h-12 text-destructive" onClick={excluir}><Trash2 className="size-4" /></Button>
+        <div className="flex flex-wrap gap-2">
+          {!novo && !duplicando && (
+            <>
+              <Button
+                variant="outline"
+                className="h-12"
+                onClick={() => {
+                  setF((s) => ({
+                    ...s,
+                    nome: s.nome.trim().toLowerCase().endsWith("(cópia)") ? s.nome : s.nome.trim() + " (cópia)",
+                    ativo: true,
+                  }));
+                  setDuplicando(true);
+                  toast.info("Cópia preparada. Edite os dados antes de salvar.");
+                }}
+              >
+                <Copy className="size-4" /> Duplicar produto
+              </Button>
+              <Button variant="outline" className="h-12 text-destructive" onClick={excluir} aria-label="Excluir produto">
+                <Trash2 className="size-4 text-destructive" />
+              </Button>
+            </>
           )}
-          <Button className="h-12 flex-1 text-base" onClick={salvar} disabled={salvando}>{salvando ? "Salvando..." : "Salvar produto"}</Button>
+          <Button className="h-12 flex-1 text-base" onClick={salvar} disabled={salvando}>
+            {salvando ? "Salvando..." : duplicando ? "Salvar como novo produto" : "Salvar produto"}
+          </Button>
         </div>
       </div>
     </>
