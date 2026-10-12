@@ -174,7 +174,7 @@ function PedidoForm() {
         cliente_id: f.cliente_id || null,
         data_entrega: f.data_entrega,
         hora_entrega: f.hora_entrega || null,
-        status: f.status,
+        status: f.status === "finalizado" ? "entregue" : f.status,
         forma_pagamento: f.forma_pagamento,
         valor_entrada: parseNum(f.valor_entrada),
         saldo_quitado: f.saldo_quitado,
@@ -203,13 +203,17 @@ function PedidoForm() {
     }
   }
 
-  async function alterarStatusPedido(status: "recebido" | "em_producao" | "finalizado") {
+  async function alterarStatusPedido(status: "recebido" | "em_producao" | "entregue") {
     if (!existente || status === f.status) return;
-    const { error } = await supabase.from("pedidos").update({ status }).eq("id", existente.id);
-    if (error) return void toast.error(error.message);
-    set("status", status);
-    await qc.invalidateQueries({ queryKey: ["pedidos"] });
-    toast.success(`Status do pedido #${existente.numero} alterado para ${statusLabel(status)}.`);
+    try {
+      const { error } = await supabase.from("pedidos").update({ status }).eq("id", existente.id);
+      if (error) throw new Error(error.message);
+      set("status", status);
+      await qc.invalidateQueries({ queryKey: ["pedidos"] });
+      toast.success(`Status do pedido #${existente.numero} alterado para ${statusLabel(status)}.`);
+    } catch (e) {
+      toast.error(`Não foi possível atualizar o status do pedido: ${e instanceof Error ? e.message : "tente novamente."}`);
+    }
   }
 
   async function excluir() {
@@ -296,12 +300,12 @@ function PedidoForm() {
           <Field label="Status do pedido">
             {existente && f.status !== "cancelado" ? (
               <NativeSelect
-                value={f.status === "entregue" ? "finalizado" : f.status === "confirmado" ? "recebido" : f.status === "pronto" ? "em_producao" : f.status}
-                onChange={(e) => alterarStatusPedido(e.target.value as "recebido" | "em_producao" | "finalizado")}
+                value={f.status === "finalizado" || f.status === "entregue" ? "entregue" : f.status === "confirmado" ? "recebido" : f.status === "pronto" ? "em_producao" : f.status}
+                onChange={(e) => alterarStatusPedido(e.target.value as "recebido" | "em_producao" | "entregue")}
               >
                 <option value="recebido">Recebido</option>
                 <option value="em_producao">Em produção</option>
-                <option value="finalizado">Finalizado</option>
+                <option value="entregue">Finalizado</option>
               </NativeSelect>
             ) : (
               <div className="rounded-lg bg-muted/60 p-3 font-semibold">{statusLabel(f.status)}</div>
