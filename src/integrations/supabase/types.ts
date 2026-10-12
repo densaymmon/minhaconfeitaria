@@ -170,6 +170,12 @@ export type Database = {
         Update: { id?: string; user_id?: string; insumo_id?: string; compra_item_id?: string | null; tipo?: string; quantidade?: number; unidade?: string; custo_total?: number; data_movimento?: string; origem?: string; referencia_id?: string | null; observacoes?: string | null; created_at?: string }
         Relationships: []
       }
+      importacoes_notas: {
+        Row: { id: string; user_id: string; nome_arquivo: string; tipo_arquivo: string; chave_nfe: string | null; status: string; dados_extraidos: Json; erro: string | null; compra_id: string | null; created_at: string }
+        Insert: { id?: string; user_id?: string; nome_arquivo: string; tipo_arquivo: string; chave_nfe?: string | null; status?: string; dados_extraidos?: Json; erro?: string | null; compra_id?: string | null; created_at?: string }
+        Update: { id?: string; user_id?: string; nome_arquivo?: string; tipo_arquivo?: string; chave_nfe?: string | null; status?: string; dados_extraidos?: Json; erro?: string | null; compra_id?: string | null; created_at?: string }
+        Relationships: []
+      }
       owner_claim: {
         Row: {
           slot: boolean
