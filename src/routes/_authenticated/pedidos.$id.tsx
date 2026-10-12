@@ -5,7 +5,7 @@ import { createFileRoute, Link, useNavigate } from "@tanstack/react-router";
 import { useQueryClient, useSuspenseQuery } from "@tanstack/react-query";
 import { useState } from "react";
 import { toast } from "sonner";
-import { MessageCircle, Plus, Trash2 } from "lucide-react";
+import { CheckCircle2, MessageCircle, Plus, Trash2 } from "lucide-react";
 import { supabase } from "@/integrations/supabase/client";
 import { clientesQ, configQ, pedidosQ } from "@/lib/queries";
 import { useCustos } from "@/lib/hooks";
@@ -176,6 +176,15 @@ function PedidoForm() {
     }
   }
 
+  async function finalizarPedido() {
+    if (!existente || f.status === "finalizado") return;
+    const { error } = await supabase.from("pedidos").update({ status: "finalizado" }).eq("id", existente.id);
+    if (error) return void toast.error(error.message);
+    set("status", "finalizado");
+    await qc.invalidateQueries({ queryKey: ["pedidos"] });
+    toast.success(`Pedido #${existente.numero} marcado como finalizado.`);
+  }
+
   async function excluir() {
     if (!existente || !confirm(`Excluir o pedido #${existente.numero}?`)) return;
     const { error } = await supabase.from("pedidos").delete().eq("id", existente.id);
@@ -218,13 +227,17 @@ function PedidoForm() {
               <Input type="time" value={f.hora_entrega} onChange={(e) => set("hora_entrega", e.target.value)} className="h-11" />
             </Field>
           </div>
-          <Field label="Status">
-            <NativeSelect value={f.status} onChange={(e) => set("status", e.target.value)}>
-              {STATUS.map((s) => (
-                <option key={s.value} value={s.value}>{s.label}</option>
-              ))}
-            </NativeSelect>
-          </Field>
+          <div className="flex items-center justify-between rounded-xl bg-muted/60 p-3">
+            <div>
+              <div className="text-xs text-muted-foreground">Status do pedido</div>
+              <div className="font-semibold">{STATUS.find((s) => s.value === f.status)?.label ?? (f.status === "entregue" ? "Finalizado" : f.status)}</div>
+            </div>
+            {existente && f.status !== "finalizado" && f.status !== "cancelado" && (
+              <Button type="button" size="sm" variant="secondary" onClick={finalizarPedido}>
+                <CheckCircle2 className="size-4" /> Finalizar
+              </Button>
+            )}
+          </div>
         </Card>
 
         <Card className="space-y-3">
@@ -277,7 +290,10 @@ function PedidoForm() {
         </Card>
 
         <Card className="space-y-3">
-          <h2 className="text-lg font-semibold">Pagamento</h2>
+          <div className="flex items-center justify-between gap-2">
+            <h2 className="text-lg font-semibold">Pagamento</h2>
+            {t.venda > 0 && t.saldo <= 0 && <span className="rounded-full bg-success/15 px-2.5 py-1 text-xs font-semibold text-success">Pago</span>}
+          </div>
           <Field label="Forma de pagamento">
             <NativeSelect value={f.forma_pagamento} onChange={(e) => set("forma_pagamento", e.target.value)}>
               {FORMAS.map((s) => (
