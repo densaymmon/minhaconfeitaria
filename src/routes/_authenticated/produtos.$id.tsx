@@ -16,6 +16,7 @@ import { medidasCompativeis, medidaLabel, numeroIngrediente, custoPorMedida } fr
 import { Switch } from "@/components/ui/switch";
 
 export const Route = createFileRoute("/_authenticated/produtos/$id")({
+ validateSearch: (search: Record<string, unknown>) => ({ duplicar: search.duplicar === "1" }),
  loader: async ({ context }) => { await Promise.all([context.queryClient.ensureQueryData(appQueries.produtosQ),context.queryClient.ensureQueryData(appQueries.insumosQ)]); },
  errorComponent: ({error}) => <p role="alert" className="py-8 text-destructive">{error instanceof Error ? error.message : "Não foi possível carregar os registros."}</p>,
  notFoundComponent: () => <p>Registro não encontrado.</p>,
@@ -36,13 +37,14 @@ export const Route = createFileRoute("/_authenticated/produtos/$id")({
 function ProdutoForm() {
   const { id } = Route.useParams();
   const novo = id === "novo";
+  const { duplicar } = Route.useSearch();
   const navigate = useNavigate();
   const qc = useQueryClient();
   const { produtos, insumos, mapIns } = useCustos();
   const p = novo ? undefined : produtos.find((x) => x.id === id);
 
   const [f, setF] = useState(() => ({
-    nome: p?.nome ?? "",
+    nome: p?.nome ? (duplicar ? `${p.nome} (cópia)` : p.nome) : "",
     categoria: p?.categoria ?? "Bolos caseiros",
     rendimento: String(p?.rendimento ?? "1"),
     custo_gas: String(p?.custo_gas ?? "0"),
@@ -55,7 +57,7 @@ function ProdutoForm() {
   }));
   const [itens, setItens] = useState(() => p?.receita_itens.map((i) => ({ insumo_id: i.insumo_id, quantidade: String(i.quantidade_utilizada ?? i.quantidade), unidade_receita: i.unidade_receita ?? mapIns.get(i.insumo_id)?.unidade ?? "un" })) ?? []);
   const [salvando, setSalvando] = useState(false);
-  const [duplicando, setDuplicando] = useState(false);
+  const [duplicando, setDuplicando] = useState(duplicar);
 
   if (!novo && !p) return <p className="py-16 text-center text-muted-foreground">Produto não encontrado. <Link to="/produtos" className="text-primary">Voltar</Link></p>;
 
@@ -218,26 +220,9 @@ function ProdutoForm() {
 
         <div className="flex flex-wrap gap-2">
           {!novo && !duplicando && (
-            <>
-              <Button
-                variant="outline"
-                className="h-12"
-                onClick={() => {
-                  setF((s) => ({
-                    ...s,
-                    nome: s.nome.trim().toLowerCase().endsWith("(cópia)") ? s.nome : s.nome.trim() + " (cópia)",
-                    ativo: true,
-                  }));
-                  setDuplicando(true);
-                  toast.info("Cópia preparada. Edite os dados antes de salvar.");
-                }}
-              >
-                <Copy className="size-4" /> Duplicar produto
-              </Button>
-              <Button variant="outline" className="h-12 text-destructive" onClick={excluir} aria-label="Excluir produto">
-                <Trash2 className="size-4 text-destructive" />
-              </Button>
-            </>
+            <Button variant="outline" className="h-12 text-destructive" onClick={excluir} aria-label="Excluir produto">
+              <Trash2 className="size-4 text-destructive" />
+            </Button>
           )}
           <Button className="h-12 flex-1 text-base" onClick={salvar} disabled={salvando}>
             {salvando ? "Salvando..." : duplicando ? "Salvar como novo produto" : "Salvar produto"}
