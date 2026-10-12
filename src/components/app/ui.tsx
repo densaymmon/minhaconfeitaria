@@ -97,10 +97,11 @@ export function Empty({ children }: { children: ReactNode }) {
 
 const statusTone: Record<string, string> = {
   recebido: "bg-muted text-muted-foreground",
-  confirmado: "bg-info/15 text-info",
+  confirmado: "bg-muted text-muted-foreground",
   em_producao: "bg-warning/25 text-warning-foreground",
-  pronto: "bg-success/15 text-success",
-  entregue: "bg-primary/10 text-primary",
+  pronto: "bg-warning/25 text-warning-foreground",
+  finalizado: "bg-success/15 text-success",
+  entregue: "bg-success/15 text-success",
   cancelado: "bg-destructive/10 text-destructive line-through",
 };
 
