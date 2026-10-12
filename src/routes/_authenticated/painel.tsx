@@ -63,7 +63,7 @@ function Painel() {
 
       <Card className="mb-4 bg-hero text-primary-foreground">
         <div className="text-xs opacity-80">Resultado do mês · {format(new Date(), "MMMM", { locale: ptBR })}</div>
-        <div className="mt-1 text-sm opacity-80">Valor em caixa — pedidos pagos</div>
+        <div className="mt-1 text-sm opacity-80">Saldo</div>
         <div className="mt-1 font-display text-3xl font-semibold">{brl(valorEmCaixa)}</div>
         <div className="mt-4 border-t border-primary-foreground/20 pt-3">
           <div className="text-xs opacity-75">Valores a receber</div>
