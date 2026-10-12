@@ -15,6 +15,7 @@ import { Card, Field, NativeSelect, PageHeader, Row } from "@/components/app/ui"
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Textarea } from "@/components/ui/textarea";
+import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/ui/dialog";
 
 export const Route = createFileRoute("/_authenticated/pedidos/$id")({
  loader: async ({ context }) => { await Promise.all([context.queryClient.ensureQueryData(appQueries.pedidosQ),context.queryClient.ensureQueryData(appQueries.configQ),context.queryClient.ensureQueryData(appQueries.clientesQ),context.queryClient.ensureQueryData(appQueries.produtosQ),context.queryClient.ensureQueryData(appQueries.insumosQ)]); },
@@ -78,6 +79,9 @@ function PedidoForm() {
       })) ?? [],
   );
   const [salvando, setSalvando] = useState(false);
+  const [clienteDialogOpen, setClienteDialogOpen] = useState(false);
+  const [salvandoCliente, setSalvandoCliente] = useState(false);
+  const [novoCliente, setNovoCliente] = useState({ nome: "", telefone: "", endereco: "", observacoes: "" });
 
   if (!novo && !existente) {
     return (
@@ -134,6 +138,30 @@ function PedidoForm() {
     }));
     setF(current => ({ ...current, data_entrega: draft.data_desejada ?? "", hora_entrega: draft.horario ?? "", observacoes: [draft.observacoes, draft.duvidas.length ? "A confirmar: " + draft.duvidas.join(" ") : null].filter(Boolean).join("\n") }));
     toast.success("Rascunho preenchido. Revise os dados antes de salvar.");
+  }
+
+  async function salvarCliente() {
+    if (!novoCliente.nome.trim()) return void toast.error("Informe o nome do cliente.");
+    setSalvandoCliente(true);
+    try {
+      const payload = {
+        nome: novoCliente.nome.trim().slice(0, 120),
+        telefone: novoCliente.telefone.trim().slice(0, 30) || null,
+        endereco: novoCliente.endereco.trim().slice(0, 300) || null,
+        observacoes: novoCliente.observacoes.trim().slice(0, 1000) || null,
+      };
+      const { data, error } = await supabase.from("clientes").insert(payload).select("id").single();
+      if (error) throw error;
+      await qc.invalidateQueries({ queryKey: ["clientes"] });
+      set("cliente_id", data.id);
+      setNovoCliente({ nome: "", telefone: "", endereco: "", observacoes: "" });
+      setClienteDialogOpen(false);
+      toast.success("Cliente cadastrado e vinculado ao pedido!");
+    } catch (e) {
+      toast.error((e as Error).message);
+    } finally {
+      setSalvandoCliente(false);
+    }
   }
 
   async function salvar() {
@@ -200,6 +228,36 @@ function PedidoForm() {
     <>
       <PageHeader title={novo ? "Novo pedido" : `Pedido #${existente?.numero}`} back="/pedidos" />
       {novo && <OrderMessage onApply={aplicarRascunho} />}
+      <Dialog open={clienteDialogOpen} onOpenChange={setClienteDialogOpen}>
+        <DialogContent className="max-w-md">
+          <DialogHeader>
+            <DialogTitle>Novo cliente</DialogTitle>
+          </DialogHeader>
+          <form
+            onSubmit={(e) => {
+              e.preventDefault();
+              void salvarCliente();
+            }}
+            className="space-y-3"
+          >
+            <Field label="Nome *">
+              <Input value={novoCliente.nome} onChange={(e) => setNovoCliente({ ...novoCliente, nome: e.target.value })} className="h-11" autoFocus />
+            </Field>
+            <Field label="Telefone / WhatsApp">
+              <Input type="tel" inputMode="tel" value={novoCliente.telefone} onChange={(e) => setNovoCliente({ ...novoCliente, telefone: e.target.value })} className="h-11" placeholder="(11) 99999-9999" />
+            </Field>
+            <Field label="Endereço">
+              <Input value={novoCliente.endereco} onChange={(e) => setNovoCliente({ ...novoCliente, endereco: e.target.value })} className="h-11" />
+            </Field>
+            <Field label="Observações">
+              <Textarea value={novoCliente.observacoes} onChange={(e) => setNovoCliente({ ...novoCliente, observacoes: e.target.value })} placeholder="Preferências, detalhes importantes..." />
+            </Field>
+            <Button className="h-11 w-full" disabled={salvandoCliente}>
+              {salvandoCliente ? "Salvando cliente..." : "Cadastrar e selecionar cliente"}
+            </Button>
+          </form>
+        </DialogContent>
+      </Dialog>
       <div className="space-y-4">
         <Card className="space-y-3">
           <Field label="Cliente">
@@ -211,7 +269,16 @@ function PedidoForm() {
             </NativeSelect>
           </Field>
           <div className="flex items-center justify-between text-xs">
-            <Link to="/clientes" className="text-primary">+ Cadastrar cliente</Link>
+            <button
+              type="button"
+              className="text-primary hover:underline"
+              onClick={() => {
+                setNovoCliente({ nome: "", telefone: "", endereco: "", observacoes: "" });
+                setClienteDialogOpen(true);
+              }}
+            >
+              + Cadastrar cliente
+            </button>
             {whatsapp && (
               <a href={whatsapp} target="_blank" rel="noreferrer" className="flex items-center gap-1 text-success">
                 <MessageCircle className="size-3.5" /> WhatsApp
