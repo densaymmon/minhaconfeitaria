@@ -22,13 +22,13 @@ export const dataLonga = (iso: string) => format(parseISO(iso), "EEEE, dd 'de' M
 
 export const STATUS = [
   { value: "recebido", label: "Recebido" },
-  { value: "confirmado", label: "Confirmado" },
   { value: "em_producao", label: "Em produção" },
-  { value: "pronto", label: "Pronto" },
-  { value: "entregue", label: "Entregue" },
+  { value: "finalizado", label: "Finalizado" },
   { value: "cancelado", label: "Cancelado" },
 ] as const;
-export const statusLabel = (s: string) => STATUS.find((x) => x.value === s)?.label ?? s;
+export const statusLabel = (s: string) =>
+  STATUS.find((x) => x.value === s)?.label ??
+  (s === "entregue" ? "Finalizado" : s === "confirmado" ? "Recebido" : s === "pronto" ? "Em produção" : s);
 
 export const FORMAS = [
   { value: "pix", label: "Pix" },
