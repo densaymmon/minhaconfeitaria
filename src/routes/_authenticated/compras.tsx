@@ -145,6 +145,13 @@ function Compras() {
     } finally { setBusy(false); }
   }
 
+  async function marcarPago(contaId: string, valor: number) {
+    const { error } = await supabase.from("contas_pagar").update({ status: "pago", valor_pago: valor, data_pagamento: hojeISO() }).eq("id", contaId);
+    if (error) { toast.error(error.message); return; }
+    await qc.invalidateQueries({ queryKey: ["contas-pagar"] });
+    toast.success("Conta marcada como paga.");
+  }
+
   return <>
     <PageHeader title="Compras e estoque" back="/mais" />
     <div className="mb-6 grid grid-cols-2 gap-3">
