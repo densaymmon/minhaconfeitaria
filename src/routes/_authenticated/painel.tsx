@@ -42,10 +42,10 @@ function Painel() {
   const despesasMes = despesas.filter((d) => d.data.startsWith(mes)).reduce((s, d) => s + Number(d.valor), 0);
   const custos = doMes.reduce((s, p) => s + p.t.custo + p.t.taxas, 0) + despesasMes;
   const lucro = faturamento - custos;
-  const atrasados = pedidos.filter((p) => p.data_entrega < hoje && !["entregue", "cancelado"].includes(p.status)).length;
+  const atrasados = pedidos.filter((p) => p.data_entrega < hoje && !["finalizado", "entregue", "cancelado"].includes(p.status)).length;
 
   const proximas = pedidos
-    .filter((p) => p.data_entrega >= hoje && !["entregue", "cancelado"].includes(p.status))
+    .filter((p) => p.data_entrega >= hoje && !["finalizado", "entregue", "cancelado"].includes(p.status))
     .sort((a, b) => a.data_entrega.localeCompare(b.data_entrega) || (a.hora_entrega ?? "").localeCompare(b.hora_entrega ?? ""))
     .slice(0, 6);
 
@@ -87,10 +87,10 @@ function Painel() {
       <div className="mb-4 grid grid-cols-2 gap-3">
         <Stat label="Entregas hoje" value={doDia.length} />
         <Stat label="Pedidos no mês" value={doMes.length} />
-        <Stat label="Aguardando produção" value={conta(["recebido", "confirmado"])} />
+        <Stat label="Recebidos" value={conta(["recebido"])} />
         <Stat label="Em produção" value={conta(["em_producao"])} tone="primary" />
-        <Stat label="Prontos" value={conta(["pronto"])} tone="success" />
-        <Stat label="Entregues no mês" value={doMes.filter((p) => p.status === "entregue").length} />
+        <Stat label="Finalizados" value={conta(["finalizado", "entregue"])} tone="success" />
+        <Stat label="Entregues no mês" value={doMes.filter((p) => ["finalizado", "entregue"].includes(p.status)).length} />
       </div>
 
       <h2 className="mb-2 text-lg font-semibold">Próximas entregas</h2>
