@@ -40,18 +40,12 @@ export const pedidosQ = queryOptions({
   queryKey: ["pedidos"],
   queryFn: async () => {
     const hoje = hojeISO();
-    const { error: legadoEntregue } = await supabase.from("pedidos").update({ status: "finalizado" }).eq("status", "entregue");
-    if (legadoEntregue) throw new Error(legadoEntregue.message);
-    const { error: legadoPronto } = await supabase.from("pedidos").update({ status: "em_producao" }).eq("status", "pronto");
-    if (legadoPronto) throw new Error(legadoPronto.message);
-    const { error: legadoConfirmado } = await supabase.from("pedidos").update({ status: "recebido" }).eq("status", "confirmado");
-    if (legadoConfirmado) throw new Error(legadoConfirmado.message);
-    // A partir do dia da entrega, pedidos recebidos passam automaticamente para produção.
+    // A partir do dia da entrega, pedidos recebidos/confirmados passam automaticamente para produção.
     // Finalizado e cancelado não entram nesta transição.
     const { error: transicao } = await supabase.from("pedidos")
       .update({ status: "em_producao" })
       .lte("data_entrega", hoje)
-      .eq("status", "recebido");
+      .in("status", ["recebido", "confirmado"]);
     if (transicao) throw new Error(transicao.message);
     const { data, error } = await supabase.from("pedidos")
       .select("*, pedido_itens(*), clientes(nome, telefone)")
@@ -60,6 +54,7 @@ export const pedidosQ = queryOptions({
     if (error) throw new Error(error.message);
     return (data ?? []) as Pedido[];
   },
+  refetchInterval: 60_000,
 });
 
 export const despesasQ = queryOptions({
