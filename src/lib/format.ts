@@ -24,11 +24,10 @@ export const STATUS = [
   { value: "recebido", label: "Recebido" },
   { value: "em_producao", label: "Em produção" },
   { value: "finalizado", label: "Finalizado" },
-  { value: "cancelado", label: "Cancelado" },
 ] as const;
 export const statusLabel = (s: string) =>
   STATUS.find((x) => x.value === s)?.label ??
-  (s === "entregue" ? "Finalizado" : s === "confirmado" ? "Recebido" : s === "pronto" ? "Em produção" : s);
+  (s === "entregue" ? "Finalizado" : s === "confirmado" ? "Recebido" : s === "pronto" ? "Em produção" : s === "cancelado" ? "Cancelado" : s);
 
 export const FORMAS = [
   { value: "pix", label: "Pix" },
