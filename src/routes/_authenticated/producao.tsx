@@ -29,7 +29,7 @@ export const Route = createFileRoute("/_authenticated/producao")({
   component: Producao,
 });
 
-const A_PRODUZIR = ["recebido", "confirmado", "em_producao"];
+const A_PRODUZIR = ["recebido", "em_producao"];
 
 function Producao() {
   const pedidos = usePedidosCalc();
@@ -72,13 +72,13 @@ function Producao() {
   async function mudarStatus(p: PedidoCalc, status: string) {
     const { error } = await supabase.from("pedidos").update({ status }).eq("id", p.id);
     if (error) return void toast.error(error.message);
-    if (status === "pronto") {
+    if (status === "finalizado") {
       await Promise.all(
         p.pedido_itens.map((i) => supabase.from("pedido_itens").update({ quantidade_produzida: i.quantidade }).eq("id", i.id)),
       );
     }
     qc.invalidateQueries({ queryKey: ["pedidos"] });
-    toast.success(status === "pronto" ? `Pedido #${p.numero} pronto!` : `Pedido #${p.numero} em produção`);
+    toast.success(status === "finalizado" ? `Pedido #${p.numero} finalizado!` : `Pedido #${p.numero} em produção`);
   }
 
   const atrasados = fila.filter((p) => p.data_entrega < hoje).length;
@@ -162,8 +162,8 @@ function Producao() {
                             <Play className="size-4" /> Iniciar
                           </Button>
                         )}
-                        <Button size="sm" className="flex-1" onClick={() => mudarStatus(p, "pronto")}>
-                          <CheckCircle2 className="size-4" /> Marcar pronto
+                        <Button size="sm" className="flex-1" onClick={() => mudarStatus(p, "finalizado")}>
+                          <CheckCircle2 className="size-4" /> Finalizado / entregue
                         </Button>
                       </div>
                     </Card>
