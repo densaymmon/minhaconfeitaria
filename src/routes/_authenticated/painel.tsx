@@ -88,7 +88,7 @@ function Painel() {
         <Stat label="Entregas hoje" value={doDia.length} />
         <Stat label="Pedidos no mês" value={doMes.length} />
         <Stat label="Recebidos" value={conta(["recebido"])} />
-        <Stat label="Em produção" value={conta(["em_producao"])} tone="primary" />
+        <Stat label="Em produção" value={conta(["em_producao", "pronto"])} tone="primary" />
         <Stat label="Finalizados" value={conta(["finalizado", "entregue"])} tone="success" />
         <Stat label="Finalizados no mês" value={doMes.filter((p) => ["finalizado", "entregue"].includes(p.status)).length} />
       </div>
