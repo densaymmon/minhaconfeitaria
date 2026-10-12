@@ -1,13 +1,11 @@
 import * as appQueries from "@/lib/queries";
 import { createFileRoute, Link } from "@tanstack/react-router";
-import { useSuspenseQuery } from "@tanstack/react-query";
 import { Plus, AlertTriangle } from "lucide-react";
-import { despesasQ } from "@/lib/queries";
 import { usePedidosCalc } from "@/lib/hooks";
 import { brl, dataCurta, hojeISO, mesISO } from "@/lib/format";
-import { Card, Empty, PageHeader, Stat, StatusBadge } from "@/components/app/ui";
+import { Card, Empty, PageHeader, StatusBadge } from "@/components/app/ui";
 import { Button } from "@/components/ui/button";
-import { format } from "date-fns";
+import { endOfMonth, format } from "date-fns";
 import { ptBR } from "date-fns/locale";
 
 export const Route = createFileRoute("/_authenticated/painel")({
@@ -30,24 +28,18 @@ export const Route = createFileRoute("/_authenticated/painel")({
 
 function Painel() {
   const pedidos = usePedidosCalc();
-  const { data: despesas } = useSuspenseQuery(despesasQ);
   const hoje = hojeISO();
   const mes = mesISO();
   const ativos = pedidos.filter((p) => p.status !== "cancelado");
   const doMes = ativos.filter((p) => p.data_entrega.startsWith(mes));
-  const doDia = ativos.filter((p) => p.data_entrega === hoje);
-  const conta = (s: string[]) => pedidos.filter((p) => s.includes(p.status)).length;
-
-  const faturamento = doMes.reduce((s, p) => s + p.t.venda, 0);
-  // "Finalizado" representa pedido entregue. Só contabiliza no caixa o valor efetivamente recebido desses pedidos.
-  const valorEmCaixa = ativos
-    .filter((p) => ["finalizado", "entregue"].includes(p.status))
-    .reduce((s, p) => s + p.t.recebido, 0);
-  // Saldo em aberto de todos os pedidos não cancelados, incluindo pedidos já finalizados com pagamento pendente.
-  const pedidosAReceber = ativos.reduce((s, p) => s + p.t.saldo, 0);
-  const despesasMes = despesas.filter((d) => d.data.startsWith(mes)).reduce((s, d) => s + Number(d.valor), 0);
-  const custos = doMes.reduce((s, p) => s + p.t.custo + p.t.taxas, 0) + despesasMes;
-  const lucro = faturamento - custos;
+  const primeiroDiaMes = `${mes}-01`;
+  const ultimoDiaMes = format(endOfMonth(new Date()), "yyyy-MM-dd");
+  const valorEmCaixa = doMes
+    .filter((p) => p.t.venda > 0 && p.t.saldo <= 0)
+    .reduce((s, p) => s + p.t.venda, 0);
+  const pedidosAReceber = doMes
+    .filter((p) => ["recebido", "confirmado", "em_producao", "pronto"].includes(p.status) && p.t.saldo > 0)
+    .reduce((s, p) => s + p.t.saldo, 0);
   const atrasados = pedidos.filter((p) => p.data_entrega < hoje && !["finalizado", "entregue", "cancelado"].includes(p.status)).length;
 
   const proximas = pedidos
@@ -70,19 +62,32 @@ function Painel() {
       />
 
       <Card className="mb-4 bg-hero text-primary-foreground">
-        <div className="text-xs opacity-80">Resultado de {format(new Date(), "MMMM", { locale: ptBR })}</div>
-        <div className="mt-1 font-display text-3xl font-semibold">{brl(lucro)}</div>
-        <div className="mt-3 grid grid-cols-2 gap-2 text-sm">
-          <div>
-            <div className="text-xs opacity-75">Faturamento</div>
-            <div className="font-semibold">{brl(faturamento)}</div>
-          </div>
-          <div>
-            <div className="text-xs opacity-75">Custos + despesas</div>
-            <div className="font-semibold">{brl(custos)}</div>
-          </div>
+        <div className="text-xs opacity-80">Resultado do mês · {format(new Date(), "MMMM", { locale: ptBR })}</div>
+        <div className="mt-1 text-sm opacity-80">Valor em caixa — pedidos pagos</div>
+        <div className="mt-1 font-display text-3xl font-semibold">{brl(valorEmCaixa)}</div>
+        <div className="mt-4 border-t border-primary-foreground/20 pt-3">
+          <div className="text-xs opacity-75">Valores a receber</div>
+          <Link
+            to="/pedidos/"
+            search={{ filtro: "em_andamento" }}
+            className="mt-1 flex items-center justify-between gap-3 rounded-lg py-1 font-semibold hover:opacity-80"
+          >
+            <span className="text-2xl">{brl(pedidosAReceber)}</span>
+            <span className="text-sm underline underline-offset-4">Ver pedidos <span aria-hidden="true">→</span></span>
+          </Link>
+          <p className="text-xs opacity-75">Saldos pendentes de pedidos recebidos ou em produção neste mês</p>
         </div>
       </Card>
+
+      <Link to="/pedidos/" search={{ filtro: "mes", dataInicial: primeiroDiaMes, dataFinal: ultimoDiaMes }} className="mb-4 block">
+        <Card className="flex items-center justify-between gap-3 transition-colors hover:bg-muted/60">
+          <div>
+            <div className="text-sm text-muted-foreground">Total de pedidos no mês</div>
+            <div className="mt-1 font-display text-3xl font-semibold">{doMes.length}</div>
+          </div>
+          <div className="text-right text-sm font-medium text-primary">Ver todos<br />do mês →</div>
+        </Card>
+      </Link>
 
       {atrasados > 0 && (
         <Link to="/producao" className="mb-4 flex items-center gap-2 rounded-xl bg-destructive/10 p-3 text-sm font-medium text-destructive">
@@ -90,16 +95,7 @@ function Painel() {
         </Link>
       )}
 
-      <div className="mb-4 grid grid-cols-2 gap-3">
-        <Stat label="Valor em caixa" value={brl(valorEmCaixa)} tone="success" />
-        <Stat label="Pedidos a receber" value={brl(pedidosAReceber)} tone="primary" />
-        <Stat label="Entregas hoje" value={doDia.length} />
-        <Stat label="Pedidos no mês" value={doMes.length} />
-        <Stat label="Recebidos" value={conta(["recebido"])} />
-        <Stat label="Em produção" value={conta(["em_producao", "pronto"])} tone="primary" />
-        <Stat label="Finalizados" value={conta(["finalizado", "entregue"])} tone="success" />
-        <Stat label="Finalizados no mês" value={doMes.filter((p) => ["finalizado", "entregue"].includes(p.status)).length} />
-      </div>
+
 
       <h2 className="mb-2 text-lg font-semibold">Próximas entregas</h2>
       {proximas.length === 0 ? (
