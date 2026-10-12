@@ -176,13 +176,13 @@ function PedidoForm() {
     }
   }
 
-  async function finalizarPedido() {
-    if (!existente || f.status === "finalizado") return;
-    const { error } = await supabase.from("pedidos").update({ status: "finalizado" }).eq("id", existente.id);
+  async function alterarStatusPedido(status: "recebido" | "em_producao" | "finalizado") {
+    if (!existente || status === f.status) return;
+    const { error } = await supabase.from("pedidos").update({ status }).eq("id", existente.id);
     if (error) return void toast.error(error.message);
-    set("status", "finalizado");
+    set("status", status);
     await qc.invalidateQueries({ queryKey: ["pedidos"] });
-    toast.success(`Pedido #${existente.numero} marcado como finalizado.`);
+    toast.success(`Status do pedido #${existente.numero} alterado para ${statusLabel(status)}.`);
   }
 
   async function excluir() {
@@ -227,17 +227,20 @@ function PedidoForm() {
               <Input type="time" value={f.hora_entrega} onChange={(e) => set("hora_entrega", e.target.value)} className="h-11" />
             </Field>
           </div>
-          <div className="flex items-center justify-between rounded-xl bg-muted/60 p-3">
-            <div>
-              <div className="text-xs text-muted-foreground">Status do pedido</div>
-              <div className="font-semibold">{statusLabel(f.status)}</div>
-            </div>
-            {existente && f.status !== "finalizado" && f.status !== "entregue" && f.status !== "cancelado" && (
-              <Button type="button" size="sm" variant="secondary" onClick={finalizarPedido}>
-                <CheckCircle2 className="size-4" /> Finalizar
-              </Button>
+          <Field label="Status do pedido">
+            {existente && f.status !== "cancelado" ? (
+              <NativeSelect
+                value={f.status === "entregue" ? "finalizado" : f.status === "confirmado" ? "recebido" : f.status === "pronto" ? "em_producao" : f.status}
+                onChange={(e) => alterarStatusPedido(e.target.value as "recebido" | "em_producao" | "finalizado")}
+              >
+                <option value="recebido">Recebido</option>
+                <option value="em_producao">Em produção</option>
+                <option value="finalizado">Finalizado</option>
+              </NativeSelect>
+            ) : (
+              <div className="rounded-lg bg-muted/60 p-3 font-semibold">{statusLabel(f.status)}</div>
             )}
-          </div>
+          </Field>
         </Card>
 
         <Card className="space-y-3">
