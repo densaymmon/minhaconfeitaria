@@ -32,11 +32,15 @@ function Pedidos() {
   const pedidos = usePedidosCalc();
   const [busca, setBusca] = useState("");
   const [status, setStatus] = useState<string>("abertos");
+  const [dataInicial, setDataInicial] = useState("");
+  const [dataFinal, setDataFinal] = useState("");
   const hoje = hojeISO();
 
   const lista = useMemo(() => {
     const q = busca.trim().toLowerCase();
     return pedidos.filter((p) => {
+      if (dataInicial && p.data_entrega < dataInicial) return false;
+      if (dataFinal && p.data_entrega > dataFinal) return false;
       if (status === "abertos" && ["finalizado", "entregue", "cancelado"].includes(p.status)) return false;
       if (status !== "abertos" && status !== "todos" && p.status !== status) return false;
       if (!q) return true;
@@ -47,7 +51,7 @@ function Pedidos() {
         p.pedido_itens.some((i) => i.descricao.toLowerCase().includes(q))
       );
     });
-  }, [pedidos, busca, status]);
+  }, [pedidos, busca, status, dataInicial, dataFinal]);
 
   function exportar() {
     baixarCSV(
@@ -97,6 +101,24 @@ function Pedidos() {
         <Search className="absolute top-3.5 left-3 size-4 text-muted-foreground" />
         <Input placeholder="Buscar por nº, cliente ou produto" value={busca} onChange={(e) => setBusca(e.target.value)} className="h-11 bg-card pl-9" />
       </div>
+      <Card className="mb-3 space-y-2 p-3">
+        <div className="text-sm font-semibold">Filtrar por data de entrega</div>
+        <div className="grid grid-cols-2 gap-3">
+          <label className="space-y-1 text-xs font-medium text-muted-foreground">
+            De
+            <Input type="date" aria-label="Data inicial de entrega" value={dataInicial} max={dataFinal || undefined} onChange={(e) => setDataInicial(e.target.value)} className="h-10 bg-background text-sm" />
+          </label>
+          <label className="space-y-1 text-xs font-medium text-muted-foreground">
+            Até
+            <Input type="date" aria-label="Data final de entrega" value={dataFinal} min={dataInicial || undefined} onChange={(e) => setDataFinal(e.target.value)} className="h-10 bg-background text-sm" />
+          </label>
+        </div>
+        {(dataInicial || dataFinal) && (
+          <button type="button" className="text-left text-sm text-primary" onClick={() => { setDataInicial(""); setDataFinal(""); }}>
+            Limpar filtro de datas
+          </button>
+        )}
+      </Card>
       <div className="-mx-4 mb-4 flex gap-2 overflow-x-auto px-4 pb-1">
         {filtros.map((f) => (
           <button
