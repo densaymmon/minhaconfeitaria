@@ -232,7 +232,7 @@ function PedidoForm() {
               <div className="text-xs text-muted-foreground">Status do pedido</div>
               <div className="font-semibold">{statusLabel(f.status)}</div>
             </div>
-            {existente && f.status !== "finalizado" && f.status !== "cancelado" && (
+            {existente && f.status !== "finalizado" && f.status !== "entregue" && f.status !== "cancelado" && (
               <Button type="button" size="sm" variant="secondary" onClick={finalizarPedido}>
                 <CheckCircle2 className="size-4" /> Finalizar
               </Button>
