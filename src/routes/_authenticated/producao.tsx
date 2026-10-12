@@ -29,7 +29,7 @@ export const Route = createFileRoute("/_authenticated/producao")({
   component: Producao,
 });
 
-const A_PRODUZIR = ["recebido", "em_producao"];
+const A_PRODUZIR = ["recebido", "em_producao", "pronto"];
 
 function Producao() {
   const pedidos = usePedidosCalc();
