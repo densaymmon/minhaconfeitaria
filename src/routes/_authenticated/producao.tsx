@@ -117,10 +117,10 @@ function Producao() {
         <p className="text-sm text-muted-foreground">Filtre pelas datas de entrega e, se quiser, por cliente. Os totais abaixo acompanham os filtros.</p>
         <div className="grid grid-cols-2 gap-3">
           <Field label="Entrega a partir de">
-            <Input type="date" value={dataInicial} max={dataFinal || undefined} onChange={(e) => setDataInicial(e.target.value)} className="h-11" />
+            <Input type="date" value={dataInicial} max={dataFinal || undefined} onChange={(e) => { setDataInicial(e.target.value); setClienteFiltro(""); }} className="h-11" />
           </Field>
           <Field label="Entrega até">
-            <Input type="date" value={dataFinal} min={dataInicial || undefined} onChange={(e) => setDataFinal(e.target.value)} className="h-11" />
+            <Input type="date" value={dataFinal} min={dataInicial || undefined} onChange={(e) => { setDataFinal(e.target.value); setClienteFiltro(""); }} className="h-11" />
           </Field>
         </div>
         <Field label="Cliente (somente do período selecionado)">
