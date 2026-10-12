@@ -94,16 +94,28 @@ function Producao() {
     qc.invalidateQueries({ queryKey: ["pedidos"] });
   }
 
-  async function mudarStatus(p: PedidoCalc, status: string) {
-    const { error } = await supabase.from("pedidos").update({ status }).eq("id", p.id);
-    if (error) return void toast.error(error.message);
-    if (status === "finalizado") {
-      await Promise.all(
-        p.pedido_itens.map((i) => supabase.from("pedido_itens").update({ quantidade_produzida: i.quantidade }).eq("id", i.id)),
+  async function mudarStatus(p: PedidoCalc, status: "entregue") {
+    try {
+      // Marca os itens como produzidos antes de concluir o pedido. Se algum item falhar,
+      // o pedido continua na fila e não mostramos uma conclusão falsa.
+      const atualizacoesItens = await Promise.all(
+        p.pedido_itens.map((i) =>
+          supabase.from("pedido_itens")
+            .update({ quantidade_produzida: i.quantidade })
+            .eq("id", i.id),
+        ),
       );
+      const erroItem = atualizacoesItens.find((resultado) => resultado.error)?.error;
+      if (erroItem) throw new Error(`Não foi possível registrar todos os itens produzidos: ${erroItem.message}`);
+
+      const { error } = await supabase.from("pedidos").update({ status }).eq("id", p.id);
+      if (error) throw new Error(`Não foi possível finalizar o pedido: ${error.message}`);
+
+      await qc.invalidateQueries({ queryKey: ["pedidos"] });
+      toast.success(`Pedido #${p.numero} finalizado e marcado como entregue!`);
+    } catch (e) {
+      toast.error(e instanceof Error ? e.message : "Não foi possível finalizar o pedido. Tente novamente.");
     }
-    qc.invalidateQueries({ queryKey: ["pedidos"] });
-    toast.success(status === "finalizado" ? `Pedido #${p.numero} finalizado!` : `Pedido #${p.numero} em produção`);
   }
 
   const atrasados = filaFiltrada.filter((p) => p.data_entrega < hoje).length;
