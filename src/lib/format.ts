@@ -23,11 +23,12 @@ export const dataLonga = (iso: string) => format(parseISO(iso), "EEEE, dd 'de' M
 export const STATUS = [
   { value: "recebido", label: "Recebido" },
   { value: "em_producao", label: "Em produção" },
-  { value: "finalizado", label: "Finalizado" },
+  // Status persistido no Supabase; a interface mantém o rótulo familiar.
+  { value: "entregue", label: "Finalizado" },
 ] as const;
 export const statusLabel = (s: string) =>
   STATUS.find((x) => x.value === s)?.label ??
-  (s === "entregue" ? "Finalizado" : s === "confirmado" ? "Recebido" : s === "pronto" ? "Em produção" : s === "cancelado" ? "Cancelado" : s);
+  (s === "finalizado" || s === "entregue" ? "Finalizado" : s === "confirmado" ? "Recebido" : s === "pronto" ? "Em produção" : s === "cancelado" ? "Cancelado" : s);
 
 export const FORMAS = [
   { value: "pix", label: "Pix" },
