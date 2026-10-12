@@ -5,7 +5,7 @@ import { createFileRoute, Link, useNavigate } from "@tanstack/react-router";
 import { useQueryClient, useSuspenseQuery } from "@tanstack/react-query";
 import { useState } from "react";
 import { toast } from "sonner";
-import { CheckCircle2, MessageCircle, Plus, Trash2 } from "lucide-react";
+import { MessageCircle, Plus, Trash2 } from "lucide-react";
 import { supabase } from "@/integrations/supabase/client";
 import { clientesQ, configQ, pedidosQ } from "@/lib/queries";
 import { useCustos } from "@/lib/hooks";
