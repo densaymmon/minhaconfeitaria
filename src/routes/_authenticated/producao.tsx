@@ -230,7 +230,7 @@ function Producao() {
                         })}
                       </div>
                       <div className="mt-3 flex gap-2">
-                        <Button size="sm" className="flex-1" onClick={() => mudarStatus(p, "finalizado")}>
+                        <Button size="sm" className="flex-1" onClick={() => mudarStatus(p, "entregue")}>
                           <CheckCircle2 className="size-4" /> Finalizado / entregue
                         </Button>
                       </div>
