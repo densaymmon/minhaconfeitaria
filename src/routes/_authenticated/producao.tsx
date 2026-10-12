@@ -3,7 +3,7 @@ import { createFileRoute, Link } from "@tanstack/react-router";
 import { useQueryClient } from "@tanstack/react-query";
 import { useMemo } from "react";
 import { toast } from "sonner";
-import { Minus, Plus, CheckCircle2, Play } from "lucide-react";
+import { Minus, Plus, CheckCircle2 } from "lucide-react";
 import { supabase } from "@/integrations/supabase/client";
 import { usePedidosCalc, type PedidoCalc } from "@/lib/hooks";
 import { dataLonga, hojeISO, num } from "@/lib/format";
@@ -157,11 +157,6 @@ function Producao() {
                         })}
                       </div>
                       <div className="mt-3 flex gap-2">
-                        {p.status !== "em_producao" && (
-                          <Button size="sm" variant="secondary" className="flex-1" onClick={() => mudarStatus(p, "em_producao")}>
-                            <Play className="size-4" /> Iniciar
-                          </Button>
-                        )}
                         <Button size="sm" className="flex-1" onClick={() => mudarStatus(p, "finalizado")}>
                           <CheckCircle2 className="size-4" /> Finalizado / entregue
                         </Button>
