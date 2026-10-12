@@ -10,7 +10,7 @@ import { supabase } from "@/integrations/supabase/client";
 import { clientesQ, configQ, pedidosQ } from "@/lib/queries";
 import { useCustos } from "@/lib/hooks";
 import { totaisPedido } from "@/lib/calc";
-import { FORMAS, STATUS, brl, hojeISO, parseNum } from "@/lib/format";
+import { FORMAS, STATUS, brl, hojeISO, parseNum, statusLabel } from "@/lib/format";
 import { Card, Field, NativeSelect, PageHeader, Row } from "@/components/app/ui";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -230,7 +230,7 @@ function PedidoForm() {
           <div className="flex items-center justify-between rounded-xl bg-muted/60 p-3">
             <div>
               <div className="text-xs text-muted-foreground">Status do pedido</div>
-              <div className="font-semibold">{STATUS.find((s) => s.value === f.status)?.label ?? (f.status === "entregue" ? "Finalizado" : f.status)}</div>
+              <div className="font-semibold">{statusLabel(f.status)}</div>
             </div>
             {existente && f.status !== "finalizado" && f.status !== "cancelado" && (
               <Button type="button" size="sm" variant="secondary" onClick={finalizarPedido}>
