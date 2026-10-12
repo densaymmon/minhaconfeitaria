@@ -14,6 +14,9 @@ export type Pedido = Tables<"pedidos"> & {
   clientes: { nome: string; telefone: string | null } | null;
 };
 export type Despesa = Tables<"despesas">;
+export type Compra = Tables<"compras">;
+export type ContaPagar = Tables<"contas_pagar">;
+export type EstoqueMovimento = Tables<"estoque_movimentos">;
 
 async function must<T>(p: PromiseLike<{ data: T | null; error: { message: string } | null }>): Promise<T> {
   const { data, error } = await p;
