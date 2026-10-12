@@ -1,9 +1,9 @@
 import * as appQueries from "@/lib/queries";
-import { createFileRoute, Link } from "@tanstack/react-router";
+import { createFileRoute, Link, useNavigate } from "@tanstack/react-router";
 import { useQueryClient } from "@tanstack/react-query";
 import { useState } from "react";
 import { toast } from "sonner";
-import { Download, Plus, Trash2, Pencil } from "lucide-react";
+import { Copy, Download, Plus, Trash2, Pencil } from "lucide-react";
 import { supabase } from "@/integrations/supabase/client";
 import { useCustos } from "@/lib/hooks";
 import { margemReal } from "@/lib/calc";
@@ -36,6 +36,7 @@ export const Route = createFileRoute("/_authenticated/produtos/")({
 
 function Produtos() {
   const { produtos, insumos, custo } = useCustos();
+  const navigate = useNavigate();
   return (
     <>
       <PageHeader title="Produtos e receitas" back="/mais" />
@@ -77,23 +78,36 @@ function Produtos() {
                 const preco = Number(p.preco_venda);
                 const lucro = preco - c;
                 return (
-                  <Link key={p.id} to="/produtos/$id" params={{ id: p.id }} className="block">
-                    <Card className={`p-3.5 ${p.ativo ? "" : "opacity-60"}`}>
-                      <div className="flex justify-between gap-2">
-                        <div className="min-w-0">
-                          <div className="truncate font-semibold">{p.nome}</div>
-                          <div className="text-xs text-muted-foreground">{p.categoria}{!p.ativo && " · inativo"}</div>
-                           {p.custo_alterado_em && <div className="mt-1 text-xs text-warning-foreground">Custo atualizado em {dataBR(p.custo_alterado_em)}</div>}
+                  <Card key={p.id} className={`p-3.5 ${p.ativo ? "" : "opacity-60"}`}>
+                    <div className="flex items-start gap-2">
+                      <Link to="/produtos/$id" params={{ id: p.id }} className="min-w-0 flex-1">
+                        <div className="flex justify-between gap-2">
+                          <div className="min-w-0">
+                            <div className="truncate font-semibold">{p.nome}</div>
+                            <div className="text-xs text-muted-foreground">{p.categoria}{!p.ativo && " · inativo"}</div>
+                            {p.custo_alterado_em && <div className="mt-1 text-xs text-warning-foreground">Custo atualizado em {dataBR(p.custo_alterado_em)}</div>}
+                          </div>
+                          <div className="text-right font-semibold">{brl(preco)}</div>
                         </div>
-                        <div className="text-right font-semibold">{brl(preco)}</div>
-                      </div>
-                      <div className="mt-2 grid grid-cols-3 text-xs">
-                        <div><div className="text-muted-foreground">Custo un.</div>{brl(c)}</div>
-                        <div><div className="text-muted-foreground">Lucro un.</div><span className={lucro >= 0 ? "text-success" : "text-destructive"}>{brl(lucro)}</span></div>
-                        <div><div className="text-muted-foreground">Margem</div>{pct(margemReal(c, preco))}</div>
-                      </div>
-                    </Card>
-                  </Link>
+                        <div className="mt-2 grid grid-cols-3 text-xs">
+                          <div><div className="text-muted-foreground">Custo un.</div>{brl(c)}</div>
+                          <div><div className="text-muted-foreground">Lucro un.</div><span className={lucro >= 0 ? "text-success" : "text-destructive"}>{brl(lucro)}</span></div>
+                          <div><div className="text-muted-foreground">Margem</div>{pct(margemReal(c, preco))}</div>
+                        </div>
+                      </Link>
+                      <Button
+                        type="button"
+                        variant="outline"
+                        size="icon"
+                        className="h-10 w-10 shrink-0"
+                        aria-label={`Duplicar ${p.nome}`}
+                        title="Duplicar produto"
+                        onClick={() => navigate({ to: "/produtos/$id", params: { id: p.id }, search: { duplicar: "1" } })}
+                      >
+                        <Copy className="size-4" />
+                      </Button>
+                    </div>
+                  </Card>
                 );
               })}
             </div>
