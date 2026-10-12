@@ -140,7 +140,7 @@ function Compras() {
       setLinhas([linhaVazia()]);
       toast.success("Compra registrada e entradas adicionadas ao estoque.");
     } catch (e) {
-      if (compraId) await supabase.from("compras").delete().eq("id", compraId);
+      if (compraId) { await supabase.from("estoque_movimentos").delete().eq("referencia_id", compraId); await supabase.from("contas_pagar").delete().eq("compra_id", compraId); await supabase.from("compras").delete().eq("id", compraId); }
       toast.error(e instanceof Error ? e.message : "Não foi possível salvar a compra.");
     } finally { setBusy(false); }
   }
