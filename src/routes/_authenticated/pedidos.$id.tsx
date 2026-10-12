@@ -10,7 +10,7 @@ import { supabase } from "@/integrations/supabase/client";
 import { clientesQ, configQ, pedidosQ } from "@/lib/queries";
 import { useCustos } from "@/lib/hooks";
 import { totaisPedido } from "@/lib/calc";
-import { FORMAS, STATUS, brl, hojeISO, parseNum, statusLabel } from "@/lib/format";
+import { FORMAS, brl, hojeISO, parseNum, statusLabel } from "@/lib/format";
 import { Card, Field, NativeSelect, PageHeader, Row } from "@/components/app/ui";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
