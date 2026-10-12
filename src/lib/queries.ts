@@ -2,6 +2,7 @@ import { queryOptions } from "@tanstack/react-query";
 import { supabase } from "@/integrations/supabase/client";
 import type { Tables } from "@/integrations/supabase/types";
 import { CONFIG_PADRAO, type Config } from "./calc";
+import { hojeISO } from "./format";
 
 export type Cliente = Tables<"clientes">;
 export type Insumo = Tables<"insumos">;
@@ -37,14 +38,28 @@ export const produtosQ = queryOptions({
 
 export const pedidosQ = queryOptions({
   queryKey: ["pedidos"],
-  queryFn: () =>
-    must<Pedido[]>(
-      supabase
-        .from("pedidos")
-        .select("*, pedido_itens(*), clientes(nome, telefone)")
-        .order("data_entrega", { ascending: false })
-        .order("numero", { ascending: false }),
-    ),
+  queryFn: async () => {
+    const hoje = hojeISO();
+    const { error: legadoEntregue } = await supabase.from("pedidos").update({ status: "finalizado" }).eq("status", "entregue");
+    if (legadoEntregue) throw new Error(legadoEntregue.message);
+    const { error: legadoPronto } = await supabase.from("pedidos").update({ status: "em_producao" }).eq("status", "pronto");
+    if (legadoPronto) throw new Error(legadoPronto.message);
+    const { error: legadoConfirmado } = await supabase.from("pedidos").update({ status: "recebido" }).eq("status", "confirmado");
+    if (legadoConfirmado) throw new Error(legadoConfirmado.message);
+    // A partir do dia da entrega, pedidos recebidos passam automaticamente para produção.
+    // Finalizado e cancelado não entram nesta transição.
+    const { error: transicao } = await supabase.from("pedidos")
+      .update({ status: "em_producao" })
+      .lte("data_entrega", hoje)
+      .eq("status", "recebido");
+    if (transicao) throw new Error(transicao.message);
+    const { data, error } = await supabase.from("pedidos")
+      .select("*, pedido_itens(*), clientes(nome, telefone)")
+      .order("data_entrega", { ascending: false })
+      .order("numero", { ascending: false });
+    if (error) throw new Error(error.message);
+    return (data ?? []) as Pedido[];
+  },
 });
 
 export const despesasQ = queryOptions({
