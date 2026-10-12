@@ -1,14 +1,15 @@
 import * as appQueries from "@/lib/queries";
 import { createFileRoute, Link } from "@tanstack/react-router";
 import { useQueryClient } from "@tanstack/react-query";
-import { useMemo } from "react";
+import { useMemo, useState } from "react";
 import { toast } from "sonner";
 import { Minus, Plus, CheckCircle2 } from "lucide-react";
 import { supabase } from "@/integrations/supabase/client";
 import { usePedidosCalc, type PedidoCalc } from "@/lib/hooks";
 import { dataLonga, hojeISO, num } from "@/lib/format";
-import { Card, Empty, PageHeader, StatusBadge } from "@/components/app/ui";
+import { Card, Empty, Field, PageHeader, StatusBadge } from "@/components/app/ui";
 import { Button } from "@/components/ui/button";
+import { Input } from "@/components/ui/input";
 import { cn } from "@/lib/utils";
 
 export const Route = createFileRoute("/_authenticated/producao")({
@@ -35,6 +36,9 @@ function Producao() {
   const pedidos = usePedidosCalc();
   const qc = useQueryClient();
   const hoje = hojeISO();
+  const [dataInicial, setDataInicial] = useState("");
+  const [dataFinal, setDataFinal] = useState("");
+  const [clienteFiltro, setClienteFiltro] = useState("");
 
   const fila = useMemo(
     () =>
@@ -44,23 +48,44 @@ function Producao() {
     [pedidos],
   );
 
+  const filaPeriodo = useMemo(
+    () => fila.filter((p) =>
+      (!dataInicial || p.data_entrega >= dataInicial) &&
+      (!dataFinal || p.data_entrega <= dataFinal)
+    ),
+    [fila, dataInicial, dataFinal],
+  );
+
+  const clientesPeriodo = useMemo(() => {
+    const m = new Map<string, string>();
+    for (const p of filaPeriodo) {
+      if (p.cliente_id && p.clientes?.nome) m.set(p.cliente_id, p.clientes.nome);
+    }
+    return [...m.entries()].sort((a, b) => a[1].localeCompare(b[1], "pt-BR"));
+  }, [filaPeriodo]);
+
+  const filaFiltrada = useMemo(
+    () => filaPeriodo.filter((p) => !clienteFiltro || p.cliente_id === clienteFiltro),
+    [filaPeriodo, clienteFiltro],
+  );
+
   const porData = useMemo(() => {
     const m = new Map<string, PedidoCalc[]>();
-    for (const p of fila) m.set(p.data_entrega, [...(m.get(p.data_entrega) ?? []), p]);
+    for (const p of filaFiltrada) m.set(p.data_entrega, [...(m.get(p.data_entrega) ?? []), p]);
     return [...m.entries()];
-  }, [fila]);
+  }, [filaFiltrada]);
 
   const resumo = useMemo(() => {
     const m = new Map<string, { qtd: number; feito: number }>();
-    for (const p of fila)
+    for (const p of filaFiltrada)
       for (const i of p.pedido_itens) {
         const r = m.get(i.descricao) ?? { qtd: 0, feito: 0 };
         r.qtd += Number(i.quantidade);
         r.feito += Number(i.quantidade_produzida);
         m.set(i.descricao, r);
       }
-    return [...m.entries()].sort((a, b) => b[1].qtd - b[1].feito - (a[1].qtd - a[1].feito));
-  }, [fila]);
+    return [...m.entries()].sort((a, b) => (b[1].qtd - b[1].feito) - (a[1].qtd - a[1].feito));
+  }, [filaFiltrada]);
 
   async function ajustar(itemId: string, valor: number, max: number) {
     const v = Math.max(0, Math.min(max, valor));
@@ -81,15 +106,39 @@ function Producao() {
     toast.success(status === "finalizado" ? `Pedido #${p.numero} finalizado!` : `Pedido #${p.numero} em produção`);
   }
 
-  const atrasados = fila.filter((p) => p.data_entrega < hoje).length;
+  const atrasados = filaFiltrada.filter((p) => p.data_entrega < hoje).length;
 
   return (
     <>
-      <PageHeader title="Produção" subtitle={`${fila.length} pedido(s) na fila${atrasados ? ` · ${atrasados} atrasado(s)` : ""}`} />
+      <PageHeader title="Produção" subtitle={`${filaFiltrada.length} pedido(s) na fila${atrasados ? ` · ${atrasados} atrasado(s)` : ""}`} />
 
-      {resumo.length > 0 && (
-        <Card className="mb-5">
-          <h2 className="mb-2 text-lg font-semibold">Total a produzir</h2>
+      <Card className="mb-5 space-y-3">
+        <h2 className="text-lg font-semibold">Total a produzir</h2>
+        <p className="text-sm text-muted-foreground">Filtre pelas datas de entrega e, se quiser, por cliente. Os totais abaixo acompanham os filtros.</p>
+        <div className="grid grid-cols-2 gap-3">
+          <Field label="Entrega a partir de">
+            <Input type="date" value={dataInicial} max={dataFinal || undefined} onChange={(e) => setDataInicial(e.target.value)} className="h-11" />
+          </Field>
+          <Field label="Entrega até">
+            <Input type="date" value={dataFinal} min={dataInicial || undefined} onChange={(e) => setDataFinal(e.target.value)} className="h-11" />
+          </Field>
+        </div>
+        <Field label="Cliente (somente do período selecionado)">
+          <select
+            value={clienteFiltro}
+            onChange={(e) => setClienteFiltro(e.target.value)}
+            className="flex h-11 w-full rounded-md border border-input bg-background px-3 py-2 text-sm"
+          >
+            <option value="">Todos os clientes do período</option>
+            {clientesPeriodo.map(([id, nome]) => <option key={id} value={id}>{nome}</option>)}
+          </select>
+        </Field>
+        {(dataInicial || dataFinal || clienteFiltro) && (
+          <Button type="button" size="sm" variant="outline" className="w-full" onClick={() => { setDataInicial(""); setDataFinal(""); setClienteFiltro(""); }}>
+            Limpar filtros
+          </Button>
+        )}
+        {resumo.length > 0 ? (
           <div className="space-y-2">
             {resumo.map(([nome, r]) => {
               const pend = Math.max(0, r.qtd - r.feito);
@@ -109,8 +158,10 @@ function Producao() {
               );
             })}
           </div>
-        </Card>
-      )}
+        ) : (
+          <p className="text-sm text-muted-foreground">Nenhum item para produzir nesse filtro.</p>
+        )}
+      </Card>
 
       {porData.length === 0 ? (
         <Empty>Nada para produzir. 🎉</Empty>
@@ -140,6 +191,16 @@ function Producao() {
                           const f = Number(i.quantidade_produzida);
                           return (
                             <div key={i.id} className="flex items-center gap-2">
+                              <label className="flex shrink-0 items-center gap-1.5 text-xs text-muted-foreground" title="Marcar item como produzido">
+                                <input
+                                  type="checkbox"
+                                  checked={q > 0 && f >= q}
+                                  onChange={(e) => ajustar(i.id, e.target.checked ? q : 0, q)}
+                                  className="size-4 accent-primary"
+                                  aria-label={`Marcar ${i.descricao} como produzido`}
+                                />
+                                Feito
+                              </label>
                               <div className="min-w-0 flex-1 text-sm">
                                 <div className="truncate">{i.descricao}</div>
                                 <div className="text-xs text-muted-foreground">
