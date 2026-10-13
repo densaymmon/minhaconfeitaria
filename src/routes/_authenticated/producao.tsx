@@ -6,10 +6,12 @@ import { toast } from "sonner";
 import { Minus, Plus, CheckCircle2, Search, List, Layers, SlidersHorizontal, Clock3, AlertTriangle, Pencil } from "lucide-react";
 import { supabase } from "@/integrations/supabase/client";
 import { usePedidosCalc, type PedidoCalc } from "@/lib/hooks";
-import { dataLonga, hojeISO, num } from "@/lib/format";
+import { brl, dataBR, dataLonga, formaLabel, FORMAS, hojeISO, num, parseNum } from "@/lib/format";
 import { Card, Empty, PageHeader, StatusBadge } from "@/components/app/ui";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
+import { Textarea } from "@/components/ui/textarea";
+import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/ui/dialog";
 import { cn } from "@/lib/utils";
 
 export const Route = createFileRoute("/_authenticated/producao")({
@@ -63,6 +65,61 @@ function Producao() {
   const [dataFinal, setDataFinal] = useState("");
   const [mostrarDatas, setMostrarDatas] = useState(false);
   const [finalizandoId, setFinalizandoId] = useState<string | null>(null);
+  const [pedidoAberto, setPedidoAberto] = useState<PedidoCalc | null>(null);
+  const [editandoPedido, setEditandoPedido] = useState(false);
+  const [salvandoEdicao, setSalvandoEdicao] = useState(false);
+  const [rascunho, setRascunho] = useState<{
+    cliente_id: string; data_entrega: string; hora_entrega: string; forma_pagamento: string;
+    valor_entrada: string; desconto: string; taxa_entrega: string; observacoes: string;
+    itens: { produto_id: string | null; descricao: string; quantidade: string; preco_unitario: string; custo_unitario: number; quantidade_produzida: number }[];
+  } | null>(null);
+
+  function abrirPedido(p: PedidoCalc) {
+    setPedidoAberto(p);
+    setEditandoPedido(false);
+    setRascunho({
+      cliente_id: p.cliente_id ?? "", data_entrega: p.data_entrega, hora_entrega: p.hora_entrega ?? "",
+      forma_pagamento: p.forma_pagamento, valor_entrada: String(p.valor_entrada ?? 0),
+      desconto: String(p.desconto ?? 0), taxa_entrega: String(p.taxa_entrega ?? 0), observacoes: p.observacoes ?? "",
+      itens: p.pedido_itens.map((i) => ({
+        produto_id: i.produto_id, descricao: i.descricao, quantidade: String(i.quantidade),
+        preco_unitario: String(i.preco_unitario), custo_unitario: Number(i.custo_unitario),
+        quantidade_produzida: Number(i.quantidade_produzida),
+      })),
+    });
+  }
+
+  async function salvarEdicaoPedido() {
+    if (!pedidoAberto || !rascunho) return;
+    if (!rascunho.data_entrega) return void toast.error("Informe a data de entrega.");
+    if (rascunho.itens.length === 0 || rascunho.itens.some((i) => !i.descricao.trim() || parseNum(i.quantidade) <= 0)) {
+      return void toast.error("Confira os itens: descrição e quantidade maior que zero são obrigatórias.");
+    }
+    setSalvandoEdicao(true);
+    try {
+      const { error } = await supabase.rpc("salvar_pedido", {
+        payload: {
+          cliente_id: rascunho.cliente_id || null, data_entrega: rascunho.data_entrega,
+          hora_entrega: rascunho.hora_entrega || null, status: pedidoAberto.status,
+          forma_pagamento: rascunho.forma_pagamento, valor_entrada: parseNum(rascunho.valor_entrada),
+          saldo_quitado: pedidoAberto.saldo_quitado, desconto: parseNum(rascunho.desconto),
+          taxa_entrega: parseNum(rascunho.taxa_entrega), observacoes: rascunho.observacoes.trim() || null,
+        },
+        itens: rascunho.itens.map((i) => ({
+          produto_id: i.produto_id, descricao: i.descricao.trim(), quantidade: parseNum(i.quantidade),
+          preco_unitario: parseNum(i.preco_unitario), custo_unitario: i.custo_unitario,
+          quantidade_produzida: Math.min(i.quantidade_produzida, parseNum(i.quantidade)),
+        })),
+        registro_id: pedidoAberto.id,
+      });
+      if (error) throw error;
+      await qc.invalidateQueries({ queryKey: ["pedidos"] });
+      toast.success(`Pedido #${pedidoAberto.numero} atualizado!`);
+      setPedidoAberto(null); setRascunho(null); setEditandoPedido(false);
+    } catch (e) {
+      toast.error(`Não foi possível salvar o pedido: ${e instanceof Error ? e.message : "tente novamente."}`);
+    } finally { setSalvandoEdicao(false); }
+  }
 
   const pedidosOrdenados = useMemo(
     () => [...pedidos]
@@ -193,6 +250,61 @@ function Producao() {
   return (
     <>
       <PageHeader title="Produção" subtitle={`${contagens.fila} pedido(s) na fila ativa${contagens.atrasados ? ` · ${contagens.atrasados} atrasado(s)` : ""}`} />
+
+      <Dialog open={!!pedidoAberto} onOpenChange={(open) => {
+        if (!open && editandoPedido && !confirm("Descartar as alterações não salvas?")) return;
+        if (!open) { setPedidoAberto(null); setRascunho(null); setEditandoPedido(false); }
+      }}>
+        <DialogContent className="max-h-[90dvh] max-w-2xl overflow-y-auto">
+          <DialogHeader><DialogTitle>Pedido #{pedidoAberto?.numero} · {pedidoAberto?.clientes?.nome ?? "Sem cliente"}</DialogTitle></DialogHeader>
+          {pedidoAberto && rascunho && (
+            <div className="space-y-4">
+              {!editandoPedido ? <>
+                <div className="grid grid-cols-1 gap-3 rounded-lg bg-muted/50 p-3 sm:grid-cols-2">
+                  <div><div className="text-xs text-muted-foreground">Cliente</div><div className="font-medium">{pedidoAberto.clientes?.nome ?? "Sem cliente"}</div></div>
+                  <div><div className="text-xs text-muted-foreground">Telefone</div><div className="font-medium">{pedidoAberto.clientes?.telefone || "Não informado"}</div></div>
+                  <div><div className="text-xs text-muted-foreground">Entrega</div><div className="font-medium">{dataBR(pedidoAberto.data_entrega)} {pedidoAberto.hora_entrega?.slice(0, 5) ?? ""}</div></div>
+                  <div><div className="text-xs text-muted-foreground">Status</div><div className="font-medium">{pedidoAberto.status}</div></div>
+                  <div><div className="text-xs text-muted-foreground">Pagamento</div><div className="font-medium">{formaLabel(pedidoAberto.forma_pagamento)}</div></div>
+                  <div><div className="text-xs text-muted-foreground">Total do pedido</div><div className="font-semibold">{brl(pedidoAberto.t.venda)}</div></div>
+                  <div><div className="text-xs text-muted-foreground">Entrada recebida</div><div className="font-medium">{brl(Number(pedidoAberto.valor_entrada ?? 0))}</div></div>
+                  <div><div className="text-xs text-muted-foreground">Saldo pendente</div><div className="font-medium">{brl(pedidoAberto.t.saldo)}</div></div>
+                </div>
+                <div><h3 className="mb-2 font-semibold">Itens do pedido</h3><div className="space-y-2">
+                  {pedidoAberto.pedido_itens.map((item) => <div key={item.id} className="flex items-start justify-between gap-3 rounded-lg border p-3">
+                    <div className="min-w-0"><div className="font-medium">{item.descricao}</div><div className="text-sm text-muted-foreground">{num(Number(item.quantidade))} × {brl(Number(item.preco_unitario))} · produzidos: {num(Number(item.quantidade_produzida))}</div></div>
+                    <div className="shrink-0 font-semibold">{brl(Number(item.quantidade) * Number(item.preco_unitario))}</div>
+                  </div>)}
+                </div></div>
+                {pedidoAberto.observacoes && <div className="rounded-lg bg-accent p-3 text-sm"><div className="mb-1 font-semibold">Observações</div><p className="whitespace-pre-wrap">{pedidoAberto.observacoes}</p></div>}
+                <div className="flex justify-end"><Button onClick={() => setEditandoPedido(true)}><Pencil className="size-4" /> Editar pedido</Button></div>
+              </> : <div className="space-y-4">
+                <div className="grid grid-cols-1 gap-3 sm:grid-cols-2">
+                  <label className="space-y-1 text-sm"><span className="font-medium">Data de entrega</span><Input type="date" value={rascunho.data_entrega} onChange={(e) => setRascunho({ ...rascunho, data_entrega: e.target.value })} /></label>
+                  <label className="space-y-1 text-sm"><span className="font-medium">Horário de entrega</span><Input type="time" value={rascunho.hora_entrega} onChange={(e) => setRascunho({ ...rascunho, hora_entrega: e.target.value })} /></label>
+                  <label className="space-y-1 text-sm"><span className="font-medium">Forma de pagamento</span><select className="h-10 w-full rounded-md border bg-background px-3" value={rascunho.forma_pagamento} onChange={(e) => setRascunho({ ...rascunho, forma_pagamento: e.target.value })}>{FORMAS.map((forma) => <option key={forma.value} value={forma.value}>{forma.label}</option>)}</select></label>
+                  <label className="space-y-1 text-sm"><span className="font-medium">Entrada recebida (R$)</span><Input inputMode="decimal" value={rascunho.valor_entrada} onChange={(e) => setRascunho({ ...rascunho, valor_entrada: e.target.value })} /></label>
+                  <label className="space-y-1 text-sm"><span className="font-medium">Desconto (R$)</span><Input inputMode="decimal" value={rascunho.desconto} onChange={(e) => setRascunho({ ...rascunho, desconto: e.target.value })} /></label>
+                  <label className="space-y-1 text-sm"><span className="font-medium">Taxa de entrega (R$)</span><Input inputMode="decimal" value={rascunho.taxa_entrega} onChange={(e) => setRascunho({ ...rascunho, taxa_entrega: e.target.value })} /></label>
+                </div>
+                <div><div className="mb-2 flex items-center justify-between"><h3 className="font-semibold">Itens</h3><Button type="button" size="sm" variant="outline" onClick={() => setRascunho({ ...rascunho, itens: [...rascunho.itens, { produto_id: null, descricao: "", quantidade: "1", preco_unitario: "0", custo_unitario: 0, quantidade_produzida: 0 }] })}><Plus className="size-4" /> Adicionar item</Button></div>
+                  <div className="space-y-3">{rascunho.itens.map((item, index) => <div key={index} className="space-y-2 rounded-lg border p-3">
+                    <Input aria-label="Descrição do item" placeholder="Descrição do produto" value={item.descricao} onChange={(e) => setRascunho({ ...rascunho, itens: rascunho.itens.map((x, i) => i === index ? { ...x, descricao: e.target.value } : x) })} />
+                    <div className="grid grid-cols-2 gap-2"><label className="space-y-1 text-sm"><span>Quantidade</span><Input inputMode="decimal" value={item.quantidade} onChange={(e) => setRascunho({ ...rascunho, itens: rascunho.itens.map((x, i) => i === index ? { ...x, quantidade: e.target.value } : x) })} /></label><label className="space-y-1 text-sm"><span>Preço unitário (R$)</span><Input inputMode="decimal" value={item.preco_unitario} onChange={(e) => setRascunho({ ...rascunho, itens: rascunho.itens.map((x, i) => i === index ? { ...x, preco_unitario: e.target.value } : x) })} /></label></div>
+                    <div className="flex items-center justify-between text-sm"><span className="text-muted-foreground">Subtotal: {brl(parseNum(item.quantidade) * parseNum(item.preco_unitario))} · Produzidos: {num(item.quantidade_produzida)}</span><Button type="button" size="sm" variant="ghost" className="text-destructive" onClick={() => setRascunho({ ...rascunho, itens: rascunho.itens.filter((_, i) => i !== index) })}>Remover</Button></div>
+                  </div>)}</div>
+                </div>
+                <label className="block space-y-1 text-sm"><span className="font-medium">Observações e personalizações</span><Textarea rows={3} value={rascunho.observacoes} onChange={(e) => setRascunho({ ...rascunho, observacoes: e.target.value })} placeholder="Detalhes do pedido..." /></label>
+                <div className="rounded-lg bg-muted/50 p-3 text-right"><span className="text-sm text-muted-foreground">Total estimado: </span><span className="font-bold">{brl(rascunho.itens.reduce((total, item) => total + parseNum(item.quantidade) * parseNum(item.preco_unitario), 0) + parseNum(rascunho.taxa_entrega) - parseNum(rascunho.desconto))}</span></div>
+                <div className="flex flex-col-reverse gap-2 sm:flex-row sm:justify-end">
+                  <Button type="button" variant="outline" disabled={salvandoEdicao} onClick={() => { if (confirm("Descartar as alterações não salvas?")) abrirPedido(pedidoAberto); }}>Cancelar edição</Button>
+                  <Button type="button" disabled={salvandoEdicao} onClick={() => void salvarEdicaoPedido()}>{salvandoEdicao ? "Salvando..." : "Salvar alterações"}</Button>
+                </div>
+              </div>}
+            </div>
+          )}
+        </DialogContent>
+      </Dialog>
 
       <div className="mb-4 grid grid-cols-2 gap-2 sm:grid-cols-4">
         <button type="button" onClick={() => setFiltro("fila")} className={cn("rounded-xl border bg-card p-3 text-left shadow-soft transition-colors", filtro === "fila" && "border-primary ring-1 ring-primary/30")}>
@@ -333,7 +445,7 @@ function Producao() {
                           <div className="flex flex-wrap items-center gap-x-2 gap-y-1">
                             <Link to="/pedidos/$id" params={{ id: p.id }} className="font-bold hover:underline">#{p.numero}</Link>
                             <span className="text-muted-foreground">·</span>
-                            <Link to="/pedidos/$id" params={{ id: p.id }} className="min-w-0 font-semibold hover:underline">{p.clientes?.nome ?? "Sem cliente"}</Link>
+                            <button type="button" onClick={() => abrirPedido(p)} className="min-w-0 rounded-sm text-left font-semibold hover:underline focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring">{p.clientes?.nome ?? "Sem cliente"}</button>
                             <StatusBadge status={p.status} />
                           </div>
                           <div className={cn("mt-1 flex flex-wrap items-center gap-x-2 text-sm", atrasado && "font-semibold text-destructive")}>
