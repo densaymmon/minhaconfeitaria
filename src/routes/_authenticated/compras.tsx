@@ -5,7 +5,7 @@ import { useMemo, useState } from "react";
 import { toast } from "sonner";
 import { Plus, Trash2, ShoppingCart, Wallet, Package } from "lucide-react";
 import { supabase } from "@/integrations/supabase/client";
-import { insumosQ, type ContaPagar, type Insumo } from "@/lib/queries";
+import { insumosQ, type ContaPagar } from "@/lib/queries";
 import { brl, dataBR, hojeISO, parseNum } from "@/lib/format";
 import { PageHeader, Field, Empty } from "@/components/app/ui";
 import { Input } from "@/components/ui/input";
