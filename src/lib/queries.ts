@@ -14,6 +14,9 @@ export type Pedido = Tables<"pedidos"> & {
   clientes: { nome: string; telefone: string | null } | null;
 };
 export type Despesa = Tables<"despesas">;
+export type Compra = Tables<"compras">;
+export type ContaPagar = Tables<"contas_pagar">;
+export type EstoqueMovimento = Tables<"estoque_movimentos">;
 
 async function must<T>(p: PromiseLike<{ data: T | null; error: { message: string } | null }>): Promise<T> {
   const { data, error } = await p;
@@ -70,4 +73,17 @@ export const configQ = queryOptions({
     const { user_id: _u, ...rest } = row;
     return Object.fromEntries(Object.entries(rest).map(([k, v]) => [k, Number(v)])) as Config;
   },
+});
+
+export const comprasQ = queryOptions({
+  queryKey: ["compras"],
+  queryFn: () => must<Compra[]>(supabase.from("compras").select("*").order("data_compra", { ascending: false })),
+});
+export const contasPagarQ = queryOptions({
+  queryKey: ["contas-pagar"],
+  queryFn: () => must<ContaPagar[]>(supabase.from("contas_pagar").select("*").order("data_vencimento")),
+});
+export const estoqueMovimentosQ = queryOptions({
+  queryKey: ["estoque-movimentos"],
+  queryFn: () => must<EstoqueMovimento[]>(supabase.from("estoque_movimentos").select("*").order("data_movimento", { ascending: false })),
 });
