@@ -19,3 +19,8 @@
 ## Rascunho por mensagem
 - [x] Adicionar interpretação com Lovable AI e revisão antes de preencher pedido.
 - [x] Validar interpretação real, revisão, preenchimento, salvamento e leitura com sessão do proprietário; pedido temporário removido e 12 testes aprovados.
+
+## Correções de build
+- [x] Remover a tela incompleta de compras e estoque e as consultas que apontavam para tabelas inexistentes; a função continua registrada em memória para ser construída no formato aprovado (data, insumos, quantidade com medida, preço por item e total).
+- [x] Alinhar o teste de status ao rótulo atual "Entregue" e corrigir os vínculos e parâmetros de busca de painel, pedidos e produtos.
+- [x] Validar com 21 testes, build sem erros de typecheck e navegação autenticada: vínculo do painel abre o filtro ativo, duplicar produto abre a receita com "(cópia)" e o menu "Mais" sem a tela removida.

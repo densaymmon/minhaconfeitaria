@@ -102,7 +102,7 @@ function Produtos() {
                         className="h-10 w-10 shrink-0"
                         aria-label={`Duplicar ${p.nome}`}
                         title="Duplicar produto"
-                        onClick={() => navigate({ to: "/produtos/$id", params: { id: p.id }, search: { duplicar: "1" } })}
+                        onClick={() => navigate({ to: "/produtos/$id", params: { id: p.id }, search: { duplicar: true } })}
                       >
                         <Copy className="size-4" />
                       </Button>

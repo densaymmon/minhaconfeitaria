@@ -16,7 +16,9 @@ import { medidasCompativeis, medidaLabel, numeroIngrediente, custoPorMedida } fr
 import { Switch } from "@/components/ui/switch";
 
 export const Route = createFileRoute("/_authenticated/produtos/$id")({
- validateSearch: (search: Record<string, unknown>) => ({ duplicar: search.duplicar === "1" }),
+ validateSearch: (search: Record<string, unknown>): { duplicar?: boolean | undefined } => ({
+   duplicar: search["duplicar"] === "1" || search["duplicar"] === "true" || search["duplicar"] === true ? true : undefined,
+ }),
  loader: async ({ context }) => { await Promise.all([context.queryClient.ensureQueryData(appQueries.produtosQ),context.queryClient.ensureQueryData(appQueries.insumosQ)]); },
  errorComponent: ({error}) => <p role="alert" className="py-8 text-destructive">{error instanceof Error ? error.message : "Não foi possível carregar os registros."}</p>,
  notFoundComponent: () => <p>Registro não encontrado.</p>,
