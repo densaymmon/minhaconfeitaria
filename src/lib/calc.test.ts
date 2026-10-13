@@ -54,10 +54,10 @@ describe("pedido", () => {
 });
 
 describe("utilitários", () => {
-  it("usa entregue como status persistido e mantém o rótulo Finalizado", () => {
-    expect(STATUS.find((status) => status.label === "Finalizado")?.value).toBe("entregue");
-    expect(statusLabel("entregue")).toBe("Finalizado");
-    expect(statusLabel("finalizado")).toBe("Finalizado");
+  it("usa entregue como status persistido e mantém o rótulo Entregue", () => {
+    expect(STATUS.find((status) => status.label === "Entregue")?.value).toBe("entregue");
+    expect(statusLabel("entregue")).toBe("Entregue");
+    expect(statusLabel("finalizado")).toBe("Entregue");
   });
   it("CSV com ; e vírgula decimal", () => {
     expect(toCSV(["a", "b"], [["x;y", 1.5]])).toBe('a;b\r\n"x;y";1,5');
