@@ -1,4 +1,4 @@
-import type { ReactNode, SelectHTMLAttributes } from "react";
+import type { HTMLAttributes, ReactNode, SelectHTMLAttributes } from "react";
 import { Link } from "@tanstack/react-router";
 import { ArrowLeft } from "lucide-react";
 import { cn } from "@/lib/utils";
@@ -35,8 +35,8 @@ export function PageHeader({
   );
 }
 
-export function Card({ className, children }: { className?: string; children: ReactNode }) {
-  return <div className={cn("rounded-2xl bg-card p-4 shadow-soft", className)}>{children}</div>;
+export function Card({ className, children, ...props }: HTMLAttributes<HTMLDivElement> & { children: ReactNode }) {
+  return <div {...props} className={cn("rounded-2xl bg-card p-4 shadow-soft", className)}>{children}</div>;
 }
 
 export function Stat({

@@ -37,6 +37,10 @@ export const Route = createFileRoute("/_authenticated/producao")({
 });
 
 const STATUS_FINAIS = ["finalizado", "entregue"];
+const STATUS_LABELS: Record<string, string> = {
+  recebido: "Recebido", confirmado: "Confirmado", em_producao: "Em produção",
+  pronto: "Pronto", finalizado: "Finalizado", entregue: "Entregue", cancelado: "Cancelado",
+};
 const STATUS_ATIVOS = ["recebido", "confirmado", "em_producao", "pronto"];
 
 type Filtro = "fila" | "todos" | "a_produzir" | "em_producao" | "prontos" | "atrasados" | "finalizados";
@@ -264,7 +268,7 @@ function Producao() {
                   <div><div className="text-xs text-muted-foreground">Cliente</div><div className="font-medium">{pedidoAberto.clientes?.nome ?? "Sem cliente"}</div></div>
                   <div><div className="text-xs text-muted-foreground">Telefone</div><div className="font-medium">{pedidoAberto.clientes?.telefone || "Não informado"}</div></div>
                   <div><div className="text-xs text-muted-foreground">Entrega</div><div className="font-medium">{dataBR(pedidoAberto.data_entrega)} {pedidoAberto.hora_entrega?.slice(0, 5) ?? ""}</div></div>
-                  <div><div className="text-xs text-muted-foreground">Status</div><div className="font-medium">{pedidoAberto.status}</div></div>
+                  <div><div className="text-xs text-muted-foreground">Status</div><div className="font-medium">{STATUS_LABELS[pedidoAberto.status] ?? pedidoAberto.status}</div></div>
                   <div><div className="text-xs text-muted-foreground">Pagamento</div><div className="font-medium">{formaLabel(pedidoAberto.forma_pagamento)}</div></div>
                   <div><div className="text-xs text-muted-foreground">Total do pedido</div><div className="font-semibold">{brl(pedidoAberto.t.venda)}</div></div>
                   <div><div className="text-xs text-muted-foreground">Entrada recebida</div><div className="font-medium">{brl(Number(pedidoAberto.valor_entrada ?? 0))}</div></div>
@@ -438,7 +442,21 @@ function Producao() {
                   const percentual = total > 0 ? Math.min(100, (feito / total) * 100) : 0;
                   const ativo = ["recebido", "confirmado", "em_producao"].includes(p.status);
                   return (
-                    <Card key={p.id} className={cn("p-3.5", atrasado && "border-destructive/50 ring-1 ring-destructive/20")}>
+                    <Card
+                      key={p.id}
+                      role="button"
+                      tabIndex={0}
+                      aria-label={`Abrir informações do pedido #${p.numero}`}
+                      onClick={(e) => {
+                        if ((e.target as HTMLElement).closest("button, a, input, textarea, select")) return;
+                        abrirPedido(p);
+                      }}
+                      onKeyDown={(e) => {
+                        if ((e.target as HTMLElement).closest("button, a, input, textarea, select")) return;
+                        if (e.key === "Enter" || e.key === " ") { e.preventDefault(); abrirPedido(p); }
+                      }}
+                      className={cn("cursor-pointer p-3.5 transition-shadow hover:shadow-md focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring", atrasado && "border-destructive/50 ring-1 ring-destructive/20")}
+                    >
                       <div className="flex items-start gap-3">
                         {atrasado && <span className="mt-0.5 grid size-8 shrink-0 place-items-center rounded-lg bg-destructive/10 text-destructive"><AlertTriangle className="size-4" /></span>}
                         <div className="min-w-0 flex-1">
