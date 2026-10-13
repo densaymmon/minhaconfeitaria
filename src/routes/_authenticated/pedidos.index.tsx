@@ -11,7 +11,7 @@ import { Input } from "@/components/ui/input";
 import { cn } from "@/lib/utils";
 
 export const Route = createFileRoute("/_authenticated/pedidos/")({
- validateSearch: (search: Record<string, unknown>): { filtro?: string; dataInicial?: string; dataFinal?: string } => ({
+ validateSearch: (search: Record<string, unknown>): { filtro?: string | undefined; dataInicial?: string | undefined; dataFinal?: string | undefined } => ({
    filtro: typeof search["filtro"] === "string" ? search["filtro"] : undefined,
    dataInicial: typeof search["dataInicial"] === "string" ? search["dataInicial"] : undefined,
    dataFinal: typeof search["dataFinal"] === "string" ? search["dataFinal"] : undefined,
