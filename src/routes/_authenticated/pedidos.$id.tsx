@@ -216,6 +216,15 @@ function PedidoForm() {
     }
   }
 
+  async function cancelarPedido() {
+    if (!existente || !confirm(`Cancelar o pedido #${existente.numero}? O pedido será mantido no histórico.`)) return;
+    const { error } = await supabase.from("pedidos").update({ status: "cancelado" }).eq("id", existente.id);
+    if (error) return void toast.error(`Não foi possível cancelar o pedido: ${error.message}`);
+    await qc.invalidateQueries({ queryKey: ["pedidos"] });
+    toast.success(`Pedido #${existente.numero} cancelado. O histórico foi preservado.`);
+    navigate({ to: "/pedidos" });
+  }
+
   async function excluir() {
     if (!existente || !confirm(`Excluir o pedido #${existente.numero}?`)) return;
     const { error } = await supabase.from("pedidos").delete().eq("id", existente.id);
@@ -395,9 +404,14 @@ function PedidoForm() {
           </Field>
         </Card>
 
-        <div className="flex gap-2">
+        <div className="flex flex-wrap gap-2">
+          {!novo && existente && !["entregue", "finalizado", "cancelado"].includes(existente.status) && (
+            <Button variant="outline" className="h-12 text-destructive" onClick={cancelarPedido}>
+              Cancelar pedido
+            </Button>
+          )}
           {!novo && (
-            <Button variant="outline" className="h-12 text-destructive" onClick={excluir}>
+            <Button variant="outline" className="h-12 text-destructive" onClick={excluir} aria-label="Excluir pedido">
               <Trash2 className="size-4" />
             </Button>
           )}
