@@ -48,7 +48,7 @@ function Pedidos() {
       if (dataInicial && p.data_entrega < dataInicial) return false;
       if (dataFinal && p.data_entrega > dataFinal) return false;
       if (status === "abertos" && ["finalizado", "entregue", "cancelado"].includes(p.status)) return false;
-      if (status === "em_andamento" && !["recebido", "confirmado", "em_producao", "pronto"].includes(p.status)) return false;
+      if (status === "em_andamento" && !["recebido", "confirmado", "em_producao"].includes(p.status)) return false;
       if (status !== "abertos" && status !== "todos" && status !== "em_andamento") {
         const statusCompativel = status === "entregue"
           ? ["entregue", "finalizado"].includes(p.status)
