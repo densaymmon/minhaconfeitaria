@@ -5,7 +5,7 @@ import { useMemo, useState } from "react";
 import { toast } from "sonner";
 import { Plus, Trash2, ShoppingCart, Wallet, Package } from "lucide-react";
 import { supabase } from "@/integrations/supabase/client";
-import { insumosQ, type Insumo } from "@/lib/queries";
+import { insumosQ, type ContaPagar, type Insumo } from "@/lib/queries";
 import { brl, dataBR, hojeISO, parseNum } from "@/lib/format";
 import { PageHeader, Field, Empty } from "@/components/app/ui";
 import { Input } from "@/components/ui/input";
@@ -37,6 +37,7 @@ function Compras() {
   const [f, setF] = useState({ fornecedor: "", data_compra: hojeISO(), numero_documento: "", desconto: "0", frete: "0", vencimento: "", forma_pagamento: "pix", observacoes: "" });
   const [linhas, setLinhas] = useState<Linha[]>([linhaVazia()]);
   const [busy, setBusy] = useState(false);
+  const [pagandoId, setPagandoId] = useState<string | null>(null);
   const set = (k: keyof typeof f, v: string) => setF(s => ({ ...s, [k]: v }));
   const linhasCalculadas = linhas.map(l => {
     const insumo = insumos.find(i => i.id === l.insumo_id);
@@ -56,6 +57,24 @@ function Compras() {
   function escolherInsumo(index: number, id: string) {
     const item = insumos.find(i => i.id === id);
     setLinhas(s => s.map((l, j) => j === index ? { ...l, insumo_id: id, preco: item ? String(item.preco_embalagem ?? item.preco_unidade) : "" } : l));
+  }
+
+  async function marcarComoPago(conta: ContaPagar) {
+    setPagandoId(conta.id);
+    try {
+      const { error } = await supabase.from("contas_pagar").update({
+        status: "pago",
+        valor_pago: Number(conta.valor),
+        data_pagamento: hojeISO(),
+      }).eq("id", conta.id);
+      if (error) throw error;
+      await qc.invalidateQueries({ queryKey: ["contas-pagar"] });
+      toast.success("Conta marcada como paga.");
+    } catch (e) {
+      toast.error(e instanceof Error ? e.message : "Não foi possível atualizar a conta.");
+    } finally {
+      setPagandoId(null);
+    }
   }
 
   async function salvar(e: React.FormEvent) {
@@ -195,6 +214,24 @@ function Compras() {
     <section className="mb-8">
       <h2 className="mb-3 flex items-center gap-2 text-lg font-semibold"><Package className="size-5"/>Estoque atual</h2>
       {!insumos.length?<Empty>Nenhum insumo cadastrado.</Empty>:<div className="divide-y">{insumos.map(i=><div key={i.id} className="flex items-center justify-between gap-3 py-3"><div className="min-w-0"><p className="font-medium">{i.nome}</p><p className="text-xs text-muted-foreground">{i.unidade_embalagem??i.unidade}</p></div><b className="text-right">{(estoque.get(i.id)??0).toLocaleString("pt-BR",{maximumFractionDigits:4})} <span className="text-xs font-normal text-muted-foreground">{i.unidade_embalagem??i.unidade}</span></b></div>)}</div>}
+    </section>
+    <section className="mb-8">
+      <h2 className="mb-3 flex items-center gap-2 text-lg font-semibold"><Wallet className="size-5"/>Contas a pagar</h2>
+      {!contas.length ? <Empty>Nenhuma conta financeira registrada.</Empty> : <div className="divide-y">{contas.map(c => {
+        const saldo = Math.max(0, Number(c.valor) - Number(c.valor_pago));
+        const pendente = c.status === "pendente" || c.status === "parcial";
+        return <div key={c.id} className="flex items-center justify-between gap-3 py-3">
+          <div className="min-w-0 flex-1">
+            <p className="font-medium">{c.descricao}</p>
+            <p className="text-xs text-muted-foreground">{c.fornecedor || "Sem fornecedor"} · Vencimento {dataBR(c.data_vencimento)}</p>
+            <p className="text-sm">{pendente ? `Saldo: ${brl(saldo)}` : c.status === "pago" ? "Pago" : "Cancelado"}</p>
+          </div>
+          <div className="flex shrink-0 flex-col items-end gap-2">
+            <b>{brl(Number(c.valor))}</b>
+            {pendente && <Button type="button" size="sm" variant="outline" disabled={pagandoId === c.id} onClick={() => marcarComoPago(c)}>{pagandoId === c.id ? "Salvando..." : "Marcar como pago"}</Button>}
+          </div>
+        </div>;
+      })}</div>}
     </section>
     <section>
       <h2 className="mb-3 text-lg font-semibold">Histórico de compras</h2>
