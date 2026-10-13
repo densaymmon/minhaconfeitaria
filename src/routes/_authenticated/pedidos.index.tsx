@@ -1,7 +1,8 @@
 import * as appQueries from "@/lib/queries";
 import { createFileRoute, Link } from "@tanstack/react-router";
 import { useMemo, useState } from "react";
-import { Download, Plus, Search } from "lucide-react";
+import { useQueryClient } from "@tanstack/react-query";
+import { CheckCircle2, Download, Pencil, Plus, Search } from "lucide-react";
 import { usePedidosCalc } from "@/lib/hooks";
 import { STATUS, brl, dataBR, formaLabel, hojeISO, statusLabel } from "@/lib/format";
 import { baixarCSV } from "@/lib/csv";
@@ -9,6 +10,8 @@ import { Card, Empty, PageHeader, StatusBadge } from "@/components/app/ui";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { cn } from "@/lib/utils";
+import { supabase } from "@/integrations/supabase/client";
+import { toast } from "sonner";
 
 export const Route = createFileRoute("/_authenticated/pedidos/")({
  validateSearch: (search: Record<string, unknown>) => ({
@@ -35,6 +38,7 @@ export const Route = createFileRoute("/_authenticated/pedidos/")({
 
 function Pedidos() {
   const pedidos = usePedidosCalc();
+  const qc = useQueryClient();
   const search = Route.useSearch();
   const [busca, setBusca] = useState("");
   const [status, setStatus] = useState<string>(search.filtro === "em_andamento" ? "em_andamento" : search.filtro === "mes" ? "todos" : search.filtro === "todos" ? "todos" : "abertos");
@@ -64,6 +68,14 @@ function Pedidos() {
       );
     });
   }, [pedidos, busca, status, dataInicial, dataFinal]);
+
+  async function marcarComoEntregue(pedido: (typeof pedidos)[number]) {
+    if (pedido.status !== "pronto") return;
+    const { error } = await supabase.from("pedidos").update({ status: "entregue" }).eq("id", pedido.id);
+    if (error) return void toast.error(`Não foi possível marcar o pedido #${pedido.numero} como entregue: ${error.message}`);
+    await qc.invalidateQueries({ queryKey: ["pedidos"] });
+    toast.success(`Pedido #${pedido.numero} marcado como entregue.`);
+  }
 
   function exportar() {
     baixarCSV(
@@ -152,10 +164,9 @@ function Pedidos() {
           {lista.map((p) => {
             const atrasado = p.data_entrega < hoje && !["finalizado", "entregue", "cancelado"].includes(p.status);
             return (
-              <Link key={p.id} to="/pedidos/$id" params={{ id: p.id }} className="block">
-                <Card className="p-3.5">
+              <Card key={p.id} className="p-3.5">
                   <div className="flex items-center justify-between gap-2">
-                    <div className="font-semibold">#{p.numero} · {p.clientes?.nome ?? "Sem cliente"}</div>
+                    <Link to="/pedidos/$id" params={{ id: p.id }} className="font-semibold hover:underline">#{p.numero} · {p.clientes?.nome ?? "Sem cliente"}</Link>
                     <div className="flex shrink-0 items-center gap-1.5">
                       {p.t.venda > 0 && p.t.saldo <= 0 && <span className="rounded-full bg-success/15 px-2 py-0.5 text-xs font-semibold text-success">Pago</span>}
                       <StatusBadge status={p.status} />
@@ -172,8 +183,19 @@ function Pedidos() {
                     <span className="font-semibold tabular-nums">{brl(p.t.venda)}</span>
                   </div>
                   {p.t.saldo > 0 && <div className="mt-0.5 text-right text-xs text-warning-foreground">Falta receber {brl(p.t.saldo)}</div>}
-                </Card>
-              </Link>
+                  {p.status === "pronto" && (
+                    <div className="mt-3 flex flex-col gap-2 border-t pt-3 sm:flex-row">
+                      <Button size="sm" className="flex-1" onClick={() => void marcarComoEntregue(p)}>
+                        <CheckCircle2 className="size-4" /> Marcar como entregue
+                      </Button>
+                      <Button asChild size="sm" variant="outline" className="flex-1">
+                        <Link to="/pedidos/$id" params={{ id: p.id }}>
+                          <Pencil className="size-4" /> Editar pedido
+                        </Link>
+                      </Button>
+                    </div>
+                  )}
+              </Card>
             );
           })}
         </div>
