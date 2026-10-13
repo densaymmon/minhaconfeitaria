@@ -448,11 +448,11 @@ function Producao() {
                       tabIndex={0}
                       aria-label={`Abrir informações do pedido #${p.numero}`}
                       onClick={(e) => {
-                        if ((e.target as HTMLElement).closest("button, a, input, textarea, select, [role=button]")) return;
+                        if ((e.target as HTMLElement).closest("button, a, input, textarea, select")) return;
                         abrirPedido(p);
                       }}
                       onKeyDown={(e) => {
-                        if ((e.target as HTMLElement).closest("button, a, input, textarea, select, [role=button]")) return;
+                        if ((e.target as HTMLElement).closest("button, a, input, textarea, select")) return;
                         if (e.key === "Enter" || e.key === " ") { e.preventDefault(); abrirPedido(p); }
                       }}
                       className={cn("cursor-pointer p-3.5 transition-shadow hover:shadow-md focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring", atrasado && "border-destructive/50 ring-1 ring-destructive/20")}
