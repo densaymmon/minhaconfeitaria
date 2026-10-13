@@ -19,7 +19,7 @@ BEGIN
     RAISE EXCEPTION 'Constraint public.pedidos.pedidos_status_check não encontrada; nenhuma alteração foi aplicada.';
   END IF;
 
-  expressao_check := regexp_replace(definicao_check, '^CHECK\\s*', '', 'i');
+  expressao_check := regexp_replace(definicao_check, '^CHECK\s*', '', 'i');
 
   ALTER TABLE public.pedidos DROP CONSTRAINT pedidos_status_check;
 
