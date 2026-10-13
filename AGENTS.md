@@ -15,6 +15,7 @@
 - Save orders and recipe ingredients through transactional, invoker-security database RPCs; partial saves must never delete previous items.
 - Preserve order item cost snapshots when ingredient prices change; historical profitability must not change with current supplier prices.
 - Enforce singleton ownership and relationship ownership in the database; frontend checks are not security boundaries.
+- Never leave routes, queries or links pointing at database tables that do not exist yet; an unfinished feature stays out of the app until its migration lands, because half-applied screens break the build and crash at runtime.
 
 - Expose read-only MCP tools through the SDK TanStack plugin with OAuth caller tokens and a shared RLS client; agents must never bypass owner isolation.
 - Preserve canonical same-origin OAuth consent return paths through login and signup so external authorization can complete safely.
