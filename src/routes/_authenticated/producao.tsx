@@ -142,7 +142,7 @@ function Producao() {
     await qc.invalidateQueries({ queryKey: ["pedidos"] });
   }
 
-  async function mudarStatus(p: PedidoCalc, status: "entregue") {
+  async function mudarStatus(p: PedidoCalc, status: "pronto") {
     setFinalizandoId(p.id);
     try {
       const atualizacoesItens = await Promise.all(
@@ -154,10 +154,10 @@ function Producao() {
       if (erroItem) throw new Error(`Não foi possível registrar todos os itens produzidos: ${erroItem.message}`);
 
       const { error } = await supabase.from("pedidos").update({ status }).eq("id", p.id);
-      if (error) throw new Error(`Não foi possível finalizar o pedido: ${error.message}`);
+      if (error) throw new Error(`Não foi possível marcar o pedido como pronto: ${error.message}`);
 
       await qc.invalidateQueries({ queryKey: ["pedidos"] });
-      toast.success(`Pedido #${p.numero} finalizado!`);
+      toast.success(`Pedido #${p.numero} marcado como pronto e aguardando entrega.`);
     } catch (e) {
       toast.error(e instanceof Error ? e.message : "Não foi possível finalizar o pedido. Tente novamente.");
     } finally {
@@ -309,7 +309,7 @@ function Producao() {
                   const total = p.pedido_itens.reduce((s, i) => s + Number(i.quantidade), 0);
                   const feito = p.pedido_itens.reduce((s, i) => s + Number(i.quantidade_produzida), 0);
                   const percentual = total > 0 ? Math.min(100, (feito / total) * 100) : 0;
-                  const ativo = STATUS_ATIVOS.includes(p.status);
+                  const ativo = ["recebido", "confirmado", "em_producao"].includes(p.status);
                   return (
                     <Card key={p.id} className={cn("p-3.5", atrasado && "border-destructive/50 ring-1 ring-destructive/20")}>
                       <div className="flex items-start gap-3">
@@ -380,9 +380,9 @@ function Producao() {
 
                       {ativo && (
                         <div className="mt-3 border-t pt-3">
-                          <Button size="lg" className="w-full" onClick={() => mudarStatus(p, "entregue")} disabled={finalizandoId === p.id}>
+                          <Button size="lg" className="w-full" onClick={() => mudarStatus(p, "pronto")} disabled={finalizandoId === p.id}>
                             <CheckCircle2 className="size-4" />
-                            {finalizandoId === p.id ? "Finalizando..." : "Marcar pedido como finalizado"}
+                            {finalizandoId === p.id ? "Marcando como pronto..." : "Marcar como Pronto"}
                           </Button>
                         </div>
                       )}
