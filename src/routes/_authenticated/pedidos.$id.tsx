@@ -203,7 +203,7 @@ function PedidoForm() {
     }
   }
 
-  async function alterarStatusPedido(status: "recebido" | "em_producao" | "entregue") {
+  async function alterarStatusPedido(status: "recebido" | "em_producao" | "pronto" | "entregue") {
     if (!existente || status === f.status) return;
     try {
       const { error } = await supabase.from("pedidos").update({ status }).eq("id", existente.id);
@@ -300,12 +300,13 @@ function PedidoForm() {
           <Field label="Status do pedido">
             {existente && f.status !== "cancelado" ? (
               <NativeSelect
-                value={f.status === "finalizado" || f.status === "entregue" ? "entregue" : f.status === "confirmado" ? "recebido" : f.status === "pronto" ? "em_producao" : f.status}
-                onChange={(e) => alterarStatusPedido(e.target.value as "recebido" | "em_producao" | "entregue")}
+                value={f.status === "finalizado" ? "entregue" : f.status === "confirmado" ? "recebido" : f.status}
+                onChange={(e) => alterarStatusPedido(e.target.value as "recebido" | "em_producao" | "pronto" | "entregue")}
               >
                 <option value="recebido">Recebido</option>
                 <option value="em_producao">Em produção</option>
-                <option value="entregue">Finalizado</option>
+                <option value="pronto">Pronto</option>
+                <option value="entregue">Entregue</option>
               </NativeSelect>
             ) : (
               <div className="rounded-lg bg-muted/60 p-3 font-semibold">{statusLabel(f.status)}</div>
