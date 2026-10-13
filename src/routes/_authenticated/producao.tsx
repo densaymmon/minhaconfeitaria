@@ -3,7 +3,7 @@ import { createFileRoute, Link } from "@tanstack/react-router";
 import { useQueryClient } from "@tanstack/react-query";
 import { useMemo, useState } from "react";
 import { toast } from "sonner";
-import { Minus, Plus, CheckCircle2, Search, List, Layers, SlidersHorizontal, Clock3, AlertTriangle } from "lucide-react";
+import { Minus, Plus, CheckCircle2, Search, List, Layers, SlidersHorizontal, Clock3, AlertTriangle, Pencil } from "lucide-react";
 import { supabase } from "@/integrations/supabase/client";
 import { usePedidosCalc, type PedidoCalc } from "@/lib/hooks";
 import { dataLonga, hojeISO, num } from "@/lib/format";
@@ -160,6 +160,21 @@ function Producao() {
       toast.success(`Pedido #${p.numero} marcado como pronto e aguardando entrega.`);
     } catch (e) {
       toast.error(e instanceof Error ? e.message : "Não foi possível finalizar o pedido. Tente novamente.");
+    } finally {
+      setFinalizandoId(null);
+    }
+  }
+
+  async function marcarComoEntregue(p: PedidoCalc) {
+    if (p.status !== "pronto") return;
+    setFinalizandoId(p.id);
+    try {
+      const { error } = await supabase.from("pedidos").update({ status: "entregue" }).eq("id", p.id);
+      if (error) throw new Error(error.message);
+      await qc.invalidateQueries({ queryKey: ["pedidos"] });
+      toast.success(`Pedido #${p.numero} marcado como entregue.`);
+    } catch (e) {
+      toast.error(`Não foi possível marcar o pedido como entregue: ${e instanceof Error ? e.message : "tente novamente."}`);
     } finally {
       setFinalizandoId(null);
     }
@@ -383,6 +398,20 @@ function Producao() {
                           <Button size="lg" className="w-full" onClick={() => mudarStatus(p, "pronto")} disabled={finalizandoId === p.id}>
                             <CheckCircle2 className="size-4" />
                             {finalizandoId === p.id ? "Marcando como pronto..." : "Marcar como Pronto"}
+                          </Button>
+                        </div>
+                      )}
+
+                      {p.status === "pronto" && (
+                        <div className="mt-3 flex flex-col gap-2 border-t pt-3 sm:flex-row">
+                          <Button size="sm" className="flex-1" onClick={() => void marcarComoEntregue(p)} disabled={finalizandoId === p.id}>
+                            <CheckCircle2 className="size-4" />
+                            {finalizandoId === p.id ? "Atualizando..." : "Marcar como entregue"}
+                          </Button>
+                          <Button asChild size="sm" variant="outline" className="flex-1">
+                            <Link to="/pedidos/$id" params={{ id: p.id }}>
+                              <Pencil className="size-4" /> Editar pedido
+                            </Link>
                           </Button>
                         </div>
                       )}
