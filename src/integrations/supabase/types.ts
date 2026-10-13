@@ -44,6 +44,81 @@ export type Database = {
         }
         Relationships: []
       }
+      compra_itens: {
+        Row: {
+          compra_id: string
+          created_at: string
+          id: string
+          insumo_id: string
+          preco_unitario: number
+          quantidade: number
+          total: number
+          unidade: string
+          user_id: string
+        }
+        Insert: {
+          compra_id: string
+          created_at?: string
+          id?: string
+          insumo_id: string
+          preco_unitario: number
+          quantidade: number
+          total?: number
+          unidade: string
+          user_id?: string
+        }
+        Update: {
+          compra_id?: string
+          created_at?: string
+          id?: string
+          insumo_id?: string
+          preco_unitario?: number
+          quantidade?: number
+          total?: number
+          unidade?: string
+          user_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "compra_itens_compra_id_fkey"
+            columns: ["compra_id"]
+            isOneToOne: false
+            referencedRelation: "compras"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "compra_itens_insumo_id_fkey"
+            columns: ["insumo_id"]
+            isOneToOne: false
+            referencedRelation: "insumos"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      compras: {
+        Row: {
+          created_at: string
+          data_compra: string
+          id: string
+          total: number
+          user_id: string
+        }
+        Insert: {
+          created_at?: string
+          data_compra: string
+          id?: string
+          total?: number
+          user_id?: string
+        }
+        Update: {
+          created_at?: string
+          data_compra?: string
+          id?: string
+          total?: number
+          user_id?: string
+        }
+        Relationships: []
+      }
       configuracoes: {
         Row: {
           imposto_pct: number
