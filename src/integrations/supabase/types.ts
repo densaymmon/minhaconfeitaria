@@ -97,7 +97,6 @@ export type Database = {
       }
       compras: {
         Row: {
-          cancelada_em: string | null
           created_at: string
           data_compra: string
           id: string
@@ -105,7 +104,6 @@ export type Database = {
           user_id: string
         }
         Insert: {
-          cancelada_em?: string | null
           created_at?: string
           data_compra: string
           id?: string
@@ -113,7 +111,6 @@ export type Database = {
           user_id?: string
         }
         Update: {
-          cancelada_em?: string | null
           created_at?: string
           data_compra?: string
           id?: string
@@ -121,68 +118,6 @@ export type Database = {
           user_id?: string
         }
         Relationships: []
-      }
-      contas_pagar: {
-        Row: {
-          compra_id: string | null
-          created_at: string
-          data_emissao: string
-          data_pagamento: string | null
-          data_vencimento: string
-          descricao: string
-          fornecedor: string | null
-          forma_pagamento: string | null
-          id: string
-          observacoes: string | null
-          status: string
-          updated_at: string
-          user_id: string
-          valor: number
-          valor_pago: number
-        }
-        Insert: {
-          compra_id?: string | null
-          created_at?: string
-          data_emissao?: string
-          data_pagamento?: string | null
-          data_vencimento?: string
-          descricao: string
-          fornecedor?: string | null
-          forma_pagamento?: string | null
-          id?: string
-          observacoes?: string | null
-          status?: string
-          updated_at?: string
-          user_id?: string
-          valor: number
-          valor_pago?: number
-        }
-        Update: {
-          compra_id?: string | null
-          created_at?: string
-          data_emissao?: string
-          data_pagamento?: string | null
-          data_vencimento?: string
-          descricao?: string
-          fornecedor?: string | null
-          forma_pagamento?: string | null
-          id?: string
-          observacoes?: string | null
-          status?: string
-          updated_at?: string
-          user_id?: string
-          valor?: number
-          valor_pago?: number
-        }
-        Relationships: [
-          {
-            foreignKeyName: "contas_pagar_compra_id_fkey"
-            columns: ["compra_id"]
-            isOneToOne: false
-            referencedRelation: "compras"
-            referencedColumns: ["id"]
-          },
-        ]
       }
       configuracoes: {
         Row: {
@@ -514,12 +449,6 @@ export type Database = {
     Functions: {
       medida_base: { Args: { u: string }; Returns: string }
       medida_fator: { Args: { u: string }; Returns: number }
-      recalcular_custos_historicos: { Args: Record<PropertyKey, never>; Returns: number }
-      saldo_estoque: { Args: Record<PropertyKey, never>; Returns: { insumo_id: string; nome: string; saldo: number; unidade_base: string | null }[] }
-      cancelar_compra: { Args: { evento_id: string; registro_id: string }; Returns: undefined }
-      registrar_inventario_fisico: { Args: { evento_id: string; itens: Json }; Returns: undefined }
-      salvar_compra: { Args: { evento_id: string; itens: Json; payload: Json; registro_id?: string }; Returns: string }
-      ajustar_producao: { Args: { evento_id: string; pedido_item_id: string; quantidade_resultado: number }; Returns: undefined }
       salvar_pedido: {
         Args: { itens: Json; payload: Json; registro_id?: string }
         Returns: string
