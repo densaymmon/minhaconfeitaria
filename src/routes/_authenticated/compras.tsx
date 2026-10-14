@@ -34,7 +34,7 @@ export const Route = createFileRoute("/_authenticated/compras")({
 });
 
 const MEDIDAS_COMPRA = ["g", "kg", "L", "un"] as const;
-type Linha = { insumo_id: string; quantidade: string; unidade: string; preco: string };
+type Linha = { compraItemId?: string; insumo_id: string; quantidade: string; unidade: string; preco: string };
 const linhaVazia = (): Linha => ({ insumo_id: "", quantidade: "", unidade: "un", preco: "" });
 
 // Nunca permita que valores numéricos inválidos vindos do banco apareçam como "NaN"
@@ -61,6 +61,7 @@ function Compras() {
   const [data, setData] = useState(hojeISO());
   const [linhas, setLinhas] = useState<Linha[]>([linhaVazia()]);
   const [busy, setBusy] = useState(false);
+  const [editandoCompraId, setEditandoCompraId] = useState<string | null>(null);
   const [de, setDe] = useState("");
   const [ate, setAte] = useState("");
 
@@ -112,17 +113,39 @@ function Compras() {
     setBusy(true);
     let compraId: string | null = null;
     try {
-      const { data: compra, error: erroCompra } = await supabase.from("compras").insert({ data_compra: data }).select("id").single();
-      if (erroCompra) throw erroCompra;
-      compraId = compra.id;
-      const { error: erroItens } = await supabase.from("compra_itens").insert(
-        calculadas.map((l) => ({ compra_id: compra.id, insumo_id: l.insumo!.id, quantidade: l.quantidade, unidade: l.unidade, preco_unitario: l.preco })),
-      );
-      if (erroItens) throw erroItens;
+      if (editandoCompraId) {
+        const { error: erroCompra } = await supabase.from("compras").update({ data_compra: data }).eq("id", editandoCompraId);
+        if (erroCompra) throw erroCompra;
+        for (const l of calculadas) {
+          const valores = { insumo_id: l.insumo!.id, quantidade: l.quantidade, unidade: l.unidade, preco_unitario: l.preco };
+          if (l.compraItemId) {
+            const { error } = await supabase.from("compra_itens").update(valores).eq("id", l.compraItemId).eq("compra_id", editandoCompraId);
+            if (error) throw error;
+          } else {
+            const { error } = await supabase.from("compra_itens").insert({ ...valores, compra_id: editandoCompraId });
+            if (error) throw error;
+          }
+        }
+        const idsMantidos = new Set(linhas.map((l) => l.compraItemId).filter(Boolean));
+        const removidos = itens.filter((i) => i.compra_id === editandoCompraId && !idsMantidos.has(i.id));
+        if (removidos.length) {
+          const { error } = await supabase.from("compra_itens").delete().in("id", removidos.map((i) => i.id)).eq("compra_id", editandoCompraId);
+          if (error) throw error;
+        }
+      } else {
+        const { data: compra, error: erroCompra } = await supabase.from("compras").insert({ data_compra: data }).select("id").single();
+        if (erroCompra) throw erroCompra;
+        compraId = compra.id;
+        const { error: erroItens } = await supabase.from("compra_itens").insert(
+          calculadas.map((l) => ({ compra_id: compra.id, insumo_id: l.insumo!.id, quantidade: l.quantidade, unidade: l.unidade, preco_unitario: l.preco })),
+        );
+        if (erroItens) throw erroItens;
+      }
       await Promise.all([qc.invalidateQueries({ queryKey: ["compras"] }), qc.invalidateQueries({ queryKey: ["compra-itens"] })]);
       setData(hojeISO());
       setLinhas([linhaVazia()]);
-      toast.success("Compra registrada.");
+      setEditandoCompraId(null);
+      toast.success(editandoCompraId ? "Compra atualizada." : "Compra registrada.");
     } catch (erro) {
       if (compraId) await supabase.from("compras").delete().eq("id", compraId);
       toast.error(erro instanceof Error ? erro.message : "Não foi possível salvar a compra.");
@@ -135,7 +158,7 @@ function Compras() {
     <>
       <PageHeader title="Compras de insumos" back="/mais" />
       <form onSubmit={salvar} className="mb-8 space-y-4">
-        <h2 className="text-lg font-semibold">Registrar compra</h2>
+        <h2 className="text-lg font-semibold">{editandoCompraId ? "Editar compra" : "Registrar compra"}</h2>
         <Field label="Data da compra">
           <Input required type="date" className="h-11" value={data} onChange={(e) => setData(e.target.value)} />
         </Field>
@@ -158,7 +181,7 @@ function Compras() {
               </Field>
               <div className="grid grid-cols-2 gap-3">
                 <Field label="Quantidade">
-                  <Input required inputMode="decimal" className="h-11" value={l.quantidade} onChange={(e) => setLinhas((s) => s.map((x, j) => (j === index ? { ...x, quantidade: e.target.value } : x)))} />
+                  <Input required inputMode="decimal" className="h-11" value={textoCampoNumerico(l.quantidade)} onChange={(e) => setLinhas((s) => s.map((x, j) => (j === index ? { ...x, quantidade: e.target.value } : x)))} />
                 </Field>
                 <Field label="Medida">
                   <select value={l.unidade} onChange={(e) => setLinhas((s) => s.map((x, j) => (j === index ? { ...x, unidade: e.target.value } : x)))} className="h-11 w-full rounded-md border border-input bg-background px-3 text-sm">
@@ -167,7 +190,7 @@ function Compras() {
                 </Field>
               </div>
               <Field label="Preço de cada item (R$)">
-                <Input required inputMode="decimal" className="h-11" value={l.preco} onChange={(e) => setLinhas((s) => s.map((x, j) => (j === index ? { ...x, preco: e.target.value } : x)))} />
+                <Input required inputMode="decimal" className="h-11" value={textoCampoNumerico(l.preco)} onChange={(e) => setLinhas((s) => s.map((x, j) => (j === index ? { ...x, preco: e.target.value } : x)))} />
               </Field>
               <div className="flex justify-between text-sm">
                 <span className="text-muted-foreground">Total do item</span>
@@ -183,7 +206,8 @@ function Compras() {
           <span className="font-medium">Total da compra</span>
           <span className="text-lg font-bold">{brl(total)}</span>
         </div>
-        <Button disabled={busy || !insumos.length} className="h-11 w-full">{busy ? "Salvando compra..." : "Salvar compra"}</Button>
+        <Button disabled={busy || !insumos.length} className="h-11 w-full">{busy ? "Salvando compra..." : editandoCompraId ? "Salvar alterações" : "Salvar compra"}</Button>
+        {editandoCompraId && <Button type="button" variant="outline" className="h-11 w-full" onClick={() => { setEditandoCompraId(null); setData(hojeISO()); setLinhas([linhaVazia()]); }}>Cancelar edição</Button>}
         {!insumos.length && <p className="text-sm text-muted-foreground">Cadastre primeiro os insumos em Produtos e receitas.</p>}
       </form>
 
@@ -230,7 +254,15 @@ function Compras() {
                 <div key={c.id} className="py-3">
                   <div className="flex items-center justify-between gap-3">
                     <p className="font-medium">{dataBR(c.data_compra)}</p>
-                    <b>{brl(Number(c.total))}</b>
+                    <div className="flex items-center gap-3">
+                      <b>{brl(Number(c.total))}</b>
+                      <Button type="button" variant="outline" size="sm" onClick={() => {
+                        const itensCompra = itens.filter((i) => i.compra_id === c.id);
+                        setData(c.data_compra);
+                        setLinhas(itensCompra.map((i) => ({ compraItemId: i.id, insumo_id: i.insumo_id, quantidade: String(i.quantidade), unidade: i.unidade, preco: String(i.preco_unitario) })));
+                        setEditandoCompraId(c.id);
+                      }}>Editar</Button>
+                    </div>
                   </div>
                   <p className="mt-1 text-xs text-muted-foreground">
                     {doDia.map((i) => `${i.quantidade.toLocaleString("pt-BR", { maximumFractionDigits: 3 })} ${medidaLabel(i.unidade)} de ${insumos.find((x) => x.id === i.insumo_id)?.nome ?? "insumo removido"}`).join(" · ") || "Sem itens"}
