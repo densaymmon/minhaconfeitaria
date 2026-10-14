@@ -68,7 +68,7 @@ function Painel() {
         <div className="mt-4 border-t border-primary-foreground/20 pt-3">
           <div className="text-xs opacity-75">Valores a receber</div>
           <Link
-            to="/pedidos/"
+            to="/pedidos"
             search={{ filtro: "em_andamento" }}
             className="mt-1 flex items-center justify-between gap-3 rounded-lg py-1 font-semibold hover:opacity-80"
           >
