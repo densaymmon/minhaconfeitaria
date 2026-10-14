@@ -87,7 +87,7 @@ function PedidoForm() {
     return (
       <div className="py-16 text-center">
         <p className="mb-4 text-muted-foreground">Pedido não encontrado.</p>
-        <Link to="/pedidos" search={{}} className="text-primary">Voltar aos pedidos</Link>
+        <Link to="/pedidos" search={{ filtro: undefined, dataInicial: undefined, dataFinal: undefined }} className="text-primary">Voltar aos pedidos</Link>
       </div>
     );
   }
@@ -194,7 +194,7 @@ function PedidoForm() {
       if (error) throw error;
       await qc.invalidateQueries({ queryKey: ["pedidos"] });
       toast.success(novo ? "Pedido criado!" : "Pedido atualizado!");
-      navigate({ to: "/pedidos", search: {} });
+      navigate({ to: "/pedidos", search: { filtro: undefined, dataInicial: undefined, dataFinal: undefined } });
     } catch (e) {
       toast.error((e as Error).message);
     } finally {
