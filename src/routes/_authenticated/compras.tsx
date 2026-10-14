@@ -223,7 +223,7 @@ function Compras() {
         unidade: l.unidade,
         preco_unitario: l.preco,
       }));
-      const assinatura = JSON.stringify({ registro_id: editandoCompraId ?? undefined, payload, itens: itensPayload });
+      const assinatura = JSON.stringify({ ...(editandoCompraId ? { registro_id: editandoCompraId } : {}), payload, itens: itensPayload });
       if (!eventoSalvarRef.current || eventoSalvarRef.current.assinatura !== assinatura) {
         eventoSalvarRef.current = { assinatura, id: crypto.randomUUID() };
       }
