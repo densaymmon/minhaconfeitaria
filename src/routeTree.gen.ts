@@ -16,6 +16,7 @@ import { Route as McpRouteImport } from './routes/mcp'
 import { Route as ResetPasswordRouteImport } from './routes/reset-password'
 import { Route as Char91DotwellKnownChar93OauthProtectedResourceRouteImport } from './routes/[.well-known]/oauth-protected-resource'
 import { Route as AuthenticatedComprasRouteImport } from './routes/_authenticated/compras'
+import { Route as AuthenticatedContasPagarRouteImport } from './routes/_authenticated/contas-pagar'
 import { Route as AuthenticatedConfiguracoesRouteImport } from './routes/_authenticated/configuracoes'
 import { Route as AuthenticatedDespesasRouteImport } from './routes/_authenticated/despesas'
 import { Route as AuthenticatedMaisRouteImport } from './routes/_authenticated/mais'
@@ -63,6 +64,11 @@ const Char91DotwellKnownChar93OauthProtectedResourceRoute =
 const AuthenticatedComprasRoute = AuthenticatedComprasRouteImport.update({
   id: '/compras',
   path: '/compras',
+  getParentRoute: () => AuthenticatedRouteRoute,
+} as any)
+const AuthenticatedContasPagarRoute = AuthenticatedContasPagarRouteImport.update({
+  id: '/contas-pagar',
+  path: '/contas-pagar',
   getParentRoute: () => AuthenticatedRouteRoute,
 } as any)
 const AuthenticatedConfiguracoesRoute =
@@ -142,6 +148,7 @@ export interface FileRoutesByFullPath {
   '/reset-password': typeof ResetPasswordRoute
   '/.well-known/oauth-protected-resource': typeof Char91DotwellKnownChar93OauthProtectedResourceRoute
   '/compras': typeof AuthenticatedComprasRoute
+  '/contas-pagar': typeof AuthenticatedContasPagarRoute
   '/configuracoes': typeof AuthenticatedConfiguracoesRoute
   '/despesas': typeof AuthenticatedDespesasRoute
   '/mais': typeof AuthenticatedMaisRoute
@@ -186,6 +193,7 @@ export interface FileRoutesById {
   '/reset-password': typeof ResetPasswordRoute
   '/.well-known/oauth-protected-resource': typeof Char91DotwellKnownChar93OauthProtectedResourceRoute
   '/_authenticated/compras': typeof AuthenticatedComprasRoute
+  '/_authenticated/contas-pagar': typeof AuthenticatedContasPagarRoute
   '/_authenticated/configuracoes': typeof AuthenticatedConfiguracoesRoute
   '/_authenticated/despesas': typeof AuthenticatedDespesasRoute
   '/_authenticated/mais': typeof AuthenticatedMaisRoute
@@ -209,6 +217,7 @@ export interface FileRouteTypes {
     | '/reset-password'
     | '/.well-known/oauth-protected-resource'
     | '/compras'
+    | '/contas-pagar'
     | '/configuracoes'
     | '/despesas'
     | '/mais'
@@ -252,6 +261,7 @@ export interface FileRouteTypes {
     | '/reset-password'
     | '/.well-known/oauth-protected-resource'
     | '/_authenticated/compras'
+    | '/_authenticated/contas-pagar'
     | '/_authenticated/configuracoes'
     | '/_authenticated/despesas'
     | '/_authenticated/mais'
@@ -424,6 +434,7 @@ declare module '@tanstack/react-router' {
 
 interface AuthenticatedRouteRouteChildren {
   AuthenticatedComprasRoute: typeof AuthenticatedComprasRoute
+  AuthenticatedContasPagarRoute: typeof AuthenticatedContasPagarRoute
   AuthenticatedConfiguracoesRoute: typeof AuthenticatedConfiguracoesRoute
   AuthenticatedDespesasRoute: typeof AuthenticatedDespesasRoute
   AuthenticatedMaisRoute: typeof AuthenticatedMaisRoute
@@ -440,6 +451,7 @@ interface AuthenticatedRouteRouteChildren {
 
 const AuthenticatedRouteRouteChildren: AuthenticatedRouteRouteChildren = {
   AuthenticatedComprasRoute: AuthenticatedComprasRoute,
+  AuthenticatedContasPagarRoute: AuthenticatedContasPagarRoute,
   AuthenticatedConfiguracoesRoute: AuthenticatedConfiguracoesRoute,
   AuthenticatedDespesasRoute: AuthenticatedDespesasRoute,
   AuthenticatedMaisRoute: AuthenticatedMaisRoute,
