@@ -9,6 +9,7 @@ DECLARE
   uid uuid := 'aaaaaaaa-aaaa-4aaa-8aaa-aaaaaaaaaaaa';
   iid uuid;
   pid uuid;
+  pid2 uuid;
   receita_id uuid;
   pedido uuid;
   item_id uuid;
@@ -112,6 +113,13 @@ BEGIN
   SELECT s.saldo INTO saldo FROM public.saldo_estoque() s WHERE s.insumo_id = iid;
   IF saldo <> 230 THEN RAISE EXCEPTION 'Consumo da produção incorreto: %', saldo; END IF;
 
+  -- Replaying the same production event must not append a second stock movement.
+  PERFORM public.ajustar_producao(
+    item_id, 2, 'eeeeeeee-eeee-4eee-8eee-eeeeeeeeeeee'
+  );
+  SELECT s.saldo INTO saldo FROM public.saldo_estoque() s WHERE s.insumo_id = iid;
+  IF saldo <> 230 THEN RAISE EXCEPTION 'Retry da produção duplicou a baixa: %', saldo; END IF;
+
   PERFORM public.ajustar_producao(
     item_id, 1, 'ffffffff-ffff-4fff-8fff-ffffffffffff'
   );
@@ -142,6 +150,22 @@ BEGIN
       RAISE;
     END IF;
     IF position('produção registrada' IN SQLERRM) = 0 THEN
+      RAISE;
+    END IF;
+  END;
+
+  INSERT INTO public.produtos(user_id, nome, rendimento)
+  VALUES (uid, 'Segundo produto teste', 1)
+  RETURNING id INTO pid2;
+
+  BEGIN
+    UPDATE public.receita_itens SET produto_id = pid2 WHERE id = receita_id;
+    RAISE EXCEPTION 'A proteção deveria bloquear a transferência de receita de produto com produção ativa.';
+  EXCEPTION WHEN raise_exception THEN
+    IF SQLERRM = 'A proteção deveria bloquear a transferência de receita de produto com produção ativa.' THEN
+      RAISE;
+    END IF;
+    IF position('alterar os ingredientes da receita' IN SQLERRM) = 0 THEN
       RAISE;
     END IF;
   END;
