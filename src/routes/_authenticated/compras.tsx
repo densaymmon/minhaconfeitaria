@@ -1,6 +1,6 @@
 import * as appQueries from "@/lib/queries";
 import { createFileRoute } from "@tanstack/react-router";
-import { useQueryClient, useSuspenseQuery } from "@tanstack/react-query";
+import { useQuery, useQueryClient, useSuspenseQuery } from "@tanstack/react-query";
 import { useMemo, useRef, useState } from "react";
 import { toast } from "sonner";
 import { Plus, Trash2, ShoppingCart } from "lucide-react";
@@ -57,6 +57,14 @@ function Compras() {
   const { data: insumos } = useSuspenseQuery(appQueries.insumosQ);
   const { data: compras } = useSuspenseQuery(appQueries.comprasQ);
   const { data: itens } = useSuspenseQuery(appQueries.compraItensQ);
+  const { data: estoque = [], isLoading: carregandoEstoque, error: erroEstoque } = useQuery({
+    queryKey: ["estoque"],
+    queryFn: async () => {
+      const { data, error } = await supabase.rpc("saldo_estoque");
+      if (error) throw new Error(error.message);
+      return data ?? [];
+    },
+  });
   const qc = useQueryClient();
   const [data, setData] = useState(hojeISO());
   const [linhas, setLinhas] = useState<Linha[]>([linhaVazia()]);
@@ -151,6 +159,40 @@ function Compras() {
   return (
     <>
       <PageHeader title="Compras de insumos" back="/mais" />
+
+      <section className="mb-8">
+        <h2 className="mb-2 text-lg font-semibold">Estoque atual</h2>
+        <p className="mb-3 text-sm text-muted-foreground">
+          O saldo considera somente movimentações registradas após a ativação do controle de estoque. Compras antigas não são incluídas automaticamente.
+        </p>
+        {carregandoEstoque ? (
+          <p className="py-3 text-sm text-muted-foreground">Carregando saldo...</p>
+        ) : erroEstoque ? (
+          <p role="alert" className="rounded-lg border p-3 text-sm text-destructive">Não foi possível carregar o estoque: {erroEstoque instanceof Error ? erroEstoque.message : "tente novamente."}</p>
+        ) : estoque.length === 0 ? (
+          <Empty>Nenhum insumo cadastrado.</Empty>
+        ) : (
+          <div className="divide-y rounded-xl border px-3">
+            {estoque.map((item) => {
+              const saldo = Number(item.saldo);
+              const unidade = item.unidade_base ?? "unidade não convertida";
+              return (
+                <div key={item.insumo_id} className="flex items-center justify-between gap-3 py-3">
+                  <div className="min-w-0">
+                    <p className="font-medium">{item.nome}</p>
+                    <p className="text-xs text-muted-foreground">{unidade}</p>
+                  </div>
+                  <b className={saldo < 0 ? "text-destructive" : ""}>
+                    {saldo.toLocaleString("pt-BR", { maximumFractionDigits: 3 })}
+                    {saldo < 0 ? " · estoque negativo" : ""}
+                  </b>
+                </div>
+              );
+            })}
+          </div>
+        )}
+      </section>
+
       <form onSubmit={salvar} className="mb-8 space-y-4">
         <h2 className="text-lg font-semibold">{editandoCompraId ? "Editar compra" : "Registrar compra"}</h2>
         <Field label="Data da compra">
