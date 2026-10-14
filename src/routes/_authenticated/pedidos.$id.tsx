@@ -230,7 +230,7 @@ function PedidoForm() {
     if (error) return void toast.error(error.message);
     await qc.invalidateQueries({ queryKey: ["pedidos"] });
     toast.success("Pedido excluído.");
-    navigate({ to: "/pedidos" });
+    navigate({ to: "/pedidos", search: { filtro: undefined, dataInicial: undefined, dataFinal: undefined } });
   }
 
   const cliente = clientes.find((c) => c.id === f.cliente_id);
