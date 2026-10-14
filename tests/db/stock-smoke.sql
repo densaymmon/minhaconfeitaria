@@ -18,7 +18,37 @@ DECLARE
   produzida numeric;
   custo_corrigido numeric;
   itens_corrigidos integer;
+  conta_id uuid;
+  conta_cancelada_id uuid;
+  status_conta text;
+  data_pagamento_conta date;
 BEGIN
+  INSERT INTO public.contas_pagar(
+    user_id, descricao, fornecedor, data_emissao, data_vencimento, valor, valor_pago
+  ) VALUES (uid, 'Conta teste', 'Fornecedor teste', current_date, current_date, 100, 0)
+  RETURNING id INTO conta_id;
+  SELECT status INTO status_conta FROM public.contas_pagar WHERE id = conta_id;
+  IF status_conta <> 'pendente' THEN RAISE EXCEPTION 'Conta nova deveria iniciar pendente: %', status_conta; END IF;
+
+  UPDATE public.contas_pagar SET valor_pago = 40 WHERE id = conta_id;
+  SELECT status, data_pagamento INTO status_conta, data_pagamento_conta
+  FROM public.contas_pagar WHERE id = conta_id;
+  IF status_conta <> 'parcial' OR data_pagamento_conta IS NULL THEN
+    RAISE EXCEPTION 'Pagamento parcial não atualizou status/data: %, %', status_conta, data_pagamento_conta;
+  END IF;
+
+  UPDATE public.contas_pagar SET valor_pago = 100 WHERE id = conta_id;
+  SELECT status INTO status_conta FROM public.contas_pagar WHERE id = conta_id;
+  IF status_conta <> 'pago' THEN RAISE EXCEPTION 'Conta totalmente paga não mudou para paga: %', status_conta; END IF;
+
+  INSERT INTO public.contas_pagar(
+    user_id, descricao, data_emissao, data_vencimento, valor, valor_pago
+  ) VALUES (uid, 'Conta cancelada teste', current_date, current_date, 50, 0)
+  RETURNING id INTO conta_cancelada_id;
+  UPDATE public.contas_pagar SET status = 'cancelado' WHERE id = conta_cancelada_id;
+  SELECT status INTO status_conta FROM public.contas_pagar WHERE id = conta_cancelada_id;
+  IF status_conta <> 'cancelado' THEN RAISE EXCEPTION 'Conta sem pagamento não foi cancelada: %', status_conta; END IF;
+
   INSERT INTO public.insumos(
     user_id, nome, unidade, preco_unidade, preco_embalagem,
     quantidade_embalagem, unidade_embalagem
