@@ -112,7 +112,6 @@ function Producao() {
         itens: rascunho.itens.map((i) => ({
           produto_id: i.produto_id, descricao: i.descricao.trim(), quantidade: parseNum(i.quantidade),
           preco_unitario: parseNum(i.preco_unitario), custo_unitario: i.custo_unitario,
-          quantidade_produzida: Math.min(i.quantidade_produzida, parseNum(i.quantidade)),
         })),
         registro_id: pedidoAberto.id,
       });
