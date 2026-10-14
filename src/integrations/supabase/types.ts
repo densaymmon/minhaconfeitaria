@@ -97,6 +97,7 @@ export type Database = {
       }
       compras: {
         Row: {
+          cancelada_em: string | null
           created_at: string
           data_compra: string
           estoque_integrado: boolean
@@ -105,6 +106,7 @@ export type Database = {
           user_id: string
         }
         Insert: {
+          cancelada_em?: string | null
           created_at?: string
           data_compra: string
           estoque_integrado?: boolean
@@ -113,6 +115,7 @@ export type Database = {
           user_id?: string
         }
         Update: {
+          cancelada_em?: string | null
           created_at?: string
           data_compra?: string
           estoque_integrado?: boolean
@@ -460,6 +463,10 @@ export type Database = {
       }
       registrar_inventario_fisico: {
         Args: { evento_id: string; itens: Json }
+        Returns: boolean
+      }
+      cancelar_compra: {
+        Args: { evento_id: string; registro_id: string }
         Returns: boolean
       }
       salvar_compra: {
