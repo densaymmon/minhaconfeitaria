@@ -449,6 +449,7 @@ export type Database = {
     Functions: {
       medida_base: { Args: { u: string }; Returns: string }
       medida_fator: { Args: { u: string }; Returns: number }
+      recalcular_custos_historicos: { Args: Record<PropertyKey, never>; Returns: number }
       salvar_pedido: {
         Args: { itens: Json; payload: Json; registro_id?: string }
         Returns: string
