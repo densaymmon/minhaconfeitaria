@@ -87,7 +87,7 @@ function PedidoForm() {
     return (
       <div className="py-16 text-center">
         <p className="mb-4 text-muted-foreground">Pedido não encontrado.</p>
-        <Link to="/pedidos" className="text-primary">Voltar aos pedidos</Link>
+        <Link to="/pedidos" search={{}} className="text-primary">Voltar aos pedidos</Link>
       </div>
     );
   }
@@ -188,14 +188,13 @@ function PedidoForm() {
           produto_id: i.produto_id, descricao: i.descricao.trim(),
           quantidade: parseNum(i.quantidade), preco_unitario: parseNum(i.preco_unitario),
           custo_unitario: i.custo_unitario,
-          quantidade_produzida: Math.min(i.quantidade_produzida, parseNum(i.quantidade)),
-        })),
+                  })),
         ...(existente ? { registro_id: existente.id } : {}),
       });
       if (error) throw error;
       await qc.invalidateQueries({ queryKey: ["pedidos"] });
       toast.success(novo ? "Pedido criado!" : "Pedido atualizado!");
-      navigate({ to: "/pedidos" });
+      navigate({ to: "/pedidos", search: {} });
     } catch (e) {
       toast.error((e as Error).message);
     } finally {
