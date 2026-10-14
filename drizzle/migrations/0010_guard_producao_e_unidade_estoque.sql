@@ -17,12 +17,7 @@ BEGIN
   item_id := OLD.id;
   uid := OLD.user_id;
 
-  IF EXISTS (
-    SELECT 1
-    FROM public.producao_eventos pe
-    WHERE pe.user_id = uid
-      AND pe.pedido_item_id = item_id
-  ) OR coalesce(OLD.quantidade_produzida, 0) > 0 THEN
+  IF coalesce(OLD.quantidade_produzida, 0) > 0 THEN
     RAISE EXCEPTION
       'Este item já tem produção registrada e não pode ser substituído ou excluído. Estorne a produção por um fluxo próprio antes de editar o pedido.';
   END IF;
@@ -41,6 +36,11 @@ FOR EACH ROW EXECUTE FUNCTION public.bloquear_edicao_item_com_producao();
 CREATE TRIGGER pedido_item_bloquear_alteracao_com_producao
 BEFORE UPDATE OF pedido_id, produto_id, descricao, quantidade ON public.pedido_itens
 FOR EACH ROW EXECUTE FUNCTION public.bloquear_edicao_item_com_producao();
+
+-- Production quantity must only be changed by the SECURITY DEFINER RPC so a
+-- user cannot reset it directly and bypass the edit/delete guard. Order saves
+-- replace item rows through salvar_pedido() and still need INSERT/DELETE rights.
+REVOKE UPDATE ON public.pedido_itens FROM authenticated;
 
 -- Report the compatible stock base unit based on the configured package/recipe
 -- measure, not only the legacy unit. This allows packages configured as 500 g,
