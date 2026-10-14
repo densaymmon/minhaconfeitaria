@@ -38,8 +38,10 @@ DECLARE
 BEGIN
   IF uid IS NULL THEN RAISE EXCEPTION 'Acesso não autorizado.'; END IF;
   IF evento_id IS NULL THEN RAISE EXCEPTION 'Identificador do inventário obrigatório.'; END IF;
-  IF jsonb_typeof(itens) IS DISTINCT FROM 'array'
-     OR jsonb_array_length(itens) NOT BETWEEN 1 AND 200 THEN
+  IF jsonb_typeof(itens) IS DISTINCT FROM 'array' THEN
+    RAISE EXCEPTION 'Os itens do inventário precisam ser enviados como uma lista.';
+  END IF;
+  IF jsonb_array_length(itens) NOT BETWEEN 1 AND 200 THEN
     RAISE EXCEPTION 'Informe de 1 a 200 insumos para conferir o estoque.';
   END IF;
 
