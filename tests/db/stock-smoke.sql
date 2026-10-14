@@ -13,6 +13,7 @@ DECLARE
   item_id uuid;
   compra uuid;
   saldo numeric;
+  produzida numeric;
 BEGIN
   INSERT INTO public.insumos(
     user_id, nome, unidade, preco_unidade, preco_embalagem,
@@ -150,7 +151,39 @@ BEGIN
   );
   SELECT s.saldo INTO saldo FROM public.saldo_estoque() s WHERE s.insumo_id = iid;
   IF saldo <> 250 THEN RAISE EXCEPTION 'Estorno total da produção incorreto: %', saldo; END IF;
-  UPDATE public.pedido_itens SET descricao = 'Produto teste revisado' WHERE id = item_id;
+
+  -- Order save may replace rows after production reaches zero, but it must ignore
+  -- any client-supplied produced quantity and create the replacement at zero.
+  PERFORM public.salvar_pedido(
+    jsonb_build_object(
+      'cliente_id', NULL,
+      'data_entrega', current_date,
+      'hora_entrega', NULL,
+      'status', 'em_producao',
+      'forma_pagamento', 'pix',
+      'valor_entrada', 0,
+      'saldo_quitado', false,
+      'desconto', 0,
+      'taxa_entrega', 0,
+      'observacoes', NULL
+    ),
+    jsonb_build_array(jsonb_build_object(
+      'produto_id', pid,
+      'descricao', 'Produto teste revisado',
+      'quantidade', 2,
+      'preco_unitario', 10,
+      'custo_unitario', 1,
+      'quantidade_produzida', 2
+    )),
+    pedido
+  );
+  SELECT pi.id, pi.quantidade_produzida
+    INTO item_id, produzida
+  FROM public.pedido_itens pi
+  WHERE pi.pedido_id = pedido;
+  IF produzida <> 0 THEN
+    RAISE EXCEPTION 'Salvar pedido aceitou quantidade produzida enviada pelo cliente: %', produzida;
+  END IF;
 
   PERFORM public.registrar_inventario_fisico(
     jsonb_build_array(jsonb_build_object(
