@@ -85,6 +85,13 @@
       "when": 1791942000006,
       "tag": "0011_salvar_pedido_preservar_estoque",
       "breakpoints": true
+    },
+    {
+      "idx": 12,
+      "version": "7",
+      "when": 1791942000007,
+      "tag": "0012_bloquear_receita_com_producao_ativa",
+      "breakpoints": true
     }
   ]
 }
