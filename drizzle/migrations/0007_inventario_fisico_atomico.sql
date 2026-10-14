@@ -44,8 +44,8 @@ BEGIN
   END IF;
 
   IF EXISTS (
-    SELECT 1 FROM jsonb_array_elements(itens) x
-    GROUP BY x->>'insumo_id' HAVING count(*) > 1
+    SELECT 1 FROM jsonb_array_elements(itens) AS t(value)
+    GROUP BY value->>'insumo_id' HAVING count(*) > 1
   ) THEN
     RAISE EXCEPTION 'Cada insumo deve aparecer apenas uma vez no inventário.';
   END IF;
