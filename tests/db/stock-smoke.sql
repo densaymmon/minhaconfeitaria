@@ -16,6 +16,8 @@ DECLARE
   compra uuid;
   saldo numeric;
   produzida numeric;
+  custo_corrigido numeric;
+  itens_corrigidos integer;
 BEGIN
   INSERT INTO public.insumos(
     user_id, nome, unidade, preco_unidade, preco_embalagem,
@@ -104,8 +106,15 @@ BEGIN
 
   INSERT INTO public.pedido_itens(
     user_id, pedido_id, produto_id, descricao, quantidade, preco_unitario, custo_unitario
-  ) VALUES (uid, pedido, pid, 'Produto teste', 2, 10, 1)
+  ) VALUES (uid, pedido, pid, 'Produto teste', 2, 10, 999)
   RETURNING id INTO item_id;
+
+  itens_corrigidos := public.recalcular_custos_historicos();
+  SELECT custo_unitario INTO custo_corrigido
+  FROM public.pedido_itens WHERE id = item_id;
+  IF itens_corrigidos <> 1 OR round(custo_corrigido, 4) <> 0.1 THEN
+    RAISE EXCEPTION 'Correção do custo histórico incorreta: itens %, custo %', itens_corrigidos, custo_corrigido;
+  END IF;
 
   PERFORM public.ajustar_producao(
     item_id, 2, 'eeeeeeee-eeee-4eee-8eee-eeeeeeeeeeee'
