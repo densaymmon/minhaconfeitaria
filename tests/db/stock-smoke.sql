@@ -9,6 +9,7 @@ DECLARE
   uid uuid := 'aaaaaaaa-aaaa-4aaa-8aaa-aaaaaaaaaaaa';
   iid uuid;
   pid uuid;
+  receita_id uuid;
   pedido uuid;
   item_id uuid;
   compra uuid;
@@ -93,7 +94,8 @@ BEGIN
 
   INSERT INTO public.receita_itens(
     user_id, produto_id, insumo_id, quantidade, quantidade_utilizada, unidade_receita
-  ) VALUES (uid, pid, iid, 10, 10, 'g');
+  ) VALUES (uid, pid, iid, 10, 10, 'g')
+  RETURNING id INTO receita_id;
 
   INSERT INTO public.pedidos(user_id, data_entrega, status)
   VALUES (uid, current_date, 'em_producao')
@@ -144,6 +146,18 @@ BEGIN
     END IF;
   END;
 
+  BEGIN
+    UPDATE public.receita_itens SET quantidade_utilizada = 12 WHERE id = receita_id;
+    RAISE EXCEPTION 'A proteção deveria bloquear alteração de receita durante produção.';
+  EXCEPTION WHEN raise_exception THEN
+    IF SQLERRM = 'A proteção deveria bloquear alteração de receita durante produção.' THEN
+      RAISE;
+    END IF;
+    IF position('alterar os ingredientes da receita' IN SQLERRM) = 0 THEN
+      RAISE;
+    END IF;
+  END;
+
   -- The normal correction workflow may reduce production to zero, which appends
   -- a full stock reversal and then permits the order item to be edited.
   PERFORM public.ajustar_producao(
@@ -151,6 +165,18 @@ BEGIN
   );
   SELECT s.saldo INTO saldo FROM public.saldo_estoque() s WHERE s.insumo_id = iid;
   IF saldo <> 250 THEN RAISE EXCEPTION 'Estorno total da produção incorreto: %', saldo; END IF;
+
+  -- Once production has been fully reversed, recipe changes are allowed again.
+  UPDATE public.receita_itens SET quantidade_utilizada = 12 WHERE id = receita_id;
+  IF NOT EXISTS (
+    SELECT 1
+    FROM public.producao_eventos pe
+    CROSS JOIN LATERAL jsonb_array_elements(pe.receita_snapshot) ri
+    WHERE pe.pedido_id = pedido
+      AND (ri->>'quantidade_utilizada')::numeric = 10
+  ) THEN
+    RAISE EXCEPTION 'A edição da receita alterou o snapshot histórico.';
+  END IF;
 
   -- Order save may replace rows after production reaches zero, but it must ignore
   -- any client-supplied produced quantity and create the replacement at zero.
