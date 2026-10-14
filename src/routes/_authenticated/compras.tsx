@@ -72,6 +72,7 @@ function Compras() {
   const eventoSalvarRef = useRef<{ assinatura: string; id: string } | null>(null);
   const [inventarioFisico, setInventarioFisico] = useState<Record<string, string>>({});
   const eventoInventarioRef = useRef<{ assinatura: string; id: string } | null>(null);
+  const eventoCancelarRef = useRef<{ compraId: string; id: string } | null>(null);
   const [editandoCompraId, setEditandoCompraId] = useState<string | null>(null);
   const [de, setDe] = useState("");
   const [ate, setAte] = useState("");
@@ -92,7 +93,8 @@ function Compras() {
   const total = calculadas.reduce((s, l) => s + (Number.isFinite(l.total) ? l.total : 0), 0);
 
   const noPeriodo = (iso: string) => (!de || iso >= de) && (!ate || iso <= ate);
-  const comprasNoPeriodo = compras.filter((c) => noPeriodo(c.data_compra));
+  const comprasPeriodo = compras.filter((c) => noPeriodo(c.data_compra));
+  const comprasNoPeriodo = comprasPeriodo.filter((c) => !c.cancelada_em);
   const idsNoPeriodo = new Set(comprasNoPeriodo.map((c) => c.id));
   const itensNoPeriodo = itens.filter((i) => idsNoPeriodo.has(i.compra_id));
   const totalPeriodo = itensNoPeriodo.reduce((s, i) => s + Number(i.total), 0);
@@ -111,6 +113,37 @@ function Compras() {
     const ins = insumos.find((i) => i.id === id);
     const unidade = unidadesPara(id)[0] ?? "un";
     setLinhas((s) => s.map((l, j) => (j === index ? { ...l, insumo_id: id, unidade, preco: Number.isFinite(numeroIngrediente(l.preco)) ? l.preco : precoInicial(ins) } : l)));
+  }
+
+  async function cancelarCompra(compra: { id: string; cancelada_em: string | null }) {
+    if (compra.cancelada_em) return;
+    if (!confirm("Cancelar esta compra? O registro será mantido no histórico e, se ela movimentou o estoque, será lançado um estorno.")) return;
+    if (!eventoCancelarRef.current || eventoCancelarRef.current.compraId !== compra.id) {
+      eventoCancelarRef.current = { compraId: compra.id, id: crypto.randomUUID() };
+    }
+    setBusy(true);
+    try {
+      const { error } = await supabase.rpc("cancelar_compra", {
+        registro_id: compra.id,
+        evento_id: eventoCancelarRef.current.id,
+      });
+      if (error) throw error;
+      eventoCancelarRef.current = null;
+      await Promise.all([
+        qc.invalidateQueries({ queryKey: ["compras"] }),
+        qc.invalidateQueries({ queryKey: ["compra-itens"] }),
+        qc.invalidateQueries({ queryKey: ["estoque"] }),
+      ]);
+      if (editandoCompraId === compra.id) {
+        setEditandoCompraId(null);
+        setLinhas([linhaVazia()]);
+      }
+      toast.success("Compra cancelada. O histórico foi preservado.");
+    } catch (erro) {
+      toast.error(erro instanceof Error ? erro.message : "Não foi possível cancelar a compra.");
+    } finally {
+      setBusy(false);
+    }
   }
 
   async function salvarInventario(e: React.FormEvent) {
@@ -359,24 +392,31 @@ function Compras() {
 
       <section>
         <h2 className="mb-3 text-lg font-semibold">Histórico de compras</h2>
-        {comprasNoPeriodo.length === 0 ? (
+        {comprasPeriodo.length === 0 ? (
           <Empty>Nenhuma compra registrada.</Empty>
         ) : (
           <div className="divide-y">
-            {comprasNoPeriodo.map((c) => {
-              const doDia = itensNoPeriodo.filter((i) => i.compra_id === c.id);
+            {comprasPeriodo.map((c) => {
+              const doDia = itens.filter((i) => i.compra_id === c.id);
               return (
                 <div key={c.id} className="py-3">
                   <div className="flex items-center justify-between gap-3">
                     <p className="font-medium">{dataBR(c.data_compra)}</p>
-                    <div className="flex items-center gap-3">
-                      <b>{brl(Number(c.total))}</b>
-                      <Button type="button" variant="outline" size="sm" onClick={() => {
-                        const itensCompra = itens.filter((i) => i.compra_id === c.id);
-                        setData(c.data_compra);
-                        setLinhas(itensCompra.map((i) => ({ compraItemId: i.id, insumo_id: i.insumo_id, quantidade: String(i.quantidade), unidade: i.unidade, preco: String(i.preco_unitario) })));
-                        setEditandoCompraId(c.id);
-                      }}>Editar</Button>
+                    <div className="flex flex-wrap items-center justify-end gap-2">
+                      <b className={c.cancelada_em ? "text-muted-foreground line-through" : ""}>{brl(Number(c.total))}</b>
+                      {c.cancelada_em ? (
+                        <span className="rounded-md bg-muted px-2 py-1 text-xs font-medium text-muted-foreground">Cancelada</span>
+                      ) : (
+                        <>
+                          <Button type="button" variant="outline" size="sm" disabled={busy} onClick={() => {
+                            const itensCompra = itens.filter((i) => i.compra_id === c.id);
+                            setData(c.data_compra);
+                            setLinhas(itensCompra.map((i) => ({ compraItemId: i.id, insumo_id: i.insumo_id, quantidade: String(i.quantidade), unidade: i.unidade, preco: String(i.preco_unitario) })));
+                            setEditandoCompraId(c.id);
+                          }}>Editar</Button>
+                          <Button type="button" variant="outline" size="sm" disabled={busy} onClick={() => void cancelarCompra(c)}>Cancelar</Button>
+                        </>
+                      )}
                     </div>
                   </div>
                   <p className="mt-1 text-xs text-muted-foreground">
