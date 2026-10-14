@@ -7,8 +7,7 @@ import { toast } from "sonner";
 import { supabase } from "@/integrations/supabase/client";
 import { Download } from "lucide-react";
 import { configQ, despesasQ, pedidosQ } from "@/lib/queries";
-import { useCustos } from "@/lib/hooks";
-import { totaisPedido } from "@/lib/calc";
+import { custoUnitario, totaisPedido } from "@/lib/calc";
 import { brl, dataBR, hojeISO, mesISO, num } from "@/lib/format";
 import { baixarCSV } from "@/lib/csv";
 import { PageHeader, Field, Stat, Row, Empty } from "@/components/app/ui";
@@ -55,6 +54,8 @@ function Relatorios() {
   const navigate = Route.useNavigate();
   const { data: pedidos } = useSuspenseQuery(pedidosQ);
   const { data: config } = useSuspenseQuery(configQ);
+  const { data: produtos } = useSuspenseQuery(appQueries.produtosQ);
+  const { data: insumos } = useSuspenseQuery(appQueries.insumosQ);
   const { data: despesas } = useSuspenseQuery(despesasQ);
   const { produtos, custo: custoAtual } = useCustos();
   const intervaloValido = inicio <= fim;
