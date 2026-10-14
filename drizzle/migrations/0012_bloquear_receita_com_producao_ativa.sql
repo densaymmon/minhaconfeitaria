@@ -13,23 +13,25 @@ LANGUAGE plpgsql
 SECURITY INVOKER
 SET search_path = pg_catalog, public
 AS $function$
-DECLARE
-  pid uuid;
-  uid uuid;
 BEGIN
-  IF TG_OP = 'DELETE' THEN
-    pid := OLD.produto_id;
-    uid := OLD.user_id;
-  ELSE
-    pid := NEW.produto_id;
-    uid := NEW.user_id;
-  END IF;
-
-  IF pid IS NOT NULL AND EXISTS (
+  -- On UPDATE, protect both the old and new product. Otherwise moving a recipe
+  -- row away from a product with active production could bypass the freeze.
+  IF TG_OP <> 'INSERT' AND OLD.produto_id IS NOT NULL AND EXISTS (
     SELECT 1
     FROM public.pedido_itens pi
-    WHERE pi.user_id = uid
-      AND pi.produto_id = pid
+    WHERE pi.user_id = OLD.user_id
+      AND pi.produto_id = OLD.produto_id
+      AND pi.quantidade_produzida > 0
+  ) THEN
+    RAISE EXCEPTION
+      'Não é possível alterar os ingredientes da receita enquanto houver produção registrada. Reduza a quantidade produzida a zero para estornar o estoque antes de editar a receita.';
+  END IF;
+
+  IF TG_OP <> 'DELETE' AND NEW.produto_id IS NOT NULL AND EXISTS (
+    SELECT 1
+    FROM public.pedido_itens pi
+    WHERE pi.user_id = NEW.user_id
+      AND pi.produto_id = NEW.produto_id
       AND pi.quantidade_produzida > 0
   ) THEN
     RAISE EXCEPTION
