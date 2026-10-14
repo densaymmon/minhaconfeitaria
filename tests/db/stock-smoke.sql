@@ -47,10 +47,27 @@ BEGIN
   SELECT s.saldo INTO saldo FROM public.saldo_estoque() s WHERE s.insumo_id = iid;
   IF saldo <> 100 THEN RAISE EXCEPTION 'Retry da compra duplicou o estoque: %', saldo; END IF;
 
+  -- Editing a purchase must reverse the previous entry and append the new one;
+  -- 0.15 kg must normalize to 150 g for this ingredient.
+  compra := public.salvar_compra(
+    '{"data_compra":"2026-10-14"}'::jsonb,
+    jsonb_build_array(jsonb_build_object(
+      'insumo_id', iid, 'quantidade', 0.15, 'unidade', 'kg', 'preco_unitario', 10
+    )),
+    compra,
+    '14141414-1414-4414-8414-141414141414'
+  );
+  SELECT s.saldo INTO saldo FROM public.saldo_estoque() s WHERE s.insumo_id = iid;
+  IF saldo <> 150 THEN RAISE EXCEPTION 'Edição/conversão da compra incorreta: %', saldo; END IF;
+
   PERFORM public.cancelar_compra(compra, 'cccccccc-cccc-4ccc-8ccc-cccccccccccc');
   PERFORM public.cancelar_compra(compra, 'cccccccc-cccc-4ccc-8ccc-cccccccccccc');
   SELECT s.saldo INTO saldo FROM public.saldo_estoque() s WHERE s.insumo_id = iid;
   IF saldo <> 0 THEN RAISE EXCEPTION 'Cancelamento não estornou a compra: %', saldo; END IF;
+  IF NOT EXISTS (SELECT 1 FROM public.compras WHERE id = compra AND cancelada_em IS NOT NULL)
+     OR NOT EXISTS (SELECT 1 FROM public.compra_itens WHERE compra_id = compra) THEN
+    RAISE EXCEPTION 'O cancelamento apagou o histórico da compra.';
+  END IF;
 
   PERFORM public.registrar_inventario_fisico(
     jsonb_build_array(jsonb_build_object(
