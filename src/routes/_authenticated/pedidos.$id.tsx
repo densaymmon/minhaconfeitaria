@@ -3,7 +3,7 @@ import type { OrderDraft } from "@/lib/order-draft";
 import * as appQueries from "@/lib/queries";
 import { createFileRoute, Link, useNavigate } from "@tanstack/react-router";
 import { useQueryClient, useSuspenseQuery } from "@tanstack/react-query";
-import { useState } from "react";
+import { useEffect, useRef, useState } from "react";
 import { toast } from "sonner";
 import { MessageCircle, Plus, Trash2 } from "lucide-react";
 import { supabase } from "@/integrations/supabase/client";
@@ -82,6 +82,35 @@ function PedidoForm() {
   const [clienteDialogOpen, setClienteDialogOpen] = useState(false);
   const [salvandoCliente, setSalvandoCliente] = useState(false);
   const [novoCliente, setNovoCliente] = useState({ nome: "", telefone: "", endereco: "", observacoes: "" });
+  // Bloqueia cliques repetidos mesmo antes de o React atualizar o estado visual.
+  const saveLock = useRef(false);
+
+  // A rota pode ser reutilizada quando o parâmetro $id muda. Recarrega o formulário
+  // somente quando muda o pedido selecionado, sem apagar edições durante refetches.
+  useEffect(() => {
+    setF({
+      cliente_id: existente?.cliente_id ?? "",
+      data_entrega: existente?.data_entrega ?? hojeISO(),
+      hora_entrega: existente?.hora_entrega ?? "",
+      status: existente?.status ?? "recebido",
+      forma_pagamento: existente?.forma_pagamento ?? "pix",
+      valor_entrada: String(existente?.valor_entrada ?? "0"),
+      saldo_quitado: existente?.saldo_quitado ?? false,
+      desconto: String(existente?.desconto ?? "0"),
+      taxa_entrega: String(existente?.taxa_entrega ?? "0"),
+      observacoes: existente?.observacoes ?? "",
+    });
+    setItens(
+      existente?.pedido_itens.map((i) => ({
+        produto_id: i.produto_id,
+        descricao: i.descricao,
+        quantidade: String(i.quantidade),
+        preco_unitario: String(i.preco_unitario),
+        custo_unitario: Number(i.custo_unitario),
+        quantidade_produzida: Number(i.quantidade_produzida),
+      })) ?? [],
+    );
+  }, [id, existente?.id]);
 
   if (!novo && !existente) {
     return (
@@ -122,6 +151,10 @@ function PedidoForm() {
     },
     config,
   );
+  // O resumo do cadastro rápido usa valores efetivamente recebidos limitados ao total.
+  // Isso evita saldo negativo quando a entrada digitada ultrapassa o valor do pedido.
+  const valorPagoEfetivo = Math.min(Math.max(0, parseNum(f.valor_entrada)), t.venda);
+  const saldoPendente = Math.max(0, t.venda - valorPagoEfetivo);
 
   function aplicarRascunho(draft: OrderDraft) {
     if (itens.length && !confirm("Substituir os itens atuais pelo rascunho da mensagem?")) return;
@@ -165,9 +198,11 @@ function PedidoForm() {
   }
 
   async function salvar() {
+    if (saveLock.current) return;
     if (!f.data_entrega) return void toast.error("Informe a data de entrega antes de salvar.");
     if (itens.length === 0) return void toast.error("Adicione pelo menos um item.");
     if (itens.some((i) => !i.descricao.trim() || parseNum(i.quantidade) <= 0)) return void toast.error("Confira os itens: descrição e quantidade são obrigatórias.");
+    saveLock.current = true;
     setSalvando(true);
     try {
       const payload = {
@@ -182,22 +217,28 @@ function PedidoForm() {
         taxa_entrega: parseNum(f.taxa_entrega),
         observacoes: f.observacoes.trim() || null,
       };
-      const { error } = await supabase.rpc("salvar_pedido", {
+      const { data: pedidoSalvoId, error } = await supabase.rpc("salvar_pedido", {
         payload,
         itens: itens.map((i) => ({
-          produto_id: i.produto_id, descricao: i.descricao.trim(),
-          quantidade: parseNum(i.quantidade), preco_unitario: parseNum(i.preco_unitario),
+          produto_id: i.produto_id,
+          descricao: i.descricao.trim(),
+          quantidade: parseNum(i.quantidade),
+          preco_unitario: parseNum(i.preco_unitario),
           custo_unitario: i.custo_unitario,
-                  })),
+        })),
         ...(existente ? { registro_id: existente.id } : {}),
       });
       if (error) throw error;
+      if (!pedidoSalvoId) {
+        throw new Error("O banco não confirmou o salvamento do pedido. Nenhuma confirmação foi exibida; confira a conexão e tente novamente.");
+      }
       await qc.invalidateQueries({ queryKey: ["pedidos"] });
       toast.success(novo ? "Pedido criado!" : "Pedido atualizado!");
       navigate({ to: "/pedidos", search: { filtro: undefined, dataInicial: undefined, dataFinal: undefined } });
     } catch (e) {
       toast.error((e as Error).message);
     } finally {
+      saveLock.current = false;
       setSalvando(false);
     }
   }
@@ -368,7 +409,7 @@ function PedidoForm() {
             <Card className="space-y-3">
               <div className="flex items-center justify-between gap-2">
                 <h2 className="text-lg font-semibold">Pagamento e resumo</h2>
-                {t.venda > 0 && t.saldo <= 0 && <span className="rounded-full bg-success/15 px-2.5 py-1 text-xs font-semibold text-success">Pago</span>}
+                {t.venda > 0 && saldoPendente <= 0 && <span className="rounded-full bg-success/15 px-2.5 py-1 text-xs font-semibold text-success">Pago</span>}
               </div>
               <div className="grid grid-cols-1 gap-3 sm:grid-cols-2">
                 <Field label="Forma de pagamento">
@@ -384,9 +425,9 @@ function PedidoForm() {
               </div>
               <div className="rounded-xl bg-muted/60 p-3">
                 <Row label="Total do pedido" value={brl(t.venda)} strong />
-                <Row label="Entrada / valor pago" value={brl(Math.max(0, t.venda - t.saldo))} />
+                <Row label="Entrada / valor pago" value={brl(valorPagoEfetivo)} />
                 <div className="my-2 border-t" />
-                <Row label="Saldo pendente" value={brl(t.saldo)} strong />
+                <Row label="Saldo pendente" value={brl(saldoPendente)} strong />
               </div>
             </Card>
 
