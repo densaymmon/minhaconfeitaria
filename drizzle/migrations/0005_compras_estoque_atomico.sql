@@ -130,7 +130,7 @@ BEGIN
     WHERE compra_id = rid AND user_id = uid;
   END IF;
 
-  FOR item IN SELECT value FROM jsonb_array_elements(itens) LOOP
+  FOR item IN SELECT value FROM jsonb_array_elements(itens) ORDER BY value->>'insumo_id' LOOP
     BEGIN
       iid := (item->>'insumo_id')::uuid;
       qty := (item->>'quantidade')::numeric;
