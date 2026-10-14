@@ -27,7 +27,10 @@ BEGIN
       'Este item já tem produção registrada e não pode ser substituído ou excluído. Estorne a produção por um fluxo próprio antes de editar o pedido.';
   END IF;
 
-  RETURN OLD;
+  IF TG_OP = 'DELETE' THEN
+    RETURN OLD;
+  END IF;
+  RETURN NEW;
 END;
 $function$;
 
