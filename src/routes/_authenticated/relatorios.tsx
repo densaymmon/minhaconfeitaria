@@ -1,27 +1,209 @@
 import * as appQueries from "@/lib/queries";
-import { createFileRoute,Link } from '@tanstack/react-router';
-import { useSuspenseQuery } from '@tanstack/react-query';
-import { useMemo } from 'react';
-import { Download } from 'lucide-react';
-import { despesasQ } from '@/lib/queries';
-import { usePedidosCalc } from '@/lib/hooks';
-import { brl,dataBR,hojeISO,mesISO,num } from '@/lib/format';
-import { baixarCSV } from '@/lib/csv';
-import { PageHeader,Field,Stat,Row,Empty } from '@/components/app/ui';
-import { Input } from '@/components/ui/input';
-import { Button } from '@/components/ui/button';
-export const Route=createFileRoute('/_authenticated/relatorios')({
- loader: async ({ context }) => { await Promise.all([context.queryClient.ensureQueryData(appQueries.pedidosQ),context.queryClient.ensureQueryData(appQueries.configQ),context.queryClient.ensureQueryData(appQueries.despesasQ)]); },
- errorComponent: ({error}) => <p role="alert" className="py-8 text-destructive">{error instanceof Error ? error.message : "Não foi possível carregar os registros."}</p>,
- notFoundComponent: () => <p>Registro não encontrado.</p>,
+import { createFileRoute, Link } from "@tanstack/react-router";
+import { useSuspenseQuery } from "@tanstack/react-query";
+import { useMemo } from "react";
+import { Download } from "lucide-react";
+import { configQ, despesasQ, pedidosQ } from "@/lib/queries";
+import { useCustos } from "@/lib/hooks";
+import { totaisPedido } from "@/lib/calc";
+import { brl, dataBR, hojeISO, mesISO, num } from "@/lib/format";
+import { baixarCSV } from "@/lib/csv";
+import { PageHeader, Field, Stat, Row, Empty } from "@/components/app/ui";
+import { Input } from "@/components/ui/input";
+import { Button } from "@/components/ui/button";
 
- validateSearch:(s:Record<string,unknown>)=>({inicio:typeof s['inicio']==='string'&&/^\d{4}-\d{2}-\d{2}$/.test(s['inicio'])?s['inicio']:mesISO()+'-01',fim:typeof s['fim']==='string'&&/^\d{4}-\d{2}-\d{2}$/.test(s['fim'])?s['fim']:hojeISO()}),
- head:()=>({meta:[{title:'Relatórios — Doce Gestão'},{name:'description',content:'Vendas, lucros e valores a receber por período.'},{property:'og:title',content:'Relatórios — Doce Gestão'},{property:'og:description',content:'Vendas, lucros e valores a receber por período.'},{property:'og:type',content:'website'},{name:'twitter:card',content:'summary_large_image'}]}),component:Relatorios});
-function Relatorios(){
- const {inicio,fim}=Route.useSearch();const navigate=Route.useNavigate();const pedidos=usePedidosCalc();const {data:despesas}=useSuspenseQuery(despesasQ);
- const lista=pedidos.filter(p=>p.status!=='cancelado'&&p.data_entrega>=inicio&&p.data_entrega<=fim);const gastos=despesas.filter(d=>d.data>=inicio&&d.data<=fim).reduce((s,d)=>s+d.valor,0);
- const t=lista.reduce((s,p)=>({venda:s.venda+p.t.venda,custo:s.custo+p.t.custo,taxas:s.taxas+p.t.taxas,recebido:s.recebido+p.t.recebido,saldo:s.saldo+p.t.saldo,realizado:s.realizado+(['finalizado','entregue'].includes(p.status)?p.t.lucroLiquido:0)}),{venda:0,custo:0,taxas:0,recebido:0,saldo:0,realizado:0});
- const porProduto=useMemo(()=>{const m=new Map<string,{qtd:number,venda:number,custo:number}>();for(const p of lista)for(const i of p.pedido_itens){const key=i.produto_id??i.descricao;const r=m.get(key)??{qtd:0,venda:0,custo:0};r.qtd+=i.quantidade;r.venda+=i.quantidade*i.preco_unitario;r.custo+=i.quantidade*i.custo_unitario;m.set(key,r);}return [...m].map(([key,r])=>({nome:lista.flatMap(p=>p.pedido_itens).find(i=>(i.produto_id??i.descricao)===key)?.descricao??key,...r})).sort((a,b)=>b.venda-a.venda);},[lista]);
- function exportar(){baixarCSV('relatorio-'+inicio+'-'+fim,['Pedido','Entrega','Cliente','Vendido','Custo','Taxas','Lucro bruto','Lucro líquido estimado','Recebido','Saldo'],lista.map(p=>[p.numero,dataBR(p.data_entrega),p.clientes?.nome,p.t.venda,p.t.custo,p.t.taxas,p.t.lucroBruto,p.t.lucroLiquido,p.t.recebido,p.t.saldo]));}
- return <><PageHeader title="Relatórios" back="/mais" action={<Button size="icon" variant="outline" aria-label="Exportar relatório CSV" onClick={exportar}><Download className="size-4"/></Button>}/><div className="mb-5 grid grid-cols-2 gap-3"><Field label="Entrega a partir de"><Input type="date" value={inicio} onChange={e=>navigate({search:s=>({...s,inicio:e.target.value})})} className="h-11 bg-card"/></Field><Field label="Até"><Input type="date" value={fim} onChange={e=>navigate({search:s=>({...s,fim:e.target.value})})} className="h-11 bg-card"/></Field></div>{inicio>fim&&<p className="mb-4 text-destructive">A data final deve ser posterior à inicial.</p>}<div className="grid grid-cols-2 gap-3 mb-6"><Stat label="Vendas contratadas" value={brl(t.venda)}/><Stat label="Dinheiro recebido¹" value={brl(t.recebido)} tone="primary"/><Stat label="Saldo a receber" value={brl(t.saldo)}/><Stat label="Resultado estimado" value={brl(t.venda-t.custo-t.taxas-gastos)} tone={t.venda-t.custo-t.taxas-gastos>=0?'success':'danger'}/></div><section className="border-y py-4 mb-6"><h2 className="text-lg mb-2">Resultado do período</h2><Row label="Vendas" value={brl(t.venda)}/><Row label="Custos das receitas" value={brl(t.custo)}/><Row label="Taxas e impostos" value={brl(t.taxas)}/><Row label="Despesas adicionais" value={brl(gastos)}/><Row label="Lucro líquido estimado" value={brl(t.venda-t.custo-t.taxas-gastos)} strong/><Row label="Resultado dos pedidos finalizados²" value={brl(t.realizado-gastos)} strong/></section><h2 className="text-lg mb-3">Vendas por produto</h2>{!porProduto.length?<Empty>Nenhuma venda no período.</Empty>:<div className="divide-y mb-6">{porProduto.map((p,i)=><div key={i} className="py-3"><div className="flex justify-between gap-2"><span className="break-words">{p.nome}</span><b className="whitespace-nowrap">{brl(p.venda)}</b></div><div className="text-xs text-muted-foreground">{num(p.qtd)} unidades · Custo {brl(p.custo)} · Lucro bruto {brl(p.venda-p.custo)}</div></div>)}</div>}<h2 className="text-lg mb-3">Lucro por encomenda</h2><div className="divide-y mb-5">{lista.map(p=><Link key={p.id} to="/pedidos/$id" params={{id:p.id}} className="flex justify-between py-3 gap-3"><div className="min-w-0"><span className="font-medium">#{p.numero} · {p.clientes?.nome??'Sem cliente'}</span><p className="text-xs text-muted-foreground">{dataBR(p.data_entrega)} · Venda {brl(p.t.venda)}</p></div><b className={p.t.lucroLiquido>=0?'text-success':'text-destructive'}>{brl(p.t.lucroLiquido)}</b></Link>)}</div><p className="text-xs text-muted-foreground mb-2">¹ Valores recebidos dos pedidos com entrega no período, não um extrato por data de pagamento.</p><p className="text-xs text-muted-foreground">² Pedidos finalizados, descontando custos, taxas e despesas adicionais. Entrada recebida não significa lucro; custos da receita não devem ser lançados novamente como despesas.</p></>;
+export const Route = createFileRoute("/_authenticated/relatorios")({
+  loader: async ({ context }) => {
+    await Promise.all([
+      context.queryClient.ensureQueryData(appQueries.pedidosQ),
+      context.queryClient.ensureQueryData(appQueries.configQ),
+      context.queryClient.ensureQueryData(appQueries.despesasQ),
+      context.queryClient.ensureQueryData(appQueries.produtosQ),
+      context.queryClient.ensureQueryData(appQueries.insumosQ),
+    ]);
+  },
+  errorComponent: ({ error }) => (
+    <p role="alert" className="py-8 text-destructive">
+      {error instanceof Error ? error.message : "Não foi possível carregar os registros."}
+    </p>
+  ),
+  notFoundComponent: () => <p>Registro não encontrado.</p>,
+  validateSearch: (s: Record<string, unknown>) => ({
+    inicio: typeof s["inicio"] === "string" && /^\d{4}-\d{2}-\d{2}$/.test(s["inicio"]) ? s["inicio"] : mesISO() + "-01",
+    fim: typeof s["fim"] === "string" && /^\d{4}-\d{2}-\d{2}$/.test(s["fim"]) ? s["fim"] : hojeISO(),
+  }),
+  head: () => ({
+    meta: [
+      { title: "Relatórios — Doce Gestão" },
+      { name: "description", content: "Vendas, custos, resultados estimados e valores a receber por período." },
+      { property: "og:title", content: "Relatórios — Doce Gestão" },
+      { property: "og:description", content: "Vendas, custos, resultados estimados e valores a receber por período." },
+      { property: "og:type", content: "website" },
+      { name: "twitter:card", content: "summary_large_image" },
+    ],
+  }),
+  component: Relatorios,
+});
+
+function Relatorios() {
+  const { inicio, fim } = Route.useSearch();
+  const navigate = Route.useNavigate();
+  const { data: pedidos } = useSuspenseQuery(pedidosQ);
+  const { data: config } = useSuspenseQuery(configQ);
+  const { data: despesas } = useSuspenseQuery(despesasQ);
+  const { produtos, custo: custoAtual } = useCustos();
+  const intervaloValido = inicio <= fim;
+
+  // Para produtos cadastrados, recalcula o custo usando a receita e os preços
+  // atualmente cadastrados. Pedidos com itens avulsos continuam usando o custo
+  // gravado no item, pois não há receita cadastrada para recalcular.
+  const produtosPorId = useMemo(() => new Map(produtos.map((p) => [p.id, p])), [produtos]);
+  const pedidosCalculados = useMemo(() => pedidos.map((pedido) => {
+    const itens = pedido.pedido_itens.map((item) => {
+      const produto = item.produto_id ? produtosPorId.get(item.produto_id) : undefined;
+      const temCustoCadastrado = !!produto && (
+        produto.receita_itens.length > 0 ||
+        Number(produto.custo_gas) > 0 ||
+        Number(produto.custo_energia) > 0 ||
+        Number(produto.custo_mao_obra) > 0
+      );
+      const custoUnitarioAtual = item.produto_id && temCustoCadastrado
+        ? (custoAtual.get(item.produto_id) ?? Number(item.custo_unitario))
+        : Number(item.custo_unitario);
+      return { ...item, custo_unitario: custoUnitarioAtual };
+    });
+    return { ...pedido, pedido_itens: itens, t: totaisPedido({ ...pedido, pedido_itens: itens }, config) };
+  }), [pedidos, produtosPorId, custoAtual, config]);
+
+  const lista = intervaloValido
+    ? pedidosCalculados.filter((p) => p.status !== "cancelado" && p.data_entrega >= inicio && p.data_entrega <= fim)
+    : [];
+  const entregues = lista.filter((p) => ["finalizado", "entregue"].includes(p.status));
+  const gastos = intervaloValido
+    ? despesas.filter((d) => d.data >= inicio && d.data <= fim).reduce((s, d) => s + Number(d.valor), 0)
+    : 0;
+
+  const contratado = lista.reduce((s, p) => ({
+    venda: s.venda + p.t.venda,
+    recebido: s.recebido + p.t.recebido,
+    saldo: s.saldo + p.t.saldo,
+  }), { venda: 0, recebido: 0, saldo: 0 });
+  const realizado = entregues.reduce((s, p) => ({
+    venda: s.venda + p.t.venda,
+    custo: s.custo + p.t.custo,
+    taxas: s.taxas + p.t.taxas,
+  }), { venda: 0, custo: 0, taxas: 0 });
+  const resultado = realizado.venda - realizado.custo - realizado.taxas - gastos;
+
+  const porProduto = useMemo(() => {
+    const m = new Map<string, { qtd: number; venda: number; custo: number; nome: string }>();
+    for (const pedido of entregues) {
+      for (const item of pedido.pedido_itens) {
+        const key = item.produto_id ?? item.descricao;
+        const r = m.get(key) ?? { qtd: 0, venda: 0, custo: 0, nome: item.descricao || "Produto sem nome" };
+        r.qtd += Number(item.quantidade);
+        r.venda += Number(item.quantidade) * Number(item.preco_unitario);
+        r.custo += Number(item.quantidade) * Number(item.custo_unitario);
+        m.set(key, r);
+      }
+    }
+    return [...m.values()].sort((a, b) => b.venda - a.venda);
+  }, [entregues]);
+
+  function exportar() {
+    baixarCSV(
+      "relatorio-" + inicio + "-" + fim,
+      ["Pedido", "Entrega", "Cliente", "Status", "Vendido", "Custo estimado atual", "Taxas estimadas", "Resultado estimado", "Recebido estimado", "Saldo estimado"],
+      lista.map((p) => [
+        p.numero, dataBR(p.data_entrega), p.clientes?.nome, p.status, p.t.venda, p.t.custo,
+        p.t.taxas, p.t.lucroLiquido, p.t.recebido, p.t.saldo,
+      ]),
+    );
+  }
+
+  return (
+    <>
+      <PageHeader title="Relatórios" back="/mais" action={
+        <Button size="icon" variant="outline" aria-label="Exportar relatório CSV" onClick={exportar}>
+          <Download className="size-4" />
+        </Button>
+      } />
+      <div className="mb-5 grid grid-cols-2 gap-3">
+        <Field label="Entrega a partir de">
+          <Input type="date" value={inicio} onChange={(e) => navigate({ search: (s) => ({ ...s, inicio: e.target.value }) })} className="h-11 bg-card" />
+        </Field>
+        <Field label="Até">
+          <Input type="date" value={fim} onChange={(e) => navigate({ search: (s) => ({ ...s, fim: e.target.value }) })} className="h-11 bg-card" />
+        </Field>
+      </div>
+      {!intervaloValido && <p className="mb-4 text-destructive">A data final deve ser igual ou posterior à data inicial.</p>}
+
+      <h2 className="mb-3 text-lg font-semibold">Visão geral</h2>
+      <div className="mb-6 grid grid-cols-2 gap-3">
+        <Stat label="Vendas dos pedidos" value={brl(contratado.venda)} />
+        <Stat label="Pedidos entregues" value={brl(realizado.venda)} tone="primary" />
+        <Stat label="Saldo a receber estimado" value={brl(contratado.saldo)} />
+        <Stat label="Resultado estimado" value={brl(resultado)} tone={resultado >= 0 ? "success" : "danger"} />
+      </div>
+
+      <section className="mb-6 border-y py-4">
+        <h2 className="mb-2 text-lg font-semibold">Resultado dos pedidos entregues</h2>
+        <Row label="Vendas dos pedidos entregues" value={brl(realizado.venda)} />
+        <Row label="Custo estimado dos produtos" value={brl(realizado.custo)} />
+        <Row label="Taxas e impostos estimados" value={brl(realizado.taxas)} />
+        <Row label="Despesas registradas no período" value={brl(gastos)} />
+        <Row label="Resultado estimado após despesas" value={brl(resultado)} strong />
+        <p className="mt-3 text-xs text-muted-foreground">
+          O resultado considera apenas pedidos entregues/finalizados no período selecionado. As despesas são filtradas pela data em que foram registradas. Não lance novamente como despesa ingredientes, embalagens, gás, energia ou mão de obra que já estejam incluídos no custo da receita, pois isso pode duplicar o desconto.
+        </p>
+      </section>
+
+      <section className="mb-6">
+        <h2 className="mb-3 text-lg font-semibold">Vendas por produto</h2>
+        <p className="mb-3 text-xs text-muted-foreground">Somente pedidos entregues. Os custos dos produtos cadastrados usam os preços e a receita cadastrados atualmente.</p>
+        {!porProduto.length ? <Empty>Nenhuma venda entregue no período.</Empty> : (
+          <div className="divide-y">
+            {porProduto.map((p, i) => (
+              <div key={i} className="py-3">
+                <div className="flex justify-between gap-2">
+                  <span className="break-words">{p.nome}</span>
+                  <b className="whitespace-nowrap">{brl(p.venda)}</b>
+                </div>
+                <div className="text-xs text-muted-foreground">
+                  {num(p.qtd)} unidades · Custo {brl(p.custo)} · Lucro bruto estimado {brl(p.venda - p.custo)}
+                </div>
+              </div>
+            ))}
+          </div>
+        )}
+      </section>
+
+      <section className="mb-5">
+        <h2 className="mb-3 text-lg font-semibold">Detalhamento dos pedidos</h2>
+        {!lista.length ? <Empty>Nenhum pedido no período.</Empty> : (
+          <div className="divide-y">
+            {lista.map((p) => (
+              <Link key={p.id} to="/pedidos/$id" params={{ id: p.id }} className="flex justify-between gap-3 py-3">
+                <div className="min-w-0">
+                  <span className="font-medium">#{p.numero} · {p.clientes?.nome ?? "Sem cliente"}</span>
+                  <p className="text-xs text-muted-foreground">{dataBR(p.data_entrega)} · {p.status} · Venda {brl(p.t.venda)}</p>
+                </div>
+                <div className="shrink-0 text-right">
+                  <b className={p.t.lucroLiquido >= 0 ? "text-success" : "text-destructive"}>{brl(p.t.lucroLiquido)}</b>
+                  <p className="text-xs text-muted-foreground">resultado estimado</p>
+                </div>
+              </Link>
+            ))}
+          </div>
+        )}
+      </section>
+
+      <p className="mb-2 text-xs text-muted-foreground">
+        Valores recebidos e saldo são estimativas dos pedidos com entrega no período, não um extrato por data de pagamento. O sistema ainda não registra cada pagamento parcial com sua própria data.
+      </p>
+      <p className="text-xs text-muted-foreground">
+        Para itens avulsos sem produto/receita cadastrada, o relatório mantém o custo salvo no pedido. Taxas e impostos são estimativas conforme as configurações atuais.
+      </p>
+    </>
+  );
 }
