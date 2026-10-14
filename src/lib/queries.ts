@@ -16,6 +16,7 @@ export type Pedido = Tables<"pedidos"> & {
 export type Despesa = Tables<"despesas">;
 export type Compra = Tables<"compras">;
 export type CompraItem = Tables<"compra_itens">;
+export type ContaPagar = Tables<"contas_pagar">;
 
 
 async function must<T>(p: PromiseLike<{ data: T | null; error: { message: string } | null }>): Promise<T> {
@@ -84,3 +85,10 @@ export const compraItensQ = queryOptions({
   queryFn: () => must<CompraItem[]>(supabase.from("compra_itens").select("*").order("created_at")),
 });
 
+
+export const contasPagarQ = queryOptions({
+  queryKey: ["contas-pagar"],
+  queryFn: () => must<ContaPagar[]>(
+    supabase.from("contas_pagar").select("*").order("data_vencimento", { ascending: true }),
+  ),
+});
