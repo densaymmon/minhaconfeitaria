@@ -39,7 +39,9 @@ const linhaVazia = (): Linha => ({ insumo_id: "", quantidade: "", unidade: "un",
 
 // Nunca permita que valores numéricos inválidos vindos do banco apareçam como "NaN"
 // em campos controlados; valores ausentes permanecem vazios e editáveis.
-function textoCampoNumerico(valor: string): string {
+function textoCampoNumerico(valor: unknown): string {
+  if (typeof valor === "number") return Number.isFinite(valor) ? String(valor) : "";
+  if (typeof valor !== "string") return "";
   return ["NaN", "Infinity", "-Infinity", "undefined", "null"].includes(valor.trim()) ? "" : valor;
 }
 
