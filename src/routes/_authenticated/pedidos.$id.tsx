@@ -226,6 +226,9 @@ function PedidoForm() {
           quantidade: parseNum(i.quantidade),
           preco_unitario: parseNum(i.preco_unitario),
           custo_unitario: i.custo_unitario,
+          // A coluna é NOT NULL: novos itens começam com zero produzido;
+          // na edição, preserva a quantidade já registrada.
+          quantidade_produzida: Number.isFinite(i.quantidade_produzida) ? i.quantidade_produzida : 0,
         })),
         ...(existente ? { registro_id: existente.id } : {}),
       });
