@@ -454,6 +454,10 @@ export type Database = {
         Args: { evento_id: string; pedido_item_id: string; quantidade_resultado: number }
         Returns: number
       }
+      saldo_estoque: {
+        Args: Record<PropertyKey, never>
+        Returns: { insumo_id: string; nome: string; unidade_base: string | null; saldo: number }[]
+      }
       salvar_compra: {
         Args: { evento_id?: string; itens: Json; payload: Json; registro_id?: string }
         Returns: string
