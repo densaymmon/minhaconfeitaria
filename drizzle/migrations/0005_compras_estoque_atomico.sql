@@ -102,29 +102,25 @@ BEGIN
     -- item movements. Legacy purchases remain unintegrated pending physical count.
     IF integrated THEN
       FOR old_item IN
-        SELECT ci.id, ci.insumo_id, m.quantidade_delta_base, m.unidade_base
+        SELECT ci.id AS compra_item_id, ci.insumo_id, m.id AS movimento_id,
+          m.quantidade_delta_base, m.unidade_base
         FROM public.compra_itens ci
         JOIN public.estoque_movimentos m
           ON m.origem_tipo = 'compra_item'
          AND m.origem_id = ci.id
          AND m.user_id = uid
+         AND m.tipo_movimento = 'entrada_compra'
         WHERE ci.compra_id = rid AND ci.user_id = uid
       LOOP
         INSERT INTO public.estoque_movimentos(
           user_id, insumo_id, quantidade_delta_base, unidade_base,
           tipo_movimento, origem_tipo, origem_id, evento_id,
           reverte_movimento_id, observacao
-        )
-        SELECT uid, old_item.insumo_id, -old_item.quantidade_delta_base,
-          old_item.unidade_base, 'estorno', 'compra_item', old_item.id,
-          evento_id, m.id, 'Estorno automático por edição de compra'
-        FROM public.estoque_movimentos m
-        WHERE m.user_id = uid AND m.origem_tipo = 'compra_item'
-          AND m.origem_id = old_item.id
-          AND m.quantidade_delta_base = old_item.quantidade_delta_base
-          AND m.unidade_base = old_item.unidade_base
-        ORDER BY m.created_at DESC
-        LIMIT 1;
+        ) VALUES (
+          uid, old_item.insumo_id, -old_item.quantidade_delta_base,
+          old_item.unidade_base, 'estorno', 'compra_item', old_item.compra_item_id,
+          evento_id, old_item.movimento_id, 'Estorno automático por edição de compra'
+        );
       END LOOP;
     END IF;
 
