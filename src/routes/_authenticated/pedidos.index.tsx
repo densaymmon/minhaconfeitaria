@@ -1,5 +1,5 @@
 import * as appQueries from "@/lib/queries";
-import { createFileRoute, useNavigate } from "@tanstack/react-router";
+import { createFileRoute, Link, useNavigate } from "@tanstack/react-router";
 import { useMemo, useState } from "react";
 import { CalendarClock, ChevronDown, Download, Plus, Search, SlidersHorizontal, Wallet } from "lucide-react";
 import { usePedidosCalc } from "@/lib/hooks";
@@ -51,6 +51,15 @@ function Pedidos() {
   const [dataInicial, setDataInicial] = useState(search.dataInicial ?? "");
   const [dataFinal, setDataFinal] = useState(search.dataFinal ?? "");
   const hoje = hojeISO();
+
+  const contagens = useMemo(() => ({
+    abertos: pedidos.filter((p) => !["finalizado", "entregue", "cancelado"].includes(p.status)).length,
+    prontos: pedidos.filter((p) => p.status === "pronto").length,
+    entregasHoje: pedidos.filter((p) => p.data_entrega === hoje && STATUS_ATIVOS.includes(p.status)).length,
+    aReceber: pedidos
+      .filter((p) => STATUS_ATIVOS.includes(p.status))
+      .reduce((soma, p) => soma + Math.max(0, Number(p.t.saldo) || 0), 0),
+  }), [pedidos, hoje]);
 
   const lista = useMemo(() => {
     const q = busca.trim().toLowerCase();
