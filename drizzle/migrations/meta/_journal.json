@@ -43,6 +43,13 @@
       "when": 1791942000000,
       "tag": "0005_compras_estoque_atomico",
       "breakpoints": true
+    },
+    {
+      "idx": 6,
+      "version": "7",
+      "when": 1791940035187,
+      "tag": "0006_producao_estoque_atomico",
+      "breakpoints": true
     }
   ]
 }
