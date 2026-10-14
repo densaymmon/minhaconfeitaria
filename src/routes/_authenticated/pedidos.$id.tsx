@@ -126,6 +126,9 @@ function PedidoForm() {
   const setItem = (i: number, patch: Partial<Item>) => setItens((s) => s.map((it, j) => (j === i ? { ...it, ...patch } : it)));
   // Alterar manualmente o valor recebido invalida a marcação anterior de saldo quitado.
   const setValorPago = (valor: string) => setF((s) => ({ ...s, valor_entrada: valor, saldo_quitado: false }));
+  const limparZeroAoFocar = (valor: string, atualizar: (valor: string) => void) => {
+    if (/^0([,.]0+)?$/.test(valor.trim())) atualizar("");
+  };
 
   function escolherProduto(i: number, pid: string) {
     const p = produtos.find((x) => x.id === pid);
@@ -394,10 +397,10 @@ function PedidoForm() {
               <Input placeholder="Descrição / personalização" value={it.descricao} onChange={(e) => setItem(i, { descricao: e.target.value })} className="h-11 bg-card" />
               <div className="grid grid-cols-3 gap-2">
                 <Field label="Qtd.">
-                  <Input inputMode="decimal" value={it.quantidade} onChange={(e) => setItem(i, { quantidade: e.target.value })} className="h-11 bg-card" />
+                  <Input inputMode="decimal" value={it.quantidade} onFocus={() => limparZeroAoFocar(it.quantidade, (valor) => setItem(i, { quantidade: valor }))} onChange={(e) => setItem(i, { quantidade: e.target.value })} className="h-11 bg-card" />
                 </Field>
                 <Field label="Preço un.">
-                  <Input inputMode="decimal" value={it.preco_unitario} onChange={(e) => setItem(i, { preco_unitario: e.target.value })} className="h-11 bg-card" />
+                  <Input inputMode="decimal" value={it.preco_unitario} onFocus={() => limparZeroAoFocar(it.preco_unitario, (valor) => setItem(i, { preco_unitario: valor }))} onChange={(e) => setItem(i, { preco_unitario: e.target.value })} className="h-11 bg-card" />
                 </Field>
               </div>
               <div className="text-right text-xs text-muted-foreground">
@@ -423,7 +426,7 @@ function PedidoForm() {
                   </NativeSelect>
                 </Field>
                 <Field label="Entrada / valor pago (R$)">
-                  <Input inputMode="decimal" value={f.valor_entrada} onChange={(e) => setValorPago(e.target.value)} className="h-11" />
+                  <Input inputMode="decimal" value={f.valor_entrada} onFocus={() => limparZeroAoFocar(f.valor_entrada, setValorPago)} onChange={(e) => setValorPago(e.target.value)} className="h-11" />
                 </Field>
               </div>
               <div className="rounded-xl bg-muted/60 p-3">
@@ -439,10 +442,10 @@ function PedidoForm() {
               <div className="mt-4 space-y-4">
                 <div className="grid grid-cols-1 gap-3 sm:grid-cols-2">
                   <Field label="Taxa de entrega (R$)">
-                    <Input inputMode="decimal" value={f.taxa_entrega} onChange={(e) => set("taxa_entrega", e.target.value)} className="h-11" />
+                    <Input inputMode="decimal" value={f.taxa_entrega} onFocus={() => limparZeroAoFocar(f.taxa_entrega, (valor) => set("taxa_entrega", valor))} onChange={(e) => set("taxa_entrega", e.target.value)} className="h-11" />
                   </Field>
                   <Field label="Desconto (R$)">
-                    <Input inputMode="decimal" value={f.desconto} onChange={(e) => set("desconto", e.target.value)} className="h-11" />
+                    <Input inputMode="decimal" value={f.desconto} onFocus={() => limparZeroAoFocar(f.desconto, (valor) => set("desconto", valor))} onChange={(e) => set("desconto", e.target.value)} className="h-11" />
                   </Field>
                 </div>
                 <Field label="Observações e personalizações">
@@ -467,13 +470,13 @@ function PedidoForm() {
               </Field>
               <div className="grid grid-cols-3 gap-2">
                 <Field label="Valor pago R$">
-                  <Input inputMode="decimal" value={f.valor_entrada} onChange={(e) => setValorPago(e.target.value)} className="h-11" />
+                  <Input inputMode="decimal" value={f.valor_entrada} onFocus={() => limparZeroAoFocar(f.valor_entrada, setValorPago)} onChange={(e) => setValorPago(e.target.value)} className="h-11" />
                 </Field>
                 <Field label="Frete R$">
-                  <Input inputMode="decimal" value={f.taxa_entrega} onChange={(e) => set("taxa_entrega", e.target.value)} className="h-11" />
+                  <Input inputMode="decimal" value={f.taxa_entrega} onFocus={() => limparZeroAoFocar(f.taxa_entrega, (valor) => set("taxa_entrega", valor))} onChange={(e) => set("taxa_entrega", e.target.value)} className="h-11" />
                 </Field>
                 <Field label="Desconto R$">
-                  <Input inputMode="decimal" value={f.desconto} onChange={(e) => set("desconto", e.target.value)} className="h-11" />
+                  <Input inputMode="decimal" value={f.desconto} onFocus={() => limparZeroAoFocar(f.desconto, (valor) => set("desconto", valor))} onChange={(e) => set("desconto", e.target.value)} className="h-11" />
                 </Field>
               </div>
 
