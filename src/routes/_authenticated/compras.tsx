@@ -6,7 +6,7 @@ import { toast } from "sonner";
 import { Plus, Trash2, ShoppingCart } from "lucide-react";
 import { supabase } from "@/integrations/supabase/client";
 import { brl, dataBR, hojeISO } from "@/lib/format";
-import { medidaLabel, medidasCompativeis, numeroIngrediente } from "@/lib/ingredient-cost";
+import { medida, medidaLabel, medidasCompativeis, numeroIngrediente } from "@/lib/ingredient-cost";
 import { Card, Empty, Field, PageHeader } from "@/components/app/ui";
 import { Input } from "@/components/ui/input";
 import { Button } from "@/components/ui/button";
@@ -103,10 +103,30 @@ function Compras() {
     const m = new Map<string, { id: string; nome: string; total: number; quantidade: number; unidade: string }>();
     for (const it of itensNoPeriodo) {
       const nome = insumos.find((i) => i.id === it.insumo_id)?.nome ?? "Insumo removido";
-      const atual = m.get(it.insumo_id) ?? { id: it.insumo_id, nome, total: 0, quantidade: 0, unidade: it.unidade };
-      m.set(it.insumo_id, { ...atual, total: atual.total + Number(it.total), quantidade: atual.quantidade + Number(it.quantidade) });
+      const conversao = medida(it.unidade);
+      const unidadeBase = conversao?.base ?? it.unidade;
+      const quantidadeBase = Number(it.quantidade) * (conversao?.fator ?? 1);
+      const atual = m.get(it.insumo_id) ?? {
+        id: it.insumo_id,
+        nome,
+        total: 0,
+        quantidade: 0,
+        unidade: unidadeBase,
+      };
+      m.set(it.insumo_id, {
+        ...atual,
+        total: atual.total + Number(it.total),
+        quantidade: atual.quantidade + quantidadeBase,
+      });
     }
-    return [...m.values()].sort((a, b) => b.total - a.total);
+    return [...m.values()]
+      .map((item) => {
+        const divisor = item.unidade === "g" || item.unidade === "ml" ? 1000 : 1;
+        const unidade =
+          item.unidade === "g" ? "kg" : item.unidade === "ml" ? "L" : item.unidade;
+        return { ...item, quantidade: item.quantidade / divisor, unidade };
+      })
+      .sort((a, b) => b.total - a.total);
   }, [itensNoPeriodo, insumos]);
 
   function escolherInsumo(index: number, id: string) {
