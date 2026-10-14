@@ -158,7 +158,7 @@ function Compras() {
               </Field>
               <div className="grid grid-cols-2 gap-3">
                 <Field label="Quantidade">
-                  <Input required inputMode="decimal" className="h-11" value={textoCampoNumerico(l.quantidade)} onChange={(e) => setLinhas((s) => s.map((x, j) => (j === index ? { ...x, quantidade: e.target.value } : x)))} />
+                  <Input required inputMode="decimal" className="h-11" value={l.quantidade} onChange={(e) => setLinhas((s) => s.map((x, j) => (j === index ? { ...x, quantidade: e.target.value } : x)))} />
                 </Field>
                 <Field label="Medida">
                   <select value={l.unidade} onChange={(e) => setLinhas((s) => s.map((x, j) => (j === index ? { ...x, unidade: e.target.value } : x)))} className="h-11 w-full rounded-md border border-input bg-background px-3 text-sm">
@@ -167,7 +167,7 @@ function Compras() {
                 </Field>
               </div>
               <Field label="Preço de cada item (R$)">
-                <Input required inputMode="decimal" className="h-11" value={textoCampoNumerico(l.preco)} onChange={(e) => setLinhas((s) => s.map((x, j) => (j === index ? { ...x, preco: e.target.value } : x)))} />
+                <Input required inputMode="decimal" className="h-11" value={l.preco} onChange={(e) => setLinhas((s) => s.map((x, j) => (j === index ? { ...x, preco: e.target.value } : x)))} />
               </Field>
               <div className="flex justify-between text-sm">
                 <span className="text-muted-foreground">Total do item</span>
