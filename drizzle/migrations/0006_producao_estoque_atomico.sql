@@ -75,6 +75,7 @@ BEGIN
       JOIN public.insumos i ON i.id = ri.insumo_id AND i.user_id = uid
       WHERE ri.produto_id = p.id AND ri.user_id = uid
       ORDER BY ri.insumo_id
+      FOR SHARE OF i
     LOOP
       unidade_base := public.medida_base(coalesce(item_receita.unidade_receita, item_receita.unidade));
       IF unidade_base NOT IN ('g','ml','un') THEN
