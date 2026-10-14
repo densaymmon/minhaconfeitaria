@@ -53,7 +53,7 @@ function Pedidos() {
   const hoje = hojeISO();
 
   const contagens = useMemo(() => ({
-    abertos: pedidos.filter((p) => !["finalizado", "entregue", "cancelado"].includes(p.status)).length,
+    abertos: pedidos.filter((p) => !["pronto", "finalizado", "entregue", "cancelado"].includes(p.status)).length,
     prontos: pedidos.filter((p) => p.status === "pronto").length,
     entregasHoje: pedidos.filter((p) => p.data_entrega === hoje && STATUS_ATIVOS.includes(p.status)).length,
     aReceber: pedidos
@@ -66,7 +66,7 @@ function Pedidos() {
     return pedidos.filter((p) => {
       if (dataInicial && p.data_entrega < dataInicial) return false;
       if (dataFinal && p.data_entrega > dataFinal) return false;
-      if (status === "abertos" && ["finalizado", "entregue", "cancelado"].includes(p.status)) return false;
+      if (status === "abertos" && ["pronto", "finalizado", "entregue", "cancelado"].includes(p.status)) return false;
       if (status === "prontos" && p.status !== "pronto") return false;
       if (status === "em_andamento" && !["recebido", "confirmado", "em_producao"].includes(p.status)) return false;
       if (status === "atrasados" && (p.data_entrega >= hoje || ["finalizado", "entregue", "cancelado"].includes(p.status))) return false;
