@@ -87,7 +87,7 @@ function PedidoForm() {
     return (
       <div className="py-16 text-center">
         <p className="mb-4 text-muted-foreground">Pedido não encontrado.</p>
-        <Link to="/pedidos" className="text-primary">Voltar aos pedidos</Link>
+        <Link to="/pedidos" search={{ filtro: undefined, dataInicial: undefined, dataFinal: undefined }} className="text-primary">Voltar aos pedidos</Link>
       </div>
     );
   }
@@ -188,14 +188,13 @@ function PedidoForm() {
           produto_id: i.produto_id, descricao: i.descricao.trim(),
           quantidade: parseNum(i.quantidade), preco_unitario: parseNum(i.preco_unitario),
           custo_unitario: i.custo_unitario,
-          quantidade_produzida: Math.min(i.quantidade_produzida, parseNum(i.quantidade)),
-        })),
+                  })),
         ...(existente ? { registro_id: existente.id } : {}),
       });
       if (error) throw error;
       await qc.invalidateQueries({ queryKey: ["pedidos"] });
       toast.success(novo ? "Pedido criado!" : "Pedido atualizado!");
-      navigate({ to: "/pedidos" });
+      navigate({ to: "/pedidos", search: { filtro: undefined, dataInicial: undefined, dataFinal: undefined } });
     } catch (e) {
       toast.error((e as Error).message);
     } finally {
@@ -222,7 +221,7 @@ function PedidoForm() {
     if (error) return void toast.error(`Não foi possível cancelar o pedido: ${error.message}`);
     await qc.invalidateQueries({ queryKey: ["pedidos"] });
     toast.success(`Pedido #${existente.numero} cancelado. O histórico foi preservado.`);
-    navigate({ to: "/pedidos" });
+    navigate({ to: "/pedidos", search: { filtro: undefined, dataInicial: undefined, dataFinal: undefined } });
   }
 
   async function excluir() {
@@ -231,7 +230,7 @@ function PedidoForm() {
     if (error) return void toast.error(error.message);
     await qc.invalidateQueries({ queryKey: ["pedidos"] });
     toast.success("Pedido excluído.");
-    navigate({ to: "/pedidos" });
+    navigate({ to: "/pedidos", search: { filtro: undefined, dataInicial: undefined, dataFinal: undefined } });
   }
 
   const cliente = clientes.find((c) => c.id === f.cliente_id);

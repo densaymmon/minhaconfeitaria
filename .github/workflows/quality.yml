@@ -1,0 +1,58 @@
+name: Quality checks
+on:
+  pull_request:
+    types: [opened, synchronize, reopened, ready_for_review]
+    branches: [main]
+  push:
+    branches: [feat/controle-estoque-draft]
+permissions:
+  contents: read
+jobs:
+  frontend:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: oven-sh/setup-bun@v2
+        with:
+          bun-version: latest
+      - run: bun install --frozen-lockfile
+      # The repository-wide lint currently reports pre-existing formatting violations
+      # across unrelated files. Lint the touched application files for code rules,
+      # while deferring the repository-wide Prettier cleanup.
+      - name: Lint changed application files
+        run: >-
+          bunx eslint src/routes/_authenticated/compras.tsx src/routes/_authenticated/producao.tsx src/integrations/supabase/types.ts --rule "prettier/prettier: off"
+      - run: bunx tsc --noEmit
+      - run: bun run test --passWithNoTests
+      - run: bun run build
+  postgres-migrations:
+    runs-on: ubuntu-latest
+    services:
+      postgres:
+        image: postgres:17
+        env:
+          POSTGRES_DB: confeitaria_test
+          POSTGRES_USER: postgres
+          POSTGRES_PASSWORD: postgres
+        ports:
+          - 5432:5432
+        options: >-
+          --health-cmd "pg_isready -U postgres -d confeitaria_test"
+          --health-interval 5s
+          --health-timeout 5s
+          --health-retries 20
+    env:
+      DATABASE_URL: postgresql://postgres:postgres@localhost:5432/confeitaria_test
+    steps:
+      - uses: actions/checkout@v4
+      - name: Prepare minimal Supabase auth compatibility layer
+        run: psql "$DATABASE_URL" -v ON_ERROR_STOP=1 -f tests/db/bootstrap.sql
+      - name: Apply all migrations to a disposable PostgreSQL database
+        run: |
+          set -euo pipefail
+          for migration in drizzle/migrations/[0-9][0-9][0-9][0-9]_*.sql; do
+            echo "Applying $migration"
+            psql "$DATABASE_URL" -v ON_ERROR_STOP=1 -f "$migration"
+          done
+      - name: Smoke-test purchase, cancellation, inventory, production, and history
+        run: psql "$DATABASE_URL" -v ON_ERROR_STOP=1 -f tests/db/stock-smoke.sql

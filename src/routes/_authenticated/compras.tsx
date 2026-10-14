@@ -1,12 +1,12 @@
 import * as appQueries from "@/lib/queries";
 import { createFileRoute } from "@tanstack/react-router";
-import { useQueryClient, useSuspenseQuery } from "@tanstack/react-query";
-import { useMemo, useState } from "react";
+import { useQuery, useQueryClient, useSuspenseQuery } from "@tanstack/react-query";
+import { useMemo, useRef, useState } from "react";
 import { toast } from "sonner";
 import { Plus, Trash2, ShoppingCart } from "lucide-react";
 import { supabase } from "@/integrations/supabase/client";
 import { brl, dataBR, hojeISO } from "@/lib/format";
-import { medidaLabel, medidasCompativeis, numeroIngrediente } from "@/lib/ingredient-cost";
+import { medida, medidaLabel, medidasCompativeis, numeroIngrediente } from "@/lib/ingredient-cost";
 import { Card, Empty, Field, PageHeader } from "@/components/app/ui";
 import { Input } from "@/components/ui/input";
 import { Button } from "@/components/ui/button";
@@ -57,10 +57,22 @@ function Compras() {
   const { data: insumos } = useSuspenseQuery(appQueries.insumosQ);
   const { data: compras } = useSuspenseQuery(appQueries.comprasQ);
   const { data: itens } = useSuspenseQuery(appQueries.compraItensQ);
+  const { data: estoque = [], isLoading: carregandoEstoque, error: erroEstoque } = useQuery({
+    queryKey: ["estoque"],
+    queryFn: async () => {
+      const { data, error } = await supabase.rpc("saldo_estoque");
+      if (error) throw new Error(error.message);
+      return data ?? [];
+    },
+  });
   const qc = useQueryClient();
   const [data, setData] = useState(hojeISO());
   const [linhas, setLinhas] = useState<Linha[]>([linhaVazia()]);
   const [busy, setBusy] = useState(false);
+  const eventoSalvarRef = useRef<{ assinatura: string; id: string } | null>(null);
+  const [inventarioFisico, setInventarioFisico] = useState<Record<string, string>>({});
+  const eventoInventarioRef = useRef<{ assinatura: string; id: string } | null>(null);
+  const eventoCancelarRef = useRef<{ compraId: string; id: string } | null>(null);
   const [editandoCompraId, setEditandoCompraId] = useState<string | null>(null);
   const [de, setDe] = useState("");
   const [ate, setAte] = useState("");
@@ -81,7 +93,8 @@ function Compras() {
   const total = calculadas.reduce((s, l) => s + (Number.isFinite(l.total) ? l.total : 0), 0);
 
   const noPeriodo = (iso: string) => (!de || iso >= de) && (!ate || iso <= ate);
-  const comprasNoPeriodo = compras.filter((c) => noPeriodo(c.data_compra));
+  const comprasPeriodo = compras.filter((c) => noPeriodo(c.data_compra));
+  const comprasNoPeriodo = comprasPeriodo.filter((c) => !c.cancelada_em);
   const idsNoPeriodo = new Set(comprasNoPeriodo.map((c) => c.id));
   const itensNoPeriodo = itens.filter((i) => idsNoPeriodo.has(i.compra_id));
   const totalPeriodo = itensNoPeriodo.reduce((s, i) => s + Number(i.total), 0);
@@ -90,16 +103,107 @@ function Compras() {
     const m = new Map<string, { id: string; nome: string; total: number; quantidade: number; unidade: string }>();
     for (const it of itensNoPeriodo) {
       const nome = insumos.find((i) => i.id === it.insumo_id)?.nome ?? "Insumo removido";
-      const atual = m.get(it.insumo_id) ?? { id: it.insumo_id, nome, total: 0, quantidade: 0, unidade: it.unidade };
-      m.set(it.insumo_id, { ...atual, total: atual.total + Number(it.total), quantidade: atual.quantidade + Number(it.quantidade) });
+      const conversao = medida(it.unidade);
+      const unidadeBase = conversao?.base ?? it.unidade;
+      const quantidadeBase = Number(it.quantidade) * (conversao?.fator ?? 1);
+      const atual = m.get(it.insumo_id) ?? {
+        id: it.insumo_id,
+        nome,
+        total: 0,
+        quantidade: 0,
+        unidade: unidadeBase,
+      };
+      m.set(it.insumo_id, {
+        ...atual,
+        total: atual.total + Number(it.total),
+        quantidade: atual.quantidade + quantidadeBase,
+      });
     }
-    return [...m.values()].sort((a, b) => b.total - a.total);
+    return [...m.values()]
+      .map((item) => {
+        const divisor = item.unidade === "g" || item.unidade === "ml" ? 1000 : 1;
+        const unidade =
+          item.unidade === "g" ? "kg" : item.unidade === "ml" ? "L" : item.unidade;
+        return { ...item, quantidade: item.quantidade / divisor, unidade };
+      })
+      .sort((a, b) => b.total - a.total);
   }, [itensNoPeriodo, insumos]);
 
   function escolherInsumo(index: number, id: string) {
     const ins = insumos.find((i) => i.id === id);
     const unidade = unidadesPara(id)[0] ?? "un";
     setLinhas((s) => s.map((l, j) => (j === index ? { ...l, insumo_id: id, unidade, preco: Number.isFinite(numeroIngrediente(l.preco)) ? l.preco : precoInicial(ins) } : l)));
+  }
+
+  async function cancelarCompra(compra: { id: string; cancelada_em: string | null }) {
+    if (compra.cancelada_em) return;
+    if (!confirm("Cancelar esta compra? O registro será mantido no histórico e, se ela movimentou o estoque, será lançado um estorno.")) return;
+    if (!eventoCancelarRef.current || eventoCancelarRef.current.compraId !== compra.id) {
+      eventoCancelarRef.current = { compraId: compra.id, id: crypto.randomUUID() };
+    }
+    setBusy(true);
+    try {
+      const { error } = await supabase.rpc("cancelar_compra", {
+        registro_id: compra.id,
+        evento_id: eventoCancelarRef.current.id,
+      });
+      if (error) throw error;
+      eventoCancelarRef.current = null;
+      await Promise.all([
+        qc.invalidateQueries({ queryKey: ["compras"] }),
+        qc.invalidateQueries({ queryKey: ["compra-itens"] }),
+        qc.invalidateQueries({ queryKey: ["estoque"] }),
+      ]);
+      if (editandoCompraId === compra.id) {
+        setEditandoCompraId(null);
+        setLinhas([linhaVazia()]);
+      }
+      toast.success("Compra cancelada. O histórico foi preservado.");
+    } catch (erro) {
+      toast.error(erro instanceof Error ? erro.message : "Não foi possível cancelar a compra.");
+    } finally {
+      setBusy(false);
+    }
+  }
+
+  async function salvarInventario(e: React.FormEvent) {
+    e.preventDefault();
+    const preenchidos = estoque.filter((item) =>
+      Boolean(inventarioFisico[item.insumo_id]?.trim()) && item.unidade_base,
+    );
+    if (!preenchidos.length) {
+      toast.error("Informe a quantidade física de pelo menos um insumo.");
+      return;
+    }
+    const itensInventario = preenchidos.map((item) => ({
+      insumo_id: item.insumo_id,
+      quantidade_fisica: numeroIngrediente(inventarioFisico[item.insumo_id] ?? ""),
+      unidade_base: item.unidade_base!,
+    }));
+    if (itensInventario.some((item) => !Number.isFinite(item.quantidade_fisica) || item.quantidade_fisica < 0)) {
+      toast.error("Confira as quantidades físicas. Use valores iguais ou maiores que zero.");
+      return;
+    }
+    const assinatura = JSON.stringify(itensInventario);
+    if (!eventoInventarioRef.current || eventoInventarioRef.current.assinatura !== assinatura) {
+      eventoInventarioRef.current = { assinatura, id: crypto.randomUUID() };
+    }
+    setBusy(true);
+    try {
+      const { error } = await supabase.rpc("registrar_inventario_fisico", {
+        itens: itensInventario,
+        evento_id: eventoInventarioRef.current.id,
+      });
+      if (error) throw error;
+      eventoInventarioRef.current = null;
+      setInventarioFisico({});
+      await qc.invalidateQueries({ queryKey: ["estoque"] });
+      toast.success("Contagem física registrada e saldo ajustado.");
+    } catch (erro) {
+      toast.error(erro instanceof Error ? erro.message : "Não foi possível registrar o inventário.");
+    } finally {
+      setBusy(false);
+    }
   }
 
   async function salvar(e: React.FormEvent) {
@@ -111,43 +215,36 @@ function Compras() {
     }
     if (total <= 0) { toast.error("O total da compra precisa ser maior que zero."); return; }
     setBusy(true);
-    let compraId: string | null = null;
     try {
-      if (editandoCompraId) {
-        const { error: erroCompra } = await supabase.from("compras").update({ data_compra: data }).eq("id", editandoCompraId);
-        if (erroCompra) throw erroCompra;
-        for (const l of calculadas) {
-          const valores = { insumo_id: l.insumo!.id, quantidade: l.quantidade, unidade: l.unidade, preco_unitario: l.preco };
-          if (l.compraItemId) {
-            const { error } = await supabase.from("compra_itens").update(valores).eq("id", l.compraItemId).eq("compra_id", editandoCompraId);
-            if (error) throw error;
-          } else {
-            const { error } = await supabase.from("compra_itens").insert({ ...valores, compra_id: editandoCompraId });
-            if (error) throw error;
-          }
-        }
-        const idsMantidos = new Set(linhas.map((l) => l.compraItemId).filter(Boolean));
-        const removidos = itens.filter((i) => i.compra_id === editandoCompraId && !idsMantidos.has(i.id));
-        if (removidos.length) {
-          const { error } = await supabase.from("compra_itens").delete().in("id", removidos.map((i) => i.id)).eq("compra_id", editandoCompraId);
-          if (error) throw error;
-        }
-      } else {
-        const { data: compra, error: erroCompra } = await supabase.from("compras").insert({ data_compra: data }).select("id").single();
-        if (erroCompra) throw erroCompra;
-        compraId = compra.id;
-        const { error: erroItens } = await supabase.from("compra_itens").insert(
-          calculadas.map((l) => ({ compra_id: compra.id, insumo_id: l.insumo!.id, quantidade: l.quantidade, unidade: l.unidade, preco_unitario: l.preco })),
-        );
-        if (erroItens) throw erroItens;
+      const payload = { data_compra: data };
+      const itensPayload = calculadas.map((l) => ({
+        insumo_id: l.insumo!.id,
+        quantidade: l.quantidade,
+        unidade: l.unidade,
+        preco_unitario: l.preco,
+      }));
+      const assinatura = JSON.stringify({ ...(editandoCompraId ? { registro_id: editandoCompraId } : {}), payload, itens: itensPayload });
+      if (!eventoSalvarRef.current || eventoSalvarRef.current.assinatura !== assinatura) {
+        eventoSalvarRef.current = { assinatura, id: crypto.randomUUID() };
       }
-      await Promise.all([qc.invalidateQueries({ queryKey: ["compras"] }), qc.invalidateQueries({ queryKey: ["compra-itens"] })]);
+      const { error } = await supabase.rpc("salvar_compra", {
+        payload,
+        itens: itensPayload,
+        ...(editandoCompraId ? { registro_id: editandoCompraId } : {}),
+        evento_id: eventoSalvarRef.current.id,
+      });
+      if (error) throw error;
+      eventoSalvarRef.current = null;
+      await Promise.all([
+        qc.invalidateQueries({ queryKey: ["compras"] }),
+        qc.invalidateQueries({ queryKey: ["compra-itens"] }),
+        qc.invalidateQueries({ queryKey: ["estoque"] }),
+      ]);
       setData(hojeISO());
       setLinhas([linhaVazia()]);
       setEditandoCompraId(null);
       toast.success(editandoCompraId ? "Compra atualizada." : "Compra registrada.");
     } catch (erro) {
-      if (compraId) await supabase.from("compras").delete().eq("id", compraId);
       toast.error(erro instanceof Error ? erro.message : "Não foi possível salvar a compra.");
     } finally {
       setBusy(false);
@@ -157,6 +254,77 @@ function Compras() {
   return (
     <>
       <PageHeader title="Compras de insumos" back="/mais" />
+
+      <section className="mb-8">
+        <h2 className="mb-2 text-lg font-semibold">Estoque atual</h2>
+        <p className="mb-3 text-sm text-muted-foreground">
+          O saldo considera somente movimentações registradas após a ativação do controle de estoque. Compras antigas não são incluídas automaticamente.
+        </p>
+        {carregandoEstoque ? (
+          <p className="py-3 text-sm text-muted-foreground">Carregando saldo...</p>
+        ) : erroEstoque ? (
+          <p role="alert" className="rounded-lg border p-3 text-sm text-destructive">Não foi possível carregar o estoque: {erroEstoque instanceof Error ? erroEstoque.message : "tente novamente."}</p>
+        ) : estoque.length === 0 ? (
+          <Empty>Nenhum insumo cadastrado.</Empty>
+        ) : (
+          <div className="divide-y rounded-xl border px-3">
+            {estoque.map((item) => {
+              const saldo = Number(item.saldo);
+              const unidade = item.unidade_base ?? "unidade não convertida";
+              return (
+                <div key={item.insumo_id} className="flex items-center justify-between gap-3 py-3">
+                  <div className="min-w-0">
+                    <p className="font-medium">{item.nome}</p>
+                    <p className="text-xs text-muted-foreground">{unidade}</p>
+                  </div>
+                  <b className={saldo < 0 ? "text-destructive" : ""}>
+                    {saldo.toLocaleString("pt-BR", { maximumFractionDigits: 3 })}
+                    {saldo < 0 ? " · estoque negativo" : ""}
+                  </b>
+                </div>
+              );
+            })}
+          </div>
+        )}
+      </section>
+
+      <section className="mb-8 rounded-xl border p-4">
+        <h2 className="mb-2 text-lg font-semibold">Conferência física do estoque</h2>
+        <p className="mb-3 text-sm text-muted-foreground">
+          Conte o que existe agora e informe a quantidade na unidade indicada. O sistema ajustará apenas a diferença. Compras antigas não serão importadas automaticamente; insumos sem unidade compatível precisam ser corrigidos no cadastro antes da contagem.
+        </p>
+        <form onSubmit={salvarInventario} className="space-y-3">
+          {estoque.map((item) => {
+            const saldo = Number(item.saldo);
+            const unidade = item.unidade_base;
+            return (
+              <div key={item.insumo_id} className="grid grid-cols-[minmax(0,1fr)_7.5rem] items-center gap-3 border-b pb-3 last:border-b-0">
+                <div className="min-w-0">
+                  <p className="font-medium">{item.nome}</p>
+                  <p className="text-xs text-muted-foreground">
+                    Saldo calculado: {saldo.toLocaleString("pt-BR", { maximumFractionDigits: 3 })} {unidade ?? ""}
+                  </p>
+                </div>
+                <label className="space-y-1 text-xs">
+                  <span className="text-muted-foreground">Físico ({unidade ?? "indefinido"})</span>
+                  <Input
+                    inputMode="decimal"
+                    aria-label={`Quantidade física de ${item.nome}`}
+                    placeholder={unidade ? "Ex.: 250" : "Corrigir unidade"}
+                    disabled={!unidade || busy}
+                    value={inventarioFisico[item.insumo_id] ?? ""}
+                    onChange={(e) => setInventarioFisico((s) => ({ ...s, [item.insumo_id]: e.target.value }))}
+                  />
+                </label>
+              </div>
+            );
+          })}
+          <Button type="submit" variant="outline" className="h-11 w-full" disabled={busy || !estoque.some((item) => item.unidade_base && Boolean(inventarioFisico[item.insumo_id]?.trim()))}>
+            {busy ? "Registrando..." : "Registrar contagem física"}
+          </Button>
+        </form>
+      </section>
+
       <form onSubmit={salvar} className="mb-8 space-y-4">
         <h2 className="text-lg font-semibold">{editandoCompraId ? "Editar compra" : "Registrar compra"}</h2>
         <Field label="Data da compra">
@@ -181,7 +349,7 @@ function Compras() {
               </Field>
               <div className="grid grid-cols-2 gap-3">
                 <Field label="Quantidade">
-                  <Input required inputMode="decimal" className="h-11" value={textoCampoNumerico(linhas[index].quantidade)} onChange={(e) => setLinhas((s) => s.map((x, j) => (j === index ? { ...x, quantidade: e.target.value } : x)))} />
+                  <Input required inputMode="decimal" className="h-11" value={textoCampoNumerico(l.quantidade)} onChange={(e) => setLinhas((s) => s.map((x, j) => (j === index ? { ...x, quantidade: e.target.value } : x)))} />
                 </Field>
                 <Field label="Medida">
                   <select value={l.unidade} onChange={(e) => setLinhas((s) => s.map((x, j) => (j === index ? { ...x, unidade: e.target.value } : x)))} className="h-11 w-full rounded-md border border-input bg-background px-3 text-sm">
@@ -190,7 +358,7 @@ function Compras() {
                 </Field>
               </div>
               <Field label="Preço de cada item (R$)">
-                <Input required type="text" inputMode="text" autoComplete="off" className="h-11" value={linhas[index].preco} onChange={(e) => { const valorDigitado = e.currentTarget.value; setLinhas((s) => s.map((x, j) => (j === index ? { ...x, preco: valorDigitado } : x))); }} />
+                <Input required type="text" inputMode="text" autoComplete="off" className="h-11" value={l.preco} onChange={(e) => { const valorDigitado = e.currentTarget.value; setLinhas((s) => s.map((x, j) => (j === index ? { ...x, preco: valorDigitado } : x))); }} />
               </Field>
               <div className="flex justify-between text-sm">
                 <span className="text-muted-foreground">Total do item</span>
@@ -244,24 +412,31 @@ function Compras() {
 
       <section>
         <h2 className="mb-3 text-lg font-semibold">Histórico de compras</h2>
-        {comprasNoPeriodo.length === 0 ? (
+        {comprasPeriodo.length === 0 ? (
           <Empty>Nenhuma compra registrada.</Empty>
         ) : (
           <div className="divide-y">
-            {comprasNoPeriodo.map((c) => {
-              const doDia = itensNoPeriodo.filter((i) => i.compra_id === c.id);
+            {comprasPeriodo.map((c) => {
+              const doDia = itens.filter((i) => i.compra_id === c.id);
               return (
                 <div key={c.id} className="py-3">
                   <div className="flex items-center justify-between gap-3">
                     <p className="font-medium">{dataBR(c.data_compra)}</p>
-                    <div className="flex items-center gap-3">
-                      <b>{brl(Number(c.total))}</b>
-                      <Button type="button" variant="outline" size="sm" onClick={() => {
-                        const itensCompra = itens.filter((i) => i.compra_id === c.id);
-                        setData(c.data_compra);
-                        setLinhas(itensCompra.map((i) => ({ compraItemId: i.id, insumo_id: i.insumo_id, quantidade: String(i.quantidade), unidade: i.unidade, preco: String(i.preco_unitario) })));
-                        setEditandoCompraId(c.id);
-                      }}>Editar</Button>
+                    <div className="flex flex-wrap items-center justify-end gap-2">
+                      <b className={c.cancelada_em ? "text-muted-foreground line-through" : ""}>{brl(Number(c.total))}</b>
+                      {c.cancelada_em ? (
+                        <span className="rounded-md bg-muted px-2 py-1 text-xs font-medium text-muted-foreground">Cancelada</span>
+                      ) : (
+                        <>
+                          <Button type="button" variant="outline" size="sm" disabled={busy} onClick={() => {
+                            const itensCompra = itens.filter((i) => i.compra_id === c.id);
+                            setData(c.data_compra);
+                            setLinhas(itensCompra.map((i) => ({ compraItemId: i.id, insumo_id: i.insumo_id, quantidade: String(i.quantidade), unidade: i.unidade, preco: String(i.preco_unitario) })));
+                            setEditandoCompraId(c.id);
+                          }}>Editar</Button>
+                          <Button type="button" variant="outline" size="sm" disabled={busy} onClick={() => void cancelarCompra(c)}>Cancelar</Button>
+                        </>
+                      )}
                     </div>
                   </div>
                   <p className="mt-1 text-xs text-muted-foreground">
