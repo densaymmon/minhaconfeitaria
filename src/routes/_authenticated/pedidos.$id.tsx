@@ -124,6 +124,8 @@ function PedidoForm() {
 
   const set = <K extends keyof typeof f>(k: K, v: (typeof f)[K]) => setF((s) => ({ ...s, [k]: v }));
   const setItem = (i: number, patch: Partial<Item>) => setItens((s) => s.map((it, j) => (j === i ? { ...it, ...patch } : it)));
+  // Alterar manualmente o valor recebido invalida a marcação anterior de saldo quitado.
+  const setValorPago = (valor: string) => setF((s) => ({ ...s, valor_entrada: valor, saldo_quitado: false }));
 
   function escolherProduto(i: number, pid: string) {
     const p = produtos.find((x) => x.id === pid);
@@ -154,8 +156,8 @@ function PedidoForm() {
   );
   // O resumo do cadastro rápido usa valores efetivamente recebidos limitados ao total.
   // Isso evita saldo negativo quando a entrada digitada ultrapassa o valor do pedido.
-  const valorPagoEfetivo = Math.min(Math.max(0, parseNum(f.valor_entrada)), t.venda);
-  const saldoPendente = Math.max(0, t.venda - valorPagoEfetivo);
+  const valorPagoEfetivo = f.saldo_quitado ? t.venda : Math.min(Math.max(0, parseNum(f.valor_entrada)), t.venda);
+  const saldoPendente = f.saldo_quitado ? 0 : Math.max(0, t.venda - valorPagoEfetivo);
 
   function aplicarRascunho(draft: OrderDraft) {
     if (itens.length && !confirm("Substituir os itens atuais pelo rascunho da mensagem?")) return;
@@ -421,7 +423,7 @@ function PedidoForm() {
                   </NativeSelect>
                 </Field>
                 <Field label="Entrada / valor pago (R$)">
-                  <Input inputMode="decimal" value={f.valor_entrada} onChange={(e) => set("valor_entrada", e.target.value)} className="h-11" />
+                  <Input inputMode="decimal" value={f.valor_entrada} onChange={(e) => setValorPago(e.target.value)} className="h-11" />
                 </Field>
               </div>
               <div className="rounded-xl bg-muted/60 p-3">
@@ -465,7 +467,7 @@ function PedidoForm() {
               </Field>
               <div className="grid grid-cols-3 gap-2">
                 <Field label="Valor pago R$">
-                  <Input inputMode="decimal" value={f.valor_entrada} onChange={(e) => set("valor_entrada", e.target.value)} className="h-11" />
+                  <Input inputMode="decimal" value={f.valor_entrada} onChange={(e) => setValorPago(e.target.value)} className="h-11" />
                 </Field>
                 <Field label="Frete R$">
                   <Input inputMode="decimal" value={f.taxa_entrega} onChange={(e) => set("taxa_entrega", e.target.value)} className="h-11" />
@@ -473,6 +475,13 @@ function PedidoForm() {
                 <Field label="Desconto R$">
                   <Input inputMode="decimal" value={f.desconto} onChange={(e) => set("desconto", e.target.value)} className="h-11" />
                 </Field>
+              </div>
+
+              <div className="rounded-xl bg-muted/60 p-3">
+                <Row label="Total do pedido" value={brl(t.venda)} strong />
+                <Row label="Valor pago" value={brl(valorPagoEfetivo)} />
+                <div className="my-2 border-t" />
+                <Row label="Saldo pendente" value={brl(saldoPendente)} strong />
               </div>
             </Card>
 
