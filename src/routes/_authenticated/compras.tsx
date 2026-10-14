@@ -149,7 +149,7 @@ function Compras() {
   async function salvarInventario(e: React.FormEvent) {
     e.preventDefault();
     const preenchidos = estoque.filter((item) =>
-      inventarioFisico[item.insumo_id]?.trim() !== "" && item.unidade_base,
+      Boolean(inventarioFisico[item.insumo_id]?.trim()) && item.unidade_base,
     );
     if (!preenchidos.length) {
       toast.error("Informe a quantidade física de pelo menos um insumo.");
@@ -299,7 +299,7 @@ function Compras() {
               </div>
             );
           })}
-          <Button type="submit" variant="outline" className="h-11 w-full" disabled={busy || !estoque.some((item) => item.unidade_base && inventarioFisico[item.insumo_id]?.trim() !== "")}>
+          <Button type="submit" variant="outline" className="h-11 w-full" disabled={busy || !estoque.some((item) => item.unidade_base && Boolean(inventarioFisico[item.insumo_id]?.trim()))}>
             {busy ? "Registrando..." : "Registrar contagem física"}
           </Button>
         </form>
