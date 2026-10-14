@@ -48,7 +48,7 @@ function Produtos() {
         <TabsContent value="produtos">
           <div className="mb-3 flex gap-2">
             <Button asChild className="h-11 flex-1">
-              <Link to="/produtos/$id" params={{ id: "novo" }}><Plus className="size-4" /> Novo produto</Link>
+              <Link to="/produtos/$id" params={{ id: "novo" }} search={{ duplicar: false }}><Plus className="size-4" /> Novo produto</Link>
             </Button>
             <Button
               variant="outline"
@@ -80,7 +80,7 @@ function Produtos() {
                 return (
                   <Card key={p.id} className={`p-3.5 ${p.ativo ? "" : "opacity-60"}`}>
                     <div className="flex items-start gap-2">
-                      <Link to="/produtos/$id" params={{ id: p.id }} className="min-w-0 flex-1">
+                      <Link to="/produtos/$id" params={{ id: p.id }} search={{ duplicar: false }} className="min-w-0 flex-1">
                         <div className="flex justify-between gap-2">
                           <div className="min-w-0">
                             <div className="truncate font-semibold">{p.nome}</div>
@@ -102,7 +102,7 @@ function Produtos() {
                         className="h-10 w-10 shrink-0"
                         aria-label={`Duplicar ${p.nome}`}
                         title="Duplicar produto"
-                        onClick={() => navigate({ to: "/produtos/$id", params: { id: p.id }, search: { duplicar: "1" } })}
+                        onClick={() => navigate({ to: "/produtos/$id", params: { id: p.id }, search: { duplicar: true } })}
                       >
                         <Copy className="size-4" />
                       </Button>
