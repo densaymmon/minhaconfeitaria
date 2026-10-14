@@ -39,7 +39,7 @@ begin
       count(*) filter (
         where ri.id is not null
           and public.medida_base(coalesce(i.unidade_embalagem, i.unidade, 'un'))
-              <> public.medida_base(coalesce(ri.unidade_receita, i.unidade, i.unidade_embalagem, 'un'))
+              IS DISTINCT FROM public.medida_base(coalesce(ri.unidade_receita, i.unidade, i.unidade_embalagem, 'un'))
       ) as unidades_incompativeis
     from public.produtos p
     left join public.receita_itens ri on ri.produto_id = p.id and ri.user_id = p.user_id
@@ -55,7 +55,7 @@ begin
     having count(*) filter (
       where ri.id is not null
         and public.medida_base(coalesce(i.unidade_embalagem, i.unidade, 'un'))
-            <> public.medida_base(coalesce(ri.unidade_receita, i.unidade, i.unidade_embalagem, 'un'))
+            IS DISTINCT FROM public.medida_base(coalesce(ri.unidade_receita, i.unidade, i.unidade_embalagem, 'un'))
     ) = 0
   )
   update public.pedido_itens pi
