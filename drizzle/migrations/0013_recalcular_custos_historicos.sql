@@ -55,7 +55,7 @@ begin
     having count(*) filter (
       where ri.id is not null
         and public.medida_base(coalesce(i.unidade_embalagem, i.unidade, 'un'))
-            <> public.medida_base(coalesce(ri.unidade_receita, i.unidade, i.unidade_embalagem, 'un'))
+            IS DISTINCT FROM public.medida_base(coalesce(ri.unidade_receita, i.unidade, i.unidade_embalagem, 'un'))
     ) = 0
   )
   update public.pedido_itens pi
