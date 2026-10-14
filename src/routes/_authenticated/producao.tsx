@@ -198,26 +198,39 @@ function Producao() {
 
   async function ajustar(itemId: string, valor: number, max: number) {
     const v = Math.max(0, Math.min(max, valor));
-    const { error } = await supabase.from("pedido_itens").update({ quantidade_produzida: v }).eq("id", itemId);
-    if (error) return void toast.error(`Não foi possível atualizar o item: ${error.message}`);
-    await qc.invalidateQueries({ queryKey: ["pedidos"] });
+    const { error } = await supabase.rpc("ajustar_producao", {
+      pedido_item_id: itemId,
+      quantidade_resultado: v,
+      evento_id: crypto.randomUUID(),
+    });
+    if (error) return void toast.error(`Não foi possível atualizar a produção/estoque: ${error.message}`);
+    await Promise.all([
+      qc.invalidateQueries({ queryKey: ["pedidos"] }),
+      qc.invalidateQueries({ queryKey: ["estoque"] }),
+    ]);
   }
 
   async function mudarStatus(p: PedidoCalc, status: "pronto") {
     setFinalizandoId(p.id);
     try {
-      const atualizacoesItens = await Promise.all(
-        p.pedido_itens.map((i) =>
-          supabase.from("pedido_itens").update({ quantidade_produzida: i.quantidade }).eq("id", i.id),
-        ),
-      );
-      const erroItem = atualizacoesItens.find((resultado) => resultado.error)?.error;
-      if (erroItem) throw new Error(`Não foi possível registrar todos os itens produzidos: ${erroItem.message}`);
+      // Process sequentially. Each RPC is atomic and delta-based; retrying a partially
+      // completed order won't deduct the same quantity twice.
+      for (const i of p.pedido_itens) {
+        const { error } = await supabase.rpc("ajustar_producao", {
+          pedido_item_id: i.id,
+          quantidade_resultado: Number(i.quantidade),
+          evento_id: crypto.randomUUID(),
+        });
+        if (error) throw new Error(`Não foi possível registrar produção/estoque do item "${i.descricao}": ${error.message}`);
+      }
 
       const { error } = await supabase.from("pedidos").update({ status }).eq("id", p.id);
       if (error) throw new Error(`Não foi possível marcar o pedido como pronto: ${error.message}`);
 
-      await qc.invalidateQueries({ queryKey: ["pedidos"] });
+      await Promise.all([
+        qc.invalidateQueries({ queryKey: ["pedidos"] }),
+        qc.invalidateQueries({ queryKey: ["estoque"] }),
+      ]);
       toast.success(`Pedido #${p.numero} marcado como pronto e aguardando entrega.`);
     } catch (e) {
       toast.error(e instanceof Error ? e.message : "Não foi possível finalizar o pedido. Tente novamente.");
