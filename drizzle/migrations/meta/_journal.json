@@ -78,6 +78,13 @@
       "when": 1791942000005,
       "tag": "0010_guard_producao_e_unidade_estoque",
       "breakpoints": true
+    },
+    {
+      "idx": 11,
+      "version": "7",
+      "when": 1791942000006,
+      "tag": "0011_salvar_pedido_preservar_estoque",
+      "breakpoints": true
     }
   ]
 }
