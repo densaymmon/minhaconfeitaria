@@ -13,7 +13,32 @@ LANGUAGE plpgsql
 SECURITY INVOKER
 SET search_path = pg_catalog, public
 AS $function$
+DECLARE
+  produto_lock uuid;
 BEGIN
+  -- Serialize recipe edits with production, which takes FOR SHARE on the product.
+  -- Stable lock ordering avoids deadlocks when an UPDATE moves a row between products.
+  IF TG_OP = 'UPDATE' THEN
+    FOR produto_lock IN
+      SELECT p.id
+      FROM public.produtos p
+      WHERE (p.id = OLD.produto_id AND p.user_id = OLD.user_id)
+         OR (p.id = NEW.produto_id AND p.user_id = NEW.user_id)
+      ORDER BY p.id
+      FOR UPDATE
+    LOOP
+      NULL;
+    END LOOP;
+  ELSIF TG_OP = 'DELETE' THEN
+    PERFORM 1 FROM public.produtos p
+    WHERE p.id = OLD.produto_id AND p.user_id = OLD.user_id
+    FOR UPDATE;
+  ELSE
+    PERFORM 1 FROM public.produtos p
+    WHERE p.id = NEW.produto_id AND p.user_id = NEW.user_id
+    FOR UPDATE;
+  END IF;
+
   -- On UPDATE, protect both the old and new product. Otherwise moving a recipe
   -- row away from a product with active production could bypass the freeze.
   IF TG_OP <> 'INSERT' AND OLD.produto_id IS NOT NULL AND EXISTS (
