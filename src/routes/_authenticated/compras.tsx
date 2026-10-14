@@ -99,7 +99,7 @@ function Compras() {
   function escolherInsumo(index: number, id: string) {
     const ins = insumos.find((i) => i.id === id);
     const unidade = unidadesPara(id)[0] ?? "un";
-    setLinhas((s) => s.map((l, j) => (j === index ? { ...l, insumo_id: id, unidade, preco: l.preco || precoInicial(ins) } : l)));
+    setLinhas((s) => s.map((l, j) => (j === index ? { ...l, insumo_id: id, unidade, preco: Number.isFinite(numeroIngrediente(l.preco)) ? l.preco : precoInicial(ins) } : l)));
   }
 
   async function salvar(e: React.FormEvent) {
