@@ -62,8 +62,10 @@ BEGIN
      OR coalesce(payload->>'data_compra','') !~ '^\d{4}-\d{2}-\d{2}$' THEN
     RAISE EXCEPTION 'Informe uma data de compra válida.';
   END IF;
-  IF jsonb_typeof(itens) IS DISTINCT FROM 'array'
-     OR jsonb_array_length(itens) NOT BETWEEN 1 AND 100 THEN
+  IF jsonb_typeof(itens) IS DISTINCT FROM 'array' THEN
+    RAISE EXCEPTION 'Os itens da compra precisam ser enviados como uma lista.';
+  END IF;
+  IF jsonb_array_length(itens) NOT BETWEEN 1 AND 100 THEN
     RAISE EXCEPTION 'A compra precisa ter de 1 a 100 itens.';
   END IF;
 
