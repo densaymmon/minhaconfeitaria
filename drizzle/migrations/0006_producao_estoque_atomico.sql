@@ -62,8 +62,25 @@ BEGIN
     RAISE EXCEPTION 'A quantidade produzida não pode superar a quantidade do pedido.';
   END IF;
 
+  -- Resolve concurrent retries with the same idempotency key after the item lock.
+  -- Only the transaction that creates the event is allowed to append stock movements.
   INSERT INTO public.producao_eventos(user_id, evento_id, pedido_item_id, quantidade_resultado)
-    VALUES (uid, evento_id, pi.id, quantidade_resultado);
+    VALUES (uid, evento_id, pi.id, quantidade_resultado)
+    ON CONFLICT ON CONSTRAINT producao_evento_unico DO NOTHING;
+
+  IF NOT FOUND THEN
+    SELECT * INTO existente
+    FROM public.producao_eventos pe
+    WHERE pe.user_id = uid
+      AND pe.evento_id = ajustar_producao.evento_id;
+
+    IF existente.pedido_item_id <> ajustar_producao.pedido_item_id
+       OR existente.quantidade_resultado <> ajustar_producao.quantidade_resultado THEN
+      RAISE EXCEPTION 'Este identificador de evento já foi usado com outros dados.';
+    END IF;
+
+    RETURN existente.quantidade_resultado;
+  END IF;
 
   delta := quantidade_resultado - pi.quantidade_produzida;
   IF delta <> 0 AND pi.produto_id IS NOT NULL THEN
