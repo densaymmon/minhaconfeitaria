@@ -32,6 +32,22 @@ BEGIN
   SELECT s.saldo INTO saldo FROM public.saldo_estoque() s WHERE s.insumo_id = iid;
   IF saldo <> 100 THEN RAISE EXCEPTION 'Compra não refletida no estoque: %', saldo; END IF;
 
+  -- Replaying the same purchase event must return the original purchase and not
+  -- append another entry movement.
+  IF public.salvar_compra(
+    '{"data_compra":"2026-10-14"}'::jsonb,
+    jsonb_build_array(jsonb_build_object(
+      'insumo_id', iid, 'quantidade', 100, 'unidade', 'g', 'preco_unitario', 0.01
+    )),
+    NULL,
+    'bbbbbbbb-bbbb-4bbb-8bbb-bbbbbbbbbbbb'
+  ) <> compra THEN
+    RAISE EXCEPTION 'Retry idempotente da compra não retornou a compra original.';
+  END IF;
+  SELECT s.saldo INTO saldo FROM public.saldo_estoque() s WHERE s.insumo_id = iid;
+  IF saldo <> 100 THEN RAISE EXCEPTION 'Retry da compra duplicou o estoque: %', saldo; END IF;
+
+  PERFORM public.cancelar_compra(compra, 'cccccccc-cccc-4ccc-8ccc-cccccccccccc');
   PERFORM public.cancelar_compra(compra, 'cccccccc-cccc-4ccc-8ccc-cccccccccccc');
   SELECT s.saldo INTO saldo FROM public.saldo_estoque() s WHERE s.insumo_id = iid;
   IF saldo <> 0 THEN RAISE EXCEPTION 'Cancelamento não estornou a compra: %', saldo; END IF;
@@ -44,6 +60,14 @@ BEGIN
   );
   SELECT s.saldo INTO saldo FROM public.saldo_estoque() s WHERE s.insumo_id = iid;
   IF saldo <> 250 THEN RAISE EXCEPTION 'Inventário físico não reconciliou saldo: %', saldo; END IF;
+  PERFORM public.registrar_inventario_fisico(
+    jsonb_build_array(jsonb_build_object(
+      'insumo_id', iid, 'quantidade_fisica', 250, 'unidade_base', 'g'
+    )),
+    'dddddddd-dddd-4ddd-8ddd-dddddddddddd'
+  );
+  SELECT s.saldo INTO saldo FROM public.saldo_estoque() s WHERE s.insumo_id = iid;
+  IF saldo <> 250 THEN RAISE EXCEPTION 'Retry do inventário duplicou o saldo: %', saldo; END IF;
 
   INSERT INTO public.produtos(user_id, nome, rendimento)
   VALUES (uid, 'Produto teste', 1)
