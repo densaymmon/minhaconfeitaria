@@ -110,6 +110,7 @@ function PedidoForm() {
         quantidade_produzida: Number(i.quantidade_produzida),
       })) ?? [],
     );
+  // eslint-disable-next-line react-hooks/exhaustive-deps -- só reinicializa ao trocar o pedido, não em refetches.
   }, [id, existente?.id]);
 
   if (!novo && !existente) {
@@ -217,7 +218,7 @@ function PedidoForm() {
         taxa_entrega: parseNum(f.taxa_entrega),
         observacoes: f.observacoes.trim() || null,
       };
-      const { data: pedidoSalvoId, error } = await supabase.rpc("salvar_pedido", {
+      const { error } = await supabase.rpc("salvar_pedido", {
         payload,
         itens: itens.map((i) => ({
           produto_id: i.produto_id,
@@ -229,9 +230,6 @@ function PedidoForm() {
         ...(existente ? { registro_id: existente.id } : {}),
       });
       if (error) throw error;
-      if (!pedidoSalvoId) {
-        throw new Error("O banco não confirmou o salvamento do pedido. Nenhuma confirmação foi exibida; confira a conexão e tente novamente.");
-      }
       await qc.invalidateQueries({ queryKey: ["pedidos"] });
       toast.success(novo ? "Pedido criado!" : "Pedido atualizado!");
       navigate({ to: "/pedidos", search: { filtro: undefined, dataInicial: undefined, dataFinal: undefined } });
