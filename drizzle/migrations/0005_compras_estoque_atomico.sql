@@ -77,7 +77,7 @@ BEGIN
   IF NOT FOUND THEN
     SELECT * INTO existing_event
     FROM public.estoque_eventos
-    WHERE user_id = uid AND evento_id = salvar_compra.evento_id;
+    WHERE user_id = uid AND estoque_eventos.evento_id = salvar_compra.evento_id;
     IF existing_event.compra_id IS NULL THEN
       RAISE EXCEPTION 'Evento repetido sem resultado persistido; tente com um novo identificador.';
     END IF;
