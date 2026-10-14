@@ -4,13 +4,13 @@ import { useMemo, useState } from "react";
 import { CalendarClock, ChevronDown, Download, Plus, Search, SlidersHorizontal, Wallet } from "lucide-react";
 import { usePedidosCalc } from "@/lib/hooks";
 import { STATUS, brl, dataBR, formaLabel, hojeISO, statusLabel } from "@/lib/format";
-
-const STATUS_ATIVOS = ["recebido", "confirmado", "em_producao", "pronto"];
 import { baixarCSV } from "@/lib/csv";
 import { Card, Empty, PageHeader, StatusBadge } from "@/components/app/ui";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { cn } from "@/lib/utils";
+
+const STATUS_ATIVOS = ["recebido", "confirmado", "em_producao", "pronto"];
 
 export const Route = createFileRoute("/_authenticated/pedidos/")({
  validateSearch: (search: Record<string, unknown>) => ({
@@ -77,7 +77,7 @@ function Pedidos() {
         p.pedido_itens.some((i) => i.descricao.toLowerCase().includes(q))
       );
     });
-  }, [pedidos, busca, status, dataInicial, dataFinal]);
+  }, [pedidos, busca, status, dataInicial, dataFinal, hoje]);
 
   function exportar() {
     baixarCSV(
