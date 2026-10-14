@@ -190,7 +190,7 @@ function Compras() {
                 </Field>
               </div>
               <Field label="Preço de cada item (R$)">
-                <Input required inputMode="decimal" className="h-11" value={textoCampoNumerico(l.preco)} onChange={(e) => setLinhas((s) => s.map((x, j) => (j === index ? { ...x, preco: e.target.value } : x)))} />
+                <Input required type="text" inputMode="text" autoComplete="off" className="h-11" value={l.preco} onChange={(e) => { const valorDigitado = e.currentTarget.value; setLinhas((s) => s.map((x, j) => (j === index ? { ...x, preco: valorDigitado } : x))); }} />
               </Field>
               <div className="flex justify-between text-sm">
                 <span className="text-muted-foreground">Total do item</span>
