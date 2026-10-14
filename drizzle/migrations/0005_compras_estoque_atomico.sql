@@ -72,7 +72,7 @@ BEGIN
   -- Serialize retries and concurrent operations for the same idempotency key.
   INSERT INTO public.estoque_eventos(user_id, evento_id, compra_id, tipo)
   VALUES (uid, evento_id, registro_id, 'salvar_compra')
-  ON CONFLICT (user_id, evento_id) DO NOTHING;
+  ON CONFLICT ON CONSTRAINT estoque_eventos_user_evento_unique DO NOTHING;
 
   IF NOT FOUND THEN
     SELECT * INTO existing_event
