@@ -97,28 +97,22 @@ export type Database = {
       }
       compras: {
         Row: {
-          cancelada_em: string | null
           created_at: string
           data_compra: string
-          estoque_integrado: boolean
           id: string
           total: number
           user_id: string
         }
         Insert: {
-          cancelada_em?: string | null
           created_at?: string
           data_compra: string
-          estoque_integrado?: boolean
           id?: string
           total?: number
           user_id?: string
         }
         Update: {
-          cancelada_em?: string | null
           created_at?: string
           data_compra?: string
-          estoque_integrado?: boolean
           id?: string
           total?: number
           user_id?: string
@@ -453,26 +447,6 @@ export type Database = {
       [_ in never]: never
     }
     Functions: {
-      ajustar_producao: {
-        Args: { evento_id: string; pedido_item_id: string; quantidade_resultado: number }
-        Returns: number
-      }
-      saldo_estoque: {
-        Args: Record<PropertyKey, never>
-        Returns: { insumo_id: string; nome: string; unidade_base: string | null; saldo: number }[]
-      }
-      registrar_inventario_fisico: {
-        Args: { evento_id: string; itens: Json }
-        Returns: boolean
-      }
-      cancelar_compra: {
-        Args: { evento_id: string; registro_id: string }
-        Returns: boolean
-      }
-      salvar_compra: {
-        Args: { evento_id?: string; itens: Json; payload: Json; registro_id?: string }
-        Returns: string
-      }
       medida_base: { Args: { u: string }; Returns: string }
       medida_fator: { Args: { u: string }; Returns: number }
       salvar_pedido: {
