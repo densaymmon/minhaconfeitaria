@@ -221,7 +221,7 @@ function PedidoForm() {
     if (error) return void toast.error(`Não foi possível cancelar o pedido: ${error.message}`);
     await qc.invalidateQueries({ queryKey: ["pedidos"] });
     toast.success(`Pedido #${existente.numero} cancelado. O histórico foi preservado.`);
-    navigate({ to: "/pedidos" });
+    navigate({ to: "/pedidos", search: { filtro: undefined, dataInicial: undefined, dataFinal: undefined } });
   }
 
   async function excluir() {
