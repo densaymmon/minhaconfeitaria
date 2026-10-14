@@ -2,54 +2,13 @@
   "version": "7",
   "dialect": "postgresql",
   "entries": [
-    {
-      "idx": 0,
-      "version": "7",
-      "when": 1791649342182,
-      "tag": "0000_migration",
-      "breakpoints": true
-    },
-    {
-      "idx": 1,
-      "version": "7",
-      "when": 1791651273207,
-      "tag": "0001_secure_validation_atomic_saves",
-      "breakpoints": true
-    },
-    {
-      "idx": 2,
-      "version": "7",
-      "when": 1791713222554,
-      "tag": "0002_ingredient_package_costs",
-      "breakpoints": true
-    },
-    {
-      "idx": 3,
-      "version": "7",
-      "when": 1791914692295,
-      "tag": "0003_compras_insumos",
-      "breakpoints": true
-    },
-    {
-      "idx": 4,
-      "version": "7",
-      "when": 1791939312445,
-      "tag": "0004_controle_estoque",
-      "breakpoints": true
-    },
-    {
-      "idx": 5,
-      "version": "7",
-      "when": 1791942000000,
-      "tag": "0005_compras_estoque_atomico",
-      "breakpoints": true
-    },
-    {
-      "idx": 6,
-      "version": "7",
-      "when": 1791942000001,
-      "tag": "0006_producao_estoque_atomico",
-      "breakpoints": true
-    }
+    { "idx": 0, "version": "7", "when": 1791649342182, "tag": "0000_migration", "breakpoints": true },
+    { "idx": 1, "version": "7", "when": 1791651273207, "tag": "0001_secure_validation_atomic_saves", "breakpoints": true },
+    { "idx": 2, "version": "7", "when": 1791713222554, "tag": "0002_ingredient_package_costs", "breakpoints": true },
+    { "idx": 3, "version": "7", "when": 1791914692295, "tag": "0003_compras_insumos", "breakpoints": true },
+    { "idx": 4, "version": "7", "when": 1791939312445, "tag": "0004_controle_estoque", "breakpoints": true },
+    { "idx": 5, "version": "7", "when": 1791942000000, "tag": "0005_compras_estoque_atomico", "breakpoints": true },
+    { "idx": 6, "version": "7", "when": 1791942000001, "tag": "0006_producao_estoque_atomico", "breakpoints": true },
+    { "idx": 7, "version": "7", "when": 1791942000002, "tag": "0007_inventario_fisico_atomico", "breakpoints": true }
   ]
 }
