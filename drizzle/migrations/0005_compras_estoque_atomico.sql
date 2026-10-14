@@ -38,7 +38,7 @@ CREATE OR REPLACE FUNCTION public.salvar_compra(
 ) RETURNS uuid
 LANGUAGE plpgsql
 SECURITY DEFINER
-SET search_path = public
+SET search_path = pg_catalog, public
 AS $function$
 DECLARE
   uid uuid := auth.uid();
