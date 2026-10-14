@@ -458,6 +458,10 @@ export type Database = {
         Args: Record<PropertyKey, never>
         Returns: { insumo_id: string; nome: string; unidade_base: string | null; saldo: number }[]
       }
+      registrar_inventario_fisico: {
+        Args: { evento_id: string; itens: Json }
+        Returns: boolean
+      }
       salvar_compra: {
         Args: { evento_id?: string; itens: Json; payload: Json; registro_id?: string }
         Returns: string
