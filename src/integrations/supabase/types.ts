@@ -122,6 +122,68 @@ export type Database = {
         }
         Relationships: []
       }
+      contas_pagar: {
+        Row: {
+          compra_id: string | null
+          created_at: string
+          data_emissao: string
+          data_pagamento: string | null
+          data_vencimento: string
+          descricao: string
+          fornecedor: string | null
+          forma_pagamento: string | null
+          id: string
+          observacoes: string | null
+          status: string
+          updated_at: string
+          user_id: string
+          valor: number
+          valor_pago: number
+        }
+        Insert: {
+          compra_id?: string | null
+          created_at?: string
+          data_emissao?: string
+          data_pagamento?: string | null
+          data_vencimento?: string
+          descricao: string
+          fornecedor?: string | null
+          forma_pagamento?: string | null
+          id?: string
+          observacoes?: string | null
+          status?: string
+          updated_at?: string
+          user_id?: string
+          valor: number
+          valor_pago?: number
+        }
+        Update: {
+          compra_id?: string | null
+          created_at?: string
+          data_emissao?: string
+          data_pagamento?: string | null
+          data_vencimento?: string
+          descricao?: string
+          fornecedor?: string | null
+          forma_pagamento?: string | null
+          id?: string
+          observacoes?: string | null
+          status?: string
+          updated_at?: string
+          user_id?: string
+          valor?: number
+          valor_pago?: number
+        }
+        Relationships: [
+          {
+            foreignKeyName: "contas_pagar_compra_id_fkey"
+            columns: ["compra_id"]
+            isOneToOne: false
+            referencedRelation: "compras"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       configuracoes: {
         Row: {
           imposto_pct: number
