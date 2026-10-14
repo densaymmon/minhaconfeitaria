@@ -126,6 +126,15 @@ BEGIN
     END IF;
   END;
 
+  -- The normal correction workflow may reduce production to zero, which appends
+  -- a full stock reversal and then permits the order item to be edited.
+  PERFORM public.ajustar_producao(
+    item_id, 0, '13131313-1313-4313-8313-131313131313'
+  );
+  SELECT s.saldo INTO saldo FROM public.saldo_estoque() s WHERE s.insumo_id = iid;
+  IF saldo <> 250 THEN RAISE EXCEPTION 'Estorno total da produção incorreto: %', saldo; END IF;
+  UPDATE public.pedido_itens SET descricao = 'Produto teste revisado' WHERE id = item_id;
+
   PERFORM public.registrar_inventario_fisico(
     jsonb_build_array(jsonb_build_object(
       'insumo_id', iid, 'quantidade_fisica', 200, 'unidade_base', 'g'
