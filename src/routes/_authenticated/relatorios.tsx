@@ -1,11 +1,13 @@
 import * as appQueries from "@/lib/queries";
 import { createFileRoute, Link } from "@tanstack/react-router";
 import { useSuspenseQuery } from "@tanstack/react-query";
-import { useMemo } from "react";
+import { useMemo, useState } from "react";
+import { useQueryClient } from "@tanstack/react-query";
+import { toast } from "sonner";
+import { supabase } from "@/integrations/supabase/client";
 import { Download } from "lucide-react";
 import { configQ, despesasQ, pedidosQ } from "@/lib/queries";
-import { useCustos } from "@/lib/hooks";
-import { totaisPedido } from "@/lib/calc";
+import { custoUnitario, totaisPedido } from "@/lib/calc";
 import { brl, dataBR, hojeISO, mesISO, num } from "@/lib/format";
 import { baixarCSV } from "@/lib/csv";
 import { PageHeader, Field, Stat, Row, Empty } from "@/components/app/ui";
@@ -47,16 +49,33 @@ export const Route = createFileRoute("/_authenticated/relatorios")({
 
 function Relatorios() {
   const { inicio, fim } = Route.useSearch();
+  const qc = useQueryClient();
+  const [corrigindoCustos, setCorrigindoCustos] = useState(false);
   const navigate = Route.useNavigate();
   const { data: pedidos } = useSuspenseQuery(pedidosQ);
   const { data: config } = useSuspenseQuery(configQ);
+  const { data: produtos } = useSuspenseQuery(appQueries.produtosQ);
+  const { data: insumos } = useSuspenseQuery(appQueries.insumosQ);
   const { data: despesas } = useSuspenseQuery(despesasQ);
-  const { produtos, custo: custoAtual } = useCustos();
   const intervaloValido = inicio <= fim;
-
-  // Para produtos cadastrados, recalcula o custo usando a receita e os preços
-  // atualmente cadastrados. Pedidos com itens avulsos continuam usando o custo
-  // gravado no item, pois não há receita cadastrada para recalcular.
+  const insumosPorId = useMemo(
+    () => new Map(insumos.map((i) => [i.id, { ...i, preco_unidade: Number(i.preco_unidade) }])),
+    [insumos],
+  );
+  // Calcula produto a produto. Se alguma receita tiver unidades incompatíveis,
+  // preserva o custo salvo para esse produto sem derrubar o relatório inteiro.
+  const custoAtual = useMemo(() => {
+    const custos = new Map<string, number>();
+    for (const produto of produtos) {
+      try {
+        const custo = custoUnitario(produto, produto.receita_itens, insumosPorId);
+        if (Number.isFinite(custo) && custo >= 0) custos.set(produto.id, custo);
+      } catch {
+        // Unidade inválida: o item do pedido mantém o custo salvo como fallback.
+      }
+    }
+    return custos;
+  }, [produtos, insumosPorId]);
   const produtosPorId = useMemo(() => new Map(produtos.map((p) => [p.id, p])), [produtos]);
   const pedidosCalculados = useMemo(() => pedidos.map((pedido) => {
     const itens = pedido.pedido_itens.map((item) => {
@@ -110,6 +129,21 @@ function Relatorios() {
     return [...m.values()].sort((a, b) => b.venda - a.venda);
   }, [entregues]);
 
+  async function corrigirCustosHistoricos() {
+    if (!confirm("Isso atualizará o custo salvo de todos os itens de pedidos vinculados a produtos cadastrados, usando os preços e receitas atuais. Valores de venda, pagamentos e datas não serão alterados. Deseja continuar?")) return;
+    setCorrigindoCustos(true);
+    try {
+      const { data, error } = await supabase.rpc("recalcular_custos_historicos");
+      if (error) throw error;
+      await qc.invalidateQueries({ queryKey: ["pedidos"] });
+      toast.success(`Custos atualizados em ${Number(data ?? 0)} itens de pedidos.`);
+    } catch (e) {
+      toast.error(e instanceof Error ? e.message : "Não foi possível corrigir os custos antigos.");
+    } finally {
+      setCorrigindoCustos(false);
+    }
+  }
+
   function exportar() {
     baixarCSV(
       "relatorio-" + inicio + "-" + fim,
@@ -153,6 +187,12 @@ function Relatorios() {
         <Row label="Taxas e impostos estimados" value={brl(realizado.taxas)} />
         <Row label="Despesas registradas no período" value={brl(gastos)} />
         <Row label="Resultado estimado após despesas" value={brl(resultado)} strong />
+        <div className="mt-4 space-y-2">
+          <Button variant="outline" className="w-full" disabled={corrigindoCustos} onClick={corrigirCustosHistoricos}>
+            {corrigindoCustos ? "Atualizando custos antigos..." : "Corrigir custos das vendas antigas"}
+          </Button>
+          <p className="text-xs text-muted-foreground">Essa ação atualiza os custos salvos dos pedidos usando os preços atuais cadastrados. Faça isso porque você confirmou que as vendas antigas usaram insumos comprados juntos. Os valores de venda e pagamento permanecem iguais.</p>
+        </div>
         <p className="mt-3 text-xs text-muted-foreground">
           O resultado considera apenas pedidos entregues/finalizados no período selecionado. As despesas são filtradas pela data em que foram registradas. Não lance novamente como despesa ingredientes, embalagens, gás, energia ou mão de obra que já estejam incluídos no custo da receita, pois isso pode duplicar o desconto.
         </p>
