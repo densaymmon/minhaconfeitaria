@@ -70,6 +70,8 @@ function Compras() {
   const [linhas, setLinhas] = useState<Linha[]>([linhaVazia()]);
   const [busy, setBusy] = useState(false);
   const eventoSalvarRef = useRef<{ assinatura: string; id: string } | null>(null);
+  const [inventarioFisico, setInventarioFisico] = useState<Record<string, string>>({});
+  const eventoInventarioRef = useRef<{ assinatura: string; id: string } | null>(null);
   const [editandoCompraId, setEditandoCompraId] = useState<string | null>(null);
   const [de, setDe] = useState("");
   const [ate, setAte] = useState("");
@@ -109,6 +111,46 @@ function Compras() {
     const ins = insumos.find((i) => i.id === id);
     const unidade = unidadesPara(id)[0] ?? "un";
     setLinhas((s) => s.map((l, j) => (j === index ? { ...l, insumo_id: id, unidade, preco: Number.isFinite(numeroIngrediente(l.preco)) ? l.preco : precoInicial(ins) } : l)));
+  }
+
+  async function salvarInventario(e: React.FormEvent) {
+    e.preventDefault();
+    const preenchidos = estoque.filter((item) =>
+      inventarioFisico[item.insumo_id]?.trim() !== "" && item.unidade_base,
+    );
+    if (!preenchidos.length) {
+      toast.error("Informe a quantidade física de pelo menos um insumo.");
+      return;
+    }
+    const itensInventario = preenchidos.map((item) => ({
+      insumo_id: item.insumo_id,
+      quantidade_fisica: numeroIngrediente(inventarioFisico[item.insumo_id]),
+      unidade_base: item.unidade_base!,
+    }));
+    if (itensInventario.some((item) => !Number.isFinite(item.quantidade_fisica) || item.quantidade_fisica < 0)) {
+      toast.error("Confira as quantidades físicas. Use valores iguais ou maiores que zero.");
+      return;
+    }
+    const assinatura = JSON.stringify(itensInventario);
+    if (!eventoInventarioRef.current || eventoInventarioRef.current.assinatura !== assinatura) {
+      eventoInventarioRef.current = { assinatura, id: crypto.randomUUID() };
+    }
+    setBusy(true);
+    try {
+      const { error } = await supabase.rpc("registrar_inventario_fisico", {
+        itens: itensInventario,
+        evento_id: eventoInventarioRef.current.id,
+      });
+      if (error) throw error;
+      eventoInventarioRef.current = null;
+      setInventarioFisico({});
+      await qc.invalidateQueries({ queryKey: ["estoque"] });
+      toast.success("Contagem física registrada e saldo ajustado.");
+    } catch (erro) {
+      toast.error(erro instanceof Error ? erro.message : "Não foi possível registrar o inventário.");
+    } finally {
+      setBusy(false);
+    }
   }
 
   async function salvar(e: React.FormEvent) {
@@ -191,6 +233,43 @@ function Compras() {
             })}
           </div>
         )}
+      </section>
+
+      <section className="mb-8 rounded-xl border p-4">
+        <h2 className="mb-2 text-lg font-semibold">Conferência física do estoque</h2>
+        <p className="mb-3 text-sm text-muted-foreground">
+          Conte o que existe agora e informe a quantidade na unidade indicada. O sistema ajustará apenas a diferença. Compras antigas não serão importadas automaticamente; insumos sem unidade compatível precisam ser corrigidos no cadastro antes da contagem.
+        </p>
+        <form onSubmit={salvarInventario} className="space-y-3">
+          {estoque.map((item) => {
+            const saldo = Number(item.saldo);
+            const unidade = item.unidade_base;
+            return (
+              <div key={item.insumo_id} className="grid grid-cols-[minmax(0,1fr)_7.5rem] items-center gap-3 border-b pb-3 last:border-b-0">
+                <div className="min-w-0">
+                  <p className="font-medium">{item.nome}</p>
+                  <p className="text-xs text-muted-foreground">
+                    Saldo calculado: {saldo.toLocaleString("pt-BR", { maximumFractionDigits: 3 })} {unidade ?? ""}
+                  </p>
+                </div>
+                <label className="space-y-1 text-xs">
+                  <span className="text-muted-foreground">Físico ({unidade ?? "indefinido"})</span>
+                  <Input
+                    inputMode="decimal"
+                    aria-label={`Quantidade física de ${item.nome}`}
+                    placeholder={unidade ? "Ex.: 250" : "Corrigir unidade"}
+                    disabled={!unidade || busy}
+                    value={inventarioFisico[item.insumo_id] ?? ""}
+                    onChange={(e) => setInventarioFisico((s) => ({ ...s, [item.insumo_id]: e.target.value }))}
+                  />
+                </label>
+              </div>
+            );
+          })}
+          <Button type="submit" variant="outline" className="h-11 w-full" disabled={busy || !estoque.some((item) => item.unidade_base && inventarioFisico[item.insumo_id]?.trim() !== "")}>
+            {busy ? "Registrando..." : "Registrar contagem física"}
+          </Button>
+        </form>
       </section>
 
       <form onSubmit={salvar} className="mb-8 space-y-4">
