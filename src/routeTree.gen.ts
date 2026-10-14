@@ -16,8 +16,8 @@ import { Route as McpRouteImport } from './routes/mcp'
 import { Route as ResetPasswordRouteImport } from './routes/reset-password'
 import { Route as Char91DotwellKnownChar93OauthProtectedResourceRouteImport } from './routes/[.well-known]/oauth-protected-resource'
 import { Route as AuthenticatedComprasRouteImport } from './routes/_authenticated/compras'
-import { Route as AuthenticatedContasPagarRouteImport } from './routes/_authenticated/contas-pagar'
 import { Route as AuthenticatedConfiguracoesRouteImport } from './routes/_authenticated/configuracoes'
+import { Route as AuthenticatedContasPagarRouteImport } from './routes/_authenticated/contas-pagar'
 import { Route as AuthenticatedDespesasRouteImport } from './routes/_authenticated/despesas'
 import { Route as AuthenticatedMaisRouteImport } from './routes/_authenticated/mais'
 import { Route as AuthenticatedPainelRouteImport } from './routes/_authenticated/painel'
@@ -66,15 +66,16 @@ const AuthenticatedComprasRoute = AuthenticatedComprasRouteImport.update({
   path: '/compras',
   getParentRoute: () => AuthenticatedRouteRoute,
 } as any)
-const AuthenticatedContasPagarRoute = AuthenticatedContasPagarRouteImport.update({
-  id: '/contas-pagar',
-  path: '/contas-pagar',
-  getParentRoute: () => AuthenticatedRouteRoute,
-} as any)
 const AuthenticatedConfiguracoesRoute =
   AuthenticatedConfiguracoesRouteImport.update({
     id: '/configuracoes',
     path: '/configuracoes',
+    getParentRoute: () => AuthenticatedRouteRoute,
+  } as any)
+const AuthenticatedContasPagarRoute =
+  AuthenticatedContasPagarRouteImport.update({
+    id: '/contas-pagar',
+    path: '/contas-pagar',
     getParentRoute: () => AuthenticatedRouteRoute,
   } as any)
 const AuthenticatedDespesasRoute = AuthenticatedDespesasRouteImport.update({
@@ -148,8 +149,8 @@ export interface FileRoutesByFullPath {
   '/reset-password': typeof ResetPasswordRoute
   '/.well-known/oauth-protected-resource': typeof Char91DotwellKnownChar93OauthProtectedResourceRoute
   '/compras': typeof AuthenticatedComprasRoute
-  '/contas-pagar': typeof AuthenticatedContasPagarRoute
   '/configuracoes': typeof AuthenticatedConfiguracoesRoute
+  '/contas-pagar': typeof AuthenticatedContasPagarRoute
   '/despesas': typeof AuthenticatedDespesasRoute
   '/mais': typeof AuthenticatedMaisRoute
   '/painel': typeof AuthenticatedPainelRoute
@@ -170,8 +171,8 @@ export interface FileRoutesByTo {
   '/reset-password': typeof ResetPasswordRoute
   '/.well-known/oauth-protected-resource': typeof Char91DotwellKnownChar93OauthProtectedResourceRoute
   '/compras': typeof AuthenticatedComprasRoute
-  '/contas-pagar': typeof AuthenticatedContasPagarRoute
   '/configuracoes': typeof AuthenticatedConfiguracoesRoute
+  '/contas-pagar': typeof AuthenticatedContasPagarRoute
   '/despesas': typeof AuthenticatedDespesasRoute
   '/mais': typeof AuthenticatedMaisRoute
   '/painel': typeof AuthenticatedPainelRoute
@@ -194,8 +195,8 @@ export interface FileRoutesById {
   '/reset-password': typeof ResetPasswordRoute
   '/.well-known/oauth-protected-resource': typeof Char91DotwellKnownChar93OauthProtectedResourceRoute
   '/_authenticated/compras': typeof AuthenticatedComprasRoute
-  '/_authenticated/contas-pagar': typeof AuthenticatedContasPagarRoute
   '/_authenticated/configuracoes': typeof AuthenticatedConfiguracoesRoute
+  '/_authenticated/contas-pagar': typeof AuthenticatedContasPagarRoute
   '/_authenticated/despesas': typeof AuthenticatedDespesasRoute
   '/_authenticated/mais': typeof AuthenticatedMaisRoute
   '/_authenticated/painel': typeof AuthenticatedPainelRoute
@@ -218,8 +219,8 @@ export interface FileRouteTypes {
     | '/reset-password'
     | '/.well-known/oauth-protected-resource'
     | '/compras'
-    | '/contas-pagar'
     | '/configuracoes'
+    | '/contas-pagar'
     | '/despesas'
     | '/mais'
     | '/painel'
@@ -240,8 +241,8 @@ export interface FileRouteTypes {
     | '/reset-password'
     | '/.well-known/oauth-protected-resource'
     | '/compras'
-    | '/contas-pagar'
     | '/configuracoes'
+    | '/contas-pagar'
     | '/despesas'
     | '/mais'
     | '/painel'
@@ -263,8 +264,8 @@ export interface FileRouteTypes {
     | '/reset-password'
     | '/.well-known/oauth-protected-resource'
     | '/_authenticated/compras'
-    | '/_authenticated/contas-pagar'
     | '/_authenticated/configuracoes'
+    | '/_authenticated/contas-pagar'
     | '/_authenticated/despesas'
     | '/_authenticated/mais'
     | '/_authenticated/painel'
@@ -340,18 +341,18 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof AuthenticatedComprasRouteImport
       parentRoute: typeof AuthenticatedRouteRoute
     }
-    '/_authenticated/contas-pagar': {
-      id: '/_authenticated/contas-pagar'
-      path: '/contas-pagar'
-      fullPath: '/contas-pagar'
-      preLoaderRoute: typeof AuthenticatedContasPagarRouteImport
-      parentRoute: typeof AuthenticatedRouteRoute
-    }
     '/_authenticated/configuracoes': {
       id: '/_authenticated/configuracoes'
       path: '/configuracoes'
       fullPath: '/configuracoes'
       preLoaderRoute: typeof AuthenticatedConfiguracoesRouteImport
+      parentRoute: typeof AuthenticatedRouteRoute
+    }
+    '/_authenticated/contas-pagar': {
+      id: '/_authenticated/contas-pagar'
+      path: '/contas-pagar'
+      fullPath: '/contas-pagar'
+      preLoaderRoute: typeof AuthenticatedContasPagarRouteImport
       parentRoute: typeof AuthenticatedRouteRoute
     }
     '/_authenticated/despesas': {
@@ -443,8 +444,8 @@ declare module '@tanstack/react-router' {
 
 interface AuthenticatedRouteRouteChildren {
   AuthenticatedComprasRoute: typeof AuthenticatedComprasRoute
-  AuthenticatedContasPagarRoute: typeof AuthenticatedContasPagarRoute
   AuthenticatedConfiguracoesRoute: typeof AuthenticatedConfiguracoesRoute
+  AuthenticatedContasPagarRoute: typeof AuthenticatedContasPagarRoute
   AuthenticatedDespesasRoute: typeof AuthenticatedDespesasRoute
   AuthenticatedMaisRoute: typeof AuthenticatedMaisRoute
   AuthenticatedPainelRoute: typeof AuthenticatedPainelRoute
@@ -460,8 +461,8 @@ interface AuthenticatedRouteRouteChildren {
 
 const AuthenticatedRouteRouteChildren: AuthenticatedRouteRouteChildren = {
   AuthenticatedComprasRoute: AuthenticatedComprasRoute,
-  AuthenticatedContasPagarRoute: AuthenticatedContasPagarRoute,
   AuthenticatedConfiguracoesRoute: AuthenticatedConfiguracoesRoute,
+  AuthenticatedContasPagarRoute: AuthenticatedContasPagarRoute,
   AuthenticatedDespesasRoute: AuthenticatedDespesasRoute,
   AuthenticatedMaisRoute: AuthenticatedMaisRoute,
   AuthenticatedPainelRoute: AuthenticatedPainelRoute,
