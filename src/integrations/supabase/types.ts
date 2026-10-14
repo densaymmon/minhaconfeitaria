@@ -99,6 +99,7 @@ export type Database = {
         Row: {
           created_at: string
           data_compra: string
+          estoque_integrado: boolean
           id: string
           total: number
           user_id: string
@@ -106,6 +107,7 @@ export type Database = {
         Insert: {
           created_at?: string
           data_compra: string
+          estoque_integrado?: boolean
           id?: string
           total?: number
           user_id?: string
@@ -113,6 +115,7 @@ export type Database = {
         Update: {
           created_at?: string
           data_compra?: string
+          estoque_integrado?: boolean
           id?: string
           total?: number
           user_id?: string
@@ -447,6 +450,10 @@ export type Database = {
       [_ in never]: never
     }
     Functions: {
+      salvar_compra: {
+        Args: { evento_id?: string; itens: Json; payload: Json; registro_id?: string }
+        Returns: string
+      }
       medida_base: { Args: { u: string }; Returns: string }
       medida_fator: { Args: { u: string }; Returns: number }
       salvar_pedido: {
