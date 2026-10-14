@@ -363,45 +363,93 @@ function PedidoForm() {
           ))}
         </Card>
 
-        <Card className="space-y-3">
-          <div className="flex items-center justify-between gap-2">
-            <h2 className="text-lg font-semibold">Pagamento</h2>
-            {t.venda > 0 && t.saldo <= 0 && <span className="rounded-full bg-success/15 px-2.5 py-1 text-xs font-semibold text-success">Pago</span>}
-          </div>
-          <Field label="Forma de pagamento">
-            <NativeSelect value={f.forma_pagamento} onChange={(e) => set("forma_pagamento", e.target.value)}>
-              {FORMAS.map((s) => (
-                <option key={s.value} value={s.value}>{s.label}</option>
-              ))}
-            </NativeSelect>
-          </Field>
-          <div className="grid grid-cols-3 gap-2">
-            <Field label="Valor pago R$">
-              <Input inputMode="decimal" value={f.valor_entrada} onChange={(e) => set("valor_entrada", e.target.value)} className="h-11" />
-            </Field>
-            <Field label="Frete R$">
-              <Input inputMode="decimal" value={f.taxa_entrega} onChange={(e) => set("taxa_entrega", e.target.value)} className="h-11" />
-            </Field>
-            <Field label="Desconto R$">
-              <Input inputMode="decimal" value={f.desconto} onChange={(e) => set("desconto", e.target.value)} className="h-11" />
-            </Field>
-          </div>
-        </Card>
+        {novo ? (
+          <>
+            <Card className="space-y-3">
+              <div className="flex items-center justify-between gap-2">
+                <h2 className="text-lg font-semibold">Pagamento e resumo</h2>
+                {t.venda > 0 && t.saldo <= 0 && <span className="rounded-full bg-success/15 px-2.5 py-1 text-xs font-semibold text-success">Pago</span>}
+              </div>
+              <div className="grid grid-cols-1 gap-3 sm:grid-cols-2">
+                <Field label="Forma de pagamento">
+                  <NativeSelect value={f.forma_pagamento} onChange={(e) => set("forma_pagamento", e.target.value)}>
+                    {FORMAS.map((s) => (
+                      <option key={s.value} value={s.value}>{s.label}</option>
+                    ))}
+                  </NativeSelect>
+                </Field>
+                <Field label="Entrada / valor pago (R$)">
+                  <Input inputMode="decimal" value={f.valor_entrada} onChange={(e) => set("valor_entrada", e.target.value)} className="h-11" />
+                </Field>
+              </div>
+              <div className="rounded-xl bg-muted/60 p-3">
+                <Row label="Total do pedido" value={brl(t.venda)} strong />
+                <Row label="Entrada / valor pago" value={brl(Math.max(0, t.venda - t.saldo))} />
+                <div className="my-2 border-t" />
+                <Row label="Saldo pendente" value={brl(t.saldo)} strong />
+              </div>
+            </Card>
 
-        <Card>
-          <h2 className="mb-2 text-lg font-semibold">Resumo do pedido</h2>
-          <Row label="Subtotal dos produtos" value={brl(t.subtotal)} />
-          <Row label="Frete" value={brl(parseNum(f.taxa_entrega))} />
-          <Row label="Descontos" value={`− ${brl(parseNum(f.desconto))}`} />
-          <div className="my-2 border-t" />
-          <Row label="Total" value={brl(t.venda)} strong />
-        </Card>
+            <details className="rounded-xl border bg-card p-4">
+              <summary className="cursor-pointer font-semibold">Opções adicionais</summary>
+              <div className="mt-4 space-y-4">
+                <div className="grid grid-cols-1 gap-3 sm:grid-cols-2">
+                  <Field label="Taxa de entrega (R$)">
+                    <Input inputMode="decimal" value={f.taxa_entrega} onChange={(e) => set("taxa_entrega", e.target.value)} className="h-11" />
+                  </Field>
+                  <Field label="Desconto (R$)">
+                    <Input inputMode="decimal" value={f.desconto} onChange={(e) => set("desconto", e.target.value)} className="h-11" />
+                  </Field>
+                </div>
+                <Field label="Observações e personalizações">
+                  <Textarea rows={3} value={f.observacoes} onChange={(e) => set("observacoes", e.target.value)} placeholder="Ex.: escrever 'Parabéns Ana', sem lactose..." />
+                </Field>
+              </div>
+            </details>
+          </>
+        ) : (
+          <>
+            <Card className="space-y-3">
+              <div className="flex items-center justify-between gap-2">
+                <h2 className="text-lg font-semibold">Pagamento</h2>
+                {t.venda > 0 && t.saldo <= 0 && <span className="rounded-full bg-success/15 px-2.5 py-1 text-xs font-semibold text-success">Pago</span>}
+              </div>
+              <Field label="Forma de pagamento">
+                <NativeSelect value={f.forma_pagamento} onChange={(e) => set("forma_pagamento", e.target.value)}>
+                  {FORMAS.map((s) => (
+                    <option key={s.value} value={s.value}>{s.label}</option>
+                  ))}
+                </NativeSelect>
+              </Field>
+              <div className="grid grid-cols-3 gap-2">
+                <Field label="Valor pago R$">
+                  <Input inputMode="decimal" value={f.valor_entrada} onChange={(e) => set("valor_entrada", e.target.value)} className="h-11" />
+                </Field>
+                <Field label="Frete R$">
+                  <Input inputMode="decimal" value={f.taxa_entrega} onChange={(e) => set("taxa_entrega", e.target.value)} className="h-11" />
+                </Field>
+                <Field label="Desconto R$">
+                  <Input inputMode="decimal" value={f.desconto} onChange={(e) => set("desconto", e.target.value)} className="h-11" />
+                </Field>
+              </div>
+            </Card>
 
-        <Card>
-          <Field label="Observações e personalizações">
-            <Textarea rows={3} value={f.observacoes} onChange={(e) => set("observacoes", e.target.value)} placeholder="Ex.: escrever 'Parabéns Ana', sem lactose..." />
-          </Field>
-        </Card>
+            <Card>
+              <h2 className="mb-2 text-lg font-semibold">Resumo do pedido</h2>
+              <Row label="Subtotal dos produtos" value={brl(t.subtotal)} />
+              <Row label="Frete" value={brl(parseNum(f.taxa_entrega))} />
+              <Row label="Descontos" value={`− ${brl(parseNum(f.desconto))}`} />
+              <div className="my-2 border-t" />
+              <Row label="Total" value={brl(t.venda)} strong />
+            </Card>
+
+            <Card>
+              <Field label="Observações e personalizações">
+                <Textarea rows={3} value={f.observacoes} onChange={(e) => set("observacoes", e.target.value)} placeholder="Ex.: escrever 'Parabéns Ana', sem lactose..." />
+              </Field>
+            </Card>
+          </>
+        )}
 
         <div className="flex flex-wrap gap-2">
           {!novo && existente && !["entregue", "finalizado", "cancelado"].includes(existente.status) && (
