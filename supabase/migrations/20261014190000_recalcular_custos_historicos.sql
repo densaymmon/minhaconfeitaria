@@ -34,7 +34,7 @@ begin
         + coalesce(p.custo_gas, 0)
         + coalesce(p.custo_energia, 0)
         + coalesce(p.custo_mao_obra, 0)
-      ) / greatest(coalesce(p.rendimento, 1), 1) as custo_unitario,
+      ) / case when coalesce(p.rendimento, 0) > 0 then p.rendimento else 1 end as custo_unitario,
       count(ri.id) as quantidade_ingredientes,
       count(*) filter (
         where ri.id is not null
