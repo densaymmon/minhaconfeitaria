@@ -22,6 +22,7 @@ export const Route = createFileRoute("/_authenticated/relatorios")({
       context.queryClient.ensureQueryData(appQueries.despesasQ),
       context.queryClient.ensureQueryData(appQueries.produtosQ),
       context.queryClient.ensureQueryData(appQueries.insumosQ),
+      context.queryClient.ensureQueryData(appQueries.contasPagarQ),
     ]);
   },
   errorComponent: ({ error }) => (
@@ -57,7 +58,13 @@ function Relatorios() {
   const { data: produtos } = useSuspenseQuery(appQueries.produtosQ);
   const { data: insumos } = useSuspenseQuery(appQueries.insumosQ);
   const { data: despesas } = useSuspenseQuery(despesasQ);
+  const { data: contasPagar } = useSuspenseQuery(appQueries.contasPagarQ);
   const intervaloValido = inicio <= fim;
+  const contasAbertas = contasPagar.filter((c) => ["pendente", "parcial"].includes(c.status));
+  const saldoContasAbertas = contasAbertas.reduce((s, c) => s + Math.max(0, Number(c.valor) - Number(c.valor_pago)), 0);
+  const saldoContasVencidas = contasAbertas
+    .filter((c) => c.data_vencimento < hojeISO())
+    .reduce((s, c) => s + Math.max(0, Number(c.valor) - Number(c.valor_pago)), 0);
   const insumosPorId = useMemo(
     () => new Map(insumos.map((i) => [i.id, { ...i, preco_unidade: Number(i.preco_unidade) }])),
     [insumos],
@@ -195,6 +202,20 @@ function Relatorios() {
         </div>
         <p className="mt-3 text-xs text-muted-foreground">
           O resultado considera apenas pedidos entregues/finalizados no período selecionado. As despesas são filtradas pela data em que foram registradas. Não lance novamente como despesa ingredientes, embalagens, gás, energia ou mão de obra que já estejam incluídos no custo da receita, pois isso pode duplicar o desconto.
+        </p>
+      </section>
+
+      <section className="mb-6 rounded-xl border p-4">
+        <div className="mb-3 flex items-center justify-between gap-3">
+          <h2 className="text-lg font-semibold">Contas a pagar</h2>
+          <Link to="/contas-pagar" className="text-sm font-medium text-primary">Ver detalhes</Link>
+        </div>
+        <div className="grid grid-cols-2 gap-3">
+          <Stat label="Saldo em aberto" value={brl(saldoContasAbertas)} />
+          <Stat label="Contas vencidas" value={brl(saldoContasVencidas)} tone={saldoContasVencidas > 0 ? "danger" : "default"} />
+        </div>
+        <p className="mt-3 text-xs text-muted-foreground">
+          Valores atuais, independentemente do período de entrega selecionado. Esses compromissos não são descontados novamente do resultado estimado; registre despesas pagas uma única vez para evitar duplicidade.
         </p>
       </section>
 
