@@ -450,6 +450,10 @@ export type Database = {
       [_ in never]: never
     }
     Functions: {
+      ajustar_producao: {
+        Args: { evento_id: string; pedido_item_id: string; quantidade_resultado: number }
+        Returns: number
+      }
       salvar_compra: {
         Args: { evento_id?: string; itens: Json; payload: Json; registro_id?: string }
         Returns: string
