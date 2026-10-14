@@ -59,7 +59,7 @@ function ContasPagar() {
   const totalAberto = abertas.reduce((s, c) => s + Math.max(0, Number(c.valor) - Number(c.valor_pago)), 0);
   const totalVencido = abertas.filter((c) => c.data_vencimento < hoje)
     .reduce((s, c) => s + Math.max(0, Number(c.valor) - Number(c.valor_pago)), 0);
-  const totalPago = contas.filter((c) => c.status === "pago")
+  const totalPago = contas.filter((c) => ["pago", "parcial"].includes(c.status))
     .reduce((s, c) => s + Number(c.valor_pago), 0);
   const ordenadas = useMemo(
     () => [...contas].sort((a, b) => a.data_vencimento.localeCompare(b.data_vencimento)),
@@ -159,7 +159,7 @@ function ContasPagar() {
       <div className="mb-6 grid grid-cols-1 gap-3 sm:grid-cols-3">
         <Stat label="Saldo em aberto" value={brl(totalAberto)} />
         <Stat label="Vencido" value={brl(totalVencido)} tone={totalVencido > 0 ? "danger" : "default"} />
-        <Stat label="Total de contas pagas" value={brl(totalPago)} tone="primary" />
+        <Stat label="Total já pago" value={brl(totalPago)} tone="primary" />
       </div>
 
       <form onSubmit={salvar} className="mb-8 space-y-3 rounded-xl border p-4">
