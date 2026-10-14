@@ -64,6 +64,13 @@
       "when": 1791942000003,
       "tag": "0008_cancelamento_compra_atomico",
       "breakpoints": true
+    },
+    {
+      "idx": 9,
+      "version": "7",
+      "when": 1791942000004,
+      "tag": "0009_historico_producao_snapshot",
+      "breakpoints": true
     }
   ]
 }
