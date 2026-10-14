@@ -230,7 +230,7 @@ function Compras() {
       const { error } = await supabase.rpc("salvar_compra", {
         payload,
         itens: itensPayload,
-        registro_id: editandoCompraId,
+        registro_id: editandoCompraId ?? undefined,
         evento_id: eventoSalvarRef.current.id,
       });
       if (error) throw error;
