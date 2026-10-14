@@ -149,7 +149,6 @@ export interface FileRoutesByFullPath {
   '/.well-known/oauth-protected-resource': typeof Char91DotwellKnownChar93OauthProtectedResourceRoute
   '/compras': typeof AuthenticatedComprasRoute
   '/contas-pagar': typeof AuthenticatedContasPagarRoute
-  '/contas-pagar': typeof AuthenticatedContasPagarRoute
   '/configuracoes': typeof AuthenticatedConfiguracoesRoute
   '/despesas': typeof AuthenticatedDespesasRoute
   '/mais': typeof AuthenticatedMaisRoute
@@ -171,6 +170,7 @@ export interface FileRoutesByTo {
   '/reset-password': typeof ResetPasswordRoute
   '/.well-known/oauth-protected-resource': typeof Char91DotwellKnownChar93OauthProtectedResourceRoute
   '/compras': typeof AuthenticatedComprasRoute
+  '/contas-pagar': typeof AuthenticatedContasPagarRoute
   '/configuracoes': typeof AuthenticatedConfiguracoesRoute
   '/despesas': typeof AuthenticatedDespesasRoute
   '/mais': typeof AuthenticatedMaisRoute
@@ -219,7 +219,6 @@ export interface FileRouteTypes {
     | '/.well-known/oauth-protected-resource'
     | '/compras'
     | '/contas-pagar'
-    | '/contas-pagar'
     | '/configuracoes'
     | '/despesas'
     | '/mais'
@@ -241,6 +240,7 @@ export interface FileRouteTypes {
     | '/reset-password'
     | '/.well-known/oauth-protected-resource'
     | '/compras'
+    | '/contas-pagar'
     | '/configuracoes'
     | '/despesas'
     | '/mais'
@@ -444,7 +444,6 @@ declare module '@tanstack/react-router' {
 interface AuthenticatedRouteRouteChildren {
   AuthenticatedComprasRoute: typeof AuthenticatedComprasRoute
   AuthenticatedContasPagarRoute: typeof AuthenticatedContasPagarRoute
-  AuthenticatedContasPagarRoute: typeof AuthenticatedContasPagarRoute
   AuthenticatedConfiguracoesRoute: typeof AuthenticatedConfiguracoesRoute
   AuthenticatedDespesasRoute: typeof AuthenticatedDespesasRoute
   AuthenticatedMaisRoute: typeof AuthenticatedMaisRoute
@@ -461,7 +460,6 @@ interface AuthenticatedRouteRouteChildren {
 
 const AuthenticatedRouteRouteChildren: AuthenticatedRouteRouteChildren = {
   AuthenticatedComprasRoute: AuthenticatedComprasRoute,
-  AuthenticatedContasPagarRoute: AuthenticatedContasPagarRoute,
   AuthenticatedContasPagarRoute: AuthenticatedContasPagarRoute,
   AuthenticatedConfiguracoesRoute: AuthenticatedConfiguracoesRoute,
   AuthenticatedDespesasRoute: AuthenticatedDespesasRoute,
