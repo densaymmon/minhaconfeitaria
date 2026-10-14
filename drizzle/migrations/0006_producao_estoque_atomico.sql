@@ -41,6 +41,9 @@ BEGIN
      OR quantidade_resultado < 0 THEN
     RAISE EXCEPTION 'Quantidade produzida inválida.';
   END IF;
+  IF quantidade_resultado <> round(quantidade_resultado, 3) THEN
+    RAISE EXCEPTION 'A quantidade produzida aceita no máximo três casas decimais.';
+  END IF;
 
   SELECT * INTO existente FROM public.producao_eventos
     WHERE user_id = uid AND producao_eventos.evento_id = ajustar_producao.evento_id;
