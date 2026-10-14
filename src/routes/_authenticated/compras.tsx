@@ -1,7 +1,7 @@
 import * as appQueries from "@/lib/queries";
 import { createFileRoute } from "@tanstack/react-router";
 import { useQueryClient, useSuspenseQuery } from "@tanstack/react-query";
-import { useMemo, useState } from "react";
+import { useMemo, useRef, useState } from "react";
 import { toast } from "sonner";
 import { Plus, Trash2, ShoppingCart } from "lucide-react";
 import { supabase } from "@/integrations/supabase/client";
@@ -61,6 +61,7 @@ function Compras() {
   const [data, setData] = useState(hojeISO());
   const [linhas, setLinhas] = useState<Linha[]>([linhaVazia()]);
   const [busy, setBusy] = useState(false);
+  const eventoSalvarRef = useRef<{ assinatura: string; id: string } | null>(null);
   const [editandoCompraId, setEditandoCompraId] = useState<string | null>(null);
   const [de, setDe] = useState("");
   const [ate, setAte] = useState("");
@@ -111,43 +112,36 @@ function Compras() {
     }
     if (total <= 0) { toast.error("O total da compra precisa ser maior que zero."); return; }
     setBusy(true);
-    let compraId: string | null = null;
     try {
-      if (editandoCompraId) {
-        const { error: erroCompra } = await supabase.from("compras").update({ data_compra: data }).eq("id", editandoCompraId);
-        if (erroCompra) throw erroCompra;
-        for (const l of calculadas) {
-          const valores = { insumo_id: l.insumo!.id, quantidade: l.quantidade, unidade: l.unidade, preco_unitario: l.preco };
-          if (l.compraItemId) {
-            const { error } = await supabase.from("compra_itens").update(valores).eq("id", l.compraItemId).eq("compra_id", editandoCompraId);
-            if (error) throw error;
-          } else {
-            const { error } = await supabase.from("compra_itens").insert({ ...valores, compra_id: editandoCompraId });
-            if (error) throw error;
-          }
-        }
-        const idsMantidos = new Set(linhas.map((l) => l.compraItemId).filter(Boolean));
-        const removidos = itens.filter((i) => i.compra_id === editandoCompraId && !idsMantidos.has(i.id));
-        if (removidos.length) {
-          const { error } = await supabase.from("compra_itens").delete().in("id", removidos.map((i) => i.id)).eq("compra_id", editandoCompraId);
-          if (error) throw error;
-        }
-      } else {
-        const { data: compra, error: erroCompra } = await supabase.from("compras").insert({ data_compra: data }).select("id").single();
-        if (erroCompra) throw erroCompra;
-        compraId = compra.id;
-        const { error: erroItens } = await supabase.from("compra_itens").insert(
-          calculadas.map((l) => ({ compra_id: compra.id, insumo_id: l.insumo!.id, quantidade: l.quantidade, unidade: l.unidade, preco_unitario: l.preco })),
-        );
-        if (erroItens) throw erroItens;
+      const payload = { data_compra: data };
+      const itensPayload = calculadas.map((l) => ({
+        insumo_id: l.insumo!.id,
+        quantidade: l.quantidade,
+        unidade: l.unidade,
+        preco_unitario: l.preco,
+      }));
+      const assinatura = JSON.stringify({ registro_id: editandoCompraId, payload, itens: itensPayload });
+      if (!eventoSalvarRef.current || eventoSalvarRef.current.assinatura !== assinatura) {
+        eventoSalvarRef.current = { assinatura, id: crypto.randomUUID() };
       }
-      await Promise.all([qc.invalidateQueries({ queryKey: ["compras"] }), qc.invalidateQueries({ queryKey: ["compra-itens"] })]);
+      const { error } = await supabase.rpc("salvar_compra", {
+        payload,
+        itens: itensPayload,
+        registro_id: editandoCompraId,
+        evento_id: eventoSalvarRef.current.id,
+      });
+      if (error) throw error;
+      eventoSalvarRef.current = null;
+      await Promise.all([
+        qc.invalidateQueries({ queryKey: ["compras"] }),
+        qc.invalidateQueries({ queryKey: ["compra-itens"] }),
+        qc.invalidateQueries({ queryKey: ["estoque"] }),
+      ]);
       setData(hojeISO());
       setLinhas([linhaVazia()]);
       setEditandoCompraId(null);
       toast.success(editandoCompraId ? "Compra atualizada." : "Compra registrada.");
     } catch (erro) {
-      if (compraId) await supabase.from("compras").delete().eq("id", compraId);
       toast.error(erro instanceof Error ? erro.message : "Não foi possível salvar a compra.");
     } finally {
       setBusy(false);
