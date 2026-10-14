@@ -1,7 +1,10 @@
 import * as appQueries from "@/lib/queries";
 import { createFileRoute, Link } from "@tanstack/react-router";
 import { useSuspenseQuery } from "@tanstack/react-query";
-import { useMemo } from "react";
+import { useMemo, useState } from "react";
+import { useQueryClient } from "@tanstack/react-query";
+import { toast } from "sonner";
+import { supabase } from "@/integrations/supabase/client";
 import { Download } from "lucide-react";
 import { configQ, despesasQ, pedidosQ } from "@/lib/queries";
 import { useCustos } from "@/lib/hooks";
@@ -47,6 +50,8 @@ export const Route = createFileRoute("/_authenticated/relatorios")({
 
 function Relatorios() {
   const { inicio, fim } = Route.useSearch();
+  const qc = useQueryClient();
+  const [corrigindoCustos, setCorrigindoCustos] = useState(false);
   const navigate = Route.useNavigate();
   const { data: pedidos } = useSuspenseQuery(pedidosQ);
   const { data: config } = useSuspenseQuery(configQ);
@@ -110,6 +115,21 @@ function Relatorios() {
     return [...m.values()].sort((a, b) => b.venda - a.venda);
   }, [entregues]);
 
+  async function corrigirCustosHistoricos() {
+    if (!confirm("Isso atualizará o custo salvo de todos os itens de pedidos vinculados a produtos cadastrados, usando os preços e receitas atuais. Valores de venda, pagamentos e datas não serão alterados. Deseja continuar?")) return;
+    setCorrigindoCustos(true);
+    try {
+      const { data, error } = await supabase.rpc("recalcular_custos_historicos");
+      if (error) throw error;
+      await qc.invalidateQueries({ queryKey: ["pedidos"] });
+      toast.success(`Custos atualizados em ${Number(data ?? 0)} itens de pedidos.`);
+    } catch (e) {
+      toast.error(e instanceof Error ? e.message : "Não foi possível corrigir os custos antigos.");
+    } finally {
+      setCorrigindoCustos(false);
+    }
+  }
+
   function exportar() {
     baixarCSV(
       "relatorio-" + inicio + "-" + fim,
@@ -153,6 +173,12 @@ function Relatorios() {
         <Row label="Taxas e impostos estimados" value={brl(realizado.taxas)} />
         <Row label="Despesas registradas no período" value={brl(gastos)} />
         <Row label="Resultado estimado após despesas" value={brl(resultado)} strong />
+        <div className="mt-4 space-y-2">
+          <Button variant="outline" className="w-full" disabled={corrigindoCustos} onClick={corrigirCustosHistoricos}>
+            {corrigindoCustos ? "Atualizando custos antigos..." : "Corrigir custos das vendas antigas"}
+          </Button>
+          <p className="text-xs text-muted-foreground">Essa ação atualiza os custos salvos dos pedidos usando os preços atuais cadastrados. Faça isso porque você confirmou que as vendas antigas usaram insumos comprados juntos. Os valores de venda e pagamento permanecem iguais.</p>
+        </div>
         <p className="mt-3 text-xs text-muted-foreground">
           O resultado considera apenas pedidos entregues/finalizados no período selecionado. As despesas são filtradas pela data em que foram registradas. Não lance novamente como despesa ingredientes, embalagens, gás, energia ou mão de obra que já estejam incluídos no custo da receita, pois isso pode duplicar o desconto.
         </p>
