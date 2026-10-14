@@ -57,12 +57,25 @@ function Relatorios() {
   const { data: produtos } = useSuspenseQuery(appQueries.produtosQ);
   const { data: insumos } = useSuspenseQuery(appQueries.insumosQ);
   const { data: despesas } = useSuspenseQuery(despesasQ);
-  const { produtos, custo: custoAtual } = useCustos();
   const intervaloValido = inicio <= fim;
-
-  // Para produtos cadastrados, recalcula o custo usando a receita e os preços
-  // atualmente cadastrados. Pedidos com itens avulsos continuam usando o custo
-  // gravado no item, pois não há receita cadastrada para recalcular.
+  const insumosPorId = useMemo(
+    () => new Map(insumos.map((i) => [i.id, { ...i, preco_unidade: Number(i.preco_unidade) }])),
+    [insumos],
+  );
+  // Calcula produto a produto. Se alguma receita tiver unidades incompatíveis,
+  // preserva o custo salvo para esse produto sem derrubar o relatório inteiro.
+  const custoAtual = useMemo(() => {
+    const custos = new Map<string, number>();
+    for (const produto of produtos) {
+      try {
+        const custo = custoUnitario(produto, produto.receita_itens, insumosPorId);
+        if (Number.isFinite(custo) && custo >= 0) custos.set(produto.id, custo);
+      } catch {
+        // Unidade inválida: o item do pedido mantém o custo salvo como fallback.
+      }
+    }
+    return custos;
+  }, [produtos, insumosPorId]);
   const produtosPorId = useMemo(() => new Map(produtos.map((p) => [p.id, p])), [produtos]);
   const pedidosCalculados = useMemo(() => pedidos.map((pedido) => {
     const itens = pedido.pedido_itens.map((item) => {
