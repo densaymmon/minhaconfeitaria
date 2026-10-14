@@ -37,6 +37,20 @@ const MEDIDAS_COMPRA = ["g", "kg", "L", "un"] as const;
 type Linha = { insumo_id: string; quantidade: string; unidade: string; preco: string };
 const linhaVazia = (): Linha => ({ insumo_id: "", quantidade: "", unidade: "un", preco: "" });
 
+// Nunca permita que valores numéricos inválidos vindos do banco apareçam como "NaN"
+// em campos controlados; valores ausentes permanecem vazios e editáveis.
+function textoCampoNumerico(valor: string): string {
+  return ["NaN", "Infinity", "-Infinity", "undefined", "null"].includes(valor.trim()) ? "" : valor;
+}
+
+function precoInicial(insumo: { preco_embalagem?: number | null; preco_unidade: number } | undefined): string {
+  if (!insumo) return "";
+  const valor = insumo.preco_embalagem ?? insumo.preco_unidade;
+  if (valor == null) return "";
+  const texto = String(valor);
+  return Number.isFinite(numeroIngrediente(texto)) ? texto : "";
+}
+
 function Compras() {
   const { data: insumos } = useSuspenseQuery(appQueries.insumosQ);
   const { data: compras } = useSuspenseQuery(appQueries.comprasQ);
@@ -82,7 +96,7 @@ function Compras() {
   function escolherInsumo(index: number, id: string) {
     const ins = insumos.find((i) => i.id === id);
     const unidade = unidadesPara(id)[0] ?? "un";
-    setLinhas((s) => s.map((l, j) => (j === index ? { ...l, insumo_id: id, unidade, preco: l.preco || (ins ? String(ins.preco_embalagem ?? ins.preco_unidade) : "") } : l)));
+    setLinhas((s) => s.map((l, j) => (j === index ? { ...l, insumo_id: id, unidade, preco: l.preco || precoInicial(ins) } : l)));
   }
 
   async function salvar(e: React.FormEvent) {
@@ -142,7 +156,7 @@ function Compras() {
               </Field>
               <div className="grid grid-cols-2 gap-3">
                 <Field label="Quantidade">
-                  <Input required inputMode="decimal" className="h-11" value={l.quantidade} onChange={(e) => setLinhas((s) => s.map((x, j) => (j === index ? { ...x, quantidade: e.target.value } : x)))} />
+                  <Input required inputMode="decimal" className="h-11" value={textoCampoNumerico(l.quantidade)} onChange={(e) => setLinhas((s) => s.map((x, j) => (j === index ? { ...x, quantidade: e.target.value } : x)))} />
                 </Field>
                 <Field label="Medida">
                   <select value={l.unidade} onChange={(e) => setLinhas((s) => s.map((x, j) => (j === index ? { ...x, unidade: e.target.value } : x)))} className="h-11 w-full rounded-md border border-input bg-background px-3 text-sm">
@@ -151,7 +165,7 @@ function Compras() {
                 </Field>
               </div>
               <Field label="Preço de cada item (R$)">
-                <Input required inputMode="decimal" className="h-11" value={l.preco} onChange={(e) => setLinhas((s) => s.map((x, j) => (j === index ? { ...x, preco: e.target.value } : x)))} />
+                <Input required inputMode="decimal" className="h-11" value={textoCampoNumerico(l.preco)} onChange={(e) => setLinhas((s) => s.map((x, j) => (j === index ? { ...x, preco: e.target.value } : x)))} />
               </Field>
               <div className="flex justify-between text-sm">
                 <span className="text-muted-foreground">Total do item</span>
