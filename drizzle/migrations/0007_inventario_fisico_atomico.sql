@@ -54,7 +54,7 @@ BEGIN
 
   INSERT INTO public.inventario_eventos(user_id, evento_id, payload)
   VALUES (uid, evento_id, itens)
-  ON CONFLICT (user_id, evento_id) DO NOTHING;
+  ON CONFLICT ON CONSTRAINT inventario_evento_unico DO NOTHING;
 
   IF NOT FOUND THEN
     SELECT * INTO evento_existente
