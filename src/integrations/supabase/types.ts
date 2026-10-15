@@ -675,6 +675,10 @@ export type Database = {
         Args: { registro_id: string; evento_id: string }
         Returns: boolean
       }
+      excluir_compra: {
+        Args: { registro_id: string; evento_id: string }
+        Returns: boolean
+      }
       cancelar_conta_pagar: {
         Args: { p_conta_id: string; p_motivo: string; p_operacao_id: string }
         Returns: string
