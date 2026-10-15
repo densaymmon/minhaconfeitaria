@@ -14,6 +14,7 @@ DECLARE
   v_valor_pago numeric;
   v_status text;
   v_falhou boolean;
+  v_count integer;
   v_payload jsonb := jsonb_build_object(
     'descricao','Conta de teste',
     'fornecedor','Fornecedor de teste',
@@ -39,12 +40,49 @@ BEGIN
   END;
   IF NOT v_falhou THEN RAISE EXCEPTION 'Falha: conflito de idempotência não foi rejeitado.'; END IF;
 
+  -- Edição e retry idempotente: mesmo payload retorna a mesma conta sem duplicar auditoria.
+  v_payload := v_payload || jsonb_build_object('descricao','Conta editada');
+  v_conta_retry := public.salvar_conta_pagar(v_payload, v_conta, 'aaaaaaaa-aaaa-4aaa-8aaa-aaaaaaaaaaa2');
+  IF v_conta_retry <> v_conta THEN RAISE EXCEPTION 'Falha: edição não retornou a conta original.'; END IF;
+  PERFORM public.salvar_conta_pagar(v_payload, v_conta, 'aaaaaaaa-aaaa-4aaa-8aaa-aaaaaaaaaaa2');
+  SELECT count(*) INTO v_count FROM public.contas_pagar_auditoria
+    WHERE conta_id=v_conta AND operacao_id='aaaaaaaa-aaaa-4aaa-8aaa-aaaaaaaaaaa2';
+  IF v_count <> 1 THEN RAISE EXCEPTION 'Falha: retry de edição duplicou auditoria.'; END IF;
+
+  v_falhou := false;
+  BEGIN
+    PERFORM public.salvar_conta_pagar(v_payload || jsonb_build_object('fornecedor','Outro fornecedor'), v_conta, 'aaaaaaaa-aaaa-4aaa-8aaa-aaaaaaaaaaa2');
+  EXCEPTION WHEN OTHERS THEN
+    IF SQLERRM LIKE 'Conflito de idempotência:%' THEN v_falhou := true; ELSE RAISE; END IF;
+  END;
+  IF NOT v_falhou THEN RAISE EXCEPTION 'Falha: payload alterado no retry de edição não foi rejeitado.'; END IF;
+
+  -- Um identificador não pode ser reutilizado em outra classe de operação.
+  v_falhou := false;
+  BEGIN
+    PERFORM public.registrar_pagamento_conta_pagar(
+      v_conta,1,'2026-10-15','pix',NULL,'aaaaaaaa-aaaa-4aaa-8aaa-aaaaaaaaaaa1'
+    );
+  EXCEPTION WHEN OTHERS THEN
+    IF SQLERRM LIKE 'Conflito de idempotência:%' THEN v_falhou := true; ELSE RAISE; END IF;
+  END;
+  IF NOT v_falhou THEN RAISE EXCEPTION 'Falha: identificador de operação foi reutilizado entre RPCs.'; END IF;
+
   v_pagamento1 := public.registrar_pagamento_conta_pagar(
     v_conta,40,'2026-10-15','pix','Parcela 1','bbbbbbbb-bbbb-4bbb-8bbb-bbbbbbbbbbb1'
   );
   IF public.registrar_pagamento_conta_pagar(
     v_conta,40,'2026-10-15','pix','Parcela 1','bbbbbbbb-bbbb-4bbb-8bbb-bbbbbbbbbbb1'
   ) <> v_pagamento1 THEN RAISE EXCEPTION 'Falha: retry de pagamento não idempotente.'; END IF;
+  v_falhou := false;
+  BEGIN
+    PERFORM public.registrar_pagamento_conta_pagar(
+      v_conta,39,'2026-10-15','pix','Parcela 1','bbbbbbbb-bbbb-4bbb-8bbb-bbbbbbbbbbb1'
+    );
+  EXCEPTION WHEN OTHERS THEN
+    IF SQLERRM LIKE 'Conflito de idempotência:%' THEN v_falhou := true; ELSE RAISE; END IF;
+  END;
+  IF NOT v_falhou THEN RAISE EXCEPTION 'Falha: retry de pagamento com parâmetros alterados não foi rejeitado.'; END IF;
   SELECT status,valor_pago INTO v_status,v_valor_pago FROM public.contas_pagar WHERE id=v_conta;
   IF v_status <> 'parcial' OR v_valor_pago <> 40 THEN RAISE EXCEPTION 'Falha: pagamento parcial.'; END IF;
 
@@ -69,6 +107,18 @@ BEGIN
   );
   SELECT status,valor_pago INTO v_status,v_valor_pago FROM public.contas_pagar WHERE id=v_conta;
   IF v_status <> 'parcial' OR v_valor_pago <> 90 THEN RAISE EXCEPTION 'Falha: estorno não recalculou o saldo.'; END IF;
+  IF public.estornar_pagamento_conta_pagar(
+    v_pagamento1,10,'Correção parcial','cccccccc-cccc-4ccc-8ccc-ccccccccccc1'
+  ) <> v_estorno THEN RAISE EXCEPTION 'Falha: retry de estorno não retornou o mesmo registro.'; END IF;
+  v_falhou := false;
+  BEGIN
+    PERFORM public.estornar_pagamento_conta_pagar(
+      v_pagamento1,9,'Motivo diferente','cccccccc-cccc-4ccc-8ccc-ccccccccccc1'
+    );
+  EXCEPTION WHEN OTHERS THEN
+    IF SQLERRM LIKE 'Conflito de idempotência:%' THEN v_falhou := true; ELSE RAISE; END IF;
+  END;
+  IF NOT v_falhou THEN RAISE EXCEPTION 'Falha: retry de estorno alterado não foi rejeitado.'; END IF;
 
   v_falhou := false;
   BEGIN
@@ -99,6 +149,21 @@ BEGIN
   PERFORM public.cancelar_conta_pagar(v_conta,'Obrigação cancelada','dddddddd-dddd-4ddd-8ddd-ddddddddddd2');
   SELECT status INTO v_status FROM public.contas_pagar WHERE id=v_conta;
   IF v_status <> 'cancelado' THEN RAISE EXCEPTION 'Falha: cancelamento permitido não foi registrado.'; END IF;
+
+  v_falhou := false;
+  BEGIN
+    UPDATE public.contas_pagar SET valor_pago=1 WHERE id=v_conta;
+  EXCEPTION WHEN insufficient_privilege THEN v_falhou := true;
+  END;
+  IF NOT v_falhou THEN RAISE EXCEPTION 'Falha: escrita direta em campos financeiros protegidos foi permitida.'; END IF;
+
+  v_falhou := false;
+  BEGIN
+    INSERT INTO public.contas_pagar_auditoria(user_id,conta_id,operacao_id,evento,dados)
+    VALUES('11111111-1111-4111-8111-111111111111',v_conta,'eeeeeeee-eeee-4eee-8eee-eeeeeeeeeee2','fraude','{}'::jsonb);
+  EXCEPTION WHEN insufficient_privilege THEN v_falhou := true;
+  END;
+  IF NOT v_falhou THEN RAISE EXCEPTION 'Falha: INSERT direto na auditoria foi permitido.'; END IF;
 
   v_falhou := false;
   BEGIN
