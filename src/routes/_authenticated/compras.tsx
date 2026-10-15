@@ -1,7 +1,7 @@
 import * as appQueries from "@/lib/queries";
 import { createFileRoute } from "@tanstack/react-router";
 import { useQuery, useQueryClient, useSuspenseQuery } from "@tanstack/react-query";
-import { useMemo, useRef, useState } from "react";
+import { useEffect, useMemo, useRef, useState } from "react";
 import { toast } from "sonner";
 import { Plus, Trash2, ShoppingCart } from "lucide-react";
 import { supabase } from "@/integrations/supabase/client";
@@ -142,6 +142,14 @@ function Compras() {
   const eventoCancelarRef = useRef<{ compraId: string; id: string } | null>(null);
   const eventoExcluirRef = useRef<{ compraId: string; id: string } | null>(null);
   const [editandoCompraId, setEditandoCompraId] = useState<string | null>(null);
+  const formularioCompraRef = useRef<HTMLFormElement | null>(null);
+
+  // Ao iniciar uma edição, leve o formulário para o início da área de registro.
+  useEffect(() => {
+    if (editandoCompraId) {
+      formularioCompraRef.current?.scrollIntoView({ behavior: "smooth", block: "start" });
+    }
+  }, [editandoCompraId]);
   const [de, setDe] = useState("");
   const [ate, setAte] = useState("");
 
@@ -455,7 +463,7 @@ function Compras() {
         </form>
       </section>
 
-      <form onSubmit={salvar} className="mb-8 space-y-4">
+      <form ref={formularioCompraRef} onSubmit={salvar} className="mb-8 scroll-mt-4 space-y-4">
         <h2 className="text-lg font-semibold">{editandoCompraId ? "Editar compra" : "Registrar compra"}</h2>
         <Field label="Data da compra">
           <Input required type="date" className="h-11" value={data} onChange={(e) => setData(e.target.value)} />
