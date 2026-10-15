@@ -3,19 +3,39 @@ import { toast } from "sonner";
 import { useQueryClient } from "@tanstack/react-query";
 import { supabase } from "@/integrations/supabase/client";
 import type { Insumo } from "@/lib/queries";
-import { MEDIDAS, custoPorMedida, medidaLabel, medidasCompativeis, numeroIngrediente } from "@/lib/ingredient-cost";
+import { MEDIDAS, custoPorMedida, medidaLabel, medidasCompativeis } from "@/lib/ingredient-cost";
 import { brl } from "@/lib/format";
 import { Field, NativeSelect } from "./ui";
 import { Input } from "@/components/ui/input";
 import { Button } from "@/components/ui/button";
 import { Save, Plus } from "lucide-react";
 
+// Parse decimals without converting intermediate input (for example "12," or "12.")
+// into NaN or changing the text while the user is typing.
+function parseCampoDecimal(valor: string): number {
+  const texto = valor.trim().replace(/\\s/g, "");
+  if (!texto || /^[+-]?(?:\\d+[.,]?|[.,])$/.test(texto)) return NaN;
+  if (!/^[+-]?[\\d.,]+$/.test(texto)) return NaN;
+  const ultimaVirgula = texto.lastIndexOf(",");
+  const ultimoPonto = texto.lastIndexOf(".");
+  let normalizado = texto;
+  if (ultimaVirgula >= 0 && ultimoPonto >= 0) {
+    const decimal = ultimaVirgula > ultimoPonto ? "," : ".";
+    const milhar = decimal === "," ? /\\./g : /,/g;
+    normalizado = texto.replace(milhar, "").replace(decimal, ".");
+  } else if (ultimaVirgula >= 0) {
+    normalizado = texto.replace(",", ".");
+  }
+  const numero = Number(normalizado);
+  return Number.isFinite(numero) ? numero : NaN;
+}
+
 export function IngredientForm({ insumo, onDone }: { insumo?: Insumo; onDone?: () => void }) {
   const qc = useQueryClient();
   const [f, setF] = useState({ nome: insumo?.nome ?? "", tipo: insumo?.tipo ?? "ingrediente", preco: String(insumo?.preco_embalagem ?? insumo?.preco_unidade ?? ""), quantidade: String(insumo?.quantidade_embalagem ?? "1"), unidade: insumo?.unidade_embalagem ?? insumo?.unidade ?? "kg" });
   const [busy, setBusy] = useState(false);
   const set = (k: keyof typeof f, v: string) => setF((s) => ({ ...s, [k]: v }));
-  const preco = numeroIngrediente(f.preco), quantidade = numeroIngrediente(f.quantidade);
+  const preco = parseCampoDecimal(f.preco), quantidade = parseCampoDecimal(f.quantidade);
   let unitario: ReturnType<typeof custoPorMedida> | null = null;
   try { unitario = custoPorMedida({ preco_unidade: 0, preco_embalagem: preco, quantidade_embalagem: quantidade, unidade_embalagem: f.unidade }); } catch { /* invalid pending input */ }
   async function salvar(e: React.FormEvent) {
@@ -37,9 +57,9 @@ export function IngredientForm({ insumo, onDone }: { insumo?: Insumo; onDone?: (
   return <form onSubmit={salvar} className="space-y-3">
     <Field label="Nome do ingrediente"><Input required maxLength={120} value={f.nome} onChange={(e) => set("nome", e.target.value)} className="h-11" /></Field>
     <Field label="Tipo"><NativeSelect value={f.tipo} onChange={(e) => set("tipo", e.target.value)}><option value="ingrediente">Ingrediente</option><option value="embalagem">Embalagem</option></NativeSelect></Field>
-    <Field label="Preço pago pela embalagem R$"><Input required inputMode="decimal" value={f.preco} onChange={(e) => set("preco", e.target.value)} className="h-11" /></Field>
+    <Field label="Preço pago pela embalagem R$"><Input required type="text" inputMode="decimal" lang="pt-BR" autoComplete="off" value={f.preco} onChange={(e) => set("preco", e.currentTarget.value)} className="h-11" /></Field>
     <div className="grid grid-cols-2 gap-3">
-      <Field label="Quantidade da embalagem"><Input required inputMode="decimal" value={f.quantidade} onChange={(e) => set("quantidade", e.target.value)} className="h-11" /></Field>
+      <Field label="Quantidade da embalagem"><Input required type="text" inputMode="decimal" lang="pt-BR" autoComplete="off" value={f.quantidade} onChange={(e) => set("quantidade", e.currentTarget.value)} className="h-11" /></Field>
       <Field label="Unidade da embalagem"><NativeSelect value={f.unidade} onChange={(e) => set("unidade", e.target.value)}>{unidades.map((u) => <option key={u} value={u}>{medidaLabel(u)}</option>)}</NativeSelect></Field>
     </div>
     {unitario && <p className="text-sm text-muted-foreground">Custo unitário: {brl(unitario.custo)} / {medidaLabel(unitario.unidade)}</p>}
