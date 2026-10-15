@@ -13,15 +13,15 @@ import { Save, Plus } from "lucide-react";
 // Parse decimals without converting intermediate input (for example "12," or "12.")
 // into NaN or changing the text while the user is typing.
 function parseCampoDecimal(valor: string): number {
-  const texto = valor.trim().replace(/\\s/g, "");
-  if (!texto || /^[+-]?(?:\\d+[.,]?|[.,])$/.test(texto)) return NaN;
-  if (!/^[+-]?[\\d.,]+$/.test(texto)) return NaN;
+  const texto = valor.trim().replace(/\s/g, "");
+  if (!texto || /^[+-]?(?:\d+[.,]?|[.,])$/.test(texto)) return NaN;
+  if (!/^[+-]?[\d.,]+$/.test(texto)) return NaN;
   const ultimaVirgula = texto.lastIndexOf(",");
   const ultimoPonto = texto.lastIndexOf(".");
   let normalizado = texto;
   if (ultimaVirgula >= 0 && ultimoPonto >= 0) {
     const decimal = ultimaVirgula > ultimoPonto ? "," : ".";
-    const milhar = decimal === "," ? /\\./g : /,/g;
+    const milhar = decimal === "," ? /\./g : /,/g;
     normalizado = texto.replace(milhar, "").replace(decimal, ".");
   } else if (ultimaVirgula >= 0) {
     normalizado = texto.replace(",", ".");
