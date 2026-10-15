@@ -335,6 +335,27 @@ function Compras() {
     if (total <= 0) { toast.error("O total da compra precisa ser maior que zero."); return; }
     setBusy(true);
     try {
+      // Se já houve pagamento de alguma parcela, bloqueie a edição antes de alterar
+      // os itens da compra, para não deixar o histórico financeiro inconsistente.
+      if (editandoCompraId) {
+        const { data: contasGeradas, error: erroContas } = await supabase
+          .from("contas_pagar")
+          .select("id")
+          .eq("compra_id", editandoCompraId)
+          .eq("gerada_automaticamente", true);
+        if (erroContas) throw erroContas;
+        const idsContas = (contasGeradas ?? []).map((conta) => conta.id);
+        if (idsContas.length) {
+          const { data: pagamentosExistentes, error: erroPagamentos } = await supabase
+            .from("contas_pagar_pagamentos")
+            .select("id")
+            .in("conta_id", idsContas);
+          if (erroPagamentos) throw erroPagamentos;
+          if ((pagamentosExistentes ?? []).length) {
+            throw new Error("Esta compra já possui parcela com pagamento registrado. Para proteger o extrato financeiro, não é possível editar a compra; registre os ajustes necessários separadamente.");
+          }
+        }
+      }
       const payload = { data_compra: data };
       const itensPayload = calculadas.map((l) => {
         // O banco legado aceita L, mas não ml. Normalize líquidos para litros
