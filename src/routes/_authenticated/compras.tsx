@@ -33,7 +33,7 @@ export const Route = createFileRoute("/_authenticated/compras")({
   component: Compras,
 });
 
-const MEDIDAS_COMPRA = ["g", "kg", "L", "un"] as const;
+const MEDIDAS_COMPRA = ["g", "kg", "L", "ml", "un"] as const;
 type Linha = { compraItemId?: string; insumo_id: string; quantidade: string; unidade: string; preco: string };
 const linhaVazia = (): Linha => ({ insumo_id: "", quantidade: "", unidade: "un", preco: "" });
 
