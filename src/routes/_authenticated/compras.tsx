@@ -90,8 +90,10 @@ function Compras() {
   const calculadas = linhas.map((l) => {
     const insumo = insumos.find((i) => i.id === l.insumo_id);
     const quantidade = numeroIngrediente(l.quantidade);
-    const preco = numeroIngrediente(l.preco);
-    return { ...l, insumo, quantidade, preco, total: preco };
+    const precoNumerico = numeroIngrediente(l.preco);
+    // Preserve l.preco as the raw string so intermediate input like "12," or "12."
+    // is not replaced with NaN while the user is typing.
+    return { ...l, insumo, quantidade, precoNumerico, total: precoNumerico };
   });
   const total = calculadas.reduce((s, l) => s + (Number.isFinite(l.total) ? l.total : 0), 0);
 
@@ -212,7 +214,7 @@ function Compras() {
   async function salvar(e: React.FormEvent) {
     e.preventDefault();
     if (!data) { toast.error("Informe a data da compra."); return; }
-    if (calculadas.some((l) => !l.insumo || !Number.isFinite(l.quantidade) || l.quantidade <= 0 || !Number.isFinite(l.preco) || l.preco < 0)) {
+    if (calculadas.some((l) => !l.insumo || !Number.isFinite(l.quantidade) || l.quantidade <= 0 || !Number.isFinite(l.precoNumerico) || l.precoNumerico < 0)) {
       toast.error("Selecione um insumo e confira a quantidade e o preço de cada item.");
       return;
     }
@@ -225,7 +227,7 @@ function Compras() {
         quantidade: l.quantidade,
         unidade: l.unidade,
         // O formulário recebe o valor total pago pelo pacote; o banco armazena o preço por medida.
-        preco_unitario: l.preco / l.quantidade,
+        preco_unitario: l.precoNumerico / l.quantidade,
       }));
       const assinatura = JSON.stringify({ ...(editandoCompraId ? { registro_id: editandoCompraId } : {}), payload, itens: itensPayload });
       if (!eventoSalvarRef.current || eventoSalvarRef.current.assinatura !== assinatura) {
