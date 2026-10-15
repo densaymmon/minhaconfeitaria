@@ -702,6 +702,7 @@ export type Database = {
       medida_fator: { Args: { u: string }; Returns: number }
       recalcular_custos_historicos: { Args: Record<PropertyKey, never>; Returns: number }
       registrar_inventario_fisico: { Args: { itens: Json; evento_id: string }; Returns: boolean }
+      registrar_local_compra: { Args: { registro_id: string; local_compra: string | null }; Returns: undefined }
       saldo_estoque: {
         Args: Record<PropertyKey, never>
         Returns: { insumo_id: string; nome: string; unidade_base: string | null; saldo: number }[]
