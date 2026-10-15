@@ -664,6 +664,14 @@ export type Database = {
       [_ in never]: never
     }
     Functions: {
+      ajustar_producao: {
+        Args: { pedido_item_id: string; quantidade_resultado: number; evento_id: string }
+        Returns: number
+      }
+      cancelar_compra: {
+        Args: { registro_id: string; evento_id: string }
+        Returns: boolean
+      }
       cancelar_conta_pagar: {
         Args: { p_conta_id: string; p_motivo: string; p_operacao_id: string }
         Returns: string
@@ -688,6 +696,17 @@ export type Database = {
         Returns: string
       }
       medida_base: { Args: { u: string }; Returns: string }
+      medida_fator: { Args: { u: string }; Returns: number }
+      recalcular_custos_historicos: { Args: Record<PropertyKey, never>; Returns: number }
+      registrar_inventario_fisico: { Args: { itens: Json; evento_id: string }; Returns: boolean }
+      saldo_estoque: {
+        Args: Record<PropertyKey, never>
+        Returns: { insumo_id: string; nome: string; unidade_base: string | null; saldo: number }[]
+      }
+      salvar_compra: {
+        Args: { payload: Json; itens: Json; registro_id?: string | null; evento_id?: string | null }
+        Returns: string
+      }
       medida_fator: { Args: { u: string }; Returns: number }
       salvar_pedido: {
         Args: { itens: Json; payload: Json; registro_id?: string }
