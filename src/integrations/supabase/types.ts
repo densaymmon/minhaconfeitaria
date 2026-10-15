@@ -707,7 +707,6 @@ export type Database = {
         Args: { payload: Json; itens: Json; registro_id?: string | null; evento_id?: string | null }
         Returns: string
       }
-      medida_fator: { Args: { u: string }; Returns: number }
       salvar_pedido: {
         Args: { itens: Json; payload: Json; registro_id?: string }
         Returns: string
