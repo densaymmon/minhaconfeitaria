@@ -50,7 +50,7 @@ function textoCampoNumerico(valor: unknown): string {
 // Aceita ponto ou vírgula como separador decimal sem alterar o texto durante a digitação.
 function numeroCompra(valor: string): number {
   const texto = valor.trim().replace(/\s/g, "");
-  if (!texto || /^[+-]?(?:\d+[.,]?|[.,])$/.test(texto)) return NaN;
+  if (!texto || /^[+-]?(?:\d+[.,]|[.,])$/.test(texto)) return NaN;
   if (!/^[+-]?[\d.,]+$/.test(texto)) return NaN;
   const virgula = texto.lastIndexOf(",");
   const ponto = texto.lastIndexOf(".");
@@ -381,7 +381,7 @@ function Compras() {
               </Field>
               <div className="grid grid-cols-2 gap-3">
                 <Field label="Quantidade">
-                  <Input required type="text" inputMode="decimal" lang="pt-BR" autoComplete="off" className="h-11" value={textoCampoNumerico(l.quantidade)} onChange={(e) => { const valorDigitado = e.currentTarget.value; setLinhas((s) => s.map((x, j) => (j === index ? { ...x, quantidade: valorDigitado } : x))); }} />
+                  <Input required type="text" inputMode="decimal" lang="pt-BR" autoComplete="off" className="h-11" value={l.quantidade} onChange={(e) => { const valorDigitado = e.currentTarget.value; setLinhas((s) => s.map((x, j) => (j === index ? { ...x, quantidade: valorDigitado } : x))); }} />
                 </Field>
                 <Field label="Medida">
                   <select value={l.unidade} onChange={(e) => setLinhas((s) => s.map((x, j) => (j === index ? { ...x, unidade: e.target.value } : x)))} className="h-11 w-full rounded-md border border-input bg-background px-3 text-sm">
