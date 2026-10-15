@@ -379,6 +379,8 @@ function Compras() {
         qc.invalidateQueries({ queryKey: ["compras"] }),
         qc.invalidateQueries({ queryKey: ["compra-itens"] }),
         qc.invalidateQueries({ queryKey: ["estoque"] }),
+        qc.invalidateQueries({ queryKey: ["contas-pagar"] }),
+        qc.invalidateQueries({ queryKey: ["contas-pagar-pagamentos"] }),
       ]);
       setData(hojeISO());
       setLocalCompra("");
@@ -512,6 +514,12 @@ function Compras() {
             </Field>
           </>}
         </div>
+        {formaPagamentoCompra === "credito" && total > 0 && (
+          <p className="rounded-lg bg-muted p-3 text-sm">
+            Previsão: {numeroParcelasCompra} parcela(s) de aproximadamente {brl(Math.floor(Math.round(total * 100) / Number(numeroParcelasCompra)) / 100)}.
+            {Number(numeroParcelasCompra) > 1 ? " A última parcela pode ter diferença de centavos para fechar exatamente o total." : ""}
+          </p>
+        )}
         <div className="space-y-3">
           {calculadas.map((l, index) => (
             <div key={index} className="space-y-3 rounded-xl border p-3">
@@ -557,7 +565,7 @@ function Compras() {
           <span className="text-lg font-bold">{brl(total)}</span>
         </div>
         <Button disabled={busy || !insumos.length} className="h-11 w-full">{busy ? "Salvando compra..." : editandoCompraId ? "Salvar alterações" : "Salvar compra"}</Button>
-        {editandoCompraId && <Button type="button" variant="outline" className="h-11 w-full" onClick={() => { setEditandoCompraId(null); setData(hojeISO()); setLocalCompra(""); setLinhas([linhaVazia()]); }}>Cancelar edição</Button>}
+        {editandoCompraId && <Button type="button" variant="outline" className="h-11 w-full" onClick={() => { setEditandoCompraId(null); setData(hojeISO()); setLocalCompra(""); setFormaPagamentoCompra("pix"); setNumeroParcelasCompra("1"); setPrimeiroVencimentoCompra(hojeISO()); setLinhas([linhaVazia()]); }}>Cancelar edição</Button>}
         {!insumos.length && <p className="text-sm text-muted-foreground">Cadastre primeiro os insumos em Produtos e receitas.</p>}
       </form>
 
@@ -617,6 +625,9 @@ function Compras() {
                             const itensCompra = itens.filter((i) => i.compra_id === c.id);
                             setData(c.data_compra);
                             setLocalCompra(c.local_compra ?? "");
+                            setFormaPagamentoCompra(c.forma_pagamento_compra ?? "pix");
+                            setNumeroParcelasCompra(String(c.numero_parcelas ?? 1));
+                            setPrimeiroVencimentoCompra(c.primeiro_vencimento ?? c.data_compra);
                             setLinhas(itensCompra.map((i) => ({ compraItemId: i.id, insumo_id: i.insumo_id, quantidade: textoCampoNumerico(i.quantidade), unidade: i.unidade, preco: valorExistenteEmCentavos(valorTotalEditavel(i)) })));
                             setEditandoCompraId(c.id);
                           }}>Editar</Button>
