@@ -22,6 +22,10 @@ DECLARE
   conta_cancelada_id uuid;
   status_conta text;
   data_pagamento_conta date;
+  compra_exclusao uuid;
+  compra_com_conta_ativa uuid;
+  conta_exclusao_id uuid;
+  conta_ativa_id uuid;
 BEGIN
   INSERT INTO public.contas_pagar(
     user_id, descricao, fornecedor, data_emissao, data_vencimento, valor, valor_pago
@@ -102,6 +106,69 @@ BEGIN
   IF NOT EXISTS (SELECT 1 FROM public.compras WHERE id = compra AND cancelada_em IS NOT NULL)
      OR NOT EXISTS (SELECT 1 FROM public.compra_itens WHERE compra_id = compra) THEN
     RAISE EXCEPTION 'O cancelamento apagou o histórico da compra.';
+  END IF;
+
+  -- Uma conta cancelada deve ser desvinculada atomicamente pela RPC de exclusão,
+  -- sem UPDATE direto do papel autenticado na tabela financeira.
+  compra_exclusao := public.salvar_compra(
+    '{"data_compra":"2026-10-15"}'::jsonb,
+    jsonb_build_array(jsonb_build_object(
+      'insumo_id', iid, 'quantidade', 25, 'unidade', 'g', 'preco_unitario', 0.01
+    )),
+    NULL,
+    '17171717-1717-4171-8171-171717171717'
+  );
+  INSERT INTO public.contas_pagar(
+    user_id, compra_id, descricao, data_emissao, data_vencimento, valor, valor_pago
+  ) VALUES (uid, compra_exclusao, 'Parcela cancelada para teste de exclusão',
+            current_date, current_date, 10, 0)
+  RETURNING id INTO conta_exclusao_id;
+  UPDATE public.contas_pagar SET status = 'cancelado' WHERE id = conta_exclusao_id;
+
+  PERFORM public.excluir_compra(
+    compra_exclusao, '18181818-1818-4181-8181-181818181818'
+  );
+  IF EXISTS (SELECT 1 FROM public.compras WHERE id = compra_exclusao) THEN
+    RAISE EXCEPTION 'A RPC não excluiu a compra vinculada apenas a uma conta cancelada.';
+  END IF;
+  IF NOT EXISTS (
+    SELECT 1 FROM public.contas_pagar
+    WHERE id = conta_exclusao_id AND status = 'cancelado' AND compra_id IS NULL
+  ) THEN
+    RAISE EXCEPTION 'A conta cancelada não foi preservada e desvinculada corretamente.';
+  END IF;
+
+  -- Contas ativas devem continuar impedindo a exclusão e preservar ambos os registros.
+  compra_com_conta_ativa := public.salvar_compra(
+    '{"data_compra":"2026-10-15"}'::jsonb,
+    jsonb_build_array(jsonb_build_object(
+      'insumo_id', iid, 'quantidade', 10, 'unidade', 'g', 'preco_unitario', 0.01
+    )),
+    NULL,
+    '19191919-1919-4191-8191-191919191919'
+  );
+  INSERT INTO public.contas_pagar(
+    user_id, compra_id, descricao, data_emissao, data_vencimento, valor, valor_pago
+  ) VALUES (uid, compra_com_conta_ativa, 'Parcela ativa para teste de bloqueio',
+            current_date, current_date, 10, 0)
+  RETURNING id INTO conta_ativa_id;
+  BEGIN
+    PERFORM public.excluir_compra(
+      compra_com_conta_ativa, '20202020-2020-4202-8202-202020202020'
+    );
+    RAISE EXCEPTION 'A exclusão deveria ser bloqueada por conta não cancelada.';
+  EXCEPTION WHEN raise_exception THEN
+    IF SQLERRM = 'A exclusão deveria ser bloqueada por conta não cancelada.' THEN
+      RAISE;
+    END IF;
+    IF position('não cancelada' IN SQLERRM) = 0 THEN RAISE; END IF;
+  END;
+  IF NOT EXISTS (SELECT 1 FROM public.compras WHERE id = compra_com_conta_ativa)
+     OR NOT EXISTS (
+       SELECT 1 FROM public.contas_pagar
+       WHERE id = conta_ativa_id AND compra_id = compra_com_conta_ativa AND status = 'pendente'
+     ) THEN
+    RAISE EXCEPTION 'A tentativa bloqueada alterou a compra ou a conta ativa.';
   END IF;
 
   PERFORM public.registrar_inventario_fisico(
