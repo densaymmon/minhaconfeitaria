@@ -217,6 +217,7 @@ BEGIN
   v_vencimento := NULLIF(p_dados->>'data_vencimento','')::date;
   v_obs := NULLIF(btrim(coalesce(p_dados->>'observacoes','')),'');
   IF length(v_descricao) NOT BETWEEN 1 AND 200 OR v_valor IS NULL OR v_valor <= 0
+     OR v_valor::text IN ('NaN','Infinity','-Infinity')
      OR v_emissao IS NULL OR v_vencimento IS NULL THEN
     RAISE EXCEPTION 'Informe descrição, datas e valor total válido.';
   END IF;
@@ -316,8 +317,9 @@ DECLARE
   v_conta_id uuid; v_pagamento public.contas_pagar_pagamentos%ROWTYPE; v_estornado numeric(12,2);
 BEGIN
   IF v_user IS NULL THEN RAISE EXCEPTION 'Sessão autenticada obrigatória.'; END IF;
-  IF p_valor IS NULL OR p_valor <= 0 OR NULLIF(btrim(coalesce(p_motivo,'')),'') IS NULL THEN
-    RAISE EXCEPTION 'Informe o valor e o motivo do estorno.';
+  IF p_valor IS NULL OR p_valor <= 0 OR p_valor::text IN ('NaN','Infinity','-Infinity')
+     OR length(btrim(coalesce(p_motivo,''))) NOT BETWEEN 1 AND 500 THEN
+    RAISE EXCEPTION 'Informe o valor e o motivo do estorno (até 500 caracteres).';
   END IF;
   v_hash := encode(digest(convert_to(jsonb_build_object('tipo','estorno','pagamento_id',p_pagamento_id,
     'valor',p_valor,'motivo',p_motivo)::text,'UTF8'),'sha256'),'hex');
@@ -356,7 +358,7 @@ AS $fn$
 DECLARE v_user uuid := auth.uid(); v_hash text; v_existente uuid; v_conta public.contas_pagar%ROWTYPE;
 BEGIN
   IF v_user IS NULL THEN RAISE EXCEPTION 'Sessão autenticada obrigatória.'; END IF;
-  IF NULLIF(btrim(coalesce(p_motivo,'')),'') IS NULL THEN RAISE EXCEPTION 'Informe o motivo do cancelamento.'; END IF;
+  IF length(btrim(coalesce(p_motivo,''))) NOT BETWEEN 1 AND 500 THEN RAISE EXCEPTION 'Informe o motivo do cancelamento (até 500 caracteres).'; END IF;
   v_hash := encode(digest(convert_to(jsonb_build_object('tipo','cancelar','conta_id',p_conta_id,'motivo',p_motivo)::text,'UTF8'),'sha256'),'hex');
   v_existente := public._conta_pagar_operacao_existente(v_user,p_operacao_id,'cancelar',v_hash);
   IF v_existente IS NOT NULL THEN RETURN v_existente; END IF;
