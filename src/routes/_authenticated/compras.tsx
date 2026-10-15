@@ -100,6 +100,7 @@ function Compras() {
   });
   const qc = useQueryClient();
   const [data, setData] = useState(hojeISO());
+  const [localCompra, setLocalCompra] = useState("");
   const [linhas, setLinhas] = useState<Linha[]>([linhaVazia()]);
   const [busy, setBusy] = useState(false);
   const eventoSalvarRef = useRef<{ assinatura: string; id: string } | null>(null);
@@ -263,13 +264,19 @@ function Compras() {
       if (!eventoSalvarRef.current || eventoSalvarRef.current.assinatura !== assinatura) {
         eventoSalvarRef.current = { assinatura, id: crypto.randomUUID() };
       }
-      const { error } = await supabase.rpc("salvar_compra", {
+      const { data: compraSalvaId, error } = await supabase.rpc("salvar_compra", {
         payload,
         itens: itensPayload,
         ...(editandoCompraId ? { registro_id: editandoCompraId } : {}),
         evento_id: eventoSalvarRef.current.id,
       });
       if (error) throw error;
+      if (!compraSalvaId) throw new Error("A compra foi processada sem retornar seu identificador.");
+      const { error: erroLocal } = await supabase.rpc("registrar_local_compra", {
+        registro_id: compraSalvaId,
+        local_compra: localCompra.trim() || null,
+      });
+      if (erroLocal) throw erroLocal;
       eventoSalvarRef.current = null;
       await Promise.all([
         qc.invalidateQueries({ queryKey: ["compras"] }),
@@ -277,6 +284,7 @@ function Compras() {
         qc.invalidateQueries({ queryKey: ["estoque"] }),
       ]);
       setData(hojeISO());
+      setLocalCompra("");
       setLinhas([linhaVazia()]);
       setEditandoCompraId(null);
       toast.success(editandoCompraId ? "Compra atualizada." : "Compra registrada.");
@@ -373,6 +381,17 @@ function Compras() {
         <Field label="Data da compra">
           <Input required type="date" className="h-11" value={data} onChange={(e) => setData(e.target.value)} />
         </Field>
+        <Field label="Local da compra (opcional)">
+          <Input
+            type="text"
+            autoComplete="organization"
+            maxLength={120}
+            placeholder="Ex.: Atacadão, Assaí, loja ou fornecedor"
+            className="h-11"
+            value={localCompra}
+            onChange={(e) => setLocalCompra(e.target.value)}
+          />
+        </Field>
         <div className="space-y-3">
           {calculadas.map((l, index) => (
             <div key={index} className="space-y-3 rounded-xl border p-3">
@@ -418,7 +437,7 @@ function Compras() {
           <span className="text-lg font-bold">{brl(total)}</span>
         </div>
         <Button disabled={busy || !insumos.length} className="h-11 w-full">{busy ? "Salvando compra..." : editandoCompraId ? "Salvar alterações" : "Salvar compra"}</Button>
-        {editandoCompraId && <Button type="button" variant="outline" className="h-11 w-full" onClick={() => { setEditandoCompraId(null); setData(hojeISO()); setLinhas([linhaVazia()]); }}>Cancelar edição</Button>}
+        {editandoCompraId && <Button type="button" variant="outline" className="h-11 w-full" onClick={() => { setEditandoCompraId(null); setData(hojeISO()); setLocalCompra(""); setLinhas([linhaVazia()]); }}>Cancelar edição</Button>}
         {!insumos.length && <p className="text-sm text-muted-foreground">Cadastre primeiro os insumos em Produtos e receitas.</p>}
       </form>
 
@@ -464,7 +483,10 @@ function Compras() {
               return (
                 <div key={c.id} className="py-3">
                   <div className="flex items-center justify-between gap-3">
-                    <p className="font-medium">{dataBR(c.data_compra)}</p>
+                    <div className="min-w-0">
+                      <p className="font-medium">{dataBR(c.data_compra)}</p>
+                      {c.local_compra && <p className="text-xs text-muted-foreground">{c.local_compra}</p>}
+                    </div>
                     <div className="flex flex-wrap items-center justify-end gap-2">
                       <b className={c.cancelada_em ? "text-muted-foreground line-through" : ""}>{Number.isFinite(Number(c.total)) ? brl(Number(c.total)) : "Valor indisponível"}</b>
                       {c.cancelada_em ? (
@@ -474,6 +496,7 @@ function Compras() {
                           <Button type="button" variant="outline" size="sm" disabled={busy} onClick={() => {
                             const itensCompra = itens.filter((i) => i.compra_id === c.id);
                             setData(c.data_compra);
+                            setLocalCompra(c.local_compra ?? "");
                             setLinhas(itensCompra.map((i) => ({ compraItemId: i.id, insumo_id: i.insumo_id, quantidade: textoCampoNumerico(i.quantidade), unidade: i.unidade, preco: valorTotalEditavel(i) })));
                             setEditandoCompraId(c.id);
                           }}>Editar</Button>
