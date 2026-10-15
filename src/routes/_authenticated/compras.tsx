@@ -67,9 +67,15 @@ function numeroCompra(valor: string): number {
     if (!parteDecimal || !/^\d+$/.test(parteDecimal)) return NaN;
     normalizado = texto.replace(separadorMilhar, "").replace(separadorDecimal, ".");
   } else if (virgula >= 0 || ponto >= 0) {
-    // Um único ponto ou vírgula é sempre decimal; aceita 12,5 e 12.5.
-    normalizado = texto.replace(",", ".");
-    if ((normalizado.match(/\./g) ?? []).length > 1) return NaN;
+    // Em formato brasileiro, "1.800" representa mil e oitocentos.
+    // Vírgula continua sendo separador decimal; ponto com exatamente 3 dígitos
+    // finais é tratado como separador de milhar para quantidades como 1.800 ml.
+    if (ponto >= 0 && /^\d{1,3}(?:\.\d{3})+$/.test(semSinal)) {
+      normalizado = texto.replace(/\./g, "");
+    } else {
+      normalizado = texto.replace(",", ".");
+      if ((normalizado.match(/\./g) ?? []).length > 1) return NaN;
+    }
   }
 
   if (!/^[+-]?(?:\d+(?:\.\d+)?|\.\d+)$/.test(normalizado)) return NaN;
@@ -319,13 +325,20 @@ function Compras() {
     setBusy(true);
     try {
       const payload = { data_compra: data };
-      const itensPayload = calculadas.map((l) => ({
-        insumo_id: l.insumo!.id,
-        quantidade: l.quantidadeNumerica,
-        unidade: l.unidade,
-        // O formulário recebe o valor total pago pelo pacote; o banco armazena o preço por medida.
-        preco_unitario: l.precoNumerico / l.quantidadeNumerica,
-      }));
+      const itensPayload = calculadas.map((l) => {
+        // O banco legado aceita L, mas não ml. Normalize líquidos para litros
+        // no payload para que "1800 ml" seja persistido como "1,8 L" e o estoque
+        // receba a quantidade correta sem exigir alteração manual do banco.
+        const quantidadeBanco = l.unidade === "ml" ? l.quantidadeNumerica / 1000 : l.quantidadeNumerica;
+        const unidadeBanco = l.unidade === "ml" ? "L" : l.unidade;
+        return {
+          insumo_id: l.insumo!.id,
+          quantidade: quantidadeBanco,
+          unidade: unidadeBanco,
+          // O formulário recebe o valor total pago pelo pacote; o banco armazena o preço por medida.
+          preco_unitario: l.precoNumerico / quantidadeBanco,
+        };
+      });
       const assinatura = JSON.stringify({ ...(editandoCompraId ? { registro_id: editandoCompraId } : {}), payload, itens: itensPayload });
       if (!eventoSalvarRef.current || eventoSalvarRef.current.assinatura !== assinatura) {
         eventoSalvarRef.current = { assinatura, id: crypto.randomUUID() };
