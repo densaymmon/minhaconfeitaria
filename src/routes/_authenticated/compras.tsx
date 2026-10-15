@@ -88,7 +88,7 @@ function Compras() {
     const insumo = insumos.find((i) => i.id === l.insumo_id);
     const quantidade = numeroIngrediente(l.quantidade);
     const preco = numeroIngrediente(l.preco);
-    return { ...l, insumo, quantidade, preco, total: quantidade * preco };
+    return { ...l, insumo, quantidade, preco, total: preco };
   });
   const total = calculadas.reduce((s, l) => s + (Number.isFinite(l.total) ? l.total : 0), 0);
 
@@ -221,7 +221,8 @@ function Compras() {
         insumo_id: l.insumo!.id,
         quantidade: l.quantidade,
         unidade: l.unidade,
-        preco_unitario: l.preco,
+        // O formulário recebe o valor total pago pelo pacote; o banco armazena o preço por medida.
+        preco_unitario: l.preco / l.quantidade,
       }));
       const assinatura = JSON.stringify({ ...(editandoCompraId ? { registro_id: editandoCompraId } : {}), payload, itens: itensPayload });
       if (!eventoSalvarRef.current || eventoSalvarRef.current.assinatura !== assinatura) {
@@ -357,11 +358,11 @@ function Compras() {
                   </select>
                 </Field>
               </div>
-              <Field label="Preço de cada item (R$)">
-                <Input required type="text" inputMode="text" autoComplete="off" className="h-11" value={l.preco} onChange={(e) => { const valorDigitado = e.currentTarget.value; setLinhas((s) => s.map((x, j) => (j === index ? { ...x, preco: valorDigitado } : x))); }} />
+              <Field label="Valor total pago pelo produto (R$)">
+                <Input required type="text" inputMode="decimal" autoComplete="off" className="h-11" value={textoCampoNumerico(l.preco)} onChange={(e) => { const valorDigitado = e.currentTarget.value; setLinhas((s) => s.map((x, j) => (j === index ? { ...x, preco: valorDigitado } : x))); }} />
               </Field>
               <div className="flex justify-between text-sm">
-                <span className="text-muted-foreground">Total do item</span>
+                <span className="text-muted-foreground">Valor total pago</span>
                 <b>{Number.isFinite(l.total) ? brl(l.total) : "—"}</b>
               </div>
             </div>
@@ -431,7 +432,7 @@ function Compras() {
                           <Button type="button" variant="outline" size="sm" disabled={busy} onClick={() => {
                             const itensCompra = itens.filter((i) => i.compra_id === c.id);
                             setData(c.data_compra);
-                            setLinhas(itensCompra.map((i) => ({ compraItemId: i.id, insumo_id: i.insumo_id, quantidade: String(i.quantidade), unidade: i.unidade, preco: String(i.preco_unitario) })));
+                            setLinhas(itensCompra.map((i) => ({ compraItemId: i.id, insumo_id: i.insumo_id, quantidade: String(i.quantidade), unidade: i.unidade, preco: textoCampoNumerico(i.total) })));
                             setEditandoCompraId(c.id);
                           }}>Editar</Button>
                           <Button type="button" variant="outline" size="sm" disabled={busy} onClick={() => void cancelarCompra(c)}>Cancelar</Button>
