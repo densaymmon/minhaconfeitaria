@@ -1,4 +1,11 @@
 -- Exclui compras do histórico com proteção para o estoque e o financeiro.
+-- Permite registrar a exclusão como evento idempotente.
+ALTER TABLE public.estoque_eventos
+  DROP CONSTRAINT IF EXISTS estoque_eventos_tipo_check;
+ALTER TABLE public.estoque_eventos
+  ADD CONSTRAINT estoque_eventos_tipo_check
+  CHECK (tipo = ANY (ARRAY['salvar_compra'::text, 'cancelar_compra'::text, 'excluir_compra'::text]));
+
 CREATE OR REPLACE FUNCTION public.excluir_compra(
   registro_id uuid,
   evento_id uuid
