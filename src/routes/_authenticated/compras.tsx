@@ -107,6 +107,7 @@ function Compras() {
   const [inventarioFisico, setInventarioFisico] = useState<Record<string, string>>({});
   const eventoInventarioRef = useRef<{ assinatura: string; id: string } | null>(null);
   const eventoCancelarRef = useRef<{ compraId: string; id: string } | null>(null);
+  const eventoExcluirRef = useRef<{ compraId: string; id: string } | null>(null);
   const [editandoCompraId, setEditandoCompraId] = useState<string | null>(null);
   const [de, setDe] = useState("");
   const [ate, setAte] = useState("");
@@ -197,6 +198,44 @@ function Compras() {
       toast.success("Compra cancelada. O histórico foi preservado.");
     } catch (erro) {
       toast.error(erro instanceof Error ? erro.message : "Não foi possível cancelar a compra.");
+    } finally {
+      setBusy(false);
+    }
+  }
+
+  async function excluirCompra(compra: { id: string; cancelada_em: string | null }) {
+    if (!confirm("Excluir permanentemente esta compra? Ela sairá do histórico. Se movimentou o estoque, o saldo será estornado. Compras vinculadas a contas a pagar não poderão ser excluídas.")) return;
+    if (!eventoExcluirRef.current || eventoExcluirRef.current.compraId !== compra.id) {
+      eventoExcluirRef.current = { compraId: compra.id, id: crypto.randomUUID() };
+    }
+    setBusy(true);
+    try {
+      const { error } = await supabase.rpc("excluir_compra", {
+        registro_id: compra.id,
+        evento_id: eventoExcluirRef.current.id,
+      });
+      if (error) throw error;
+      eventoExcluirRef.current = null;
+      await Promise.all([
+        qc.invalidateQueries({ queryKey: ["compras"] }),
+        qc.invalidateQueries({ queryKey: ["compra-itens"] }),
+        qc.invalidateQueries({ queryKey: ["estoque"] }),
+        qc.invalidateQueries({ queryKey: ["contas-pagar"] }),
+      ]);
+      if (editandoCompraId === compra.id) {
+        setEditandoCompraId(null);
+        setData(hojeISO());
+        setLocalCompra("");
+        setLinhas([linhaVazia()]);
+      }
+      toast.success("Compra excluída do histórico.");
+    } catch (erro) {
+      const mensagem = erro instanceof Error
+        ? erro.message
+        : typeof erro === "object" && erro !== null && "message" in erro && typeof erro.message === "string"
+          ? erro.message
+          : "Não foi possível excluir a compra.";
+      toast.error(mensagem);
     } finally {
       setBusy(false);
     }
@@ -503,6 +542,9 @@ function Compras() {
                           <Button type="button" variant="outline" size="sm" disabled={busy} onClick={() => void cancelarCompra(c)}>Cancelar</Button>
                         </>
                       )}
+                      <Button type="button" variant="destructive" size="sm" disabled={busy} onClick={() => void excluirCompra(c)}>
+                        <Trash2 className="mr-1 size-3.5" /> Excluir
+                      </Button>
                     </div>
                   </div>
                   <p className="mt-1 text-xs text-muted-foreground">
