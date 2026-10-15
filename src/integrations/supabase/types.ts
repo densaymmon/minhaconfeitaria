@@ -97,6 +97,7 @@ export type Database = {
       }
       compras: {
         Row: {
+          cancelada_em: string | null
           created_at: string
           data_compra: string
           id: string
@@ -104,6 +105,7 @@ export type Database = {
           user_id: string
         }
         Insert: {
+          cancelada_em?: string | null
           created_at?: string
           data_compra: string
           id?: string
@@ -111,6 +113,7 @@ export type Database = {
           user_id?: string
         }
         Update: {
+          cancelada_em?: string | null
           created_at?: string
           data_compra?: string
           id?: string
