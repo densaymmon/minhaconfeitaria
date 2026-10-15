@@ -50,18 +50,29 @@ function textoCampoNumerico(valor: unknown): string {
 // Aceita ponto ou vírgula como separador decimal sem alterar o texto durante a digitação.
 function numeroCompra(valor: string): number {
   const texto = valor.trim().replace(/\s/g, "");
+  // Campo vazio ou separador no final é um estado normal durante a digitação.
   if (!texto || /^[+-]?(?:\d+[.,]|[.,])$/.test(texto)) return NaN;
   if (!/^[+-]?[\d.,]+$/.test(texto)) return NaN;
-  const virgula = texto.lastIndexOf(",");
-  const ponto = texto.lastIndexOf(".");
+
+  const semSinal = texto.replace(/^[+-]/, "");
+  const virgula = semSinal.lastIndexOf(",");
+  const ponto = semSinal.lastIndexOf(".");
   let normalizado = texto;
+
   if (virgula >= 0 && ponto >= 0) {
+    // Quando há os dois sinais, o último é decimal e o outro é separador de milhar.
     const separadorDecimal = virgula > ponto ? "," : ".";
     const separadorMilhar = separadorDecimal === "," ? /\./g : /,/g;
+    const parteDecimal = semSinal.slice(Math.max(virgula, ponto) + 1);
+    if (!parteDecimal || !/^\d+$/.test(parteDecimal)) return NaN;
     normalizado = texto.replace(separadorMilhar, "").replace(separadorDecimal, ".");
-  } else if (virgula >= 0) {
+  } else if (virgula >= 0 || ponto >= 0) {
+    // Um único ponto ou vírgula é sempre decimal; aceita 12,5 e 12.5.
     normalizado = texto.replace(",", ".");
+    if ((normalizado.match(/\./g) ?? []).length > 1) return NaN;
   }
+
+  if (!/^[+-]?(?:\d+(?:\.\d+)?|\.\d+)$/.test(normalizado)) return NaN;
   const numero = Number(normalizado);
   return Number.isFinite(numero) ? numero : NaN;
 }
@@ -381,7 +392,7 @@ function Compras() {
               </Field>
               <div className="grid grid-cols-2 gap-3">
                 <Field label="Quantidade">
-                  <Input required type="text" inputMode="decimal" lang="pt-BR" autoComplete="off" className="h-11" value={l.quantidade} onChange={(e) => { const valorDigitado = e.currentTarget.value; setLinhas((s) => s.map((x, j) => (j === index ? { ...x, quantidade: valorDigitado } : x))); }} />
+                  <Input required type="text" inputMode="decimal" lang="pt-BR" autoComplete="off" className="h-11" value={textoCampoNumerico(l.quantidade)} onChange={(e) => { const valorDigitado = e.currentTarget.value; setLinhas((s) => s.map((x, j) => (j === index ? { ...x, quantidade: valorDigitado } : x))); }} />
                 </Field>
                 <Field label="Medida">
                   <select value={l.unidade} onChange={(e) => setLinhas((s) => s.map((x, j) => (j === index ? { ...x, unidade: e.target.value } : x)))} className="h-11 w-full rounded-md border border-input bg-background px-3 text-sm">
@@ -463,7 +474,7 @@ function Compras() {
                           <Button type="button" variant="outline" size="sm" disabled={busy} onClick={() => {
                             const itensCompra = itens.filter((i) => i.compra_id === c.id);
                             setData(c.data_compra);
-                            setLinhas(itensCompra.map((i) => ({ compraItemId: i.id, insumo_id: i.insumo_id, quantidade: String(i.quantidade), unidade: i.unidade, preco: valorTotalEditavel(i) })));
+                            setLinhas(itensCompra.map((i) => ({ compraItemId: i.id, insumo_id: i.insumo_id, quantidade: textoCampoNumerico(i.quantidade), unidade: i.unidade, preco: valorTotalEditavel(i) })));
                             setEditandoCompraId(c.id);
                           }}>Editar</Button>
                           <Button type="button" variant="outline" size="sm" disabled={busy} onClick={() => void cancelarCompra(c)}>Cancelar</Button>
