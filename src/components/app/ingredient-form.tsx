@@ -14,7 +14,7 @@ import { Save, Plus } from "lucide-react";
 // into NaN or changing the text while the user is typing.
 function parseCampoDecimal(valor: string): number {
   const texto = valor.trim().replace(/\s/g, "");
-  if (!texto || /^[+-]?(?:\d+[.,]?|[.,])$/.test(texto)) return NaN;
+  if (!texto || /^[+-]?(?:\d+[.,]|[.,])$/.test(texto)) return NaN;
   if (!/^[+-]?[\d.,]+$/.test(texto)) return NaN;
   const ultimaVirgula = texto.lastIndexOf(",");
   const ultimoPonto = texto.lastIndexOf(".");
