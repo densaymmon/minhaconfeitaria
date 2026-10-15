@@ -89,7 +89,7 @@ function valorTotalEditavel(item: { total: unknown; preco_unitario: unknown; qua
 // Formata a digitação como dinheiro: os últimos dois dígitos sempre são os centavos.
 // Ex.: "1234" -> "12,34" e "123456" -> "1.234,56".
 function formatarValorMonetario(valor: string): string {
-  const digitos = valor.replace(/\\D/g, "");
+  const digitos = valor.replace(/\D/g, "");
   if (!digitos) return "";
   const centavos = Number(digitos);
   if (!Number.isSafeInteger(centavos)) return "";
