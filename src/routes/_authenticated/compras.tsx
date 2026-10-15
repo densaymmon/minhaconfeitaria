@@ -251,7 +251,14 @@ function Compras() {
       setEditandoCompraId(null);
       toast.success(editandoCompraId ? "Compra atualizada." : "Compra registrada.");
     } catch (erro) {
-      toast.error(erro instanceof Error ? erro.message : "Não foi possível salvar a compra.");
+      // Supabase returns structured error objects rather than native Error instances.
+      // Surface the real backend message so save failures can be diagnosed accurately.
+      const mensagem = erro instanceof Error
+        ? erro.message
+        : typeof erro === "object" && erro !== null && "message" in erro && typeof erro.message === "string"
+          ? erro.message
+          : "Não foi possível salvar a compra.";
+      toast.error(mensagem);
     } finally {
       setBusy(false);
     }
