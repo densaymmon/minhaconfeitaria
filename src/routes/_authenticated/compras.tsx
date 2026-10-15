@@ -253,7 +253,37 @@ function Compras() {
       eventoExcluirRef.current = { compraId: compra.id, id: crypto.randomUUID() };
     }
     setBusy(true);
+    let contasDesvinculadas: string[] = [];
     try {
+      // Contas canceladas devem continuar no histórico financeiro, mas não devem
+      // impedir a exclusão da compra a que estavam vinculadas.
+      const { data: contasVinculadas, error: erroConsultaContas } = await supabase
+        .from("contas_pagar")
+        .select("id, status")
+        .eq("compra_id", compra.id);
+      if (erroConsultaContas) throw erroConsultaContas;
+
+      const contasAtivas = (contasVinculadas ?? []).filter((conta) => conta.status !== "cancelado");
+      if (contasAtivas.length > 0) {
+        throw new Error(
+          "Não é possível excluir esta compra porque ainda existem contas a pagar não canceladas. Cancele ou resolva todas as parcelas antes de excluir."
+        );
+      }
+
+      contasDesvinculadas = (contasVinculadas ?? [])
+        .filter((conta) => conta.status === "cancelado")
+        .map((conta) => conta.id);
+
+      if (contasDesvinculadas.length > 0) {
+        const { error: erroDesvincular } = await supabase
+          .from("contas_pagar")
+          .update({ compra_id: null })
+          .in("id", contasDesvinculadas)
+          .eq("compra_id", compra.id)
+          .eq("status", "cancelado");
+        if (erroDesvincular) throw erroDesvincular;
+      }
+
       const { error } = await supabase.rpc("excluir_compra", {
         registro_id: compra.id,
         evento_id: eventoExcluirRef.current.id,
@@ -274,12 +304,28 @@ function Compras() {
       }
       toast.success("Compra excluída do histórico.");
     } catch (erro) {
+      // Se a exclusão falhar após desvincular contas canceladas, tenta restaurar
+      // os vínculos originais para não deixar o financeiro parcialmente alterado.
+      let erroRestauracao: unknown = null;
+      if (contasDesvinculadas.length > 0) {
+        const { error } = await supabase
+          .from("contas_pagar")
+          .update({ compra_id: compra.id })
+          .in("id", contasDesvinculadas)
+          .is("compra_id", null)
+          .eq("status", "cancelado");
+        erroRestauracao = error;
+      }
       const mensagem = erro instanceof Error
         ? erro.message
         : typeof erro === "object" && erro !== null && "message" in erro && typeof erro.message === "string"
           ? erro.message
           : "Não foi possível excluir a compra.";
-      toast.error(mensagem);
+      toast.error(
+        erroRestauracao
+          ? `${mensagem} Atenção: não foi possível restaurar automaticamente o vínculo das contas canceladas. Confira o financeiro antes de tentar novamente.`
+          : mensagem
+      );
     } finally {
       setBusy(false);
     }
