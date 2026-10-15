@@ -123,7 +123,7 @@ function Compras() {
     const precoNumerico = numeroCompra(l.preco);
     // Preserve l.preco as the raw string so intermediate input like "12," or "12."
     // is not replaced with NaN while the user is typing.
-    return { ...l, insumo, quantidade, precoNumerico, total: precoNumerico };
+    return { ...l, insumo, quantidadeTexto: l.quantidade, quantidade, precoNumerico, total: precoNumerico };
   });
   const total = calculadas.reduce((s, l) => s + (Number.isFinite(l.total) ? l.total : 0), 0);
 
@@ -392,7 +392,7 @@ function Compras() {
               </Field>
               <div className="grid grid-cols-2 gap-3">
                 <Field label="Quantidade">
-                  <Input required type="text" inputMode="decimal" lang="pt-BR" autoComplete="off" className="h-11" value={textoCampoNumerico(l.quantidade)} onChange={(e) => { const valorDigitado = e.currentTarget.value; setLinhas((s) => s.map((x, j) => (j === index ? { ...x, quantidade: valorDigitado } : x))); }} />
+                  <Input required type="text" inputMode="decimal" lang="pt-BR" autoComplete="off" className="h-11" value={textoCampoNumerico(l.quantidadeTexto)} onChange={(e) => { const valorDigitado = e.currentTarget.value; setLinhas((s) => s.map((x, j) => (j === index ? { ...x, quantidade: valorDigitado } : x))); }} />
                 </Field>
                 <Field label="Medida">
                   <select value={l.unidade} onChange={(e) => setLinhas((s) => s.map((x, j) => (j === index ? { ...x, unidade: e.target.value } : x)))} className="h-11 w-full rounded-md border border-input bg-background px-3 text-sm">
