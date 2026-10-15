@@ -101,6 +101,7 @@ export type Database = {
           created_at: string
           data_compra: string
           id: string
+          local_compra: string | null
           total: number
           user_id: string
         }
@@ -109,6 +110,7 @@ export type Database = {
           created_at?: string
           data_compra: string
           id?: string
+          local_compra?: string | null
           total?: number
           user_id?: string
         }
@@ -117,6 +119,7 @@ export type Database = {
           created_at?: string
           data_compra?: string
           id?: string
+          local_compra?: string | null
           total?: number
           user_id?: string
         }
