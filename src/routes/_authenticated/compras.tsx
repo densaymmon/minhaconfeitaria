@@ -134,6 +134,9 @@ function Compras() {
   const qc = useQueryClient();
   const [data, setData] = useState(hojeISO());
   const [localCompra, setLocalCompra] = useState("");
+  const [formaPagamentoCompra, setFormaPagamentoCompra] = useState("pix");
+  const [numeroParcelasCompra, setNumeroParcelasCompra] = useState("1");
+  const [primeiroVencimentoCompra, setPrimeiroVencimentoCompra] = useState(hojeISO());
   const [linhas, setLinhas] = useState<Linha[]>([linhaVazia()]);
   const [busy, setBusy] = useState(false);
   const eventoSalvarRef = useRef<{ assinatura: string; id: string } | null>(null);
@@ -364,6 +367,13 @@ function Compras() {
         local_compra: localCompra.trim() || null,
       });
       if (erroLocal) throw erroLocal;
+      const { error: erroFinanceiro } = await supabase.rpc("registrar_pagamento_compra", {
+        p_compra_id: compraSalvaId,
+        p_forma_pagamento: formaPagamentoCompra,
+        p_numero_parcelas: formaPagamentoCompra === "credito" ? Number(numeroParcelasCompra) : 1,
+        p_primeiro_vencimento: formaPagamentoCompra === "credito" ? primeiroVencimentoCompra : data,
+      });
+      if (erroFinanceiro) throw erroFinanceiro;
       eventoSalvarRef.current = null;
       await Promise.all([
         qc.invalidateQueries({ queryKey: ["compras"] }),
@@ -372,6 +382,9 @@ function Compras() {
       ]);
       setData(hojeISO());
       setLocalCompra("");
+      setFormaPagamentoCompra("pix");
+      setNumeroParcelasCompra("1");
+      setPrimeiroVencimentoCompra(hojeISO());
       setLinhas([linhaVazia()]);
       setEditandoCompraId(null);
       toast.success(editandoCompraId ? "Compra atualizada." : "Compra registrada.");
@@ -479,6 +492,26 @@ function Compras() {
             onChange={(e) => setLocalCompra(e.target.value)}
           />
         </Field>
+        <div className="grid grid-cols-1 gap-3 sm:grid-cols-2">
+          <Field label="Método de pagamento">
+            <select required value={formaPagamentoCompra} onChange={(e) => setFormaPagamentoCompra(e.target.value)} className="h-11 w-full rounded-md border border-input bg-background px-3 text-sm">
+              <option value="credito">Cartão de crédito</option>
+              <option value="debito">Cartão de débito</option>
+              <option value="pix">Pix</option>
+              <option value="dinheiro">Dinheiro</option>
+            </select>
+          </Field>
+          {formaPagamentoCompra === "credito" && <>
+            <Field label="Parcelamento">
+              <select required value={numeroParcelasCompra} onChange={(e) => setNumeroParcelasCompra(e.target.value)} className="h-11 w-full rounded-md border border-input bg-background px-3 text-sm">
+                {Array.from({ length: 24 }, (_, i) => i + 1).map((n) => <option key={n} value={String(n)}>{n}x</option>)}
+              </select>
+            </Field>
+            <Field label="Vencimento da 1ª parcela" hint="As próximas parcelas vencem mensalmente a partir desta data.">
+              <Input required type="date" className="h-11" value={primeiroVencimentoCompra} onChange={(e) => setPrimeiroVencimentoCompra(e.target.value)} />
+            </Field>
+          </>}
+        </div>
         <div className="space-y-3">
           {calculadas.map((l, index) => (
             <div key={index} className="space-y-3 rounded-xl border p-3">
