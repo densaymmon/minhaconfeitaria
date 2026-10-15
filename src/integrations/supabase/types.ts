@@ -100,8 +100,11 @@ export type Database = {
           cancelada_em: string | null
           created_at: string
           data_compra: string
+          forma_pagamento_compra: string
           id: string
           local_compra: string | null
+          numero_parcelas: number
+          primeiro_vencimento: string | null
           total: number
           user_id: string
         }
@@ -109,8 +112,11 @@ export type Database = {
           cancelada_em?: string | null
           created_at?: string
           data_compra: string
+          forma_pagamento_compra?: string
           id?: string
           local_compra?: string | null
+          numero_parcelas?: number
+          primeiro_vencimento?: string | null
           total?: number
           user_id?: string
         }
@@ -118,8 +124,11 @@ export type Database = {
           cancelada_em?: string | null
           created_at?: string
           data_compra?: string
+          forma_pagamento_compra?: string
           id?: string
           local_compra?: string | null
+          numero_parcelas?: number
+          primeiro_vencimento?: string | null
           total?: number
           user_id?: string
         }
@@ -136,6 +145,9 @@ export type Database = {
           descricao: string
           fornecedor: string | null
           forma_pagamento: string | null
+          gerada_automaticamente: boolean
+          compra_parcela_numero: number | null
+          compra_parcelas_total: number | null
           id: string
           motivo_cancelamento: string | null
           observacoes: string | null
@@ -155,6 +167,9 @@ export type Database = {
           descricao: string
           fornecedor?: string | null
           forma_pagamento?: string | null
+          gerada_automaticamente?: boolean
+          compra_parcela_numero?: number | null
+          compra_parcelas_total?: number | null
           id?: string
           motivo_cancelamento?: string | null
           observacoes?: string | null
@@ -174,6 +189,9 @@ export type Database = {
           descricao?: string
           fornecedor?: string | null
           forma_pagamento?: string | null
+          gerada_automaticamente?: boolean
+          compra_parcela_numero?: number | null
+          compra_parcelas_total?: number | null
           id?: string
           motivo_cancelamento?: string | null
           observacoes?: string | null
@@ -707,6 +725,7 @@ export type Database = {
       recalcular_custos_historicos: { Args: Record<PropertyKey, never>; Returns: number }
       registrar_inventario_fisico: { Args: { itens: Json; evento_id: string }; Returns: boolean }
       registrar_local_compra: { Args: { registro_id: string; local_compra: string | null }; Returns: undefined }
+      registrar_pagamento_compra: { Args: { p_compra_id: string; p_forma_pagamento: string; p_numero_parcelas?: number; p_primeiro_vencimento?: string }; Returns: boolean }
       saldo_estoque: {
         Args: Record<PropertyKey, never>
         Returns: { insumo_id: string; nome: string; unidade_base: string | null; saldo: number }[]
