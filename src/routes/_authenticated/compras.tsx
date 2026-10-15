@@ -42,7 +42,18 @@ const linhaVazia = (): Linha => ({ insumo_id: "", quantidade: "", unidade: "un",
 function textoCampoNumerico(valor: unknown): string {
   if (typeof valor === "number") return Number.isFinite(valor) ? String(valor) : "";
   if (typeof valor !== "string") return "";
-  return ["NaN", "Infinity", "-Infinity", "undefined", "null"].includes(valor.trim()) ? "" : valor;
+  const texto = valor.trim();
+  if (!texto || ["nan", "infinity", "-infinity", "undefined", "null"].includes(texto.toLowerCase())) return "";
+  return texto;
+}
+
+function valorTotalEditavel(item: { total: unknown; preco_unitario: unknown; quantidade: unknown }): string {
+  const total = typeof item.total === "number" ? item.total : Number(item.total);
+  if (Number.isFinite(total) && total >= 0) return String(total);
+  const unitario = typeof item.preco_unitario === "number" ? item.preco_unitario : Number(item.preco_unitario);
+  const quantidade = typeof item.quantidade === "number" ? item.quantidade : Number(item.quantidade);
+  const calculado = unitario * quantidade;
+  return Number.isFinite(calculado) && calculado >= 0 ? String(calculado) : "";
 }
 
 function Compras() {
@@ -416,7 +427,7 @@ function Compras() {
                   <div className="flex items-center justify-between gap-3">
                     <p className="font-medium">{dataBR(c.data_compra)}</p>
                     <div className="flex flex-wrap items-center justify-end gap-2">
-                      <b className={c.cancelada_em ? "text-muted-foreground line-through" : ""}>{brl(Number(c.total))}</b>
+                      <b className={c.cancelada_em ? "text-muted-foreground line-through" : ""}>{Number.isFinite(Number(c.total)) ? brl(Number(c.total)) : "Valor indisponível"}</b>
                       {c.cancelada_em ? (
                         <span className="rounded-md bg-muted px-2 py-1 text-xs font-medium text-muted-foreground">Cancelada</span>
                       ) : (
@@ -424,7 +435,7 @@ function Compras() {
                           <Button type="button" variant="outline" size="sm" disabled={busy} onClick={() => {
                             const itensCompra = itens.filter((i) => i.compra_id === c.id);
                             setData(c.data_compra);
-                            setLinhas(itensCompra.map((i) => ({ compraItemId: i.id, insumo_id: i.insumo_id, quantidade: String(i.quantidade), unidade: i.unidade, preco: textoCampoNumerico(i.total) })));
+                            setLinhas(itensCompra.map((i) => ({ compraItemId: i.id, insumo_id: i.insumo_id, quantidade: String(i.quantidade), unidade: i.unidade, preco: valorTotalEditavel(i) })));
                             setEditandoCompraId(c.id);
                           }}>Editar</Button>
                           <Button type="button" variant="outline" size="sm" disabled={busy} onClick={() => void cancelarCompra(c)}>Cancelar</Button>
