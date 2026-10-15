@@ -332,7 +332,7 @@ function ContasPagar() {
           <Field label="Vencimento">
             <Input required type="date" className="h-11" value={f.data_vencimento} onChange={(e) => setF({ ...f, data_vencimento: e.target.value })} />
           </Field>
-          <Field label="Valor total (R$)" hint={temPagamentosEditada ? "Protegido após o primeiro pagamento" : undefined}>
+          <Field label="Valor total (R$)" hint={temPagamentosEditada ? "Protegido após o primeiro pagamento" : "Pode ser alterado enquanto não houver pagamentos."}>
             <Input required inputMode="decimal" disabled={temPagamentosEditada} className="h-11" value={f.valor} onChange={(e) => setF({ ...f, valor: e.target.value })} />
           </Field>
         </div>
