@@ -47,6 +47,25 @@ function textoCampoNumerico(valor: unknown): string {
   return texto;
 }
 
+// Aceita ponto ou vírgula como separador decimal sem alterar o texto durante a digitação.
+function numeroCompra(valor: string): number {
+  const texto = valor.trim().replace(/\s/g, "");
+  if (!texto || /^[+-]?(?:\d+[.,]?|[.,])$/.test(texto)) return NaN;
+  if (!/^[+-]?[\d.,]+$/.test(texto)) return NaN;
+  const virgula = texto.lastIndexOf(",");
+  const ponto = texto.lastIndexOf(".");
+  let normalizado = texto;
+  if (virgula >= 0 && ponto >= 0) {
+    const separadorDecimal = virgula > ponto ? "," : ".";
+    const separadorMilhar = separadorDecimal === "," ? /\./g : /,/g;
+    normalizado = texto.replace(separadorMilhar, "").replace(separadorDecimal, ".");
+  } else if (virgula >= 0) {
+    normalizado = texto.replace(",", ".");
+  }
+  const numero = Number(normalizado);
+  return Number.isFinite(numero) ? numero : NaN;
+}
+
 function valorTotalEditavel(item: { total: unknown; preco_unitario: unknown; quantidade: unknown }): string {
   const total = typeof item.total === "number" ? item.total : Number(item.total);
   if (Number.isFinite(total) && total >= 0) return String(total);
@@ -89,8 +108,8 @@ function Compras() {
 
   const calculadas = linhas.map((l) => {
     const insumo = insumos.find((i) => i.id === l.insumo_id);
-    const quantidade = numeroIngrediente(l.quantidade);
-    const precoNumerico = numeroIngrediente(l.preco);
+    const quantidade = numeroCompra(l.quantidade);
+    const precoNumerico = numeroCompra(l.preco);
     // Preserve l.preco as the raw string so intermediate input like "12," or "12."
     // is not replaced with NaN while the user is typing.
     return { ...l, insumo, quantidade, precoNumerico, total: precoNumerico };
@@ -362,7 +381,7 @@ function Compras() {
               </Field>
               <div className="grid grid-cols-2 gap-3">
                 <Field label="Quantidade">
-                  <Input required inputMode="decimal" className="h-11" value={textoCampoNumerico(l.quantidade)} onChange={(e) => setLinhas((s) => s.map((x, j) => (j === index ? { ...x, quantidade: e.target.value } : x)))} />
+                  <Input required type="text" inputMode="decimal" lang="pt-BR" autoComplete="off" className="h-11" value={textoCampoNumerico(l.quantidade)} onChange={(e) => { const valorDigitado = e.currentTarget.value; setLinhas((s) => s.map((x, j) => (j === index ? { ...x, quantidade: valorDigitado } : x))); }} />
                 </Field>
                 <Field label="Medida">
                   <select value={l.unidade} onChange={(e) => setLinhas((s) => s.map((x, j) => (j === index ? { ...x, unidade: e.target.value } : x)))} className="h-11 w-full rounded-md border border-input bg-background px-3 text-sm">
