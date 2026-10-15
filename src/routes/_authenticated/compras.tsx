@@ -45,14 +45,6 @@ function textoCampoNumerico(valor: unknown): string {
   return ["NaN", "Infinity", "-Infinity", "undefined", "null"].includes(valor.trim()) ? "" : valor;
 }
 
-function precoInicial(insumo: { preco_embalagem?: number | null; preco_unidade: number } | undefined): string {
-  if (!insumo) return "";
-  const valor = insumo.preco_embalagem ?? insumo.preco_unidade;
-  if (valor == null) return "";
-  const texto = String(valor);
-  return Number.isFinite(numeroIngrediente(texto)) ? texto : "";
-}
-
 function Compras() {
   const { data: insumos } = useSuspenseQuery(appQueries.insumosQ);
   const { data: compras } = useSuspenseQuery(appQueries.comprasQ);
