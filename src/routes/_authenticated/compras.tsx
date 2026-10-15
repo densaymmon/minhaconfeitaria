@@ -99,6 +99,16 @@ function formatarValorMonetario(valor: string): string {
   });
 }
 
+// Formata um valor já armazenado numericamente para abrir a edição sem alterar os centavos.
+function formatarValorExistente(valor: string): string {
+  const numero = Number(valor);
+  if (!Number.isFinite(numero) || numero < 0) return "";
+  return numero.toLocaleString("pt-BR", {
+    minimumFractionDigits: 2,
+    maximumFractionDigits: 2,
+  });
+}
+
 function Compras() {
   const { data: insumos } = useSuspenseQuery(appQueries.insumosQ);
   const { data: compras } = useSuspenseQuery(appQueries.comprasQ);
@@ -549,7 +559,7 @@ function Compras() {
                             const itensCompra = itens.filter((i) => i.compra_id === c.id);
                             setData(c.data_compra);
                             setLocalCompra(c.local_compra ?? "");
-                            setLinhas(itensCompra.map((i) => ({ compraItemId: i.id, insumo_id: i.insumo_id, quantidade: textoCampoNumerico(i.quantidade), unidade: i.unidade, preco: formatarValorMonetario(valorTotalEditavel(i)) })));
+                            setLinhas(itensCompra.map((i) => ({ compraItemId: i.id, insumo_id: i.insumo_id, quantidade: textoCampoNumerico(i.quantidade), unidade: i.unidade, preco: formatarValorExistente(valorTotalEditavel(i)) })));
                             setEditandoCompraId(c.id);
                           }}>Editar</Button>
                           <Button type="button" variant="outline" size="sm" disabled={busy} onClick={() => void cancelarCompra(c)}>Cancelar</Button>
