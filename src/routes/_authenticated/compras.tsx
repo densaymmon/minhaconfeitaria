@@ -86,12 +86,12 @@ function valorTotalEditavel(item: { total: unknown; preco_unitario: unknown; qua
   return Number.isFinite(calculado) && calculado >= 0 ? String(calculado) : "";
 }
 
-// Formata a digitação como dinheiro: os últimos dois dígitos sempre são os centavos.
-// Ex.: "1234" -> "12,34" e "123456" -> "1.234,56".
-function formatarValorMonetario(valor: string): string {
-  const digitos = valor.replace(/\D/g, "");
-  if (!digitos) return "";
-  const centavos = Number(digitos);
+// O estado guarda apenas dígitos (centavos); a máscara é aplicada só na exibição.
+// Separar o texto cru do texto formatado evita que a vírgula mova o cursor ou apague a digitação.
+function formatarValorMonetario(digitos: string): string {
+  const somenteDigitos = digitos.replace(/\D/g, "");
+  if (!somenteDigitos) return "";
+  const centavos = Number(somenteDigitos);
   if (!Number.isSafeInteger(centavos)) return "";
   return (centavos / 100).toLocaleString("pt-BR", {
     minimumFractionDigits: 2,
@@ -99,14 +99,18 @@ function formatarValorMonetario(valor: string): string {
   });
 }
 
-// Formata um valor já armazenado numericamente para abrir a edição sem alterar os centavos.
-function formatarValorExistente(valor: string): string {
+function valorMonetarioEmCentavos(valor: string): number {
+  const digitos = valor.replace(/\D/g, "");
+  if (!digitos) return NaN;
+  const centavos = Number(digitos);
+  return Number.isSafeInteger(centavos) ? centavos / 100 : NaN;
+}
+
+// Converte valores já salvos em reais para o estado cru em centavos, ao editar uma compra.
+function valorExistenteEmCentavos(valor: string): string {
   const numero = Number(valor);
   if (!Number.isFinite(numero) || numero < 0) return "";
-  return numero.toLocaleString("pt-BR", {
-    minimumFractionDigits: 2,
-    maximumFractionDigits: 2,
-  });
+  return String(Math.round((numero + Number.EPSILON) * 100));
 }
 
 function Compras() {
@@ -145,7 +149,7 @@ function Compras() {
   const calculadas = linhas.map((l) => {
     const insumo = insumos.find((i) => i.id === l.insumo_id);
     const quantidadeNumerica = numeroCompra(l.quantidade);
-    const precoNumerico = numeroCompra(l.preco);
+    const precoNumerico = valorMonetarioEmCentavos(l.preco);
     // Preserve l.preco as the raw string so intermediate input like "12," or "12."
     // is not replaced with NaN while the user is typing.
     return { ...l, insumo, quantidadeNumerica, precoNumerico, total: precoNumerico };
@@ -482,7 +486,7 @@ function Compras() {
                 </Field>
               </div>
               <Field label="Valor (R$)">
-                <Input required type="text" inputMode="numeric" lang="pt-BR" autoComplete="off" className="h-11" value={l.preco} onChange={(e) => { const valorDigitado = e.currentTarget.value; const valorFormatado = formatarValorMonetario(valorDigitado); setLinhas((s) => s.map((x, j) => (j === index ? { ...x, preco: valorFormatado } : x))); }} />
+                <Input required type="text" inputMode="numeric" lang="pt-BR" autoComplete="off" className="h-11" value={formatarValorMonetario(l.preco)} onChange={(e) => { const digitos = e.currentTarget.value.replace(/\D/g, ""); setLinhas((s) => s.map((x, j) => (j === index ? { ...x, preco: digitos } : x))); }} />
               </Field>
               <div className="flex justify-between text-sm">
                 <span className="text-muted-foreground">Valor total pago</span>
@@ -559,7 +563,7 @@ function Compras() {
                             const itensCompra = itens.filter((i) => i.compra_id === c.id);
                             setData(c.data_compra);
                             setLocalCompra(c.local_compra ?? "");
-                            setLinhas(itensCompra.map((i) => ({ compraItemId: i.id, insumo_id: i.insumo_id, quantidade: textoCampoNumerico(i.quantidade), unidade: i.unidade, preco: formatarValorExistente(valorTotalEditavel(i)) })));
+                            setLinhas(itensCompra.map((i) => ({ compraItemId: i.id, insumo_id: i.insumo_id, quantidade: textoCampoNumerico(i.quantidade), unidade: i.unidade, preco: valorExistenteEmCentavos(valorTotalEditavel(i)) })));
                             setEditandoCompraId(c.id);
                           }}>Editar</Button>
                           <Button type="button" variant="outline" size="sm" disabled={busy} onClick={() => void cancelarCompra(c)}>Cancelar</Button>
