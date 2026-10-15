@@ -86,6 +86,19 @@ function valorTotalEditavel(item: { total: unknown; preco_unitario: unknown; qua
   return Number.isFinite(calculado) && calculado >= 0 ? String(calculado) : "";
 }
 
+// Formata a digitação como dinheiro: os últimos dois dígitos sempre são os centavos.
+// Ex.: "1234" -> "12,34" e "123456" -> "1.234,56".
+function formatarValorMonetario(valor: string): string {
+  const digitos = valor.replace(/\\D/g, "");
+  if (!digitos) return "";
+  const centavos = Number(digitos);
+  if (!Number.isSafeInteger(centavos)) return "";
+  return (centavos / 100).toLocaleString("pt-BR", {
+    minimumFractionDigits: 2,
+    maximumFractionDigits: 2,
+  });
+}
+
 function Compras() {
   const { data: insumos } = useSuspenseQuery(appQueries.insumosQ);
   const { data: compras } = useSuspenseQuery(appQueries.comprasQ);
@@ -459,7 +472,7 @@ function Compras() {
                 </Field>
               </div>
               <Field label="Valor (R$)">
-                <Input required type="text" inputMode="decimal" lang="pt-BR" autoComplete="off" className="h-11" value={l.preco} onChange={(e) => { const valorDigitado = e.currentTarget.value; setLinhas((s) => s.map((x, j) => (j === index ? { ...x, preco: valorDigitado } : x))); }} />
+                <Input required type="text" inputMode="numeric" lang="pt-BR" autoComplete="off" className="h-11" value={l.preco} onChange={(e) => { const valorDigitado = e.currentTarget.value; const valorFormatado = formatarValorMonetario(valorDigitado); setLinhas((s) => s.map((x, j) => (j === index ? { ...x, preco: valorFormatado } : x))); }} />
               </Field>
               <div className="flex justify-between text-sm">
                 <span className="text-muted-foreground">Valor total pago</span>
@@ -536,7 +549,7 @@ function Compras() {
                             const itensCompra = itens.filter((i) => i.compra_id === c.id);
                             setData(c.data_compra);
                             setLocalCompra(c.local_compra ?? "");
-                            setLinhas(itensCompra.map((i) => ({ compraItemId: i.id, insumo_id: i.insumo_id, quantidade: textoCampoNumerico(i.quantidade), unidade: i.unidade, preco: valorTotalEditavel(i) })));
+                            setLinhas(itensCompra.map((i) => ({ compraItemId: i.id, insumo_id: i.insumo_id, quantidade: textoCampoNumerico(i.quantidade), unidade: i.unidade, preco: formatarValorMonetario(valorTotalEditavel(i)) })));
                             setEditandoCompraId(c.id);
                           }}>Editar</Button>
                           <Button type="button" variant="outline" size="sm" disabled={busy} onClick={() => void cancelarCompra(c)}>Cancelar</Button>
