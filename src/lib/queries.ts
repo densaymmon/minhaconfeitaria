@@ -17,6 +17,8 @@ export type Despesa = Tables<"despesas">;
 export type Compra = Tables<"compras">;
 export type CompraItem = Tables<"compra_itens">;
 export type ContaPagar = Tables<"contas_pagar">;
+export type ContaPagarPagamento = Tables<"contas_pagar_pagamentos">;
+export type ContaPagarEstorno = Tables<"contas_pagar_estornos">;
 
 
 async function must<T>(p: PromiseLike<{ data: T | null; error: { message: string } | null }>): Promise<T> {
@@ -90,5 +92,19 @@ export const contasPagarQ = queryOptions({
   queryKey: ["contas-pagar"],
   queryFn: () => must<ContaPagar[]>(
     supabase.from("contas_pagar").select("*").order("data_vencimento", { ascending: true }),
+  ),
+});
+
+export const contasPagarPagamentosQ = queryOptions({
+  queryKey: ["contas-pagar-pagamentos"],
+  queryFn: () => must<ContaPagarPagamento[]>(
+    supabase.from("contas_pagar_pagamentos").select("*").order("data_pagamento", { ascending: false }),
+  ),
+});
+
+export const contasPagarEstornosQ = queryOptions({
+  queryKey: ["contas-pagar-estornos"],
+  queryFn: () => must<ContaPagarEstorno[]>(
+    supabase.from("contas_pagar_estornos").select("*").order("created_at", { ascending: false }),
   ),
 });

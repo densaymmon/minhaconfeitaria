@@ -97,6 +97,7 @@ export type Database = {
       }
       compras: {
         Row: {
+          cancelada_em: string | null
           created_at: string
           data_compra: string
           id: string
@@ -104,6 +105,7 @@ export type Database = {
           user_id: string
         }
         Insert: {
+          cancelada_em?: string | null
           created_at?: string
           data_compra: string
           id?: string
@@ -111,10 +113,225 @@ export type Database = {
           user_id?: string
         }
         Update: {
+          cancelada_em?: string | null
           created_at?: string
           data_compra?: string
           id?: string
           total?: number
+          user_id?: string
+        }
+        Relationships: []
+      }
+      contas_pagar: {
+        Row: {
+          cancelada_em: string | null
+          compra_id: string | null
+          created_at: string
+          data_emissao: string
+          data_pagamento: string | null
+          data_vencimento: string
+          descricao: string
+          fornecedor: string | null
+          forma_pagamento: string | null
+          id: string
+          motivo_cancelamento: string | null
+          observacoes: string | null
+          status: string
+          updated_at: string
+          user_id: string
+          valor: number
+          valor_pago: number
+        }
+        Insert: {
+          cancelada_em?: string | null
+          compra_id?: string | null
+          created_at?: string
+          data_emissao?: string
+          data_pagamento?: string | null
+          data_vencimento?: string
+          descricao: string
+          fornecedor?: string | null
+          forma_pagamento?: string | null
+          id?: string
+          motivo_cancelamento?: string | null
+          observacoes?: string | null
+          status?: string
+          updated_at?: string
+          user_id?: string
+          valor: number
+          valor_pago?: number
+        }
+        Update: {
+          cancelada_em?: string | null
+          compra_id?: string | null
+          created_at?: string
+          data_emissao?: string
+          data_pagamento?: string | null
+          data_vencimento?: string
+          descricao?: string
+          fornecedor?: string | null
+          forma_pagamento?: string | null
+          id?: string
+          motivo_cancelamento?: string | null
+          observacoes?: string | null
+          status?: string
+          updated_at?: string
+          user_id?: string
+          valor?: number
+          valor_pago?: number
+        }
+        Relationships: [
+          {
+            foreignKeyName: "contas_pagar_compra_id_fkey"
+            columns: ["compra_id"]
+            isOneToOne: false
+            referencedRelation: "compras"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      contas_pagar_pagamentos: {
+        Row: {
+          conta_id: string
+          created_at: string
+          data_pagamento: string
+          forma_pagamento: string
+          id: string
+          observacoes: string | null
+          user_id: string
+          valor: number
+        }
+        Insert: {
+          conta_id: string
+          created_at?: string
+          data_pagamento?: string
+          forma_pagamento: string
+          id?: string
+          observacoes?: string | null
+          user_id: string
+          valor: number
+        }
+        Update: {
+          conta_id?: string
+          created_at?: string
+          data_pagamento?: string
+          forma_pagamento?: string
+          id?: string
+          observacoes?: string | null
+          user_id?: string
+          valor?: number
+        }
+        Relationships: [
+          {
+            foreignKeyName: "contas_pagar_pagamentos_conta_id_user_id_fkey"
+            columns: ["conta_id", "user_id"]
+            isOneToOne: false
+            referencedRelation: "contas_pagar"
+            referencedColumns: ["id", "user_id"]
+          },
+        ]
+      }
+      contas_pagar_estornos: {
+        Row: {
+          conta_id: string
+          created_at: string
+          id: string
+          motivo: string
+          pagamento_id: string
+          user_id: string
+          valor: number
+        }
+        Insert: {
+          conta_id: string
+          created_at?: string
+          id?: string
+          motivo: string
+          pagamento_id: string
+          user_id: string
+          valor: number
+        }
+        Update: {
+          conta_id?: string
+          created_at?: string
+          id?: string
+          motivo?: string
+          pagamento_id?: string
+          user_id?: string
+          valor?: number
+        }
+        Relationships: [
+          {
+            foreignKeyName: "contas_pagar_estornos_pagamento_id_conta_id_user_id_fkey"
+            columns: ["pagamento_id", "conta_id", "user_id"]
+            isOneToOne: false
+            referencedRelation: "contas_pagar_pagamentos"
+            referencedColumns: ["id", "conta_id", "user_id"]
+          },
+          {
+            foreignKeyName: "contas_pagar_estornos_conta_id_user_id_fkey"
+            columns: ["conta_id", "user_id"]
+            isOneToOne: false
+            referencedRelation: "contas_pagar"
+            referencedColumns: ["id", "user_id"]
+          },
+        ]
+      }
+      contas_pagar_operacoes: {
+        Row: {
+          conta_id: string
+          created_at: string
+          operacao_id: string
+          payload_hash: string
+          resultado_id: string
+          tipo_operacao: string
+          user_id: string
+        }
+        Insert: {
+          conta_id: string
+          created_at?: string
+          operacao_id: string
+          payload_hash: string
+          resultado_id: string
+          tipo_operacao: string
+          user_id: string
+        }
+        Update: {
+          conta_id?: string
+          created_at?: string
+          operacao_id?: string
+          payload_hash?: string
+          resultado_id?: string
+          tipo_operacao?: string
+          user_id?: string
+        }
+        Relationships: []
+      }
+      contas_pagar_auditoria: {
+        Row: {
+          conta_id: string
+          created_at: string
+          dados: Json
+          evento: string
+          id: string
+          operacao_id: string
+          user_id: string
+        }
+        Insert: {
+          conta_id: string
+          created_at?: string
+          dados?: Json
+          evento: string
+          id?: string
+          operacao_id: string
+          user_id: string
+        }
+        Update: {
+          conta_id?: string
+          created_at?: string
+          dados?: Json
+          evento?: string
+          id?: string
+          operacao_id?: string
           user_id?: string
         }
         Relationships: []
@@ -447,8 +664,49 @@ export type Database = {
       [_ in never]: never
     }
     Functions: {
+      ajustar_producao: {
+        Args: { pedido_item_id: string; quantidade_resultado: number; evento_id: string }
+        Returns: number
+      }
+      cancelar_compra: {
+        Args: { registro_id: string; evento_id: string }
+        Returns: boolean
+      }
+      cancelar_conta_pagar: {
+        Args: { p_conta_id: string; p_motivo: string; p_operacao_id: string }
+        Returns: string
+      }
+      estornar_pagamento_conta_pagar: {
+        Args: { p_pagamento_id: string; p_valor: number; p_motivo: string; p_operacao_id: string }
+        Returns: string
+      }
+      registrar_pagamento_conta_pagar: {
+        Args: {
+          p_conta_id: string
+          p_valor: number
+          p_data_pagamento: string
+          p_forma_pagamento: string
+          p_observacoes: string | null
+          p_operacao_id: string
+        }
+        Returns: string
+      }
+      salvar_conta_pagar: {
+        Args: { p_dados: Json; p_conta_id?: string | null; p_operacao_id?: string | null }
+        Returns: string
+      }
       medida_base: { Args: { u: string }; Returns: string }
       medida_fator: { Args: { u: string }; Returns: number }
+      recalcular_custos_historicos: { Args: Record<PropertyKey, never>; Returns: number }
+      registrar_inventario_fisico: { Args: { itens: Json; evento_id: string }; Returns: boolean }
+      saldo_estoque: {
+        Args: Record<PropertyKey, never>
+        Returns: { insumo_id: string; nome: string; unidade_base: string | null; saldo: number }[]
+      }
+      salvar_compra: {
+        Args: { payload: Json; itens: Json; registro_id?: string | null; evento_id?: string | null }
+        Returns: string
+      }
       salvar_pedido: {
         Args: { itens: Json; payload: Json; registro_id?: string }
         Returns: string

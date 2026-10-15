@@ -1,0 +1,64 @@
+name: Teste isolado de contas a pagar
+
+on:
+  pull_request:
+    paths:
+      - "docs/deploy/contas-pagar-rpcs.sql"
+      - "tests/db/**"
+      - ".github/workflows/test-contas-pagar-rpcs.yml"
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  postgres-smoke:
+    runs-on: ubuntu-latest
+    services:
+      postgres:
+        image: postgres:17
+        env:
+          POSTGRES_USER: postgres
+          POSTGRES_PASSWORD: postgres
+          POSTGRES_DB: contas_pagar_test
+        ports:
+          - 5432:5432
+        options: >-
+          --health-cmd "pg_isready -U postgres -d contas_pagar_test"
+          --health-interval 5s
+          --health-timeout 5s
+          --health-retries 10
+    env:
+      PGHOST: localhost
+      PGPORT: 5432
+      PGUSER: postgres
+      PGPASSWORD: postgres
+      PGDATABASE: contas_pagar_test
+    steps:
+      - uses: actions/checkout@v4
+      - name: Instalar cliente PostgreSQL
+        run: sudo apt-get update && sudo apt-get install -y postgresql-client
+      - name: Preparar compatibilidade mínima com Supabase Auth e tabela de compras
+        run: |
+          psql -v ON_ERROR_STOP=1 <<'SQL'
+          CREATE ROLE anon NOLOGIN;
+          CREATE ROLE authenticated NOLOGIN;
+          CREATE ROLE service_role NOLOGIN BYPASSRLS;
+          CREATE SCHEMA auth;
+          CREATE FUNCTION auth.uid() RETURNS uuid
+          LANGUAGE sql STABLE
+          AS $$ SELECT NULLIF(current_setting('request.jwt.claim.sub', true), '')::uuid $$;
+          CREATE TABLE public.compras (
+            id uuid PRIMARY KEY DEFAULT gen_random_uuid(),
+            user_id uuid NOT NULL,
+            data_compra date NOT NULL DEFAULT current_date,
+            total numeric NOT NULL DEFAULT 0,
+            created_at timestamptz NOT NULL DEFAULT now()
+          );
+          SQL
+      - name: Aplicar a migração somente no banco descartável
+        run: psql -v ON_ERROR_STOP=1 -f docs/deploy/contas-pagar-rpcs.sql
+      - name: Executar testes funcionais, idempotência, RLS e histórico
+        run: psql -v ON_ERROR_STOP=1 -f tests/db/contas-pagar-rpcs-smoke.sql
+      - name: Executar teste de concorrência de pagamentos
+        run: bash tests/db/contas-pagar-concurrency.sh
