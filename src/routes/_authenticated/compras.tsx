@@ -119,11 +119,11 @@ function Compras() {
 
   const calculadas = linhas.map((l) => {
     const insumo = insumos.find((i) => i.id === l.insumo_id);
-    const quantidade = numeroCompra(l.quantidade);
+    const quantidadeNumerica = numeroCompra(l.quantidade);
     const precoNumerico = numeroCompra(l.preco);
     // Preserve l.preco as the raw string so intermediate input like "12," or "12."
     // is not replaced with NaN while the user is typing.
-    return { ...l, insumo, quantidadeTexto: l.quantidade, quantidade, precoNumerico, total: precoNumerico };
+    return { ...l, insumo, quantidadeNumerica, precoNumerico, total: precoNumerico };
   });
   const total = calculadas.reduce((s, l) => s + (Number.isFinite(l.total) ? l.total : 0), 0);
 
@@ -244,7 +244,7 @@ function Compras() {
   async function salvar(e: React.FormEvent) {
     e.preventDefault();
     if (!data) { toast.error("Informe a data da compra."); return; }
-    if (calculadas.some((l) => !l.insumo || !Number.isFinite(l.quantidade) || l.quantidade <= 0 || !Number.isFinite(l.precoNumerico) || l.precoNumerico < 0)) {
+    if (calculadas.some((l) => !l.insumo || !Number.isFinite(l.quantidadeNumerica) || l.quantidadeNumerica <= 0 || !Number.isFinite(l.precoNumerico) || l.precoNumerico < 0)) {
       toast.error("Selecione um insumo e confira a quantidade e o preço de cada item.");
       return;
     }
@@ -254,10 +254,10 @@ function Compras() {
       const payload = { data_compra: data };
       const itensPayload = calculadas.map((l) => ({
         insumo_id: l.insumo!.id,
-        quantidade: l.quantidade,
+        quantidade: l.quantidadeNumerica,
         unidade: l.unidade,
         // O formulário recebe o valor total pago pelo pacote; o banco armazena o preço por medida.
-        preco_unitario: l.precoNumerico / l.quantidade,
+        preco_unitario: l.precoNumerico / l.quantidadeNumerica,
       }));
       const assinatura = JSON.stringify({ ...(editandoCompraId ? { registro_id: editandoCompraId } : {}), payload, itens: itensPayload });
       if (!eventoSalvarRef.current || eventoSalvarRef.current.assinatura !== assinatura) {
