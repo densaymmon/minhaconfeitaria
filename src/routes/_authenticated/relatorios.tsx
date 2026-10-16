@@ -117,8 +117,11 @@ function Relatorios() {
         : Number(item.custo_unitario);
       return { ...item, custo_unitario: custoUnitarioAtual };
     });
-    return { ...pedido, pedido_itens: itens, t: totaisPedido({ ...pedido, pedido_itens: itens }, config) };
-  }), [pedidos, produtosPorId, custoAtual, config]);
+    const totais = totaisPedido({ ...pedido, pedido_itens: itens }, config);
+    const pagamentosDetalhados = pagamentosPedidos.filter((pagamento) => pagamento.pedido_id === pedido.id).reduce((soma, pagamento) => soma + Math.max(0, Number(pagamento.valor) || 0), 0);
+    const recebido = Math.min(totais.venda, pagamentosDetalhados > 0 ? pagamentosDetalhados : Math.max(0, Number(totais.recebido) || 0));
+    return { ...pedido, pedido_itens: itens, t: { ...totais, recebido, saldo: pedido.status === "cancelado" || pedido.saldo_quitado ? 0 : Math.max(0, totais.venda - recebido) } };
+  }), [pedidos, produtosPorId, custoAtual, config, pagamentosPedidos]);
 
   const lista = intervaloValido
     ? pedidosCalculados.filter((p) => p.status !== "cancelado" && p.data_entrega >= inicio && p.data_entrega <= fim)
