@@ -21,6 +21,12 @@ describe("custo proporcional", () => {
     expect(numeroIngrediente("12abc")).toBeNaN();
     expect(numeroIngrediente("")).toBeNaN();
     expect(numeroIngrediente("1.234,50")).toBe(1234.5);
+    expect(numeroIngrediente("1,234.50")).toBe(1234.5);
+    expect(numeroIngrediente("3.396")).toBe(3.396);
+    expect(numeroIngrediente("3,396")).toBe(3.396);
+    expect(numeroIngrediente("0.5")).toBe(0.5);
+    expect(numeroIngrediente("0,5")).toBe(0.5);
+    expect(numeroIngrediente("1.234.567")).toBeNaN();
   });
   it("não arredonda antes de somar e recalcula ao alterar preço ou embalagem", () => {
     const i = { id: "a", preco_unidade: 0, preco_embalagem: 1, quantidade_embalagem: 3, unidade_embalagem: "un" };
