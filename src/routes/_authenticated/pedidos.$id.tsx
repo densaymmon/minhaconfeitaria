@@ -515,45 +515,65 @@ function PedidoForm() {
           </>
         ) : (
           <>
-            <Card className="space-y-3">
-              <div className="flex items-center justify-between gap-2">
-                <h2 className="text-lg font-semibold">Pagamento</h2>
-                {t.venda > 0 && t.saldo <= 0 && <span className="rounded-full bg-success/15 px-2.5 py-1 text-xs font-semibold text-success">Pago</span>}
+            <Card className="space-y-4">
+              <div className="flex items-start justify-between gap-3">
+                <div>
+                  <h2 className="text-lg font-semibold">Pagamento e recebimentos</h2>
+                  <p className="mt-0.5 text-sm text-muted-foreground">Valores do pedido e registro dos pagamentos em um só lugar.</p>
+                </div>
+                {t.venda > 0 && saldoPendente <= 0.009 && (
+                  <span className="shrink-0 rounded-full bg-success/15 px-2.5 py-1 text-xs font-semibold text-success">Pago</span>
+                )}
               </div>
-              <Field label="Forma de pagamento">
-                <NativeSelect value={f.forma_pagamento} onChange={(e) => set("forma_pagamento", e.target.value)}>
-                  {FORMAS.map((s) => (
-                    <option key={s.value} value={s.value}>{s.label}</option>
-                  ))}
-                </NativeSelect>
-              </Field>
-              <div className="grid grid-cols-3 gap-2">
-                <Field label="Valor pago R$">
+
+              <div className="grid grid-cols-1 gap-3 sm:grid-cols-2">
+                <Field label="Forma de pagamento principal">
+                  <NativeSelect value={f.forma_pagamento} onChange={(e) => set("forma_pagamento", e.target.value)}>
+                    {FORMAS.map((forma) => (
+                      <option key={forma.value} value={forma.value}>{forma.label}</option>
+                    ))}
+                  </NativeSelect>
+                </Field>
+                <Field label="Valor já pago (R$)">
                   <Input inputMode="decimal" value={f.valor_entrada} disabled={pagamentos.length > 0} onFocus={() => limparZeroAoFocar(f.valor_entrada, setValorPago)} onChange={(e) => setValorPago(e.target.value)} className="h-11" />
                 </Field>
-                <Field label="Frete R$">
+                <Field label="Frete (R$)">
                   <Input inputMode="decimal" value={f.taxa_entrega} onFocus={() => limparZeroAoFocar(f.taxa_entrega, (valor) => set("taxa_entrega", valor))} onChange={(e) => set("taxa_entrega", e.target.value)} className="h-11" />
                 </Field>
-                <Field label="Desconto R$">
+                <Field label="Desconto (R$)">
                   <Input inputMode="decimal" value={f.desconto} onFocus={() => limparZeroAoFocar(f.desconto, (valor) => set("desconto", valor))} onChange={(e) => set("desconto", e.target.value)} className="h-11" />
                 </Field>
               </div>
 
-              <div className="rounded-xl bg-muted/60 p-3">
-                <Row label="Total do pedido" value={brl(t.venda)} strong />
-                <Row label="Valor pago" value={brl(valorPagoEfetivo)} />
+              <div className="rounded-xl border bg-muted/40 p-3">
+                <div className="grid grid-cols-3 gap-2">
+                  <div className="min-w-0">
+                    <p className="text-[11px] leading-4 text-muted-foreground">Total do pedido</p>
+                    <p className="mt-1 break-words text-sm font-bold tabular-nums sm:text-base">{brl(t.venda)}</p>
+                  </div>
+                  <div className="min-w-0">
+                    <p className="text-[11px] leading-4 text-muted-foreground">Já recebido</p>
+                    <p className="mt-1 break-words text-sm font-bold tabular-nums text-success sm:text-base">{brl(valorPagoEfetivo)}</p>
+                  </div>
+                  <div className="min-w-0">
+                    <p className="text-[11px] leading-4 text-muted-foreground">Em aberto</p>
+                    <p className="mt-1 break-words text-sm font-bold tabular-nums sm:text-base">{brl(saldoPendente)}</p>
+                  </div>
+                </div>
+                <div className="my-3 border-t" />
+                <Row label="Subtotal dos produtos" value={brl(t.subtotal)} />
+                <Row label="Frete" value={brl(parseNum(f.taxa_entrega))} />
+                <Row label="Desconto" value={`− ${brl(parseNum(f.desconto))}`} />
                 <div className="my-2 border-t" />
-                <Row label="Saldo pendente" value={brl(saldoPendente)} strong />
+                <Row label="Total final" value={brl(t.venda)} strong />
               </div>
-            </Card>
 
-            <Card className="space-y-3">
-              <div>
-                <h2 className="text-lg font-semibold">Histórico de recebimentos</h2>
-                <p className="text-sm text-muted-foreground">Registre cada entrada com sua data e forma de pagamento. Saldo atual: {brl(saldoPendente)}.</p>
-              </div>
               {existente?.status !== "cancelado" && saldoPendente > 0.009 && (
                 <div className="space-y-3 rounded-xl border p-3">
+                  <div>
+                    <h3 className="font-semibold">Registrar recebimento</h3>
+                    <p className="text-xs text-muted-foreground">Informe o valor, a data e a forma usada neste pagamento.</p>
+                  </div>
                   <div className="grid grid-cols-1 gap-3 sm:grid-cols-2">
                     <Field label="Valor recebido (R$)">
                       <Input inputMode="decimal" value={novoRecebimento.valor} onChange={(e) => setNovoRecebimento((s) => ({ ...s, valor: e.target.value }))} placeholder="0,00" className="h-11" />
@@ -562,7 +582,7 @@ function PedidoForm() {
                       <Input type="date" value={novoRecebimento.data_pagamento} max={hojeISO()} onChange={(e) => setNovoRecebimento((s) => ({ ...s, data_pagamento: e.target.value }))} className="h-11" />
                     </Field>
                   </div>
-                  <Field label="Forma de pagamento">
+                  <Field label="Forma de pagamento deste recebimento">
                     <NativeSelect value={novoRecebimento.forma_pagamento} onChange={(e) => setNovoRecebimento((s) => ({ ...s, forma_pagamento: e.target.value }))}>
                       {FORMAS.map((forma) => <option key={forma.value} value={forma.value}>{forma.label}</option>)}
                     </NativeSelect>
@@ -575,36 +595,30 @@ function PedidoForm() {
                   </Button>
                 </div>
               )}
-              <div className="rounded-xl bg-muted/60 p-3">
-                <Row label="Total do pedido" value={brl(t.venda)} />
-                <Row label="Total recebido no cadastro" value={brl(valorPagoEfetivo)} />
-                <Row label="Registros detalhados" value={brl(pagamentos.reduce((s, p) => s + Number(p.valor || 0), 0))} />
-                <Row label="Saldo pendente" value={brl(saldoPendente)} strong />
-              </div>
-              {pagamentos.length === 0 ? (
-                <p className="text-sm text-muted-foreground">Nenhum recebimento detalhado registrado ainda. Os valores pagos anteriormente permanecem no cadastro, mas não possuem data individual no histórico.</p>
-              ) : (
-                <div className="divide-y rounded-xl border">
-                  {pagamentos.map((p) => (
-                    <div key={p.id} className="flex items-start justify-between gap-3 p-3 text-sm">
-                      <div>
-                        <p className="font-medium">{dataBR(p.data_pagamento)} · {FORMAS.find((forma) => forma.value === p.forma_pagamento)?.label ?? p.forma_pagamento}</p>
-                        {p.observacoes && <p className="text-muted-foreground">{p.observacoes}</p>}
-                      </div>
-                      <span className="shrink-0 font-semibold">{brl(Number(p.valor))}</span>
-                    </div>
-                  ))}
-                </div>
-              )}
-            </Card>
 
-            <Card>
-              <h2 className="mb-2 text-lg font-semibold">Resumo do pedido</h2>
-              <Row label="Subtotal dos produtos" value={brl(t.subtotal)} />
-              <Row label="Frete" value={brl(parseNum(f.taxa_entrega))} />
-              <Row label="Descontos" value={`− ${brl(parseNum(f.desconto))}`} />
-              <div className="my-2 border-t" />
-              <Row label="Total" value={brl(t.venda)} strong />
+              <details className="rounded-xl border">
+                <summary className="flex cursor-pointer list-none items-center justify-between gap-3 p-3 font-semibold">
+                  <span>Histórico de recebimentos</span>
+                  <span className="rounded-full bg-muted px-2 py-0.5 text-xs font-medium">{pagamentos.length} registro(s)</span>
+                </summary>
+                <div className="border-t px-3 py-2">
+                  {pagamentos.length === 0 ? (
+                    <p className="py-2 text-sm text-muted-foreground">Nenhum recebimento com data individual registrado. Valores antigos cadastrados no pedido continuam considerados no total pago.</p>
+                  ) : (
+                    <div className="divide-y">
+                      {pagamentos.map((pagamento) => (
+                        <div key={pagamento.id} className="flex items-start justify-between gap-3 py-3 text-sm">
+                          <div className="min-w-0">
+                            <p className="font-medium">{dataBR(pagamento.data_pagamento)} · {FORMAS.find((forma) => forma.value === pagamento.forma_pagamento)?.label ?? pagamento.forma_pagamento}</p>
+                            {pagamento.observacoes && <p className="mt-0.5 break-words text-xs text-muted-foreground">{pagamento.observacoes}</p>}
+                          </div>
+                          <span className="shrink-0 font-semibold tabular-nums">{brl(Number(pagamento.valor))}</span>
+                        </div>
+                      ))}
+                    </div>
+                  )}
+                </div>
+              </details>
             </Card>
 
             <Card>
