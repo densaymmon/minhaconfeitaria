@@ -584,6 +584,47 @@ export type Database = {
           },
         ]
       }
+      pedido_pagamentos: {
+        Row: {
+          created_at: string
+          data_pagamento: string
+          forma_pagamento: string
+          id: string
+          observacoes: string | null
+          pedido_id: string
+          user_id: string
+          valor: number
+        }
+        Insert: {
+          created_at?: string
+          data_pagamento?: string
+          forma_pagamento: string
+          id?: string
+          observacoes?: string | null
+          pedido_id: string
+          user_id?: string
+          valor: number
+        }
+        Update: {
+          created_at?: string
+          data_pagamento?: string
+          forma_pagamento?: string
+          id?: string
+          observacoes?: string | null
+          pedido_id?: string
+          user_id?: string
+          valor?: number
+        }
+        Relationships: [
+          {
+            foreignKeyName: "pedido_pagamentos_pedido_id_fkey"
+            columns: ["pedido_id"]
+            isOneToOne: false
+            referencedRelation: "pedidos"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       produtos: {
         Row: {
           ativo: boolean
@@ -732,6 +773,16 @@ export type Database = {
       }
       salvar_compra: {
         Args: { payload: Json; itens: Json; registro_id?: string | null; evento_id?: string | null }
+        Returns: string
+      }
+      registrar_recebimento_pedido: {
+        Args: {
+          p_pedido_id: string
+          p_valor: number
+          p_data_pagamento: string
+          p_forma_pagamento: string
+          p_observacoes?: string | null
+        }
         Returns: string
       }
       salvar_pedido: {
