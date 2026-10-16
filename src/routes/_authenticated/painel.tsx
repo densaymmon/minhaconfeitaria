@@ -50,9 +50,10 @@ function Painel() {
   const pedidosAReceber = pedidos
     .filter((p) => p.status !== "cancelado")
     .reduce((soma, p) => {
-      const entradaLegada = Math.max(0, Number(p.t.recebido) || 0);
       const pagamentosDetalhados = totalPagoPorPedido.get(p.id) ?? 0;
-      const totalRecebido = Math.min(p.t.venda, entradaLegada + pagamentosDetalhados);
+      // Se existe histórico detalhado, ele já representa os recebimentos do pedido;
+      // somá-lo à entrada legada duplicaria pagamentos migrados.
+      const totalRecebido = Math.min(p.t.venda, pagamentosDetalhados > 0 ? pagamentosDetalhados : Math.max(0, Number(p.t.recebido) || 0));
       const saldoPendente = p.saldo_quitado ? 0 : Math.max(0, p.t.venda - totalRecebido);
       return soma + saldoPendente;
     }, 0);
