@@ -1,7 +1,7 @@
 import { useMemo } from "react";
 import { useSuspenseQuery } from "@tanstack/react-query";
 import { configQ, insumosQ, pedidosQ, pedidoPagamentosQ, produtosQ, type Pedido } from "./queries";
-import { custoUnitario, totaisPedido } from "./calc";
+import { calcularRecebimentoPedido, custoUnitario, totaisPedido } from "./calc";
 
 export function useCustos() {
   const { data: produtos } = useSuspenseQuery(produtosQ);
@@ -27,14 +27,14 @@ export function usePedidosCalc(): PedidoCalc[] {
     }
     return pedidos.map((pedido) => {
       const totais = totaisPedido(pedido, config);
-      // valor_entrada guarda o total acumulado no formulário; o histórico pode
-      // conter os mesmos pagamentos ou apenas os registrados detalhadamente.
-      // Usar o maior valor evita ignorar recebimentos e também somá-los duas vezes.
-      const recebido = Math.min(totais.venda, Math.max(totais.recebido, pagosPorPedido.get(pedido.id) ?? 0));
-      const saldo = pedido.status === "cancelado" || pedido.saldo_quitado
-        ? 0
-        : Math.max(0, totais.venda - recebido);
-      return { ...pedido, t: { ...totais, recebido, saldo } };
+      const recebimento = calcularRecebimentoPedido({
+        venda: totais.venda,
+        status: pedido.status,
+        saldo_quitado: pedido.saldo_quitado,
+        valor_entrada: totais.recebido,
+        pagamentosDetalhados: pagosPorPedido.get(pedido.id) ?? 0,
+      });
+      return { ...pedido, t: { ...totais, ...recebimento } };
     });
   }, [pedidos, config, pagamentos]);
 }
