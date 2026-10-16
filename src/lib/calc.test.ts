@@ -1,5 +1,5 @@
 import { describe, expect, it } from "vitest";
-import { custoReceita, custoUnitario, margemReal, precoSugerido, ratearVendaETaxas, totaisPedido, CONFIG_PADRAO } from "./calc";
+import { custoReceita, custoUnitario, margemReal, precoSugerido, ratearVendaETaxas, totaisPedido, calcularRecebimentoPedido, CONFIG_PADRAO } from "./calc";
 import { toCSV } from "./csv";
 import { parseNum, STATUS, statusLabel } from "./format";
 
@@ -47,6 +47,33 @@ describe("pedido", () => {
     expect(t.lucroLiquido).toBeCloseTo(80 - 5.988);
     expect(t.recebido).toBe(50);
     expect(t.saldo).toBe(70);
+  });
+  it("consolida entrada legada e histórico sem duplicar recebimentos", () => {
+    expect(calcularRecebimentoPedido({
+      venda: 112,
+      status: "em_producao",
+      saldo_quitado: false,
+      valor_entrada: 77,
+      pagamentosDetalhados: 77,
+    })).toEqual({ recebido: 77, saldo: 35 });
+  });
+  it("usa o histórico quando o cadastro legado está zerado", () => {
+    expect(calcularRecebimentoPedido({
+      venda: 112,
+      status: "em_producao",
+      saldo_quitado: false,
+      valor_entrada: 0,
+      pagamentosDetalhados: 77,
+    })).toEqual({ recebido: 77, saldo: 35 });
+  });
+  it("não permite entrada negativa nem saldo negativo", () => {
+    expect(calcularRecebimentoPedido({
+      venda: 112,
+      status: "em_producao",
+      saldo_quitado: false,
+      valor_entrada: -5,
+      pagamentosDetalhados: 120,
+    })).toEqual({ recebido: 112, saldo: 0 });
   });
   it("saldo quitado zera o saldo", () => {
     const t = totaisPedido({ ...base, saldo_quitado: true }, CONFIG_PADRAO);
