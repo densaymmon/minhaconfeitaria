@@ -221,7 +221,7 @@ BEGIN
 
   -- Replaying the same production event must not append a second stock movement.
   PERFORM public.ajustar_producao(
-    item_id, 2, 'eeeeeeee-eeee-4eee-8eee-eeeeeeeeeeee'
+    'eeeeeeee-eeee-4eee-8eee-eeeeeeeeeeee', item_id, 2
   );
   SELECT s.saldo INTO saldo FROM public.saldo_estoque() s WHERE s.insumo_id = iid;
   IF saldo <> 230 THEN RAISE EXCEPTION 'Retry da produção duplicou a baixa: %', saldo; END IF;
