@@ -25,6 +25,8 @@ export const Route = createFileRoute("/_authenticated/relatorios")({
       context.queryClient.ensureQueryData(appQueries.contasPagarQ),
       context.queryClient.ensureQueryData(appQueries.comprasQ),
       context.queryClient.ensureQueryData(appQueries.pedidoPagamentosQ),
+      context.queryClient.ensureQueryData(appQueries.contasPagarPagamentosQ),
+      context.queryClient.ensureQueryData(appQueries.contasPagarEstornosQ),
     ]);
   },
   errorComponent: ({ error }) => (
@@ -65,6 +67,8 @@ function Relatorios() {
   const { data: contasPagar } = useSuspenseQuery(appQueries.contasPagarQ);
   const { data: compras } = useSuspenseQuery(appQueries.comprasQ);
   const { data: pagamentosPedidos } = useSuspenseQuery(appQueries.pedidoPagamentosQ);
+  const { data: pagamentosContasPagar } = useSuspenseQuery(appQueries.contasPagarPagamentosQ);
+  const { data: estornosContasPagar } = useSuspenseQuery(appQueries.contasPagarEstornosQ);
   const intervaloValido = inicio <= fim;
   const contasAbertas = contasPagar.filter((c) => !c.cancelada_em && ["pendente", "parcial"].includes(c.status));
   const saldoContasAbertas = contasAbertas.reduce((s, c) => s + Math.max(0, Number(c.valor) - Number(c.valor_pago)), 0);
@@ -123,6 +127,31 @@ function Relatorios() {
   const intervaloRecebimentosValido = inicioRecebimentos <= fimRecebimentos;
   const recebimentosNoPeriodo = intervaloRecebimentosValido ? pagamentosPedidos.filter((p) => p.data_pagamento >= inicioRecebimentos && p.data_pagamento <= fimRecebimentos) : [];
   const totalRecebidoNoPeriodo = recebimentosNoPeriodo.reduce((s, p) => s + Math.max(0, Number(p.valor) || 0), 0);
+  // O caixa considera movimentos datados: recebimentos detalhados, despesas lançadas,
+  // compras pagas à vista e pagamentos efetivos de contas a pagar.
+  // Compras no crédito entram apenas quando cada parcela é paga, evitando duplicidade.
+  const despesasCaixaNoPeriodo = intervaloRecebimentosValido
+    ? despesas.filter((d) => d.data >= inicioRecebimentos && d.data <= fimRecebimentos)
+    : [];
+  const comprasAvistaNoPeriodo = intervaloRecebimentosValido
+    ? compras.filter((c) => !c.cancelada_em
+      && c.data_compra >= inicioRecebimentos
+      && c.data_compra <= fimRecebimentos
+      && String(c.forma_pagamento_compra || "").toLowerCase() !== "credito")
+    : [];
+  const pagamentosContasNoPeriodo = intervaloRecebimentosValido
+    ? pagamentosContasPagar.filter((p) => p.data_pagamento >= inicioRecebimentos && p.data_pagamento <= fimRecebimentos)
+    : [];
+  const estornosContasNoPeriodo = intervaloRecebimentosValido
+    ? estornosContasPagar.filter((e) => e.created_at.slice(0, 10) >= inicioRecebimentos && e.created_at.slice(0, 10) <= fimRecebimentos)
+    : [];
+  const totalDespesasCaixa = despesasCaixaNoPeriodo.reduce((s, d) => s + Math.max(0, Number(d.valor) || 0), 0);
+  const totalComprasAvista = comprasAvistaNoPeriodo.reduce((s, c) => s + Math.max(0, Number(c.total) || 0), 0);
+  const totalPagamentosContas = pagamentosContasNoPeriodo.reduce((s, p) => s + Math.max(0, Number(p.valor) || 0), 0);
+  const totalEstornosContas = estornosContasNoPeriodo.reduce((s, e) => s + Math.max(0, Number(e.valor) || 0), 0);
+  const totalEntradasCaixa = totalRecebidoNoPeriodo + totalEstornosContas;
+  const totalSaidasCaixa = totalDespesasCaixa + totalComprasAvista + totalPagamentosContas;
+  const saldoMovimentoCaixa = totalEntradasCaixa - totalSaidasCaixa;
   const comprasPorForma = useMemo(() => {
     const totais = new Map<string, number>();
     for (const compra of comprasNoPeriodo) {
@@ -250,6 +279,28 @@ function Relatorios() {
             </div>
           ))}
         </div>
+      </section>
+      <section className="mb-6 rounded-xl border p-4">
+        <h2 className="mb-1 text-lg font-semibold">Conciliação do fluxo de caixa</h2>
+        <p className="mb-4 text-sm text-muted-foreground">
+          Compara o dinheiro registrado como recebido e pago no intervalo acima. O saldo é a diferença dos movimentos deste período, não o saldo bancário total da empresa.
+        </p>
+        <div className="mb-4 grid grid-cols-2 gap-3">
+          <Stat label="Entradas registradas" value={brl(totalEntradasCaixa)} tone="primary" />
+          <Stat label="Saídas registradas" value={brl(totalSaidasCaixa)} />
+          <Stat label="Saldo do período" value={brl(saldoMovimentoCaixa)} tone={saldoMovimentoCaixa >= 0 ? "success" : "danger"} />
+          <Stat label="Estornos de contas" value={brl(totalEstornosContas)} />
+        </div>
+        <div className="space-y-2">
+          <Row label="Recebimentos de pedidos detalhados" value={brl(totalRecebidoNoPeriodo)} />
+          <Row label="Estornos de pagamentos (entrada)" value={brl(totalEstornosContas)} />
+          <Row label="Despesas registradas" value={brl(totalDespesasCaixa)} />
+          <Row label="Compras pagas sem crédito" value={brl(totalComprasAvista)} />
+          <Row label="Pagamentos de contas a pagar" value={brl(totalPagamentosContas)} />
+        </div>
+        <p className="mt-3 text-xs text-muted-foreground">
+          Pagamentos antigos de pedidos sem data individual não são atribuídos a datas estimadas. Compras no crédito entram quando suas parcelas são efetivamente pagas. Despesas usam a data cadastrada; registre cada gasto apenas uma vez e mantenha o histórico de pagamentos das contas atualizado. O saldo mostrado não inclui saldo inicial de caixa, tarifas bancárias não registradas ou movimentações externas ao sistema.
+        </p>
       </section>
       <section className="mb-6 border-y py-4">
         <h2 className="mb-2 text-lg font-semibold">Resultado dos pedidos entregues</h2>
