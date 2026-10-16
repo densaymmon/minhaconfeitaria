@@ -7,7 +7,7 @@ import { toast } from "sonner";
 import { supabase } from "@/integrations/supabase/client";
 import { Download } from "lucide-react";
 import { configQ, despesasQ, pedidosQ } from "@/lib/queries";
-import { custoUnitario, ratearVendaETaxas, totaisPedido } from "@/lib/calc";
+import { calcularRecebimentoPedido, custoUnitario, ratearVendaETaxas, totaisPedido } from "@/lib/calc";
 import { medida } from "@/lib/ingredient-cost";
 import { brl, dataBR, hojeISO, mesISO, num } from "@/lib/format";
 import { baixarCSV } from "@/lib/csv";
@@ -119,9 +119,17 @@ function Relatorios() {
       return { ...item, custo_unitario: custoUnitarioAtual };
     });
     const totais = totaisPedido({ ...pedido, pedido_itens: itens }, config);
-    const pagamentosDetalhados = pagamentosPedidos.filter((pagamento) => pagamento.pedido_id === pedido.id).reduce((soma, pagamento) => soma + Math.max(0, Number(pagamento.valor) || 0), 0);
-    const recebido = Math.min(totais.venda, Math.max(Math.max(0, Number(totais.recebido) || 0), pagamentosDetalhados));
-    return { ...pedido, pedido_itens: itens, t: { ...totais, recebido, saldo: pedido.status === "cancelado" || pedido.saldo_quitado ? 0 : Math.max(0, totais.venda - recebido) } };
+    const pagamentosDetalhados = pagamentosPedidos
+      .filter((pagamento) => pagamento.pedido_id === pedido.id)
+      .reduce((soma, pagamento) => soma + Math.max(0, Number(pagamento.valor) || 0), 0);
+    const recebimento = calcularRecebimentoPedido({
+      venda: totais.venda,
+      status: pedido.status,
+      saldo_quitado: pedido.saldo_quitado,
+      valor_entrada: totais.recebido,
+      pagamentosDetalhados,
+    });
+    return { ...pedido, pedido_itens: itens, t: { ...totais, ...recebimento } };
   }), [pedidos, produtosPorId, custoAtual, config, pagamentosPedidos]);
 
   const lista = intervaloValido
