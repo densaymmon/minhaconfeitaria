@@ -21,7 +21,7 @@ jobs:
       # while deferring the repository-wide Prettier cleanup.
       - name: Lint changed application files
         run: >-
-          bunx eslint src/routes/_authenticated/compras.tsx src/routes/_authenticated/producao.tsx src/routes/_authenticated/relatorios.tsx src/integrations/supabase/types.ts --rule "prettier/prettier: off"
+          bunx eslint src/routes/_authenticated/compras.tsx src/routes/_authenticated/producao.tsx src/routes/_authenticated/relatorios.tsx src/routes/_authenticated/pedidos.$id.tsx src/lib/queries.ts src/integrations/supabase/types.ts --rule "prettier/prettier: off"
       - run: bunx tsc --noEmit
       - run: bun run test --passWithNoTests
       - run: bun run build
