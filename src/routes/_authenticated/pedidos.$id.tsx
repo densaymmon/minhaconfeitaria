@@ -544,7 +544,7 @@ function PedidoForm() {
                 <h2 className="text-lg font-semibold">Histórico de recebimentos</h2>
                 <p className="text-sm text-muted-foreground">Registre cada entrada com sua data e forma de pagamento. Saldo atual: {brl(saldoPendente)}.</p>
               </div>
-              {existente.status !== "cancelado" && saldoPendente > 0.009 && (
+              {existente?.status !== "cancelado" && saldoPendente > 0.009 && (
                 <div className="space-y-3 rounded-xl border p-3">
                   <div className="grid grid-cols-1 gap-3 sm:grid-cols-2">
                     <Field label="Valor recebido (R$)">
