@@ -287,7 +287,12 @@ function PedidoForm() {
           p_forma_pagamento: f.forma_pagamento,
           p_observacoes: "Entrada registrada na criação do pedido",
         });
-        if (recebimentoError) throw new Error("Pedido criado, mas não foi possível registrar a entrada: " + recebimentoError.message);
+        if (recebimentoError) {
+          await qc.invalidateQueries({ queryKey: ["pedidos"] });
+          toast.error("Pedido criado, mas a entrada não foi registrada: " + recebimentoError.message);
+          navigate({ to: "/pedidos", search: { filtro: undefined, dataInicial: undefined, dataFinal: undefined } });
+          return;
+        }
       }
       await qc.invalidateQueries({ queryKey: ["pedidos"] });
       toast.success(novo ? "Pedido criado!" : "Pedido atualizado!");
