@@ -32,35 +32,35 @@ function Painel() {
   const { data: pagamentosPedidos } = useSuspenseQuery(appQueries.pedidoPagamentosQ);
   const hoje = hojeISO();
   const mes = mesISO();
-  const doMes = pedidos.filter((p) => p.status !== "cancelado" && p.data_entrega.startsWith(mes));
   const primeiroDiaMes = `${mes}-01`;
   const ultimoDiaMes = format(endOfMonth(new Date()), "yyyy-MM-dd");
-  // Soma pagamentos datados do mês apenas para pedidos válidos.
-  // Agrupar por pedido e limitar ao valor da venda impede que registros repetidos
-  // ou valores acima do total do pedido inflem o indicador.
-  const vendasPorPedido = new Map(
-    pedidos
-      .filter((pedido) => pedido.status !== "cancelado")
-      .map((pedido) => [pedido.id, Math.max(0, Number(pedido.t.venda) || 0)] as const),
+
+  // "Pedidos feitos" usa a data de cadastro do pedido (created_at), não a data de entrega.
+  // Pedidos cancelados ficam fora dos indicadores comerciais.
+  const pedidosCriadosNoMes = pedidos.filter((pedido) => {
+    const dataCriacao = String(pedido.created_at ?? "").slice(0, 10);
+    return pedido.status !== "cancelado" && dataCriacao >= primeiroDiaMes && dataCriacao <= ultimoDiaMes;
+  });
+  const valorPedidosCriadosNoMes = pedidosCriadosNoMes.reduce(
+    (soma, pedido) => soma + Math.max(0, Number(pedido.t.venda) || 0),
+    0,
   );
-  const recebimentosPorPedidoNoMes = new Map<string, number>();
-  for (const pagamento of pagamentosPedidos) {
-    if (pagamento.data_pagamento < primeiroDiaMes || pagamento.data_pagamento > ultimoDiaMes) continue;
-    const valorVenda = vendasPorPedido.get(pagamento.pedido_id);
-    if (valorVenda === undefined || valorVenda <= 0) continue;
-    const somaAtual = recebimentosPorPedidoNoMes.get(pagamento.pedido_id) ?? 0;
-    recebimentosPorPedidoNoMes.set(
-      pagamento.pedido_id,
-      Math.min(valorVenda, somaAtual + Math.max(0, Number(pagamento.valor) || 0)),
-    );
-  }
-  const totalRecebidoNoMes = [...recebimentosPorPedidoNoMes.values()]
-    .reduce((soma, valor) => soma + valor, 0);
-  // O hook compartilhado calcula o saldo usando entrada acumulada e histórico,
-  // sem ignorar recebimentos nem contar o mesmo pagamento duas vezes.
-  const pedidosAReceber = pedidos
-    .filter((p) => p.status !== "cancelado")
-    .reduce((soma, p) => soma + Math.max(0, Number(p.t.saldo) || 0), 0);
+
+  // Recebimento mensal usa apenas movimentos com data individual confirmada.
+  // Não atribui pagamentos antigos sem data a um mês fictício.
+  const totalRecebidoNoMes = pagamentosPedidos
+    .filter((pagamento) =>
+      pagamento.data_pagamento >= primeiroDiaMes &&
+      pagamento.data_pagamento <= ultimoDiaMes &&
+      pedidos.some((pedido) => pedido.id === pagamento.pedido_id && pedido.status !== "cancelado"),
+    )
+    .reduce((soma, pagamento) => soma + Math.max(0, Number(pagamento.valor) || 0), 0);
+
+  // Saldo a receber limitado aos pedidos criados neste mês, sem incluir cancelados.
+  const pedidosAReceberNoMes = pedidosCriadosNoMes.reduce(
+    (soma, pedido) => soma + Math.max(0, Number(pedido.t.saldo) || 0),
+    0,
+  );
   const atrasados = pedidos.filter((p) => p.data_entrega < hoje && !["finalizado", "entregue", "cancelado"].includes(p.status)).length;
 
   const proximas = pedidos
@@ -82,32 +82,62 @@ function Painel() {
         }
       />
 
-      <Card className="mb-4 bg-hero text-primary-foreground">
-        <div className="text-xs opacity-80">Movimento do mês · {format(new Date(), "MMMM", { locale: ptBR })}</div>
-        <div className="mt-1 text-sm opacity-80">Total recebido no mês</div>
-        <div className="mt-1 font-display text-3xl font-semibold">{brl(totalRecebidoNoMes)}</div>
-        <p className="mt-1 text-xs opacity-75">Pagamentos registrados pela data de recebimento</p>
-        <div className="mt-4 border-t border-primary-foreground/20 pt-3">
-          <div className="text-xs opacity-75">Valores a receber</div>
-          <Link
-            to="/pedidos"
-            search={{ filtro: "em_andamento", dataInicial: undefined, dataFinal: undefined }}
-            className="mt-1 flex items-center justify-between gap-3 rounded-lg py-1 font-semibold hover:opacity-80"
-          >
-            <span className="text-2xl">{brl(pedidosAReceber)}</span>
-            <span className="text-sm underline underline-offset-4">Ver pedidos <span aria-hidden="true">→</span></span>
-          </Link>
-          <p className="text-xs opacity-75">Saldo pendente de todos os pedidos não cancelados</p>
+      <section aria-label="Resumo financeiro do mês" className="mb-4">
+        <div className="mb-3 text-xs text-muted-foreground">
+          Movimento de {format(new Date(), "MMMM yyyy", { locale: ptBR })}
         </div>
-      </Card>
+        <div className="grid grid-cols-1 gap-3 sm:grid-cols-3">
+          <Link
+            to="/relatorios"
+            search={{ inicio: primeiroDiaMes, fim: ultimoDiaMes, secao: "vendas", dataBase: "criacao" }}
+            className="block rounded-xl focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring"
+            aria-label={`Ver relatório dos pedidos feitos no mês: ${brl(valorPedidosCriadosNoMes)}`}
+          >
+            <Card className="h-full transition-colors hover:bg-muted/60">
+              <div className="text-sm text-muted-foreground">Pedidos feitos no mês</div>
+              <div className="mt-1 font-display text-2xl font-semibold">{brl(valorPedidosCriadosNoMes)}</div>
+              <div className="mt-1 text-xs text-muted-foreground">{pedidosCriadosNoMes.length} pedido(s) · pelo cadastro</div>
+              <div className="mt-3 text-sm font-medium text-primary">Detalhar no financeiro →</div>
+            </Card>
+          </Link>
+          <Link
+            to="/relatorios"
+            search={{ inicio: primeiroDiaMes, fim: ultimoDiaMes, secao: "caixa", dataBase: "entrega" }}
+            className="block rounded-xl focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring"
+            aria-label={`Ver relatório de recebimentos do mês: ${brl(totalRecebidoNoMes)}`}
+          >
+            <Card className="h-full transition-colors hover:bg-muted/60">
+              <div className="text-sm text-muted-foreground">Pedidos pagos / recebido no mês</div>
+              <div className="mt-1 font-display text-2xl font-semibold">{brl(totalRecebidoNoMes)}</div>
+              <div className="mt-1 text-xs text-muted-foreground">Pagamentos pela data em que entraram</div>
+              <div className="mt-3 text-sm font-medium text-primary">Detalhar no financeiro →</div>
+            </Card>
+          </Link>
+          <Link
+            to="/relatorios"
+            search={{ inicio: primeiroDiaMes, fim: ultimoDiaMes, secao: "contas", dataBase: "criacao" }}
+            className="block rounded-xl focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring"
+            aria-label={`Ver relatório dos valores a receber dos pedidos do mês: ${brl(pedidosAReceberNoMes)}`}
+          >
+            <Card className="h-full transition-colors hover:bg-muted/60">
+              <div className="text-sm text-muted-foreground">A receber dos pedidos do mês</div>
+              <div className="mt-1 font-display text-2xl font-semibold">{brl(pedidosAReceberNoMes)}</div>
+              <div className="mt-1 text-xs text-muted-foreground">Saldo dos pedidos não cancelados</div>
+              <div className="mt-3 text-sm font-medium text-primary">Detalhar no financeiro →</div>
+            </Card>
+          </Link>
+        </div>
+      </section>
 
       <Link to="/pedidos" search={{ filtro: "mes", dataInicial: primeiroDiaMes, dataFinal: ultimoDiaMes }} className="mb-4 block">
         <Card className="flex items-center justify-between gap-3 transition-colors hover:bg-muted/60">
           <div>
-            <div className="text-sm text-muted-foreground">Total de pedidos no mês</div>
-            <div className="mt-1 font-display text-3xl font-semibold">{doMes.length}</div>
+            <div className="text-sm text-muted-foreground">Pedidos com entrega neste mês</div>
+            <div className="mt-1 font-display text-3xl font-semibold">
+              {pedidos.filter((p) => p.status !== "cancelado" && p.data_entrega >= primeiroDiaMes && p.data_entrega <= ultimoDiaMes).length}
+            </div>
           </div>
-          <div className="text-right text-sm font-medium text-primary">Ver todos<br />do mês →</div>
+          <div className="text-right text-sm font-medium text-primary">Ver entregas<br />do mês →</div>
         </Card>
       </Link>
 
