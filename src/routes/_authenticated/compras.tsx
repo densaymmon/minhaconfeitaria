@@ -17,6 +17,7 @@ export const Route = createFileRoute("/_authenticated/compras")({
       context.queryClient.ensureQueryData(appQueries.insumosQ),
       context.queryClient.ensureQueryData(appQueries.comprasQ),
       context.queryClient.ensureQueryData(appQueries.compraItensQ),
+      context.queryClient.ensureQueryData(appQueries.contasPagarQ),
     ]);
   },
   errorComponent: ({ error }) => <p role="alert" className="py-8 text-destructive">{error instanceof Error ? error.message : "Não foi possível carregar as compras."}</p>,
@@ -123,6 +124,7 @@ function Compras() {
   const { data: insumos } = useSuspenseQuery(appQueries.insumosQ);
   const { data: compras } = useSuspenseQuery(appQueries.comprasQ);
   const { data: itens } = useSuspenseQuery(appQueries.compraItensQ);
+  const { data: contasPagar } = useSuspenseQuery(appQueries.contasPagarQ);
   const { data: estoque = [], isLoading: carregandoEstoque, error: erroEstoque } = useQuery({
     queryKey: ["estoque"],
     queryFn: async () => {
@@ -179,6 +181,76 @@ function Compras() {
   const idsNoPeriodo = new Set(comprasNoPeriodo.map((c) => c.id));
   const itensNoPeriodo = itens.filter((i) => idsNoPeriodo.has(i.compra_id));
   const totalPeriodo = itensNoPeriodo.reduce((s, i) => s + Number(i.total), 0);
+
+  // Auditoria somente de leitura: não corrige nem altera automaticamente valores financeiros.
+  // Compras anteriores à implantação do vínculo automático podem não ter contas geradas.
+  const auditoriaIntegracao = useMemo(() => {
+    const problemas: { id: string; mensagem: string }[] = [];
+    const limiteIntegracao = "2026-10-15";
+    for (const compra of compras) {
+      const contasVinculadas = contasPagar.filter((conta) =>
+        conta.compra_id === compra.id && conta.gerada_automaticamente
+      );
+      const contasAtivas = contasVinculadas.filter((conta) =>
+        !conta.cancelada_em && conta.status !== "cancelado"
+      );
+      const totalContasAtivas = contasAtivas.reduce((s, conta) => s + (Number(conta.valor) || 0), 0);
+      const totalCentavos = Math.round((Number(compra.total) || 0) * 100);
+      const totalContasCentavos = Math.round(totalContasAtivas * 100);
+      const compraRecente = compra.created_at.slice(0, 10) >= limiteIntegracao;
+
+      if (compra.cancelada_em && contasAtivas.length > 0) {
+        problemas.push({
+          id: compra.id + "-cancelada-com-conta",
+          mensagem: `Compra de ${dataBR(compra.data_compra)} cancelada, mas ainda possui ${contasAtivas.length} conta(s) ativa(s) vinculada(s).`,
+        });
+        continue;
+      }
+      if (compra.cancelada_em) continue;
+
+      if (compraRecente && contasVinculadas.length === 0) {
+        problemas.push({
+          id: compra.id + "-sem-conta",
+          mensagem: `Compra de ${dataBR(compra.data_compra)} sem conta financeira automática vinculada.`,
+        });
+        continue;
+      }
+      if (!contasVinculadas.length) continue;
+
+      if (compra.forma_pagamento_compra === "credito") {
+        const parcelasEsperadas = Number(compra.numero_parcelas) || 1;
+        if (contasAtivas.length !== parcelasEsperadas) {
+          problemas.push({
+            id: compra.id + "-parcelas",
+            mensagem: `Compra de ${dataBR(compra.data_compra)}: esperadas ${parcelasEsperadas} parcela(s), encontradas ${contasAtivas.length} ativa(s).`,
+          });
+        }
+        if (totalContasCentavos !== totalCentavos) {
+          problemas.push({
+            id: compra.id + "-total-parcelas",
+            mensagem: `Compra de ${dataBR(compra.data_compra)}: total das parcelas (${brl(totalContasAtivas)}) difere do total comprado (${brl(Number(compra.total) || 0)}).`,
+          });
+        }
+      } else if (compraRecente) {
+        if (totalContasCentavos !== totalCentavos) {
+          problemas.push({
+            id: compra.id + "-total-avista",
+            mensagem: `Compra à vista de ${dataBR(compra.data_compra)}: conta vinculada totaliza ${brl(totalContasAtivas)}, mas a compra foi de ${brl(Number(compra.total) || 0)}.`,
+          });
+        }
+        const totalPagoCentavos = Math.round(contasAtivas.reduce((s, conta) => s + (Number(conta.valor_pago) || 0), 0) * 100);
+        if (totalPagoCentavos !== totalCentavos) {
+          problemas.push({
+            id: compra.id + "-pagamento-avista",
+            mensagem: `Compra à vista de ${dataBR(compra.data_compra)} não aparece totalmente paga no financeiro.`,
+          });
+        }
+      }
+    }
+    return problemas;
+  }, [compras, contasPagar]);
+
+  const estoqueNegativo = estoque.filter((item) => Number(item.saldo) < 0);
 
   const porInsumo = useMemo(() => {
     const m = new Map<string, { id: string; nome: string; total: number; quantidade: number; unidade: string }>();
@@ -440,6 +512,39 @@ function Compras() {
   return (
     <>
       <PageHeader title="Compras de insumos" back="/mais" />
+
+      <section className="mb-8 rounded-xl border p-4">
+        <div className="mb-2 flex items-center justify-between gap-3">
+          <h2 className="text-lg font-semibold">Conferência de integração</h2>
+          <span className={auditoriaIntegracao.length || estoqueNegativo.length ? "rounded-full bg-destructive/10 px-2 py-1 text-xs font-semibold text-destructive" : "rounded-full bg-muted px-2 py-1 text-xs font-semibold"}>
+            {auditoriaIntegracao.length + estoqueNegativo.length} alerta(s)
+          </span>
+        </div>
+        <p className="mb-3 text-sm text-muted-foreground">
+          Verificação somente de leitura entre compras e contas a pagar, além de saldos negativos de estoque. Nenhum valor ou lançamento é alterado por esta conferência.
+        </p>
+        {auditoriaIntegracao.length === 0 && estoqueNegativo.length === 0 ? (
+          <p className="text-sm">Nenhuma divergência identificada nas verificações disponíveis.</p>
+        ) : (
+          <div className="space-y-2">
+            {auditoriaIntegracao.map((problema) => (
+              <div key={problema.id} className="rounded-lg border border-destructive/30 p-3 text-sm">
+                <p className="font-medium">{problema.mensagem}</p>
+                <p className="mt-1 text-xs text-muted-foreground">Confira a compra e suas contas vinculadas antes de fazer qualquer ajuste manual.</p>
+              </div>
+            ))}
+            {estoqueNegativo.map((item) => (
+              <div key={item.insumo_id} className="rounded-lg border border-amber-500/40 p-3 text-sm">
+                <p className="font-medium">Estoque negativo: {item.nome}</p>
+                <p className="text-xs text-muted-foreground">Saldo calculado: {Number(item.saldo).toLocaleString("pt-BR", { maximumFractionDigits: 3 })} {item.unidade_base ?? ""}. Confira entradas, produção e contagem física.</p>
+              </div>
+            ))}
+          </div>
+        )}
+        <p className="mt-3 text-xs text-muted-foreground">
+          Compras criadas antes de 15/10/2026 podem não ter vínculo financeiro automático e não são consideradas divergência apenas por isso. O alerta não substitui a conferência de extratos nem altera o estoque.
+        </p>
+      </section>
 
       <section className="mb-8">
         <h2 className="mb-2 text-lg font-semibold">Estoque atual</h2>
