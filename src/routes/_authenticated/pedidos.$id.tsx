@@ -521,7 +521,7 @@ function PedidoForm() {
               </Field>
               <div className="grid grid-cols-3 gap-2">
                 <Field label="Valor pago R$">
-                  <Input inputMode="decimal" value={f.valor_entrada} onFocus={() => limparZeroAoFocar(f.valor_entrada, setValorPago)} onChange={(e) => setValorPago(e.target.value)} className="h-11" />
+                  <Input inputMode="decimal" value={f.valor_entrada} disabled={pagamentos.length > 0} onFocus={() => limparZeroAoFocar(f.valor_entrada, setValorPago)} onChange={(e) => setValorPago(e.target.value)} className="h-11" />
                 </Field>
                 <Field label="Frete R$">
                   <Input inputMode="decimal" value={f.taxa_entrega} onFocus={() => limparZeroAoFocar(f.taxa_entrega, (valor) => set("taxa_entrega", valor))} onChange={(e) => set("taxa_entrega", e.target.value)} className="h-11" />
