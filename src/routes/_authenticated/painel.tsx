@@ -2,7 +2,6 @@ import * as appQueries from "@/lib/queries";
 import { createFileRoute, Link } from "@tanstack/react-router";
 import { Plus, AlertTriangle } from "lucide-react";
 import { usePedidosCalc } from "@/lib/hooks";
-import { useSuspenseQuery } from "@tanstack/react-query";
 import { brl, dataCurta, hojeISO, mesISO } from "@/lib/format";
 import { Card, Empty, PageHeader, StatusBadge } from "@/components/app/ui";
 import { Button } from "@/components/ui/button";
@@ -29,35 +28,30 @@ export const Route = createFileRoute("/_authenticated/painel")({
 
 function Painel() {
   const pedidos = usePedidosCalc();
-  const { data: pagamentosPedidos } = useSuspenseQuery(appQueries.pedidoPagamentosQ);
   const hoje = hojeISO();
   const mes = mesISO();
   const primeiroDiaMes = `${mes}-01`;
   const ultimoDiaMes = format(endOfMonth(new Date()), "yyyy-MM-dd");
 
-  // "Pedidos feitos" usa a data de cadastro do pedido (created_at), não a data de entrega.
-  // Pedidos cancelados ficam fora dos indicadores comerciais.
-  const pedidosCriadosNoMes = pedidos.filter((pedido) => {
-    const dataCriacao = String(pedido.created_at ?? "").slice(0, 10);
-    return pedido.status !== "cancelado" && dataCriacao >= primeiroDiaMes && dataCriacao <= ultimoDiaMes;
-  });
-  const valorPedidosCriadosNoMes = pedidosCriadosNoMes.reduce(
+  // Os indicadores mensais usam a data de entrega cadastrada no pedido,
+  // que é a data operacional utilizada no filtro principal do relatório financeiro.
+  const pedidosDoMes = pedidos.filter((pedido) =>
+    pedido.status !== "cancelado" &&
+    pedido.data_entrega >= primeiroDiaMes &&
+    pedido.data_entrega <= ultimoDiaMes,
+  );
+  const valorPedidosDoMes = pedidosDoMes.reduce(
     (soma, pedido) => soma + Math.max(0, Number(pedido.t.venda) || 0),
     0,
   );
-
-  // Recebimento mensal usa apenas movimentos com data individual confirmada.
-  // Não atribui pagamentos antigos sem data a um mês fictício.
-  const totalRecebidoNoMes = pagamentosPedidos
-    .filter((pagamento) =>
-      pagamento.data_pagamento >= primeiroDiaMes &&
-      pagamento.data_pagamento <= ultimoDiaMes &&
-      pedidos.some((pedido) => pedido.id === pagamento.pedido_id && pedido.status !== "cancelado"),
-    )
-    .reduce((soma, pagamento) => soma + Math.max(0, Number(pagamento.valor) || 0), 0);
-
-  // Saldo a receber limitado aos pedidos criados neste mês, sem incluir cancelados.
-  const pedidosAReceberNoMes = pedidosCriadosNoMes.reduce(
+  // Para o resumo dos pedidos, respeita o recebido e o saldo consolidados por pedido
+  // (entrada cadastrada, pagamentos detalhados e indicador de quitação), sem confundir
+  // esse valor com o caixa conciliado exclusivamente por data de pagamento.
+  const recebidoDosPedidosNoMes = pedidosDoMes.reduce(
+    (soma, pedido) => soma + Math.max(0, Number(pedido.t.recebido) || 0),
+    0,
+  );
+  const pedidosAReceberNoMes = pedidosDoMes.reduce(
     (soma, pedido) => soma + Math.max(0, Number(pedido.t.saldo) || 0),
     0,
   );
@@ -89,27 +83,27 @@ function Painel() {
         <div className="grid grid-cols-1 gap-3 sm:grid-cols-3">
           <Link
             to="/relatorios"
-            search={{ inicio: primeiroDiaMes, fim: ultimoDiaMes, secao: "vendas", dataBase: "criacao" }}
+            search={{ inicio: primeiroDiaMes, fim: ultimoDiaMes, secao: "visao-geral", dataBase: "entrega" }}
             className="block rounded-xl focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring"
-            aria-label={`Ver relatório dos pedidos feitos no mês: ${brl(valorPedidosCriadosNoMes)}`}
+            aria-label={`Ver relatório dos pedidos do mês: ${brl(valorPedidosDoMes)}`}
           >
             <Card className="h-full transition-colors hover:bg-muted/60">
-              <div className="text-sm text-muted-foreground">Pedidos feitos no mês</div>
-              <div className="mt-1 font-display text-2xl font-semibold">{brl(valorPedidosCriadosNoMes)}</div>
-              <div className="mt-1 text-xs text-muted-foreground">{pedidosCriadosNoMes.length} pedido(s) · pelo cadastro</div>
+              <div className="text-sm text-muted-foreground">Valor dos pedidos do mês</div>
+              <div className="mt-1 font-display text-2xl font-semibold">{brl(valorPedidosDoMes)}</div>
+              <div className="mt-1 text-xs text-muted-foreground">{pedidosDoMes.length} pedido(s) · pela data de entrega</div>
               <div className="mt-3 text-sm font-medium text-primary">Detalhar no financeiro →</div>
             </Card>
           </Link>
           <Link
             to="/relatorios"
-            search={{ inicio: primeiroDiaMes, fim: ultimoDiaMes, secao: "caixa", dataBase: "entrega" }}
+            search={{ inicio: primeiroDiaMes, fim: ultimoDiaMes, secao: "vendas", dataBase: "entrega" }}
             className="block rounded-xl focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring"
-            aria-label={`Ver relatório de recebimentos do mês: ${brl(totalRecebidoNoMes)}`}
+            aria-label={`Ver relatório do valor recebido nos pedidos do mês: ${brl(recebidoDosPedidosNoMes)}`}
           >
             <Card className="h-full transition-colors hover:bg-muted/60">
-              <div className="text-sm text-muted-foreground">Pedidos pagos / recebido no mês</div>
-              <div className="mt-1 font-display text-2xl font-semibold">{brl(totalRecebidoNoMes)}</div>
-              <div className="mt-1 text-xs text-muted-foreground">Pagamentos pela data em que entraram</div>
+              <div className="text-sm text-muted-foreground">Recebido dos pedidos do mês</div>
+              <div className="mt-1 font-display text-2xl font-semibold">{brl(recebidoDosPedidosNoMes)}</div>
+              <div className="mt-1 text-xs text-muted-foreground">Valores consolidados nos pedidos do mês</div>
               <div className="mt-3 text-sm font-medium text-primary">Detalhar no financeiro →</div>
             </Card>
           </Link>
@@ -122,7 +116,7 @@ function Painel() {
             <Card className="h-full transition-colors hover:bg-muted/60">
               <div className="text-sm text-muted-foreground">A receber dos pedidos do mês</div>
               <div className="mt-1 font-display text-2xl font-semibold">{brl(pedidosAReceberNoMes)}</div>
-              <div className="mt-1 text-xs text-muted-foreground">Saldo dos pedidos não cancelados</div>
+              <div className="mt-1 text-xs text-muted-foreground">Saldo pendente dos pedidos do mês</div>
               <div className="mt-3 text-sm font-medium text-primary">Detalhar no financeiro →</div>
             </Card>
           </Link>
