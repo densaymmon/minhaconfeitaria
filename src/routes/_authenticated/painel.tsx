@@ -35,11 +35,27 @@ function Painel() {
   const doMes = pedidos.filter((p) => p.status !== "cancelado" && p.data_entrega.startsWith(mes));
   const primeiroDiaMes = `${mes}-01`;
   const ultimoDiaMes = format(endOfMonth(new Date()), "yyyy-MM-dd");
-  // Soma recebimentos pela data em que o pagamento foi registrado, não pela data de entrega.
-  // Pagamentos antigos sem data individual ficam fora deste indicador para não inventar datas.
-  const totalRecebidoNoMes = pagamentosPedidos
-    .filter((pagamento) => pagamento.data_pagamento >= primeiroDiaMes && pagamento.data_pagamento <= ultimoDiaMes)
-    .reduce((soma, pagamento) => soma + Math.max(0, Number(pagamento.valor) || 0), 0);
+  // Soma pagamentos datados do mês apenas para pedidos válidos.
+  // Agrupar por pedido e limitar ao valor da venda impede que registros repetidos
+  // ou valores acima do total do pedido inflem o indicador.
+  const vendasPorPedido = new Map(
+    pedidos
+      .filter((pedido) => pedido.status !== "cancelado")
+      .map((pedido) => [pedido.id, Math.max(0, Number(pedido.t.venda) || 0)]),
+  );
+  const recebimentosPorPedidoNoMes = new Map<string, number>();
+  for (const pagamento of pagamentosPedidos) {
+    if (pagamento.data_pagamento < primeiroDiaMes || pagamento.data_pagamento > ultimoDiaMes) continue;
+    const valorVenda = vendasPorPedido.get(pagamento.pedido_id);
+    if (valorVenda === undefined || valorVenda <= 0) continue;
+    const somaAtual = recebimentosPorPedidoNoMes.get(pagamento.pedido_id) ?? 0;
+    recebimentosPorPedidoNoMes.set(
+      pagamento.pedido_id,
+      Math.min(valorVenda, somaAtual + Math.max(0, Number(pagamento.valor) || 0)),
+    );
+  }
+  const totalRecebidoNoMes = [...recebimentosPorPedidoNoMes.values()]
+    .reduce((soma, valor) => soma + valor, 0);
   // O hook compartilhado calcula o saldo usando entrada acumulada e histórico,
   // sem ignorar recebimentos nem contar o mesmo pagamento duas vezes.
   const pedidosAReceber = pedidos
