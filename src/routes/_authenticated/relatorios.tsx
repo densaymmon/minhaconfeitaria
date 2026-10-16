@@ -23,6 +23,7 @@ export const Route = createFileRoute("/_authenticated/relatorios")({
       context.queryClient.ensureQueryData(appQueries.produtosQ),
       context.queryClient.ensureQueryData(appQueries.insumosQ),
       context.queryClient.ensureQueryData(appQueries.contasPagarQ),
+      context.queryClient.ensureQueryData(appQueries.comprasQ),
     ]);
   },
   errorComponent: ({ error }) => (
@@ -59,6 +60,7 @@ function Relatorios() {
   const { data: insumos } = useSuspenseQuery(appQueries.insumosQ);
   const { data: despesas } = useSuspenseQuery(despesasQ);
   const { data: contasPagar } = useSuspenseQuery(appQueries.contasPagarQ);
+  const { data: compras } = useSuspenseQuery(appQueries.comprasQ);
   const intervaloValido = inicio <= fim;
   const contasAbertas = contasPagar.filter((c) => ["pendente", "parcial"].includes(c.status));
   const saldoContasAbertas = contasAbertas.reduce((s, c) => s + Math.max(0, Number(c.valor) - Number(c.valor_pago)), 0);
@@ -108,6 +110,12 @@ function Relatorios() {
   const gastos = intervaloValido
     ? despesas.filter((d) => d.data >= inicio && d.data <= fim).reduce((s, d) => s + Number(d.valor), 0)
     : 0;
+  // Compras são mostradas como movimento/compromisso financeiro, sem subtraí-las
+  // novamente do resultado: os insumos consumidos já devem compor o custo dos produtos vendidos.
+  const comprasNoPeriodo = intervaloValido
+    ? compras.filter((c) => !c.cancelada_em && c.data_compra >= inicio && c.data_compra <= fim)
+    : [];
+  const totalComprasInsumos = comprasNoPeriodo.reduce((s, c) => s + Math.max(0, Number(c.total) || 0), 0);
 
   const contratado = lista.reduce((s, p) => ({
     venda: s.venda + p.t.venda,
@@ -179,13 +187,19 @@ function Relatorios() {
       </div>
       {!intervaloValido && <p className="mb-4 text-destructive">A data final deve ser igual ou posterior à data inicial.</p>}
 
-      <h2 className="mb-3 text-lg font-semibold">Visão geral</h2>
+      <h2 className="mb-3 text-lg font-semibold">Visão geral do período</h2>
       <div className="mb-6 grid grid-cols-2 gap-3">
-        <Stat label="Vendas dos pedidos" value={brl(contratado.venda)} />
-        <Stat label="Pedidos entregues" value={brl(realizado.venda)} tone="primary" />
-        <Stat label="Saldo a receber estimado" value={brl(contratado.saldo)} />
+        <Stat label="Vendas contratadas" value={brl(contratado.venda)} />
+        <Stat label="Vendas entregues" value={brl(realizado.venda)} tone="primary" />
+        <Stat label="Recebido nos pedidos" value={brl(contratado.recebido)} />
+        <Stat label="Saldo a receber" value={brl(contratado.saldo)} />
+        <Stat label="Compras de insumos" value={brl(totalComprasInsumos)} />
+        <Stat label="Contas a pagar em aberto" value={brl(saldoContasAbertas)} tone={saldoContasAbertas > 0 ? "danger" : "default"} />
         <Stat label="Resultado estimado" value={brl(resultado)} tone={resultado >= 0 ? "success" : "danger"} />
       </div>
+      <p className="mb-6 text-xs text-muted-foreground">
+        Compras de insumos mostram o total registrado pela data da compra; contas a pagar mostram o saldo ainda pendente. Esses valores são informativos e não são descontados novamente do resultado estimado.
+      </p>
 
       <section className="mb-6 border-y py-4">
         <h2 className="mb-2 text-lg font-semibold">Resultado dos pedidos entregues</h2>
