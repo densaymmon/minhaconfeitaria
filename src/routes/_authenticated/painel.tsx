@@ -37,9 +37,8 @@ function Painel() {
   const valorEmCaixa = doMes
     .filter((p) => p.t.venda > 0 && p.t.saldo <= 0)
     .reduce((s, p) => s + p.t.venda, 0);
-  const pedidosAReceber = doMes
-    .filter((p) => ["recebido", "confirmado", "em_producao", "pronto"].includes(p.status) && p.t.saldo > 0)
-    .reduce((s, p) => s + p.t.saldo, 0);
+  // Mantém o mesmo critério do relatório financeiro: saldo de todos os pedidos não cancelados, sem limitar pela data de entrega ou status operacional.
+  const pedidosAReceber = ativos.reduce((s, p) => s + Math.max(0, Number(p.t.saldo) || 0), 0);
   const atrasados = pedidos.filter((p) => p.data_entrega < hoje && !["finalizado", "entregue", "cancelado"].includes(p.status)).length;
 
   const proximas = pedidos
@@ -75,7 +74,7 @@ function Painel() {
             <span className="text-2xl">{brl(pedidosAReceber)}</span>
             <span className="text-sm underline underline-offset-4">Ver pedidos <span aria-hidden="true">→</span></span>
           </Link>
-          <p className="text-xs opacity-75">Saldos pendentes de pedidos recebidos ou em produção neste mês</p>
+          <p className="text-xs opacity-75">Saldo pendente de todos os pedidos não cancelados</p>
         </div>
       </Card>
 
