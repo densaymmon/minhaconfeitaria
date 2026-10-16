@@ -341,6 +341,29 @@ BEGIN
     RAISE EXCEPTION 'Salvar pedido aceitou quantidade produzida enviada pelo cliente: %', produzida;
   END IF;
 
+  -- Order receipt history must update the running paid balance atomically and
+  -- reject an amount that exceeds the remaining order balance.
+  PERFORM public.registrar_recebimento_pedido(
+    pedido, 5, current_date, 'pix', 'Sinal de teste'
+  );
+  PERFORM public.registrar_recebimento_pedido(
+    pedido, 5, current_date, 'dinheiro', 'Segunda parcela de teste'
+  );
+  SELECT valor_entrada INTO saldo FROM public.pedidos WHERE id = pedido;
+  IF saldo <> 10 THEN RAISE EXCEPTION 'Saldo recebido do pedido incorreto após duas parcelas: %', saldo; END IF;
+  SELECT COALESCE(SUM(valor), 0) INTO saldo FROM public.pedido_pagamentos WHERE pedido_id = pedido;
+  IF saldo <> 10 THEN RAISE EXCEPTION 'Histórico de recebimentos incorreto: %', saldo; END IF;
+  BEGIN
+    PERFORM public.registrar_recebimento_pedido(
+      pedido, 10.01, current_date, 'pix', 'Tentativa de exceder o saldo'
+    );
+    RAISE EXCEPTION 'O sistema deveria bloquear recebimento acima do saldo.';
+  EXCEPTION WHEN raise_exception THEN
+    IF SQLERRM NOT LIKE 'O recebimento excede o saldo do pedido%' THEN
+      RAISE;
+    END IF;
+  END;
+
   PERFORM public.registrar_inventario_fisico(
     jsonb_build_array(jsonb_build_object(
       'insumo_id', iid, 'quantidade_fisica', 200, 'unidade_base', 'g'
