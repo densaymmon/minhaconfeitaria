@@ -2,6 +2,7 @@ import * as appQueries from "@/lib/queries";
 import { createFileRoute, Link } from "@tanstack/react-router";
 import { Plus, AlertTriangle } from "lucide-react";
 import { usePedidosCalc } from "@/lib/hooks";
+import { useSuspenseQuery } from "@tanstack/react-query";
 import { brl, dataCurta, hojeISO, mesISO } from "@/lib/format";
 import { Card, Empty, PageHeader, StatusBadge } from "@/components/app/ui";
 import { Button } from "@/components/ui/button";
@@ -28,14 +29,17 @@ export const Route = createFileRoute("/_authenticated/painel")({
 
 function Painel() {
   const pedidos = usePedidosCalc();
+  const { data: pagamentosPedidos } = useSuspenseQuery(appQueries.pedidoPagamentosQ);
   const hoje = hojeISO();
   const mes = mesISO();
   const doMes = pedidos.filter((p) => p.status !== "cancelado" && p.data_entrega.startsWith(mes));
   const primeiroDiaMes = `${mes}-01`;
   const ultimoDiaMes = format(endOfMonth(new Date()), "yyyy-MM-dd");
-  const valorEmCaixa = doMes
-    .filter((p) => p.t.venda > 0 && p.t.saldo <= 0)
-    .reduce((s, p) => s + p.t.venda, 0);
+  // Soma recebimentos pela data em que o pagamento foi registrado, não pela data de entrega.
+  // Pagamentos antigos sem data individual ficam fora deste indicador para não inventar datas.
+  const totalRecebidoNoMes = pagamentosPedidos
+    .filter((pagamento) => pagamento.data_pagamento >= primeiroDiaMes && pagamento.data_pagamento <= ultimoDiaMes)
+    .reduce((soma, pagamento) => soma + Math.max(0, Number(pagamento.valor) || 0), 0);
   // O hook compartilhado calcula o saldo usando entrada acumulada e histórico,
   // sem ignorar recebimentos nem contar o mesmo pagamento duas vezes.
   const pedidosAReceber = pedidos
@@ -63,9 +67,10 @@ function Painel() {
       />
 
       <Card className="mb-4 bg-hero text-primary-foreground">
-        <div className="text-xs opacity-80">Resultado do mês · {format(new Date(), "MMMM", { locale: ptBR })}</div>
-        <div className="mt-1 text-sm opacity-80">Saldo</div>
-        <div className="mt-1 font-display text-3xl font-semibold">{brl(valorEmCaixa)}</div>
+        <div className="text-xs opacity-80">Movimento do mês · {format(new Date(), "MMMM", { locale: ptBR })}</div>
+        <div className="mt-1 text-sm opacity-80">Total recebido no mês</div>
+        <div className="mt-1 font-display text-3xl font-semibold">{brl(totalRecebidoNoMes)}</div>
+        <p className="mt-1 text-xs opacity-75">Pagamentos registrados pela data de recebimento</p>
         <div className="mt-4 border-t border-primary-foreground/20 pt-3">
           <div className="text-xs opacity-75">Valores a receber</div>
           <Link
