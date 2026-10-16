@@ -30,15 +30,16 @@ function Painel() {
   const pedidos = usePedidosCalc();
   const hoje = hojeISO();
   const mes = mesISO();
-  const ativos = pedidos.filter((p) => p.status !== "cancelado");
-  const doMes = ativos.filter((p) => p.data_entrega.startsWith(mes));
+  const doMes = pedidos.filter((p) => p.status !== "cancelado" && p.data_entrega.startsWith(mes));
   const primeiroDiaMes = `${mes}-01`;
   const ultimoDiaMes = format(endOfMonth(new Date()), "yyyy-MM-dd");
   const valorEmCaixa = doMes
     .filter((p) => p.t.venda > 0 && p.t.saldo <= 0)
     .reduce((s, p) => s + p.t.venda, 0);
-  // Mantém o mesmo critério do relatório financeiro: saldo de todos os pedidos não cancelados, sem limitar pela data de entrega ou status operacional.
-  const pedidosAReceber = ativos.reduce((s, p) => s + Math.max(0, Number(p.t.saldo) || 0), 0);
+  // Replica exatamente o cálculo do indicador “A receber” da tela de Pedidos.
+  const pedidosAReceber = pedidos
+    .filter((p) => p.status !== "cancelado")
+    .reduce((soma, p) => soma + Math.max(0, Number(p.t.saldo) || 0), 0);
   const atrasados = pedidos.filter((p) => p.data_entrega < hoje && !["finalizado", "entregue", "cancelado"].includes(p.status)).length;
 
   const proximas = pedidos
