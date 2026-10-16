@@ -1,5 +1,7 @@
 import * as appQueries from "@/lib/queries";
 import { createFileRoute, Link } from "@tanstack/react-router";
+import { useMemo } from "react";
+import { useSuspenseQuery } from "@tanstack/react-query";
 import { Plus, AlertTriangle } from "lucide-react";
 import { usePedidosCalc } from "@/lib/hooks";
 import { brl, dataCurta, hojeISO, mesISO } from "@/lib/format";
@@ -9,7 +11,7 @@ import { endOfMonth, format } from "date-fns";
 import { ptBR } from "date-fns/locale";
 
 export const Route = createFileRoute("/_authenticated/painel")({
- loader: async ({ context }) => { await Promise.all([context.queryClient.ensureQueryData(appQueries.pedidosQ),context.queryClient.ensureQueryData(appQueries.configQ),context.queryClient.ensureQueryData(appQueries.despesasQ)]); },
+ loader: async ({ context }) => { await Promise.all([context.queryClient.ensureQueryData(appQueries.pedidosQ),context.queryClient.ensureQueryData(appQueries.configQ),context.queryClient.ensureQueryData(appQueries.despesasQ),context.queryClient.ensureQueryData(appQueries.pedidoPagamentosQ)]); },
  errorComponent: ({error}) => <p role="alert" className="py-8 text-destructive">{error instanceof Error ? error.message : "Não foi possível carregar os registros."}</p>,
  notFoundComponent: () => <p>Registro não encontrado.</p>,
 
@@ -28,6 +30,14 @@ export const Route = createFileRoute("/_authenticated/painel")({
 
 function Painel() {
   const pedidos = usePedidosCalc();
+  const { data: pagamentosPedidos } = useSuspenseQuery(appQueries.pedidoPagamentosQ);
+  const totalPagoPorPedido = useMemo(() => {
+    const totais = new Map<string, number>();
+    for (const pagamento of pagamentosPedidos) {
+      totais.set(pagamento.pedido_id, (totais.get(pagamento.pedido_id) ?? 0) + Math.max(0, Number(pagamento.valor) || 0));
+    }
+    return totais;
+  }, [pagamentosPedidos]);
   const hoje = hojeISO();
   const mes = mesISO();
   const doMes = pedidos.filter((p) => p.status !== "cancelado" && p.data_entrega.startsWith(mes));
@@ -36,10 +46,16 @@ function Painel() {
   const valorEmCaixa = doMes
     .filter((p) => p.t.venda > 0 && p.t.saldo <= 0)
     .reduce((s, p) => s + p.t.venda, 0);
-  // Replica exatamente o cálculo do indicador “A receber” da tela de Pedidos.
+  // Inclui entradas antigas e os recebimentos detalhados registrados no histórico.
   const pedidosAReceber = pedidos
     .filter((p) => p.status !== "cancelado")
-    .reduce((soma, p) => soma + Math.max(0, Number(p.t.saldo) || 0), 0);
+    .reduce((soma, p) => {
+      const entradaLegada = Math.max(0, Number(p.t.recebido) || 0);
+      const pagamentosDetalhados = totalPagoPorPedido.get(p.id) ?? 0;
+      const totalRecebido = Math.min(p.t.venda, entradaLegada + pagamentosDetalhados);
+      const saldoPendente = p.saldo_quitado ? 0 : Math.max(0, p.t.venda - totalRecebido);
+      return soma + saldoPendente;
+    }, 0);
   const atrasados = pedidos.filter((p) => p.data_entrega < hoje && !["finalizado", "entregue", "cancelado"].includes(p.status)).length;
 
   const proximas = pedidos
