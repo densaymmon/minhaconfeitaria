@@ -40,6 +40,8 @@ export const Route = createFileRoute("/_authenticated/relatorios")({
   validateSearch: (s: Record<string, unknown>) => ({
     inicio: typeof s["inicio"] === "string" && /^\d{4}-\d{2}-\d{2}$/.test(s["inicio"]) ? s["inicio"] : mesISO() + "-01",
     fim: typeof s["fim"] === "string" && /^\d{4}-\d{2}-\d{2}$/.test(s["fim"]) ? s["fim"] : hojeISO(),
+    secao: ["visao-geral", "vendas", "compras", "contas", "caixa", "despesas"].includes(String(s["secao"])) ? String(s["secao"]) : "visao-geral",
+    dataBase: s["dataBase"] === "criacao" ? "criacao" : "entrega",
   }),
   head: () => ({
     meta: [
@@ -55,13 +57,13 @@ export const Route = createFileRoute("/_authenticated/relatorios")({
 });
 
 function Relatorios() {
-  const { inicio, fim } = Route.useSearch();
+  const { inicio, fim, secao, dataBase } = Route.useSearch();
   const qc = useQueryClient();
   const [corrigindoCustos, setCorrigindoCustos] = useState(false);
-  const [inicioRecebimentos, setInicioRecebimentos] = useState(mesISO() + "-01");
-  const [fimRecebimentos, setFimRecebimentos] = useState(hojeISO());
+  const [inicioRecebimentos, setInicioRecebimentos] = useState(inicio);
+  const [fimRecebimentos, setFimRecebimentos] = useState(fim);
   const navigate = Route.useNavigate();
-  const [categoriaRelatorio, setCategoriaRelatorio] = useState("visao-geral");
+  const [categoriaRelatorio, setCategoriaRelatorio] = useState(secao);
   const [filtroStatusConta, setFiltroStatusConta] = useState("todas");
   const [filtroFormaCompra, setFiltroFormaCompra] = useState("todas");
   const [filtroCategoriaDespesa, setFiltroCategoriaDespesa] = useState("todas");
@@ -136,7 +138,13 @@ function Relatorios() {
   }), [pedidos, produtosPorId, custoAtual, config, pagamentosPedidos]);
 
   const lista = intervaloValido
-    ? pedidosCalculados.filter((p) => p.status !== "cancelado" && p.data_entrega >= inicio && p.data_entrega <= fim)
+    ? pedidosCalculados.filter((p) => {
+      if (p.status === "cancelado") return false;
+      const dataReferencia = dataBase === "criacao"
+        ? String(p.created_at ?? "").slice(0, 10)
+        : p.data_entrega;
+      return dataReferencia >= inicio && dataReferencia <= fim;
+    })
     : [];
   const entregues = lista.filter((p) => ["finalizado", "entregue"].includes(p.status));
   const gastos = intervaloValido
@@ -249,6 +257,7 @@ function Relatorios() {
   const pedidosEmAberto = pedidosCalculados.filter((p) => p.status !== "cancelado");
   const saldoTotalAReceber = pedidosEmAberto.reduce((s, p) => s + Math.max(0, Number(p.t.saldo) || 0), 0);
   const pedidosComSaldo = pedidosEmAberto.filter((p) => Number(p.t.saldo) > 0).length;
+  const saldoAReceberNoPeriodo = lista.reduce((soma, pedido) => soma + Math.max(0, Number(pedido.t.saldo) || 0), 0);
 
   const contratado = lista.reduce((s, p) => ({
     venda: s.venda + p.t.venda,
@@ -418,7 +427,8 @@ function Relatorios() {
           Estes valores representam a posição atual de todos os pedidos e contas cadastrados, independentemente do período selecionado acima.
         </p>
         <div className="grid grid-cols-2 gap-3">
-          <Stat label="Total a receber em pedidos" value={brl(saldoTotalAReceber)} tone={saldoTotalAReceber > 0 ? "primary" : "default"} />
+          <Stat label="A receber dos pedidos no período" value={brl(saldoAReceberNoPeriodo)} tone={saldoAReceberNoPeriodo > 0 ? "primary" : "default"} />
+          <Stat label="Total a receber em todos os pedidos" value={brl(saldoTotalAReceber)} tone={saldoTotalAReceber > 0 ? "primary" : "default"} />
           <Stat label="Pedidos com saldo pendente" value={String(pedidosComSaldo)} />
           <Stat label="Contas vencidas" value={brl(saldoContasVencidas)} tone={saldoContasVencidas > 0 ? "danger" : "success"} />
           <Stat label="Contas vencendo em 7 dias" value={brl(saldoContasProximos7Dias)} tone={saldoContasProximos7Dias > 0 ? "danger" : "default"} />
