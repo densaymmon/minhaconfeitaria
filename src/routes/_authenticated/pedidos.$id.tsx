@@ -256,14 +256,14 @@ function PedidoForm() {
         hora_entrega: f.hora_entrega || null,
         status: f.status === "finalizado" ? "entregue" : f.status,
         forma_pagamento: f.forma_pagamento,
-        valor_entrada: parseNum(f.valor_entrada),
-        saldo_quitado: f.saldo_quitado,
+        valor_entrada: !novo && pagamentos.length > 0 ? Number(existente?.valor_entrada ?? parseNum(f.valor_entrada)) : parseNum(f.valor_entrada),
+        saldo_quitado: !novo && pagamentos.length > 0 ? Boolean(existente?.saldo_quitado) : f.saldo_quitado,
         desconto: parseNum(f.desconto),
         taxa_entrega: parseNum(f.taxa_entrega),
         observacoes: f.observacoes.trim() || null,
       };
-      const { error } = await supabase.rpc("salvar_pedido", {
-        payload,
+      const { data: pedidoSalvoId, error } = await supabase.rpc("salvar_pedido", {
+        payload: novo && parseNum(f.valor_entrada) > 0 ? { ...payload, valor_entrada: 0, saldo_quitado: false } : payload,
         itens: itens.map((i) => ({
           produto_id: i.produto_id,
           descricao: i.descricao.trim(),
@@ -277,6 +277,16 @@ function PedidoForm() {
         ...(existente ? { registro_id: existente.id } : {}),
       });
       if (error) throw error;
+      if (novo && parseNum(f.valor_entrada) > 0) {
+        const { error: recebimentoError } = await supabase.rpc("registrar_recebimento_pedido", {
+          p_pedido_id: pedidoSalvoId,
+          p_valor: Math.round(parseNum(f.valor_entrada) * 100) / 100,
+          p_data_pagamento: hojeISO(),
+          p_forma_pagamento: f.forma_pagamento,
+          p_observacoes: "Entrada registrada na criação do pedido",
+        });
+        if (recebimentoError) throw new Error("Pedido criado, mas não foi possível registrar a entrada: " + recebimentoError.message);
+      }
       await qc.invalidateQueries({ queryKey: ["pedidos"] });
       toast.success(novo ? "Pedido criado!" : "Pedido atualizado!");
       navigate({ to: "/pedidos", search: { filtro: undefined, dataInicial: undefined, dataFinal: undefined } });
@@ -465,7 +475,7 @@ function PedidoForm() {
                   </NativeSelect>
                 </Field>
                 <Field label="Entrada / valor pago (R$)">
-                  <Input inputMode="decimal" value={f.valor_entrada} onFocus={() => limparZeroAoFocar(f.valor_entrada, setValorPago)} onChange={(e) => setValorPago(e.target.value)} className="h-11" />
+                  <Input inputMode="decimal" value={f.valor_entrada} disabled={pagamentos.length > 0} onFocus={() => limparZeroAoFocar(f.valor_entrada, setValorPago)} onChange={(e) => setValorPago(e.target.value)} className="h-11" />
                 </Field>
               </div>
               <div className="rounded-xl bg-muted/60 p-3">
