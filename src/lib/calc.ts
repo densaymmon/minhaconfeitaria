@@ -102,6 +102,24 @@ export type PedidoLite = {
   pedido_itens: { quantidade: number; preco_unitario: number; custo_unitario: number }[];
 };
 
+/** Consolida recebimentos legados e detalhados sem somá-los em duplicidade. */
+export function calcularRecebimentoPedido(input: {
+  venda: number;
+  status: string;
+  saldo_quitado: boolean;
+  valor_entrada: number;
+  pagamentosDetalhados: number;
+}) {
+  const venda = Math.max(0, n(input.venda));
+  const recebidoCadastro = Math.min(venda, Math.max(0, n(input.valor_entrada)));
+  const recebidoHistorico = Math.max(0, n(input.pagamentosDetalhados));
+  const recebido = Math.min(venda, Math.max(recebidoCadastro, recebidoHistorico, input.saldo_quitado ? venda : 0));
+  const saldo = input.status === "cancelado" || input.saldo_quitado
+    ? 0
+    : Math.max(0, venda - recebido);
+  return { recebido, saldo };
+}
+
 export function totaisPedido(p: PedidoLite, c: Config) {
   const subtotal = p.pedido_itens.reduce((s, i) => s + n(i.quantidade) * n(i.preco_unitario), 0);
   const venda = Math.max(0, subtotal + n(p.taxa_entrega) - n(p.desconto));
