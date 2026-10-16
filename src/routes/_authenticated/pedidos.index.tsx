@@ -3,7 +3,6 @@ import { createFileRoute, Link, useNavigate } from "@tanstack/react-router";
 import { useMemo, useState } from "react";
 import { CalendarClock, ChevronDown, Download, Plus, Search, SlidersHorizontal, Wallet } from "lucide-react";
 import { usePedidosCalc } from "@/lib/hooks";
-import { useSuspenseQuery } from "@tanstack/react-query";
 import { STATUS, brl, dataBR, formaLabel, hojeISO, statusLabel } from "@/lib/format";
 import { baixarCSV } from "@/lib/csv";
 import { Card, Empty, PageHeader, StatusBadge } from "@/components/app/ui";
@@ -37,19 +36,7 @@ export const Route = createFileRoute("/_authenticated/pedidos/")({
 });
 
 function Pedidos() {
-  const pedidosBase = usePedidosCalc();
-  const { data: pagamentosPedidos } = useSuspenseQuery(appQueries.pedidoPagamentosQ);
-  const pedidos = useMemo(() => {
-    const totais = new Map<string, number>();
-    for (const pagamento of pagamentosPedidos) {
-      totais.set(pagamento.pedido_id, (totais.get(pagamento.pedido_id) ?? 0) + Math.max(0, Number(pagamento.valor) || 0));
-    }
-    return pedidosBase.map((pedido) => {
-      const detalhado = totais.get(pedido.id) ?? 0;
-      const recebido = Math.min(pedido.t.venda, detalhado > 0 ? detalhado : Math.max(0, Number(pedido.t.recebido) || 0));
-      return { ...pedido, t: { ...pedido.t, recebido, saldo: pedido.status === "cancelado" || pedido.saldo_quitado ? 0 : Math.max(0, pedido.t.venda - recebido) } };
-    });
-  }, [pedidosBase, pagamentosPedidos]);
+  const pedidos = usePedidosCalc();
   const search = Route.useSearch();
   const navigate = useNavigate();
   const [busca, setBusca] = useState("");
