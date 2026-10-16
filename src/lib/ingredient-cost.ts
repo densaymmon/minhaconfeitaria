@@ -11,11 +11,30 @@ export function medidasCompativeis(u: string) {
   const base = medida(u)?.base;
   return [...MEDIDAS, ...(u === "dúzia" || u === "pacote" ? [u] : [])].filter((v) => medida(v)?.base === base);
 }
-/** Strict numeric input; unlike parseFloat, rejects trailing text and empty values. */
+/**
+ * Strict numeric input for quantities. A single comma or period is treated as
+ * the decimal separator (so "3.396" means 3.396, not 3396). When both
+ * separators are present, the last one is decimal and the other is grouping.
+ */
 export function numeroIngrediente(s: string): number {
-  const text = s.trim();
-  if (!/^(?:\d+(?:\.\d+)?|\d{1,3}(?:\.\d{3})*)(?:,\d+)?$/.test(text)) return NaN;
-  return Number(text.includes(",") ? text.replaceAll(".", "").replace(",", ".") : text);
+  const text = s.trim().replace(/\s/g, "");
+  if (!text || !/^[\d.,]+$/.test(text) || !/\d/.test(text)) return NaN;
+
+  const lastDot = text.lastIndexOf(".");
+  const lastComma = text.lastIndexOf(",");
+  if (lastDot >= 0 && lastComma >= 0) {
+    const decimalSeparator = lastDot > lastComma ? "." : ",";
+    const groupingSeparator = decimalSeparator === "." ? "," : ".";
+    const normalized = text.split(groupingSeparator).join("").replace(decimalSeparator, ".");
+    return /^\d+(?:\.\d+)?$/.test(normalized) ? Number(normalized) : NaN;
+  }
+
+  const separator = lastDot >= 0 ? "." : lastComma >= 0 ? "," : null;
+  if (!separator) return /^\d+$/.test(text) ? Number(text) : NaN;
+  const pieces = text.split(separator);
+  if (pieces.length !== 2 || !pieces[0] || !pieces[1]) return NaN;
+  const normalized = pieces[0] + "." + pieces[1];
+  return /^\d+(?:\.\d+)?$/.test(normalized) ? Number(normalized) : NaN;
 }
 export type Embalagem = { preco_embalagem?: number | null; quantidade_embalagem?: number | null; unidade_embalagem?: string | null; preco_unidade: number; unidade?: string };
 export function custoProporcional(i: Embalagem, quantidade: number, unidade: string) {
