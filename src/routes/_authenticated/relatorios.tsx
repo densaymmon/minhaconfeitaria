@@ -294,7 +294,7 @@ function Relatorios() {
       {categoriaRelatorio === "contas" && <section className="mb-6 rounded-xl border p-4">
         <h2 className="mb-1 text-lg font-semibold">Saúde financeira atual</h2>
         <p className="mb-4 text-sm text-muted-foreground">
-          Estes valores representam a posição atual de todos os pedidos e contas cadastrados, independentemente do filtro de datas de entrega acima.
+          Estes valores representam a posição atual de todos os pedidos e contas cadastrados, independentemente do período selecionado acima.
         </p>
         <div className="grid grid-cols-2 gap-3">
           <Stat label="Total a receber em pedidos" value={brl(saldoTotalAReceber)} tone={saldoTotalAReceber > 0 ? "primary" : "default"} />
@@ -465,12 +465,14 @@ function Relatorios() {
         )}
       </section>}
 
-      {categoriaRelatorio === "vendas" && <p className="mb-2 text-xs text-muted-foreground">
+      {categoriaRelatorio === "vendas" && <>
+      <p className="mb-2 text-xs text-muted-foreground">
         Valores recebidos e saldo são estimativas dos pedidos com entrega no período, não um extrato por data de pagamento. O sistema ainda não registra cada pagamento parcial com sua própria data.
       </p>
       <p className="text-xs text-muted-foreground">
         Para itens avulsos sem produto/receita cadastrada, o relatório mantém o custo salvo no pedido. Taxas e impostos são estimativas conforme as configurações atuais.
-      </p>}
+      </p>
+      </>}
     </>
   );
 }
