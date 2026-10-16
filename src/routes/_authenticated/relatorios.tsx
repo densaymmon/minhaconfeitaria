@@ -62,6 +62,9 @@ function Relatorios() {
   const [fimRecebimentos, setFimRecebimentos] = useState(hojeISO());
   const navigate = Route.useNavigate();
   const [categoriaRelatorio, setCategoriaRelatorio] = useState("visao-geral");
+  const [filtroStatusConta, setFiltroStatusConta] = useState("todas");
+  const [filtroFormaCompra, setFiltroFormaCompra] = useState("todas");
+  const [filtroCategoriaDespesa, setFiltroCategoriaDespesa] = useState("todas");
   const { data: pedidos } = useSuspenseQuery(pedidosQ);
   const { data: config } = useSuspenseQuery(configQ);
   const { data: produtos } = useSuspenseQuery(appQueries.produtosQ);
@@ -147,8 +150,10 @@ function Relatorios() {
   const totalComprasInsumos = comprasNoPeriodo.reduce((s, c) => s + Math.max(0, Number(c.total) || 0), 0);
   // Normaliza quantidades antes de somar: 1 kg + 200 g = 1,2 kg,
   // e 1 L + 200 ml = 1,2 L. Nunca soma valores de unidades diferentes diretamente.
+  const comprasFiltradasForma = useMemo(() => comprasNoPeriodo.filter((compra) => filtroFormaCompra === "todas" || (compra.forma_pagamento_compra || "não informado") === filtroFormaCompra), [comprasNoPeriodo, filtroFormaCompra]);
+  const totalComprasFiltradas = comprasFiltradasForma.reduce((s, c) => s + Math.max(0, Number(c.total) || 0), 0);
   const gastosPorInsumo = useMemo(() => {
-    const idsComprasValidas = new Set(comprasNoPeriodo.map((compra) => compra.id));
+    const idsComprasValidas = new Set(comprasFiltradasForma.map((compra) => compra.id));
     const totais = new Map<string, { nome: string; total: number; quantidadeCompras: number; quantidadeBase: number; unidadeBase: string; unidadesIncompativeis: boolean }>();
     const comprasPorInsumo = new Map<string, Set<string>>();
     for (const item of itensCompra) {
@@ -191,7 +196,7 @@ function Relatorios() {
         quantidadeCompras: comprasPorInsumo.get(id)?.size ?? 0,
       };
     }).sort((a, b) => b.total - a.total);
-  }, [comprasNoPeriodo, itensCompra, insumosPorId]);
+  }, [comprasFiltradasForma, itensCompra, insumosPorId]);
   const intervaloRecebimentosValido = inicioRecebimentos <= fimRecebimentos;
   const recebimentosNoPeriodo = intervaloRecebimentosValido ? pagamentosPedidos.filter((p) => p.data_pagamento >= inicioRecebimentos && p.data_pagamento <= fimRecebimentos) : [];
   const totalRecebidoNoPeriodo = recebimentosNoPeriodo.reduce((s, p) => s + Math.max(0, Number(p.valor) || 0), 0);
@@ -228,15 +233,17 @@ function Relatorios() {
     }
     return [...totais.entries()].sort((a, b) => b[1] - a[1]);
   }, [comprasNoPeriodo]);
+  const categoriasDespesasDisponiveis = useMemo(() => [...new Set(despesas.filter((d) => !intervaloValido || (d.data >= inicio && d.data <= fim)).map((d) => d.categoria?.trim() || "Sem categoria"))].sort((a, b) => a.localeCompare(b, "pt-BR")), [despesas, inicio, fim, intervaloValido]);
   const despesasPorCategoria = useMemo(() => {
     const totais = new Map<string, number>();
     for (const despesa of despesas) {
       if (!intervaloValido || despesa.data < inicio || despesa.data > fim) continue;
       const categoria = despesa.categoria?.trim() || "Sem categoria";
+      if (filtroCategoriaDespesa !== "todas" && categoria !== filtroCategoriaDespesa) continue;
       totais.set(categoria, (totais.get(categoria) ?? 0) + (Number(despesa.valor) || 0));
     }
     return [...totais.entries()].sort((a, b) => b[1] - a[1]);
-  }, [despesas, inicio, fim, intervaloValido]);
+  }, [despesas, inicio, fim, intervaloValido, filtroCategoriaDespesa]);
 
   // Indicadores atuais não dependem do filtro de entrega do relatório.
   const pedidosEmAberto = pedidosCalculados.filter((p) => p.status !== "cancelado");
@@ -316,14 +323,14 @@ function Relatorios() {
         ["Insumo", "Quantidade comprada", "Unidade", "Número de compras", "Gasto total", "Participação nos gastos (%)"],
         gastosPorInsumo.map((item) => [
           item.nome, item.quantidade ?? "Conferir unidades", item.unidade, item.quantidadeCompras, item.total,
-          totalComprasInsumos > 0 ? Number(((item.total / totalComprasInsumos) * 100).toFixed(2)) : 0,
+          totalComprasFiltradas > 0 ? Number(((item.total / totalComprasFiltradas) * 100).toFixed(2)) : 0,
         ]),
       );
       return;
     }
     if (categoriaRelatorio === "despesas") {
       const despesasNoPeriodo = intervaloValido
-        ? despesas.filter((d) => d.data >= inicio && d.data <= fim)
+        ? despesas.filter((d) => d.data >= inicio && d.data <= fim && (filtroCategoriaDespesa === "todas" || (d.categoria?.trim() || "Sem categoria") === filtroCategoriaDespesa))
         : [];
       baixarCSV("relatorio-despesas-custos-" + sufixo,
         ["Data", "Categoria", "Descrição", "Valor"],
@@ -334,7 +341,7 @@ function Relatorios() {
     if (categoriaRelatorio === "contas") {
       baixarCSV("relatorio-contas-a-pagar-" + sufixo,
         ["Vencimento", "Descrição", "Fornecedor", "Status", "Valor", "Valor pago", "Saldo pendente"],
-        contasPagar.filter((c) => !c.cancelada_em).map((c) => [
+        contasPagar.filter((c) => filtroStatusConta === "todas" ? !c.cancelada_em : filtroStatusConta === "cancelado" ? !!c.cancelada_em || c.status === "cancelado" : !c.cancelada_em && c.status === filtroStatusConta).map((c) => [
           dataBR(c.data_vencimento), c.descricao, c.fornecedor || "", c.status,
           Number(c.valor) || 0, Number(c.valor_pago) || 0,
           Math.max(0, Number(c.valor) - Number(c.valor_pago)),
@@ -493,6 +500,12 @@ function Relatorios() {
 
       {categoriaRelatorio === "despesas" && <section className="mb-6">
         <h2 className="mb-3 text-lg font-semibold">Despesas por categoria</h2>
+        <Field label="Filtrar categoria">
+          <select className="h-11 w-full rounded-md border bg-card px-3 text-sm" value={filtroCategoriaDespesa} onChange={(e) => setFiltroCategoriaDespesa(e.target.value)}>
+            <option value="todas">Todas as categorias</option>
+            {categoriasDespesasDisponiveis.map((categoria) => <option key={categoria} value={categoria}>{categoria}</option>)}
+          </select>
+        </Field>
         {!despesasPorCategoria.length ? <Empty>Nenhuma despesa registrada no período.</Empty> : (
           <div className="divide-y">
             {despesasPorCategoria.map(([categoria, valor]) => (
@@ -508,37 +521,48 @@ function Relatorios() {
       {categoriaRelatorio === "compras" && <section className="mb-6">
         <h2 className="mb-1 text-lg font-semibold">Gastos por insumo</h2>
         <p className="mb-3 text-sm text-muted-foreground">Veja quanto foi gasto com cada produto comprado no período selecionado. Quantidades de peso são convertidas para kg, de volume para L e de dúzias para unidades antes da soma. Compras canceladas não entram no cálculo.</p>
+        <Field label="Filtrar forma de pagamento">
+          <select className="h-11 w-full rounded-md border bg-card px-3 text-sm" value={filtroFormaCompra} onChange={(e) => setFiltroFormaCompra(e.target.value)}>
+            <option value="todas">Todas as formas</option>
+            {[...new Set(comprasNoPeriodo.map((c) => c.forma_pagamento_compra || "não informado"))].sort().map((forma) => <option key={forma} value={forma}>{forma.replaceAll("_", " ")}</option>)}
+          </select>
+        </Field>
         <div className="mb-3 grid grid-cols-2 gap-3">
-          <Stat label="Total de compras" value={brl(totalComprasInsumos)} />
+          <Stat label="Total de compras filtradas" value={brl(totalComprasFiltradas)} />
           <Stat label="Insumos comprados" value={String(gastosPorInsumo.length)} />
         </div>
-        {!gastosPorInsumo.length ? <Empty>Nenhuma compra com itens registrada no período.</Empty> : (
-          <div className="divide-y rounded-xl border px-3">
-            {gastosPorInsumo.map((item) => (
-              <div key={item.id} className="py-3">
-                <div className="flex items-start justify-between gap-3">
-                  <div className="min-w-0">
-                    <p className="font-medium">{item.nome}</p>
-                    <p className="text-xs text-muted-foreground">{item.quantidade === null ? "Confira as unidades cadastradas" : `${num(item.quantidade)} ${item.unidade}`} · {item.quantidadeCompras} compra(s)</p>
+        <details className="mt-3 rounded-xl border px-3">
+          <summary className="cursor-pointer py-3 text-sm font-medium">Detalhar gastos por insumo ({gastosPorInsumo.length})</summary>
+          {!gastosPorInsumo.length ? <Empty>Nenhuma compra com itens registrada no período.</Empty> : (
+            <div className="divide-y">
+              {gastosPorInsumo.map((item) => (
+                <div key={item.id} className="py-3">
+                  <div className="flex items-start justify-between gap-3">
+                    <div className="min-w-0">
+                      <p className="font-medium">{item.nome}</p>
+                      <p className="text-xs text-muted-foreground">{item.quantidade === null ? "Confira as unidades cadastradas" : `${num(item.quantidade)} ${item.unidade}`} · {item.quantidadeCompras} compra(s)</p>
+                    </div>
+                    <b className="shrink-0">{brl(item.total)}</b>
                   </div>
-                  <b className="shrink-0">{brl(item.total)}</b>
+                  <div className="mt-2 h-1.5 overflow-hidden rounded-full bg-muted">
+                    <div className="h-full rounded-full bg-primary" style={{ width: totalComprasFiltradas > 0 ? Math.min(100, (item.total / totalComprasFiltradas) * 100) + "%" : "0%" }} />
+                  </div>
+                  <p className="mt-1 text-right text-xs text-muted-foreground">{(totalComprasFiltradas > 0 ? (item.total / totalComprasFiltradas) * 100 : 0).toLocaleString("pt-BR", { maximumFractionDigits: 1 })}% dos gastos</p>
                 </div>
-                <div className="mt-2 h-1.5 overflow-hidden rounded-full bg-muted">
-                  <div className="h-full rounded-full bg-primary" style={{ width: totalComprasInsumos > 0 ? Math.min(100, (item.total / totalComprasInsumos) * 100) + "%" : "0%" }} />
-                </div>
-                <p className="mt-1 text-right text-xs text-muted-foreground">{(totalComprasInsumos > 0 ? (item.total / totalComprasInsumos) * 100 : 0).toLocaleString("pt-BR", { maximumFractionDigits: 1 })}% dos gastos</p>
-              </div>
-            ))}
-          </div>
-        )}
-        <h3 className="mb-2 mt-5 font-medium">Gastos por forma de pagamento</h3>
-        {!comprasPorForma.length ? <p className="text-sm text-muted-foreground">Nenhuma compra registrada no período.</p> : (
-          <div className="divide-y">
-            {comprasPorForma.map(([forma, valor]) => (
-              <Row key={forma} label={forma.replaceAll("_", " ")} value={brl(valor)} />
-            ))}
-          </div>
-        )}
+              ))}
+            </div>
+          )}
+        </details>
+        <details className="mt-3 rounded-xl border px-3">
+          <summary className="cursor-pointer py-3 text-sm font-medium">Gastos por forma de pagamento ({comprasPorForma.length})</summary>
+          {!comprasPorForma.length ? <p className="pb-3 text-sm text-muted-foreground">Nenhuma compra registrada no período.</p> : (
+            <div className="divide-y">
+              {comprasPorForma.map(([forma, valor]) => (
+                <Row key={forma} label={forma.replaceAll("_", " ")} value={brl(valor)} />
+              ))}
+            </div>
+          )}
+        </details>
         <p className="mt-2 text-xs text-muted-foreground">O gasto por insumo usa o valor de cada item da compra; a forma de pagamento é um resumo separado do total das compras, não do valor efetivamente pago em cada data.</p>
       </section>}
 
@@ -550,6 +574,43 @@ function Relatorios() {
         <div className="grid grid-cols-2 gap-3">
           <Stat label="Saldo em aberto" value={brl(saldoContasAbertas)} />
           <Stat label="Contas vencidas" value={brl(saldoContasVencidas)} tone={saldoContasVencidas > 0 ? "danger" : "default"} />
+        </div>
+        <div className="mt-4">
+          <Field label="Filtrar situação">
+            <select className="h-11 w-full rounded-md border bg-card px-3 text-sm" value={filtroStatusConta} onChange={(e) => setFiltroStatusConta(e.target.value)}>
+              <option value="todas">Todas as situações</option>
+              <option value="pendente">Pendente</option>
+              <option value="parcial">Parcialmente paga</option>
+              <option value="pago">Paga</option>
+              <option value="cancelado">Cancelada</option>
+            </select>
+          </Field>
+          {(() => {
+            const contasFiltradas = contasPagar
+              .filter((c) => filtroStatusConta === "todas" ? !c.cancelada_em : filtroStatusConta === "cancelado" ? !!c.cancelada_em || c.status === "cancelado" : !c.cancelada_em && c.status === filtroStatusConta)
+              .sort((a, b) => a.data_vencimento.localeCompare(b.data_vencimento));
+            return (
+              <details className="mt-3 rounded-xl border px-3">
+                <summary className="cursor-pointer py-3 text-sm font-medium">Detalhar contas ({contasFiltradas.length})</summary>
+                {contasFiltradas.length === 0 ? <p className="pb-3 text-sm text-muted-foreground">Nenhuma conta encontrada para essa situação.</p> : (
+                  <div className="divide-y">
+                    {contasFiltradas.map((c) => {
+                      const statusExibido = c.cancelada_em || c.status === "cancelado" ? "Cancelada"
+                        : c.status === "parcial" ? "Parcialmente paga"
+                        : c.status === "pago" ? "Paga"
+                        : c.status === "pendente" ? "Pendente" : c.status;
+                      return (
+                        <div key={c.id} className="flex items-start justify-between gap-3 py-3 text-sm">
+                          <div className="min-w-0"><p className="font-medium">{c.descricao}</p><p className="text-xs text-muted-foreground">{c.fornecedor || "Fornecedor não informado"} · Vencimento {dataBR(c.data_vencimento)} · {statusExibido}</p><p className="text-xs text-muted-foreground">Pago: {brl(Number(c.valor_pago) || 0)} · Saldo: {brl(Math.max(0, Number(c.valor) - Number(c.valor_pago)))}</p></div>
+                          <b className="shrink-0">{brl(Number(c.valor) || 0)}</b>
+                        </div>
+                      );
+                    })}
+                  </div>
+                )}
+              </details>
+            );
+          })()}
         </div>
         <p className="mt-3 text-xs text-muted-foreground">
           Valores atuais, independentemente do período de entrega selecionado. Esses compromissos não são descontados novamente do resultado estimado; registre despesas pagas uma única vez para evitar duplicidade.
