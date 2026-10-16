@@ -399,22 +399,29 @@ function Relatorios() {
 
       <section className="mb-6">
         <h2 className="mb-3 text-lg font-semibold">Rentabilidade estimada por produto</h2>
-        <p className="mb-3 text-xs text-muted-foreground">Somente pedidos entregues. Os custos dos produtos cadastrados usam os preços e a receita cadastrados atualmente.</p>
+        <p className="mb-3 text-xs text-muted-foreground">Somente pedidos entregues no período. A venda e as taxas/impostos do pedido são rateados proporcionalmente entre os itens para considerar descontos e entrega. Os custos usam a receita e os preços atuais cadastrados; embalagens precisam estar cadastradas como insumos da receita.</p>
         {!porProduto.length ? <Empty>Nenhuma venda entregue no período.</Empty> : (
           <div className="divide-y">
             {porProduto.map((p, i) => (
               <div key={i} className="py-3">
-                <div className="flex justify-between gap-2">
-                  <span className="break-words">{p.nome}</span>
-                  <b className="whitespace-nowrap">{brl(p.venda)}</b>
+                <div className="flex items-start justify-between gap-3">
+                  <div className="min-w-0">
+                    <p className="break-words font-medium">{i + 1}. {p.nome}</p>
+                    <p className="text-xs text-muted-foreground">{num(p.qtd)} unidades · Venda considerada {brl(p.venda)}</p>
+                  </div>
+                  <b className={p.lucro >= 0 ? "whitespace-nowrap text-success" : "whitespace-nowrap text-destructive"}>{brl(p.lucro)}</b>
                 </div>
-                <div className="text-xs text-muted-foreground">
-                  {num(p.qtd)} unidades · Custo {brl(p.custo)} · Lucro bruto estimado {brl(p.venda - p.custo)} · Margem {String((p.venda > 0 ? ((p.venda - p.custo) / p.venda) * 100 : 0).toLocaleString("pt-BR", { maximumFractionDigits: 1 }))}%
+                <div className="mt-2 grid grid-cols-2 gap-x-3 gap-y-1 text-xs text-muted-foreground">
+                  <span>Custo total: {brl(p.custo)}</span>
+                  <span>Taxas/impostos: {brl(p.taxas)}</span>
+                  <span>Margem estimada: {String((p.venda > 0 ? (p.lucro / p.venda) * 100 : 0).toLocaleString("pt-BR", { maximumFractionDigits: 1 }))}%</span>
+                  <span>Resultado após taxas</span>
                 </div>
               </div>
             ))}
           </div>
         )}
+        <p className="mt-3 text-xs text-muted-foreground">É uma margem de contribuição estimada, não o lucro contábil final: despesas gerais não são rateadas automaticamente. Gás, energia e mão de obra entram quando cadastrados no custo da receita; evite lançá-los novamente como despesas se já estiverem incluídos.</p>
       </section>
 
       <section className="mb-5">
