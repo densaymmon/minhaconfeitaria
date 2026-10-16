@@ -56,8 +56,9 @@ function Pedidos() {
     abertos: pedidos.filter((p) => !["pronto", "finalizado", "entregue", "cancelado"].includes(p.status)).length,
     prontos: pedidos.filter((p) => p.status === "pronto").length,
     entregasHoje: pedidos.filter((p) => p.data_entrega === hoje && STATUS_ATIVOS.includes(p.status)).length,
+    // Mesmo critério do relatório financeiro e do painel: todos os pedidos não cancelados.
     aReceber: pedidos
-      .filter((p) => STATUS_ATIVOS.includes(p.status))
+      .filter((p) => p.status !== "cancelado")
       .reduce((soma, p) => soma + Math.max(0, Number(p.t.saldo) || 0), 0),
   }), [pedidos, hoje]);
 
