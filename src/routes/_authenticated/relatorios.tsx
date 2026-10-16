@@ -531,33 +531,38 @@ function Relatorios() {
           <Stat label="Total de compras filtradas" value={brl(totalComprasFiltradas)} />
           <Stat label="Insumos comprados" value={String(gastosPorInsumo.length)} />
         </div>
-        {!gastosPorInsumo.length ? <Empty>Nenhuma compra com itens registrada no período.</Empty> : (
-          <div className="divide-y rounded-xl border px-3">
-            {gastosPorInsumo.map((item) => (
-              <div key={item.id} className="py-3">
-                <div className="flex items-start justify-between gap-3">
-                  <div className="min-w-0">
-                    <p className="font-medium">{item.nome}</p>
-                    <p className="text-xs text-muted-foreground">{item.quantidade === null ? "Confira as unidades cadastradas" : `${num(item.quantidade)} ${item.unidade}`} · {item.quantidadeCompras} compra(s)</p>
+        <details className="mt-3 rounded-xl border px-3">
+          <summary className="cursor-pointer py-3 text-sm font-medium">Detalhar gastos por insumo ({gastosPorInsumo.length})</summary>
+          {!gastosPorInsumo.length ? <Empty>Nenhuma compra com itens registrada no período.</Empty> : (
+            <div className="divide-y">
+              {gastosPorInsumo.map((item) => (
+                <div key={item.id} className="py-3">
+                  <div className="flex items-start justify-between gap-3">
+                    <div className="min-w-0">
+                      <p className="font-medium">{item.nome}</p>
+                      <p className="text-xs text-muted-foreground">{item.quantidade === null ? "Confira as unidades cadastradas" : `${num(item.quantidade)} ${item.unidade}`} · {item.quantidadeCompras} compra(s)</p>
+                    </div>
+                    <b className="shrink-0">{brl(item.total)}</b>
                   </div>
-                  <b className="shrink-0">{brl(item.total)}</b>
+                  <div className="mt-2 h-1.5 overflow-hidden rounded-full bg-muted">
+                    <div className="h-full rounded-full bg-primary" style={{ width: totalComprasFiltradas > 0 ? Math.min(100, (item.total / totalComprasFiltradas) * 100) + "%" : "0%" }} />
+                  </div>
+                  <p className="mt-1 text-right text-xs text-muted-foreground">{(totalComprasFiltradas > 0 ? (item.total / totalComprasFiltradas) * 100 : 0).toLocaleString("pt-BR", { maximumFractionDigits: 1 })}% dos gastos</p>
                 </div>
-                <div className="mt-2 h-1.5 overflow-hidden rounded-full bg-muted">
-                  <div className="h-full rounded-full bg-primary" style={{ width: totalComprasFiltradas > 0 ? Math.min(100, (item.total / totalComprasFiltradas) * 100) + "%" : "0%" }} />
-                </div>
-                <p className="mt-1 text-right text-xs text-muted-foreground">{(totalComprasFiltradas > 0 ? (item.total / totalComprasFiltradas) * 100 : 0).toLocaleString("pt-BR", { maximumFractionDigits: 1 })}% dos gastos</p>
-              </div>
-            ))}
-          </div>
-        )}
-        <h3 className="mb-2 mt-5 font-medium">Gastos por forma de pagamento</h3>
-        {!comprasPorForma.length ? <p className="text-sm text-muted-foreground">Nenhuma compra registrada no período.</p> : (
-          <div className="divide-y">
-            {comprasPorForma.map(([forma, valor]) => (
-              <Row key={forma} label={forma.replaceAll("_", " ")} value={brl(valor)} />
-            ))}
-          </div>
-        )}
+              ))}
+            </div>
+          )}
+        </details>
+        <details className="mt-3 rounded-xl border px-3">
+          <summary className="cursor-pointer py-3 text-sm font-medium">Gastos por forma de pagamento ({comprasPorForma.length})</summary>
+          {!comprasPorForma.length ? <p className="pb-3 text-sm text-muted-foreground">Nenhuma compra registrada no período.</p> : (
+            <div className="divide-y">
+              {comprasPorForma.map(([forma, valor]) => (
+                <Row key={forma} label={forma.replaceAll("_", " ")} value={brl(valor)} />
+              ))}
+            </div>
+          )}
+        </details>
         <p className="mt-2 text-xs text-muted-foreground">O gasto por insumo usa o valor de cada item da compra; a forma de pagamento é um resumo separado do total das compras, não do valor efetivamente pago em cada data.</p>
       </section>}
 
@@ -580,14 +585,32 @@ function Relatorios() {
               <option value="cancelado">Cancelada</option>
             </select>
           </Field>
-          <div className="mt-3 divide-y">
-            {contasPagar.filter((c) => filtroStatusConta === "todas" ? !c.cancelada_em : filtroStatusConta === "cancelado" ? !!c.cancelada_em || c.status === "cancelado" : !c.cancelada_em && c.status === filtroStatusConta).length === 0 ? <p className="py-3 text-sm text-muted-foreground">Nenhuma conta encontrada para essa situação.</p> : contasPagar.filter((c) => filtroStatusConta === "todas" ? !c.cancelada_em : filtroStatusConta === "cancelado" ? !!c.cancelada_em || c.status === "cancelado" : !c.cancelada_em && c.status === filtroStatusConta).sort((a, b) => a.data_vencimento.localeCompare(b.data_vencimento)).map((c) => (
-              <div key={c.id} className="flex items-start justify-between gap-3 py-3 text-sm">
-                <div className="min-w-0"><p className="font-medium">{c.descricao}</p><p className="text-xs text-muted-foreground">{c.fornecedor || "Fornecedor não informado"} · Vencimento {dataBR(c.data_vencimento)} · {c.status}</p><p className="text-xs text-muted-foreground">Pago: {brl(Number(c.valor_pago) || 0)} · Saldo: {brl(Math.max(0, Number(c.valor) - Number(c.valor_pago)))}</p></div>
-                <b className="shrink-0">{brl(Number(c.valor) || 0)}</b>
-              </div>
-            ))}
-          </div>
+          {(() => {
+            const contasFiltradas = contasPagar
+              .filter((c) => filtroStatusConta === "todas" ? !c.cancelada_em : filtroStatusConta === "cancelado" ? !!c.cancelada_em || c.status === "cancelado" : !c.cancelada_em && c.status === filtroStatusConta)
+              .sort((a, b) => a.data_vencimento.localeCompare(b.data_vencimento));
+            return (
+              <details className="mt-3 rounded-xl border px-3">
+                <summary className="cursor-pointer py-3 text-sm font-medium">Detalhar contas ({contasFiltradas.length})</summary>
+                {contasFiltradas.length === 0 ? <p className="pb-3 text-sm text-muted-foreground">Nenhuma conta encontrada para essa situação.</p> : (
+                  <div className="divide-y">
+                    {contasFiltradas.map((c) => {
+                      const statusExibido = c.cancelada_em || c.status === "cancelado" ? "Cancelada"
+                        : c.status === "parcial" ? "Parcialmente paga"
+                        : c.status === "pago" ? "Paga"
+                        : c.status === "pendente" ? "Pendente" : c.status;
+                      return (
+                        <div key={c.id} className="flex items-start justify-between gap-3 py-3 text-sm">
+                          <div className="min-w-0"><p className="font-medium">{c.descricao}</p><p className="text-xs text-muted-foreground">{c.fornecedor || "Fornecedor não informado"} · Vencimento {dataBR(c.data_vencimento)} · {statusExibido}</p><p className="text-xs text-muted-foreground">Pago: {brl(Number(c.valor_pago) || 0)} · Saldo: {brl(Math.max(0, Number(c.valor) - Number(c.valor_pago)))}</p></div>
+                          <b className="shrink-0">{brl(Number(c.valor) || 0)}</b>
+                        </div>
+                      );
+                    })}
+                  </div>
+                )}
+              </details>
+            );
+          })()}
         </div>
         <p className="mt-3 text-xs text-muted-foreground">
           Valores atuais, independentemente do período de entrega selecionado. Esses compromissos não são descontados novamente do resultado estimado; registre despesas pagas uma única vez para evitar duplicidade.
