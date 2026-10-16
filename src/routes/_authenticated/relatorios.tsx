@@ -7,7 +7,7 @@ import { toast } from "sonner";
 import { supabase } from "@/integrations/supabase/client";
 import { Download } from "lucide-react";
 import { configQ, despesasQ, pedidosQ } from "@/lib/queries";
-import { custoUnitario, totaisPedido } from "@/lib/calc";
+import { custoUnitario, ratearVendaETaxas, totaisPedido } from "@/lib/calc";
 import { brl, dataBR, hojeISO, mesISO, num } from "@/lib/format";
 import { baixarCSV } from "@/lib/csv";
 import { PageHeader, Field, Stat, Row, Empty } from "@/components/app/ui";
@@ -196,18 +196,24 @@ function Relatorios() {
   const resultado = lucroBruto - realizado.taxas - gastos;
 
   const porProduto = useMemo(() => {
-    const m = new Map<string, { qtd: number; venda: number; custo: number; nome: string }>();
+    const m = new Map<string, { qtd: number; venda: number; custo: number; taxas: number; lucro: number; nome: string }>();
     for (const pedido of entregues) {
+      const subtotal = pedido.pedido_itens.reduce((s, item) => s + Number(item.quantidade) * Number(item.preco_unitario), 0);
       for (const item of pedido.pedido_itens) {
+        const vendaItem = Number(item.quantidade) * Number(item.preco_unitario);
+        const rateio = ratearVendaETaxas(vendaItem, subtotal, pedido.t.venda, pedido.t.taxas);
+        const custoItem = Number(item.quantidade) * Number(item.custo_unitario);
         const key = item.produto_id ?? item.descricao;
-        const r = m.get(key) ?? { qtd: 0, venda: 0, custo: 0, nome: item.descricao || "Produto sem nome" };
+        const r = m.get(key) ?? { qtd: 0, venda: 0, custo: 0, taxas: 0, lucro: 0, nome: item.descricao || "Produto sem nome" };
         r.qtd += Number(item.quantidade);
-        r.venda += Number(item.quantidade) * Number(item.preco_unitario);
-        r.custo += Number(item.quantidade) * Number(item.custo_unitario);
+        r.venda += rateio.venda;
+        r.custo += custoItem;
+        r.taxas += rateio.taxas;
+        r.lucro += rateio.venda - custoItem - rateio.taxas;
         m.set(key, r);
       }
     }
-    return [...m.values()].sort((a, b) => b.venda - a.venda);
+    return [...m.values()].sort((a, b) => b.lucro - a.lucro);
   }, [entregues]);
 
   async function corrigirCustosHistoricos() {
