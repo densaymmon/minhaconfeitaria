@@ -415,7 +415,6 @@ function Relatorios() {
                   <span>Custo total: {brl(p.custo)}</span>
                   <span>Taxas/impostos: {brl(p.taxas)}</span>
                   <span>Margem estimada: {String((p.venda > 0 ? (p.lucro / p.venda) * 100 : 0).toLocaleString("pt-BR", { maximumFractionDigits: 1 }))}%</span>
-                  <span>Resultado após taxas</span>
                 </div>
               </div>
             ))}
