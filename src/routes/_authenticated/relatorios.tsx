@@ -24,6 +24,7 @@ export const Route = createFileRoute("/_authenticated/relatorios")({
       context.queryClient.ensureQueryData(appQueries.insumosQ),
       context.queryClient.ensureQueryData(appQueries.contasPagarQ),
       context.queryClient.ensureQueryData(appQueries.comprasQ),
+      context.queryClient.ensureQueryData(appQueries.compraItensQ),
       context.queryClient.ensureQueryData(appQueries.pedidoPagamentosQ),
       context.queryClient.ensureQueryData(appQueries.contasPagarPagamentosQ),
       context.queryClient.ensureQueryData(appQueries.contasPagarEstornosQ),
@@ -67,6 +68,7 @@ function Relatorios() {
   const { data: despesas } = useSuspenseQuery(despesasQ);
   const { data: contasPagar } = useSuspenseQuery(appQueries.contasPagarQ);
   const { data: compras } = useSuspenseQuery(appQueries.comprasQ);
+  const { data: itensCompra } = useSuspenseQuery(appQueries.compraItensQ);
   const { data: pagamentosPedidos } = useSuspenseQuery(appQueries.pedidoPagamentosQ);
   const { data: pagamentosContasPagar } = useSuspenseQuery(appQueries.contasPagarPagamentosQ);
   const { data: estornosContasPagar } = useSuspenseQuery(appQueries.contasPagarEstornosQ);
@@ -131,6 +133,25 @@ function Relatorios() {
     ? compras.filter((c) => !c.cancelada_em && c.data_compra >= inicio && c.data_compra <= fim)
     : [];
   const totalComprasInsumos = comprasNoPeriodo.reduce((s, c) => s + Math.max(0, Number(c.total) || 0), 0);
+  const gastosPorInsumo = useMemo(() => {
+    const idsComprasValidas = new Set(comprasNoPeriodo.map((compra) => compra.id));
+    const totais = new Map<string, { nome: string; total: number; quantidadeCompras: number; quantidade: number; unidade: string }>();
+    const comprasPorInsumo = new Map<string, Set<string>>();
+    for (const item of itensCompra) {
+      if (!idsComprasValidas.has(item.compra_id)) continue;
+      const insumo = insumosPorId.get(item.insumo_id);
+      const nome = insumo?.nome ?? "Insumo removido";
+      const atual = totais.get(item.insumo_id) ?? { nome, total: 0, quantidadeCompras: 0, quantidade: 0, unidade: item.unidade || insumo?.unidade || "un" };
+      atual.total += Math.max(0, Number(item.total) || 0);
+      atual.quantidade += Math.max(0, Number(item.quantidade) || 0);
+      totais.set(item.insumo_id, atual);
+      const ids = comprasPorInsumo.get(item.insumo_id) ?? new Set<string>();
+      ids.add(item.compra_id);
+      comprasPorInsumo.set(item.insumo_id, ids);
+    }
+    return [...totais.entries()].map(([id, item]) => ({ ...item, id, quantidadeCompras: comprasPorInsumo.get(id)?.size ?? 0 }))
+      .sort((a, b) => b.total - a.total);
+  }, [comprasNoPeriodo, itensCompra, insumosPorId]);
   const intervaloRecebimentosValido = inicioRecebimentos <= fimRecebimentos;
   const recebimentosNoPeriodo = intervaloRecebimentosValido ? pagamentosPedidos.filter((p) => p.data_pagamento >= inicioRecebimentos && p.data_pagamento <= fimRecebimentos) : [];
   const totalRecebidoNoPeriodo = recebimentosNoPeriodo.reduce((s, p) => s + Math.max(0, Number(p.valor) || 0), 0);
@@ -251,11 +272,11 @@ function Relatorios() {
       return;
     }
     if (categoriaRelatorio === "compras") {
-      baixarCSV("relatorio-compras-insumos-" + sufixo,
-        ["Data da compra", "Local da compra", "Forma de pagamento", "Parcelas", "Total"],
-        comprasNoPeriodo.map((c) => [
-          dataBR(c.data_compra), c.local_compra || "", c.forma_pagamento_compra || "não informado",
-          c.numero_parcelas, Number(c.total) || 0,
+      baixarCSV("relatorio-compras-por-insumo-" + sufixo,
+        ["Insumo", "Quantidade comprada", "Unidade", "Número de compras", "Gasto total", "Participação nos gastos (%)"],
+        gastosPorInsumo.map((item) => [
+          item.nome, item.quantidade, item.unidade, item.quantidadeCompras, item.total,
+          totalComprasInsumos > 0 ? Number(((item.total / totalComprasInsumos) * 100).toFixed(2)) : 0,
         ]),
       );
       return;
@@ -445,17 +466,40 @@ function Relatorios() {
       </section>}
 
       {categoriaRelatorio === "compras" && <section className="mb-6">
-        <h2 className="mb-3 text-lg font-semibold">Compras de insumos por pagamento</h2>
-        {!comprasPorForma.length ? <Empty>Nenhuma compra registrada no período.</Empty> : (
+        <h2 className="mb-1 text-lg font-semibold">Gastos por insumo</h2>
+        <p className="mb-3 text-sm text-muted-foreground">Veja quanto foi gasto com cada produto comprado no período selecionado. Compras canceladas não entram no cálculo.</p>
+        <div className="mb-3 grid grid-cols-2 gap-3">
+          <Stat label="Total de compras" value={brl(totalComprasInsumos)} />
+          <Stat label="Insumos comprados" value={String(gastosPorInsumo.length)} />
+        </div>
+        {!gastosPorInsumo.length ? <Empty>Nenhuma compra com itens registrada no período.</Empty> : (
+          <div className="divide-y rounded-xl border px-3">
+            {gastosPorInsumo.map((item) => (
+              <div key={item.id} className="py-3">
+                <div className="flex items-start justify-between gap-3">
+                  <div className="min-w-0">
+                    <p className="font-medium">{item.nome}</p>
+                    <p className="text-xs text-muted-foreground">{num(item.quantidade)} {item.unidade} · {item.quantidadeCompras} compra(s)</p>
+                  </div>
+                  <b className="shrink-0">{brl(item.total)}</b>
+                </div>
+                <div className="mt-2 h-1.5 overflow-hidden rounded-full bg-muted">
+                  <div className="h-full rounded-full bg-primary" style={{ width: totalComprasInsumos > 0 ? Math.min(100, (item.total / totalComprasInsumos) * 100) + "%" : "0%" }} />
+                </div>
+                <p className="mt-1 text-right text-xs text-muted-foreground">{(totalComprasInsumos > 0 ? (item.total / totalComprasInsumos) * 100 : 0).toLocaleString("pt-BR", { maximumFractionDigits: 1 })}% dos gastos</p>
+              </div>
+            ))}
+          </div>
+        )}
+        <h3 className="mb-2 mt-5 font-medium">Gastos por forma de pagamento</h3>
+        {!comprasPorForma.length ? <p className="text-sm text-muted-foreground">Nenhuma compra registrada no período.</p> : (
           <div className="divide-y">
             {comprasPorForma.map(([forma, valor]) => (
               <Row key={forma} label={forma.replaceAll("_", " ")} value={brl(valor)} />
             ))}
           </div>
         )}
-        <p className="mt-2 text-xs text-muted-foreground">
-          Valores agrupados pela forma de pagamento informada na compra, não pelo valor efetivamente pago no período.
-        </p>
+        <p className="mt-2 text-xs text-muted-foreground">O gasto por insumo usa o valor de cada item da compra; a forma de pagamento é um resumo separado do total das compras, não do valor efetivamente pago em cada data.</p>
       </section>}
 
       {categoriaRelatorio === "contas" && <section className="mb-6 rounded-xl border p-4">
