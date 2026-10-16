@@ -41,7 +41,6 @@ DECLARE
   rendimento numeric;
   receita record;
   base_unit text;
-  movimento_evento uuid;
 BEGIN
   IF uid IS NULL THEN
     RAISE EXCEPTION 'Acesso não autorizado.';
@@ -124,7 +123,6 @@ BEGIN
         RAISE EXCEPTION 'Não foi possível calcular o consumo do insumo "%".', receita.insumo_nome;
       END IF;
       IF receita.quantidade_delta <> 0 THEN
-        movimento_evento := gen_random_uuid();
         INSERT INTO public.estoque_movimentos (
           user_id, insumo_id, quantidade_delta_base, unidade_base,
           tipo_movimento, origem_tipo, origem_id, evento_id, observacao
@@ -136,7 +134,7 @@ BEGIN
           CASE WHEN delta > 0 THEN 'saida_producao' ELSE 'estorno' END,
           'producao',
           pedido_item_id,
-          movimento_evento,
+          evento_id,
           CASE WHEN delta > 0
             THEN 'Consumo automático por aumento da produção'
             ELSE 'Estorno automático por redução da produção'
