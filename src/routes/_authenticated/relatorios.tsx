@@ -24,6 +24,7 @@ export const Route = createFileRoute("/_authenticated/relatorios")({
       context.queryClient.ensureQueryData(appQueries.insumosQ),
       context.queryClient.ensureQueryData(appQueries.contasPagarQ),
       context.queryClient.ensureQueryData(appQueries.comprasQ),
+      context.queryClient.ensureQueryData(appQueries.pedidoPagamentosQ),
     ]);
   },
   errorComponent: ({ error }) => (
@@ -61,6 +62,7 @@ function Relatorios() {
   const { data: despesas } = useSuspenseQuery(despesasQ);
   const { data: contasPagar } = useSuspenseQuery(appQueries.contasPagarQ);
   const { data: compras } = useSuspenseQuery(appQueries.comprasQ);
+  const { data: pagamentosPedidos } = useSuspenseQuery(appQueries.pedidoPagamentosQ);
   const intervaloValido = inicio <= fim;
   const contasAbertas = contasPagar.filter((c) => !c.cancelada_em && ["pendente", "parcial"].includes(c.status));
   const saldoContasAbertas = contasAbertas.reduce((s, c) => s + Math.max(0, Number(c.valor) - Number(c.valor_pago)), 0);
@@ -116,6 +118,8 @@ function Relatorios() {
     ? compras.filter((c) => !c.cancelada_em && c.data_compra >= inicio && c.data_compra <= fim)
     : [];
   const totalComprasInsumos = comprasNoPeriodo.reduce((s, c) => s + Math.max(0, Number(c.total) || 0), 0);
+  const recebimentosNoPeriodo = intervaloValido ? pagamentosPedidos.filter((p) => p.data_pagamento >= inicio && p.data_pagamento <= fim) : [];
+  const totalRecebidoNoPeriodo = recebimentosNoPeriodo.reduce((s, p) => s + Math.max(0, Number(p.valor) || 0), 0);
   const comprasPorForma = useMemo(() => {
     const totais = new Map<string, number>();
     for (const compra of comprasNoPeriodo) {
