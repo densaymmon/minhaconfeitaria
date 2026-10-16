@@ -75,6 +75,12 @@ function Relatorios() {
   const saldoContasVencidas = contasAbertas
     .filter((c) => c.data_vencimento < hojeISO())
     .reduce((s, c) => s + Math.max(0, Number(c.valor) - Number(c.valor_pago)), 0);
+  const dataLimiteContas = new Date(hojeISO() + "T00:00:00");
+  dataLimiteContas.setDate(dataLimiteContas.getDate() + 7);
+  const dataLimiteContasISO = dataLimiteContas.getFullYear() + "-" + String(dataLimiteContas.getMonth() + 1).padStart(2, "0") + "-" + String(dataLimiteContas.getDate()).padStart(2, "0");
+  const saldoContasProximos7Dias = contasAbertas
+    .filter((c) => c.data_vencimento >= hojeISO() && c.data_vencimento <= dataLimiteContasISO)
+    .reduce((s, c) => s + Math.max(0, Number(c.valor) - Number(c.valor_pago)), 0);
   const insumosPorId = useMemo(
     () => new Map(insumos.map((i) => [i.id, { ...i, preco_unidade: Number(i.preco_unidade) }])),
     [insumos],
@@ -170,6 +176,11 @@ function Relatorios() {
     return [...totais.entries()].sort((a, b) => b[1] - a[1]);
   }, [despesas, inicio, fim, intervaloValido]);
 
+  // Indicadores atuais não dependem do filtro de entrega do relatório.
+  const pedidosEmAberto = pedidosCalculados.filter((p) => p.status !== "cancelado");
+  const saldoTotalAReceber = pedidosEmAberto.reduce((s, p) => s + Math.max(0, Number(p.t.saldo) || 0), 0);
+  const pedidosComSaldo = pedidosEmAberto.filter((p) => Number(p.t.saldo) > 0).length;
+
   const contratado = lista.reduce((s, p) => ({
     venda: s.venda + p.t.venda,
     recebido: s.recebido + p.t.recebido,
@@ -254,6 +265,22 @@ function Relatorios() {
         <Stat label="Contas a pagar em aberto" value={brl(saldoContasAbertas)} tone={saldoContasAbertas > 0 ? "danger" : "default"} />
         <Stat label="Resultado estimado" value={brl(resultado)} tone={resultado >= 0 ? "success" : "danger"} />
       </div>
+      <section className="mb-6 rounded-xl border p-4">
+        <h2 className="mb-1 text-lg font-semibold">Saúde financeira atual</h2>
+        <p className="mb-4 text-sm text-muted-foreground">
+          Estes valores representam a posição atual de todos os pedidos e contas cadastrados, independentemente do filtro de datas de entrega acima.
+        </p>
+        <div className="grid grid-cols-2 gap-3">
+          <Stat label="Total a receber em pedidos" value={brl(saldoTotalAReceber)} tone={saldoTotalAReceber > 0 ? "primary" : "default"} />
+          <Stat label="Pedidos com saldo pendente" value={String(pedidosComSaldo)} />
+          <Stat label="Contas vencidas" value={brl(saldoContasVencidas)} tone={saldoContasVencidas > 0 ? "danger" : "success"} />
+          <Stat label="Contas vencendo em 7 dias" value={brl(saldoContasProximos7Dias)} tone={saldoContasProximos7Dias > 0 ? "danger" : "default"} />
+          <Stat label="Total de contas em aberto" value={brl(saldoContasAbertas)} />
+        </div>
+        <p className="mt-3 text-xs text-muted-foreground">
+          O total a receber usa o saldo cadastrado em cada pedido não cancelado. Contas a pagar consideram apenas o saldo ainda não quitado. Isso não substitui a conferência dos extratos bancários nem inclui um saldo inicial de caixa.
+        </p>
+      </section>
       <p className="mb-6 text-xs text-muted-foreground">
         Recebimentos no período consideram somente pagamentos com data individual registrada. Pagamentos antigos sem histórico detalhado continuam no valor pago cadastrado, mas não são atribuídos a uma data fictícia. Compras de insumos e contas a pagar são indicadores separados e não são descontados novamente do resultado estimado.
       </p>
