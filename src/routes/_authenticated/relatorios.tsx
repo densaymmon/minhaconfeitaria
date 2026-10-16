@@ -144,7 +144,9 @@ function Relatorios() {
     custo: s.custo + p.t.custo,
     taxas: s.taxas + p.t.taxas,
   }), { venda: 0, custo: 0, taxas: 0 });
-  const resultado = realizado.venda - realizado.custo - realizado.taxas - gastos;
+  const lucroBruto = realizado.venda - realizado.custo;
+  const margemBruta = realizado.venda > 0 ? (lucroBruto / realizado.venda) * 100 : 0;
+  const resultado = lucroBruto - realizado.taxas - gastos;
 
   const porProduto = useMemo(() => {
     const m = new Map<string, { qtd: number; venda: number; custo: number; nome: string }>();
@@ -208,6 +210,8 @@ function Relatorios() {
       <div className="mb-6 grid grid-cols-2 gap-3">
         <Stat label="Vendas contratadas" value={brl(contratado.venda)} />
         <Stat label="Vendas entregues" value={brl(realizado.venda)} tone="primary" />
+        <Stat label="Lucro bruto estimado" value={brl(lucroBruto)} tone={lucroBruto >= 0 ? "success" : "danger"} />
+        <Stat label="Margem bruta estimada" value={String(margemBruta.toLocaleString("pt-BR", { maximumFractionDigits: 1 })) + "%"} />
         <Stat label="Recebido nos pedidos" value={brl(contratado.recebido)} />
         <Stat label="Saldo a receber" value={brl(contratado.saldo)} />
         <Stat label="Compras de insumos" value={brl(totalComprasInsumos)} />
@@ -222,6 +226,8 @@ function Relatorios() {
         <h2 className="mb-2 text-lg font-semibold">Resultado dos pedidos entregues</h2>
         <Row label="Vendas dos pedidos entregues" value={brl(realizado.venda)} />
         <Row label="Custo estimado dos produtos" value={brl(realizado.custo)} />
+        <Row label="Lucro bruto estimado" value={brl(lucroBruto)} strong />
+        <Row label="Margem bruta estimada" value={String(margemBruta.toLocaleString("pt-BR", { maximumFractionDigits: 1 })) + "%"} />
         <Row label="Taxas e impostos estimados" value={brl(realizado.taxas)} />
         <Row label="Despesas registradas no período" value={brl(gastos)} />
         <Row label="Resultado estimado após despesas" value={brl(resultado)} strong />
@@ -290,7 +296,7 @@ function Relatorios() {
                   <b className="whitespace-nowrap">{brl(p.venda)}</b>
                 </div>
                 <div className="text-xs text-muted-foreground">
-                  {num(p.qtd)} unidades · Custo {brl(p.custo)} · Lucro bruto estimado {brl(p.venda - p.custo)}
+                  {num(p.qtd)} unidades · Custo {brl(p.custo)} · Lucro bruto estimado {brl(p.venda - p.custo)} · Margem {String((p.venda > 0 ? ((p.venda - p.custo) / p.venda) * 100 : 0).toLocaleString("pt-BR", { maximumFractionDigits: 1 }))}%
                 </div>
               </div>
             ))}
