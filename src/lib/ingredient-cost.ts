@@ -17,8 +17,8 @@ export function medidasCompativeis(u: string) {
  * separators are present, the last one is decimal and the other is grouping.
  */
 export function numeroIngrediente(s: string): number {
-  const text = s.trim().replace(/\\s/g, "");
-  if (!text || !/^[\\d.,]+$/.test(text) || !/\\d/.test(text)) return NaN;
+  const text = s.trim().replace(/\s/g, "");
+  if (!text || !/^[\d.,]+$/.test(text) || !/\d/.test(text)) return NaN;
 
   const lastDot = text.lastIndexOf(".");
   const lastComma = text.lastIndexOf(",");
@@ -26,15 +26,15 @@ export function numeroIngrediente(s: string): number {
     const decimalSeparator = lastDot > lastComma ? "." : ",";
     const groupingSeparator = decimalSeparator === "." ? "," : ".";
     const normalized = text.split(groupingSeparator).join("").replace(decimalSeparator, ".");
-    return /^\\d+(?:\\.\\d+)?$/.test(normalized) ? Number(normalized) : NaN;
+    return /^\d+(?:\.\d+)?$/.test(normalized) ? Number(normalized) : NaN;
   }
 
   const separator = lastDot >= 0 ? "." : lastComma >= 0 ? "," : null;
-  if (!separator) return /^\\d+$/.test(text) ? Number(text) : NaN;
+  if (!separator) return /^\d+$/.test(text) ? Number(text) : NaN;
   const pieces = text.split(separator);
   if (pieces.length !== 2 || !pieces[0] || !pieces[1]) return NaN;
   const normalized = pieces[0] + "." + pieces[1];
-  return /^\\d+(?:\\.\\d+)?$/.test(normalized) ? Number(normalized) : NaN;
+  return /^\d+(?:\.\d+)?$/.test(normalized) ? Number(normalized) : NaN;
 }
 export type Embalagem = { preco_embalagem?: number | null; quantidade_embalagem?: number | null; unidade_embalagem?: string | null; preco_unidade: number; unidade?: string };
 export function custoProporcional(i: Embalagem, quantidade: number, unidade: string) {
