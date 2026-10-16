@@ -1,8 +1,9 @@
 import * as appQueries from "@/lib/queries";
 import { createFileRoute, Link } from "@tanstack/react-router";
 import { useSuspenseQuery } from "@tanstack/react-query";
-import { useMemo, useState } from "react";
+import { useEffect, useMemo, useState } from "react";
 import { useQueryClient } from "@tanstack/react-query";
+import { endOfMonth, format } from "date-fns";
 import { toast } from "sonner";
 import { supabase } from "@/integrations/supabase/client";
 import { Download } from "lucide-react";
@@ -39,7 +40,7 @@ export const Route = createFileRoute("/_authenticated/relatorios")({
   notFoundComponent: () => <p>Registro não encontrado.</p>,
   validateSearch: (s: Record<string, unknown>) => ({
     inicio: typeof s["inicio"] === "string" && /^\d{4}-\d{2}-\d{2}$/.test(s["inicio"]) ? s["inicio"] : mesISO() + "-01",
-    fim: typeof s["fim"] === "string" && /^\d{4}-\d{2}-\d{2}$/.test(s["fim"]) ? s["fim"] : hojeISO(),
+    fim: typeof s["fim"] === "string" && /^\d{4}-\d{2}-\d{2}$/.test(s["fim"]) ? s["fim"] : format(endOfMonth(new Date()), "yyyy-MM-dd"),
     secao: ["visao-geral", "vendas", "compras", "contas", "caixa", "despesas"].includes(String(s["secao"])) ? String(s["secao"]) : "visao-geral",
     dataBase: s["dataBase"] === "criacao" ? "criacao" : "entrega",
   }),
@@ -63,7 +64,11 @@ function Relatorios() {
   const [inicioRecebimentos, setInicioRecebimentos] = useState(inicio);
   const [fimRecebimentos, setFimRecebimentos] = useState(fim);
   const navigate = Route.useNavigate();
-  const [categoriaRelatorio, setCategoriaRelatorio] = useState(secao);
+  const categoriaRelatorio = secao;
+  useEffect(() => {
+    setInicioRecebimentos(inicio);
+    setFimRecebimentos(fim);
+  }, [inicio, fim]);
   const [filtroStatusConta, setFiltroStatusConta] = useState("todas");
   const [filtroFormaCompra, setFiltroFormaCompra] = useState("todas");
   const [filtroCategoriaDespesa, setFiltroCategoriaDespesa] = useState("todas");
@@ -264,6 +269,16 @@ function Relatorios() {
     recebido: s.recebido + p.t.recebido,
     saldo: s.saldo + p.t.saldo,
   }), { venda: 0, recebido: 0, saldo: 0 });
+  // Concilia o valor recebido consolidado no pedido com o histórico de pagamentos.
+  // Não cria pagamentos automaticamente: os registros legados não informam necessariamente
+  // a data real de cada recebimento.
+  const totalPagamentosDetalhadosDosPedidosNoPeriodo = pagamentosPedidos
+    .filter((pagamento) => lista.some((pedido) => pedido.id === pagamento.pedido_id))
+    .reduce((soma, pagamento) => soma + Math.max(0, Number(pagamento.valor) || 0), 0);
+  const diferencaRecebidoVsHistorico = Math.max(
+    0,
+    contratado.recebido - totalPagamentosDetalhadosDosPedidosNoPeriodo,
+  );
   const realizado = entregues.reduce((s, p) => ({
     venda: s.venda + p.t.venda,
     custo: s.custo + p.t.custo,
@@ -397,6 +412,25 @@ function Relatorios() {
       </div>
       {!intervaloValido && <p className="mb-4 text-destructive">A data final deve ser igual ou posterior à data inicial.</p>}
 
+      <section className="mb-6 rounded-xl border p-4" aria-label="Resumo dos pedidos no período">
+        <h2 className="mb-1 text-lg font-semibold">Resumo dos pedidos no período</h2>
+        <p className="mb-4 text-sm text-muted-foreground">
+          Os indicadores abaixo usam o mesmo conjunto de pedidos não cancelados, filtrados por {dataBase === "criacao" ? "data de cadastro" : "data de entrega"}.
+          O valor recebido é o consolidado em cada pedido; o fluxo de caixa detalhado aparece na seção própria.
+        </p>
+        <div className="grid grid-cols-1 gap-3 sm:grid-cols-3">
+          <Stat label="Valor dos pedidos" value={brl(contratado.venda)} tone="primary" />
+          <Stat label="Recebido nos pedidos" value={brl(contratado.recebido)} />
+          <Stat label="A receber dos pedidos" value={brl(contratado.saldo)} tone={contratado.saldo > 0 ? "danger" : "default"} />
+        </div>
+        {diferencaRecebidoVsHistorico > 0.009 && (
+          <p role="status" className="mt-3 rounded-md bg-amber-500/10 p-3 text-sm">
+            <strong>Conferência necessária:</strong> {brl(diferencaRecebidoVsHistorico)} do valor recebido consolidado nos pedidos não aparece no histórico detalhado de pagamentos desses mesmos pedidos.
+            Isso pode ocorrer por entradas antigas ou pedidos marcados como quitados sem lançamento detalhado. O sistema não criou lançamentos automaticamente; confira os registros antes de usar o fluxo de caixa como conciliação bancária.
+          </p>
+        )}
+      </section>
+
       <nav aria-label="Categorias do relatório financeiro" className="mb-6 grid grid-cols-2 gap-2 sm:grid-cols-3">
         {[
           ["visao-geral", "Visão geral"],
@@ -406,7 +440,7 @@ function Relatorios() {
           ["caixa", "Fluxo de caixa"],
           ["despesas", "Despesas e custos"],
         ].map(([valor, rotulo]) => (
-          <Button key={valor} type="button" size="sm" variant={categoriaRelatorio === valor ? "default" : "outline"} aria-pressed={categoriaRelatorio === valor} onClick={() => setCategoriaRelatorio(valor ?? "visao-geral")}>
+          <Button key={valor} type="button" size="sm" variant={categoriaRelatorio === valor ? "default" : "outline"} aria-pressed={categoriaRelatorio === valor} onClick={() => navigate({ search: (s) => ({ ...s, secao: valor ?? "visao-geral" }) })}>
             {rotulo}
           </Button>
         ))}
