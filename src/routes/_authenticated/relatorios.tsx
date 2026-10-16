@@ -191,6 +191,13 @@ function Relatorios() {
     custo: s.custo + p.t.custo,
     taxas: s.taxas + p.t.taxas,
   }), { venda: 0, custo: 0, taxas: 0 });
+  // O resumo considera todos os pedidos não cancelados do período e subtrai
+  // custos registrados nos itens, taxas estimadas e despesas lançadas.
+  // Compras e contas a pagar são indicadores informativos, não são subtraídos
+  // novamente para evitar duplicar insumos já contabilizados no custo da produção.
+  const custosProducaoPeriodo = lista.reduce((s, p) => s + Math.max(0, Number(p.t.custo) || 0), 0);
+  const taxasPeriodo = lista.reduce((s, p) => s + Math.max(0, Number(p.t.taxas) || 0), 0);
+  const lucroTotalPeriodo = contratado.venda - custosProducaoPeriodo - taxasPeriodo - gastos;
   const lucroBruto = realizado.venda - realizado.custo;
   const margemBruta = realizado.venda > 0 ? (lucroBruto / realizado.venda) * 100 : 0;
   const resultado = lucroBruto - realizado.taxas - gastos;
@@ -261,15 +268,10 @@ function Relatorios() {
 
       <h2 className="mb-3 text-lg font-semibold">Visão geral do período</h2>
       <div className="mb-6 grid grid-cols-2 gap-3">
-        <Stat label="Vendas contratadas" value={brl(contratado.venda)} />
-        <Stat label="Vendas entregues" value={brl(realizado.venda)} tone="primary" />
-        <Stat label="Lucro bruto estimado" value={brl(lucroBruto)} tone={lucroBruto >= 0 ? "success" : "danger"} />
-        <Stat label="Margem bruta estimada" value={String(margemBruta.toLocaleString("pt-BR", { maximumFractionDigits: 1 })) + "%"} />
-        <Stat label="Pago cadastrado nos pedidos" value={brl(contratado.recebido)} />
-        <Stat label="Saldo a receber" value={brl(contratado.saldo)} />
-        <Stat label="Compras de insumos" value={brl(totalComprasInsumos)} />
-        <Stat label="Contas a pagar em aberto" value={brl(saldoContasAbertas)} tone={saldoContasAbertas > 0 ? "danger" : "default"} />
-        <Stat label="Resultado estimado" value={brl(resultado)} tone={resultado >= 0 ? "success" : "danger"} />
+        <Stat label="Vendas totais" value={brl(contratado.venda)} tone="primary" />
+        <Stat label="Compra de insumos" value={brl(totalComprasInsumos)} />
+        <Stat label="Contas a pagar" value={brl(saldoContasAbertas)} tone={saldoContasAbertas > 0 ? "danger" : "default"} />
+        <Stat label="Lucro total estimado" value={brl(lucroTotalPeriodo)} tone={lucroTotalPeriodo >= 0 ? "success" : "danger"} />
       </div>
       <section className="mb-6 rounded-xl border p-4">
         <h2 className="mb-1 text-lg font-semibold">Saúde financeira atual</h2>
