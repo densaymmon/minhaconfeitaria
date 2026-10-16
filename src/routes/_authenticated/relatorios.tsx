@@ -8,6 +8,7 @@ import { supabase } from "@/integrations/supabase/client";
 import { Download } from "lucide-react";
 import { configQ, despesasQ, pedidosQ } from "@/lib/queries";
 import { custoUnitario, ratearVendaETaxas, totaisPedido } from "@/lib/calc";
+import { medida } from "@/lib/ingredient-cost";
 import { brl, dataBR, hojeISO, mesISO, num } from "@/lib/format";
 import { baixarCSV } from "@/lib/csv";
 import { PageHeader, Field, Stat, Row, Empty } from "@/components/app/ui";
@@ -136,24 +137,52 @@ function Relatorios() {
     ? compras.filter((c) => !c.cancelada_em && c.data_compra >= inicio && c.data_compra <= fim)
     : [];
   const totalComprasInsumos = comprasNoPeriodo.reduce((s, c) => s + Math.max(0, Number(c.total) || 0), 0);
+  // Normaliza quantidades antes de somar: 1 kg + 200 g = 1,2 kg,
+  // e 1 L + 200 ml = 1,2 L. Nunca soma valores de unidades diferentes diretamente.
   const gastosPorInsumo = useMemo(() => {
     const idsComprasValidas = new Set(comprasNoPeriodo.map((compra) => compra.id));
-    const totais = new Map<string, { nome: string; total: number; quantidadeCompras: number; quantidade: number; unidade: string }>();
+    const totais = new Map<string, { nome: string; total: number; quantidadeCompras: number; quantidadeBase: number; unidadeBase: string; unidadesIncompativeis: boolean }>();
     const comprasPorInsumo = new Map<string, Set<string>>();
     for (const item of itensCompra) {
       if (!idsComprasValidas.has(item.compra_id)) continue;
       const insumo = insumosPorId.get(item.insumo_id);
       const nome = insumo?.nome ?? "Insumo removido";
-      const atual = totais.get(item.insumo_id) ?? { nome, total: 0, quantidadeCompras: 0, quantidade: 0, unidade: item.unidade || insumo?.unidade || "un" };
-      atual.total += Math.max(0, Number(item.total) || 0);
-      atual.quantidade += Math.max(0, Number(item.quantidade) || 0);
-      totais.set(item.insumo_id, atual);
+      const conversao = medida(item.unidade);
+      const unidadeBase = conversao?.base ?? item.unidade ?? insumo?.unidade ?? "un";
+      const quantidadeBase = Math.max(0, Number(item.quantidade) || 0) * (conversao?.fator ?? 1);
+      const atual = totais.get(item.insumo_id);
+      if (!atual) {
+        totais.set(item.insumo_id, {
+          nome, total: Math.max(0, Number(item.total) || 0), quantidadeBase,
+          quantidadeCompras: 0, unidadeBase, unidadesIncompativeis: false,
+        });
+      } else {
+        atual.total += Math.max(0, Number(item.total) || 0);
+        if (atual.unidadeBase === unidadeBase) {
+          atual.quantidadeBase += quantidadeBase;
+        } else {
+          // Dados legados com unidades incompatíveis não devem gerar uma quantidade enganosa.
+          atual.unidadesIncompativeis = true;
+        }
+      }
       const ids = comprasPorInsumo.get(item.insumo_id) ?? new Set<string>();
       ids.add(item.compra_id);
       comprasPorInsumo.set(item.insumo_id, ids);
     }
-    return [...totais.entries()].map(([id, item]) => ({ ...item, id, quantidadeCompras: comprasPorInsumo.get(id)?.size ?? 0 }))
-      .sort((a, b) => b.total - a.total);
+    return [...totais.entries()].map(([id, item]) => {
+      const unidadeExibicao = item.unidadeBase === "g" ? "kg"
+        : item.unidadeBase === "ml" ? "L"
+        : item.unidadeBase === "un" ? "un"
+        : item.unidadeBase;
+      const divisor = item.unidadeBase === "g" || item.unidadeBase === "ml" ? 1000
+        : item.unidadeBase === "un" ? 1 : 1;
+      return {
+        id, nome: item.nome, total: item.total,
+        quantidade: item.unidadesIncompativeis ? null : item.quantidadeBase / divisor,
+        unidade: item.unidadesIncompativeis ? "unidades incompatíveis" : unidadeExibicao,
+        quantidadeCompras: comprasPorInsumo.get(id)?.size ?? 0,
+      };
+    }).sort((a, b) => b.total - a.total);
   }, [comprasNoPeriodo, itensCompra, insumosPorId]);
   const intervaloRecebimentosValido = inicioRecebimentos <= fimRecebimentos;
   const recebimentosNoPeriodo = intervaloRecebimentosValido ? pagamentosPedidos.filter((p) => p.data_pagamento >= inicioRecebimentos && p.data_pagamento <= fimRecebimentos) : [];
@@ -278,7 +307,7 @@ function Relatorios() {
       baixarCSV("relatorio-compras-por-insumo-" + sufixo,
         ["Insumo", "Quantidade comprada", "Unidade", "Número de compras", "Gasto total", "Participação nos gastos (%)"],
         gastosPorInsumo.map((item) => [
-          item.nome, item.quantidade, item.unidade, item.quantidadeCompras, item.total,
+          item.nome, item.quantidade ?? "Conferir unidades", item.unidade, item.quantidadeCompras, item.total,
           totalComprasInsumos > 0 ? Number(((item.total / totalComprasInsumos) * 100).toFixed(2)) : 0,
         ]),
       );
@@ -470,7 +499,7 @@ function Relatorios() {
 
       {categoriaRelatorio === "compras" && <section className="mb-6">
         <h2 className="mb-1 text-lg font-semibold">Gastos por insumo</h2>
-        <p className="mb-3 text-sm text-muted-foreground">Veja quanto foi gasto com cada produto comprado no período selecionado. Compras canceladas não entram no cálculo.</p>
+        <p className="mb-3 text-sm text-muted-foreground">Veja quanto foi gasto com cada produto comprado no período selecionado. Quantidades de peso são convertidas para kg, de volume para L e de dúzias para unidades antes da soma. Compras canceladas não entram no cálculo.</p>
         <div className="mb-3 grid grid-cols-2 gap-3">
           <Stat label="Total de compras" value={brl(totalComprasInsumos)} />
           <Stat label="Insumos comprados" value={String(gastosPorInsumo.length)} />
@@ -482,7 +511,7 @@ function Relatorios() {
                 <div className="flex items-start justify-between gap-3">
                   <div className="min-w-0">
                     <p className="font-medium">{item.nome}</p>
-                    <p className="text-xs text-muted-foreground">{num(item.quantidade)} {item.unidade} · {item.quantidadeCompras} compra(s)</p>
+                    <p className="text-xs text-muted-foreground">{item.quantidade === null ? "Confira as unidades cadastradas" : `${num(item.quantidade)} ${item.unidade}`} · {item.quantidadeCompras} compra(s)</p>
                   </div>
                   <b className="shrink-0">{brl(item.total)}</b>
                 </div>
