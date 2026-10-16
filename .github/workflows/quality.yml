@@ -21,7 +21,7 @@ jobs:
       # while deferring the repository-wide Prettier cleanup.
       - name: Lint changed application files
         run: >-
-          bunx eslint src/routes/_authenticated/compras.tsx src/routes/_authenticated/producao.tsx src/integrations/supabase/types.ts --rule "prettier/prettier: off"
+          bunx eslint src/routes/_authenticated/compras.tsx src/routes/_authenticated/producao.tsx src/routes/_authenticated/relatorios.tsx src/integrations/supabase/types.ts --rule "prettier/prettier: off"
       - run: bunx tsc --noEmit
       - run: bun run test --passWithNoTests
       - run: bun run build
@@ -51,6 +51,12 @@ jobs:
         run: |
           set -euo pipefail
           for migration in drizzle/migrations/[0-9][0-9][0-9][0-9]_*.sql; do
+            # This legacy draft duplicates the production RPC migration 0006 and
+            # creates an incompatible producao_eventos table. Do not apply it.
+            if [[ "$migration" == "drizzle/migrations/0006_producao_estoque_atomico.sql" ]]; then
+              echo "Skipping obsolete draft migration: $migration"
+              continue
+            fi
             echo "Applying $migration"
             psql "$DATABASE_URL" -v ON_ERROR_STOP=1 -f "$migration"
           done

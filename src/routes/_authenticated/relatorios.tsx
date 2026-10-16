@@ -23,6 +23,7 @@ export const Route = createFileRoute("/_authenticated/relatorios")({
       context.queryClient.ensureQueryData(appQueries.produtosQ),
       context.queryClient.ensureQueryData(appQueries.insumosQ),
       context.queryClient.ensureQueryData(appQueries.contasPagarQ),
+      context.queryClient.ensureQueryData(appQueries.comprasQ),
     ]);
   },
   errorComponent: ({ error }) => (
@@ -59,8 +60,9 @@ function Relatorios() {
   const { data: insumos } = useSuspenseQuery(appQueries.insumosQ);
   const { data: despesas } = useSuspenseQuery(despesasQ);
   const { data: contasPagar } = useSuspenseQuery(appQueries.contasPagarQ);
+  const { data: compras } = useSuspenseQuery(appQueries.comprasQ);
   const intervaloValido = inicio <= fim;
-  const contasAbertas = contasPagar.filter((c) => ["pendente", "parcial"].includes(c.status));
+  const contasAbertas = contasPagar.filter((c) => !c.cancelada_em && ["pendente", "parcial"].includes(c.status));
   const saldoContasAbertas = contasAbertas.reduce((s, c) => s + Math.max(0, Number(c.valor) - Number(c.valor_pago)), 0);
   const saldoContasVencidas = contasAbertas
     .filter((c) => c.data_vencimento < hojeISO())
@@ -108,6 +110,29 @@ function Relatorios() {
   const gastos = intervaloValido
     ? despesas.filter((d) => d.data >= inicio && d.data <= fim).reduce((s, d) => s + Number(d.valor), 0)
     : 0;
+  // Compras são mostradas como movimento/compromisso financeiro, sem subtraí-las
+  // novamente do resultado: os insumos consumidos já devem compor o custo dos produtos vendidos.
+  const comprasNoPeriodo = intervaloValido
+    ? compras.filter((c) => !c.cancelada_em && c.data_compra >= inicio && c.data_compra <= fim)
+    : [];
+  const totalComprasInsumos = comprasNoPeriodo.reduce((s, c) => s + Math.max(0, Number(c.total) || 0), 0);
+  const comprasPorForma = useMemo(() => {
+    const totais = new Map<string, number>();
+    for (const compra of comprasNoPeriodo) {
+      const forma = compra.forma_pagamento_compra || "não informado";
+      totais.set(forma, (totais.get(forma) ?? 0) + Math.max(0, Number(compra.total) || 0));
+    }
+    return [...totais.entries()].sort((a, b) => b[1] - a[1]);
+  }, [comprasNoPeriodo]);
+  const despesasPorCategoria = useMemo(() => {
+    const totais = new Map<string, number>();
+    for (const despesa of despesas) {
+      if (!intervaloValido || despesa.data < inicio || despesa.data > fim) continue;
+      const categoria = despesa.categoria?.trim() || "Sem categoria";
+      totais.set(categoria, (totais.get(categoria) ?? 0) + (Number(despesa.valor) || 0));
+    }
+    return [...totais.entries()].sort((a, b) => b[1] - a[1]);
+  }, [despesas, inicio, fim, intervaloValido]);
 
   const contratado = lista.reduce((s, p) => ({
     venda: s.venda + p.t.venda,
@@ -119,7 +144,9 @@ function Relatorios() {
     custo: s.custo + p.t.custo,
     taxas: s.taxas + p.t.taxas,
   }), { venda: 0, custo: 0, taxas: 0 });
-  const resultado = realizado.venda - realizado.custo - realizado.taxas - gastos;
+  const lucroBruto = realizado.venda - realizado.custo;
+  const margemBruta = realizado.venda > 0 ? (lucroBruto / realizado.venda) * 100 : 0;
+  const resultado = lucroBruto - realizado.taxas - gastos;
 
   const porProduto = useMemo(() => {
     const m = new Map<string, { qtd: number; venda: number; custo: number; nome: string }>();
@@ -179,18 +206,28 @@ function Relatorios() {
       </div>
       {!intervaloValido && <p className="mb-4 text-destructive">A data final deve ser igual ou posterior à data inicial.</p>}
 
-      <h2 className="mb-3 text-lg font-semibold">Visão geral</h2>
+      <h2 className="mb-3 text-lg font-semibold">Visão geral do período</h2>
       <div className="mb-6 grid grid-cols-2 gap-3">
-        <Stat label="Vendas dos pedidos" value={brl(contratado.venda)} />
-        <Stat label="Pedidos entregues" value={brl(realizado.venda)} tone="primary" />
-        <Stat label="Saldo a receber estimado" value={brl(contratado.saldo)} />
+        <Stat label="Vendas contratadas" value={brl(contratado.venda)} />
+        <Stat label="Vendas entregues" value={brl(realizado.venda)} tone="primary" />
+        <Stat label="Lucro bruto estimado" value={brl(lucroBruto)} tone={lucroBruto >= 0 ? "success" : "danger"} />
+        <Stat label="Margem bruta estimada" value={String(margemBruta.toLocaleString("pt-BR", { maximumFractionDigits: 1 })) + "%"} />
+        <Stat label="Recebido nos pedidos" value={brl(contratado.recebido)} />
+        <Stat label="Saldo a receber" value={brl(contratado.saldo)} />
+        <Stat label="Compras de insumos" value={brl(totalComprasInsumos)} />
+        <Stat label="Contas a pagar em aberto" value={brl(saldoContasAbertas)} tone={saldoContasAbertas > 0 ? "danger" : "default"} />
         <Stat label="Resultado estimado" value={brl(resultado)} tone={resultado >= 0 ? "success" : "danger"} />
       </div>
+      <p className="mb-6 text-xs text-muted-foreground">
+        Compras de insumos mostram o total registrado pela data da compra; contas a pagar mostram o saldo ainda pendente. Esses valores são informativos e não são descontados novamente do resultado estimado.
+      </p>
 
       <section className="mb-6 border-y py-4">
         <h2 className="mb-2 text-lg font-semibold">Resultado dos pedidos entregues</h2>
         <Row label="Vendas dos pedidos entregues" value={brl(realizado.venda)} />
         <Row label="Custo estimado dos produtos" value={brl(realizado.custo)} />
+        <Row label="Lucro bruto estimado" value={brl(lucroBruto)} strong />
+        <Row label="Margem bruta estimada" value={String(margemBruta.toLocaleString("pt-BR", { maximumFractionDigits: 1 })) + "%"} />
         <Row label="Taxas e impostos estimados" value={brl(realizado.taxas)} />
         <Row label="Despesas registradas no período" value={brl(gastos)} />
         <Row label="Resultado estimado após despesas" value={brl(resultado)} strong />
@@ -202,6 +239,34 @@ function Relatorios() {
         </div>
         <p className="mt-3 text-xs text-muted-foreground">
           O resultado considera apenas pedidos entregues/finalizados no período selecionado. As despesas são filtradas pela data em que foram registradas. Não lance novamente como despesa ingredientes, embalagens, gás, energia ou mão de obra que já estejam incluídos no custo da receita, pois isso pode duplicar o desconto.
+        </p>
+      </section>
+
+      <section className="mb-6">
+        <h2 className="mb-3 text-lg font-semibold">Despesas por categoria</h2>
+        {!despesasPorCategoria.length ? <Empty>Nenhuma despesa registrada no período.</Empty> : (
+          <div className="divide-y">
+            {despesasPorCategoria.map(([categoria, valor]) => (
+              <Row key={categoria} label={categoria} value={brl(valor)} />
+            ))}
+          </div>
+        )}
+        <p className="mt-2 text-xs text-muted-foreground">
+          Soma as despesas pela data registrada. Confira se os lançamentos não repetem custos de ingredientes, embalagens ou outros itens já calculados nas receitas.
+        </p>
+      </section>
+
+      <section className="mb-6">
+        <h2 className="mb-3 text-lg font-semibold">Compras de insumos por pagamento</h2>
+        {!comprasPorForma.length ? <Empty>Nenhuma compra registrada no período.</Empty> : (
+          <div className="divide-y">
+            {comprasPorForma.map(([forma, valor]) => (
+              <Row key={forma} label={forma.replaceAll("_", " ")} value={brl(valor)} />
+            ))}
+          </div>
+        )}
+        <p className="mt-2 text-xs text-muted-foreground">
+          Valores agrupados pela forma de pagamento informada na compra, não pelo valor efetivamente pago no período.
         </p>
       </section>
 
@@ -231,7 +296,7 @@ function Relatorios() {
                   <b className="whitespace-nowrap">{brl(p.venda)}</b>
                 </div>
                 <div className="text-xs text-muted-foreground">
-                  {num(p.qtd)} unidades · Custo {brl(p.custo)} · Lucro bruto estimado {brl(p.venda - p.custo)}
+                  {num(p.qtd)} unidades · Custo {brl(p.custo)} · Lucro bruto estimado {brl(p.venda - p.custo)} · Margem {String((p.venda > 0 ? ((p.venda - p.custo) / p.venda) * 100 : 0).toLocaleString("pt-BR", { maximumFractionDigits: 1 }))}%
                 </div>
               </div>
             ))}
