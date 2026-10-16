@@ -41,7 +41,7 @@ function Painel() {
   const vendasPorPedido = new Map(
     pedidos
       .filter((pedido) => pedido.status !== "cancelado")
-      .map((pedido) => [pedido.id, Math.max(0, Number(pedido.t.venda) || 0)]),
+      .map((pedido) => [pedido.id, Math.max(0, Number(pedido.t.venda) || 0)] as const),
   );
   const recebimentosPorPedidoNoMes = new Map<string, number>();
   for (const pagamento of pagamentosPedidos) {
