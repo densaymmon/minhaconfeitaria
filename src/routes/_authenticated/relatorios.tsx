@@ -59,6 +59,7 @@ function Relatorios() {
   const [inicioRecebimentos, setInicioRecebimentos] = useState(mesISO() + "-01");
   const [fimRecebimentos, setFimRecebimentos] = useState(hojeISO());
   const navigate = Route.useNavigate();
+  const [categoriaRelatorio, setCategoriaRelatorio] = useState("visao-geral");
   const { data: pedidos } = useSuspenseQuery(pedidosQ);
   const { data: config } = useSuspenseQuery(configQ);
   const { data: produtos } = useSuspenseQuery(appQueries.produtosQ);
@@ -257,15 +258,31 @@ function Relatorios() {
         </Button>
       } />
       <div className="mb-5 grid grid-cols-2 gap-3">
-        <Field label="Entrega a partir de">
+        <Field label="Data inicial">
           <Input type="date" value={inicio} onChange={(e) => navigate({ search: (s) => ({ ...s, inicio: e.target.value }) })} className="h-11 bg-card" />
         </Field>
-        <Field label="Até">
+        <Field label="Data final">
           <Input type="date" value={fim} onChange={(e) => navigate({ search: (s) => ({ ...s, fim: e.target.value }) })} className="h-11 bg-card" />
         </Field>
       </div>
       {!intervaloValido && <p className="mb-4 text-destructive">A data final deve ser igual ou posterior à data inicial.</p>}
 
+      <nav aria-label="Categorias do relatório financeiro" className="mb-6 grid grid-cols-2 gap-2 sm:grid-cols-3">
+        {[
+          ["visao-geral", "Visão geral"],
+          ["vendas", "Vendas e lucro"],
+          ["compras", "Compras e insumos"],
+          ["contas", "Contas a pagar"],
+          ["caixa", "Fluxo de caixa"],
+          ["despesas", "Despesas e custos"],
+        ].map(([valor, rotulo]) => (
+          <Button key={valor} type="button" size="sm" variant={categoriaRelatorio === valor ? "default" : "outline"} aria-pressed={categoriaRelatorio === valor} onClick={() => setCategoriaRelatorio(valor)}>
+            {rotulo}
+          </Button>
+        ))}
+      </nav>
+
+      {categoriaRelatorio === "visao-geral" && <>
       <h2 className="mb-3 text-lg font-semibold">Visão geral do período</h2>
       <div className="mb-6 grid grid-cols-2 gap-3">
         <Stat label="Vendas totais" value={brl(contratado.venda)} tone="primary" />
@@ -273,7 +290,8 @@ function Relatorios() {
         <Stat label="Contas a pagar" value={brl(saldoContasAbertas)} tone={saldoContasAbertas > 0 ? "danger" : "default"} />
         <Stat label="Lucro total estimado" value={brl(lucroTotalPeriodo)} tone={lucroTotalPeriodo >= 0 ? "success" : "danger"} />
       </div>
-      <section className="mb-6 rounded-xl border p-4">
+      </>}
+      {categoriaRelatorio === "contas" && <section className="mb-6 rounded-xl border p-4">
         <h2 className="mb-1 text-lg font-semibold">Saúde financeira atual</h2>
         <p className="mb-4 text-sm text-muted-foreground">
           Estes valores representam a posição atual de todos os pedidos e contas cadastrados, independentemente do filtro de datas de entrega acima.
@@ -288,11 +306,12 @@ function Relatorios() {
         <p className="mt-3 text-xs text-muted-foreground">
           O total a receber usa o saldo cadastrado em cada pedido não cancelado. Contas a pagar consideram apenas o saldo ainda não quitado. Isso não substitui a conferência dos extratos bancários nem inclui um saldo inicial de caixa.
         </p>
-      </section>
-      <p className="mb-6 text-xs text-muted-foreground">
+      </section>}
+      {categoriaRelatorio === "visao-geral" && <p className="mb-6 text-xs text-muted-foreground">
         Recebimentos no período consideram somente pagamentos com data individual registrada. Pagamentos antigos sem histórico detalhado continuam no valor pago cadastrado, mas não são atribuídos a uma data fictícia. Compras de insumos e contas a pagar são indicadores separados e não são descontados novamente do resultado estimado.
-      </p>
+      </p>}
 
+      {categoriaRelatorio === "caixa" && <>
       <section className="mb-6 rounded-xl border p-4">
         <h2 className="mb-1 text-lg font-semibold">Fluxo de recebimentos</h2>
         <p className="mb-3 text-sm text-muted-foreground">Pagamentos registrados pela data em que o dinheiro entrou no caixa.</p>
@@ -337,7 +356,8 @@ function Relatorios() {
           Pagamentos antigos de pedidos sem data individual não são atribuídos a datas estimadas. Compras no crédito entram quando suas parcelas são efetivamente pagas. Despesas usam a data cadastrada; registre cada gasto apenas uma vez e mantenha o histórico de pagamentos das contas atualizado. O saldo mostrado não inclui saldo inicial de caixa, tarifas bancárias não registradas ou movimentações externas ao sistema.
         </p>
       </section>
-      <section className="mb-6 border-y py-4">
+      </>}
+      {categoriaRelatorio === "vendas" && <section className="mb-6 border-y py-4">
         <h2 className="mb-2 text-lg font-semibold">Resultado dos pedidos entregues</h2>
         <Row label="Vendas dos pedidos entregues" value={brl(realizado.venda)} />
         <Row label="Custo estimado dos produtos" value={brl(realizado.custo)} />
@@ -355,9 +375,9 @@ function Relatorios() {
         <p className="mt-3 text-xs text-muted-foreground">
           O resultado considera apenas pedidos entregues/finalizados no período selecionado. As despesas são filtradas pela data em que foram registradas. Não lance novamente como despesa ingredientes, embalagens, gás, energia ou mão de obra que já estejam incluídos no custo da receita, pois isso pode duplicar o desconto.
         </p>
-      </section>
+      </section>}
 
-      <section className="mb-6">
+      {categoriaRelatorio === "despesas" && <section className="mb-6">
         <h2 className="mb-3 text-lg font-semibold">Despesas por categoria</h2>
         {!despesasPorCategoria.length ? <Empty>Nenhuma despesa registrada no período.</Empty> : (
           <div className="divide-y">
@@ -369,9 +389,9 @@ function Relatorios() {
         <p className="mt-2 text-xs text-muted-foreground">
           Soma as despesas pela data registrada. Confira se os lançamentos não repetem custos de ingredientes, embalagens ou outros itens já calculados nas receitas.
         </p>
-      </section>
+      </section>}
 
-      <section className="mb-6">
+      {categoriaRelatorio === "compras" && <section className="mb-6">
         <h2 className="mb-3 text-lg font-semibold">Compras de insumos por pagamento</h2>
         {!comprasPorForma.length ? <Empty>Nenhuma compra registrada no período.</Empty> : (
           <div className="divide-y">
@@ -383,9 +403,9 @@ function Relatorios() {
         <p className="mt-2 text-xs text-muted-foreground">
           Valores agrupados pela forma de pagamento informada na compra, não pelo valor efetivamente pago no período.
         </p>
-      </section>
+      </section>}
 
-      <section className="mb-6 rounded-xl border p-4">
+      {categoriaRelatorio === "contas" && <section className="mb-6 rounded-xl border p-4">
         <div className="mb-3 flex items-center justify-between gap-3">
           <h2 className="text-lg font-semibold">Contas a pagar</h2>
           <Link to="/contas-pagar" className="text-sm font-medium text-primary">Ver detalhes</Link>
@@ -397,9 +417,9 @@ function Relatorios() {
         <p className="mt-3 text-xs text-muted-foreground">
           Valores atuais, independentemente do período de entrega selecionado. Esses compromissos não são descontados novamente do resultado estimado; registre despesas pagas uma única vez para evitar duplicidade.
         </p>
-      </section>
+      </section>}
 
-      <section className="mb-6">
+      {categoriaRelatorio === "vendas" && <section className="mb-6">
         <h2 className="mb-3 text-lg font-semibold">Rentabilidade estimada por produto</h2>
         <p className="mb-3 text-xs text-muted-foreground">Somente pedidos entregues no período. A venda e as taxas/impostos do pedido são rateados proporcionalmente entre os itens para considerar descontos e entrega. Os custos usam a receita e os preços atuais cadastrados; embalagens precisam estar cadastradas como insumos da receita.</p>
         {!porProduto.length ? <Empty>Nenhuma venda entregue no período.</Empty> : (
@@ -423,9 +443,9 @@ function Relatorios() {
           </div>
         )}
         <p className="mt-3 text-xs text-muted-foreground">É uma margem de contribuição estimada, não o lucro contábil final: despesas gerais não são rateadas automaticamente. Gás, energia e mão de obra entram quando cadastrados no custo da receita; evite lançá-los novamente como despesas se já estiverem incluídos.</p>
-      </section>
+      </section>}
 
-      <section className="mb-5">
+      {categoriaRelatorio === "vendas" && <section className="mb-5">
         <h2 className="mb-3 text-lg font-semibold">Detalhamento dos pedidos</h2>
         {!lista.length ? <Empty>Nenhum pedido no período.</Empty> : (
           <div className="divide-y">
@@ -443,14 +463,14 @@ function Relatorios() {
             ))}
           </div>
         )}
-      </section>
+      </section>}
 
-      <p className="mb-2 text-xs text-muted-foreground">
+      {categoriaRelatorio === "vendas" && <p className="mb-2 text-xs text-muted-foreground">
         Valores recebidos e saldo são estimativas dos pedidos com entrega no período, não um extrato por data de pagamento. O sistema ainda não registra cada pagamento parcial com sua própria data.
       </p>
       <p className="text-xs text-muted-foreground">
         Para itens avulsos sem produto/receita cadastrada, o relatório mantém o custo salvo no pedido. Taxas e impostos são estimativas conforme as configurações atuais.
-      </p>
+      </p>}
     </>
   );
 }
