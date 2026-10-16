@@ -52,6 +52,12 @@ export function margemReal(custoUnit: number, preco: number) {
   return ((preco - custoUnit) / custoUnit) * 100;
 }
 
+/** Distribui a venda total e as taxas do pedido proporcionalmente ao valor bruto de cada item. */
+export function ratearVendaETaxas(valorItem: number, subtotalItens: number, vendaPedido: number, taxasPedido: number) {
+  const proporcao = subtotalItens > 0 ? Math.max(0, valorItem) / subtotalItens : 0;
+  return { venda: Math.max(0, vendaPedido) * proporcao, taxas: Math.max(0, taxasPedido) * proporcao };
+}
+
 export type Config = {
   taxa_pix: number;
   taxa_dinheiro: number;
