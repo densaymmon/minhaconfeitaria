@@ -41,8 +41,6 @@ DECLARE
   rendimento numeric;
   receita record;
   base_unit text;
-  fator numeric;
-  consumo_delta numeric;
   movimento_evento uuid;
 BEGIN
   IF uid IS NULL THEN
