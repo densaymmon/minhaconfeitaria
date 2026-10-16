@@ -114,6 +114,8 @@ function PedidoForm() {
       if (loadError) throw new Error(loadError.message);
       setPagamentos((data ?? []) as PedidoPagamento[]);
       setNovoRecebimento({ valor: "", data_pagamento: hojeISO(), forma_pagamento: "pix", observacoes: "" });
+      const novoTotalPago = Math.min(t.venda, valorPagoEfetivo + valor);
+      setF((atual) => ({ ...atual, valor_entrada: String(novoTotalPago), saldo_quitado: novoTotalPago >= t.venda }));
       await qc.invalidateQueries({ queryKey: ["pedidos"] });
       toast.success("Recebimento registrado.");
     } catch (e) {
