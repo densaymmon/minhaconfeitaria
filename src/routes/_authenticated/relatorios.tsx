@@ -7,7 +7,7 @@ import { toast } from "sonner";
 import { supabase } from "@/integrations/supabase/client";
 import { Download } from "lucide-react";
 import { configQ, despesasQ, pedidosQ } from "@/lib/queries";
-import { custoUnitario, totaisPedido } from "@/lib/calc";
+import { custoUnitario, ratearVendaETaxas, totaisPedido } from "@/lib/calc";
 import { brl, dataBR, hojeISO, mesISO, num } from "@/lib/format";
 import { baixarCSV } from "@/lib/csv";
 import { PageHeader, Field, Stat, Row, Empty } from "@/components/app/ui";
@@ -196,18 +196,24 @@ function Relatorios() {
   const resultado = lucroBruto - realizado.taxas - gastos;
 
   const porProduto = useMemo(() => {
-    const m = new Map<string, { qtd: number; venda: number; custo: number; nome: string }>();
+    const m = new Map<string, { qtd: number; venda: number; custo: number; taxas: number; lucro: number; nome: string }>();
     for (const pedido of entregues) {
+      const subtotal = pedido.pedido_itens.reduce((s, item) => s + Number(item.quantidade) * Number(item.preco_unitario), 0);
       for (const item of pedido.pedido_itens) {
+        const vendaItem = Number(item.quantidade) * Number(item.preco_unitario);
+        const rateio = ratearVendaETaxas(vendaItem, subtotal, pedido.t.venda, pedido.t.taxas);
+        const custoItem = Number(item.quantidade) * Number(item.custo_unitario);
         const key = item.produto_id ?? item.descricao;
-        const r = m.get(key) ?? { qtd: 0, venda: 0, custo: 0, nome: item.descricao || "Produto sem nome" };
+        const r = m.get(key) ?? { qtd: 0, venda: 0, custo: 0, taxas: 0, lucro: 0, nome: item.descricao || "Produto sem nome" };
         r.qtd += Number(item.quantidade);
-        r.venda += Number(item.quantidade) * Number(item.preco_unitario);
-        r.custo += Number(item.quantidade) * Number(item.custo_unitario);
+        r.venda += rateio.venda;
+        r.custo += custoItem;
+        r.taxas += rateio.taxas;
+        r.lucro += rateio.venda - custoItem - rateio.taxas;
         m.set(key, r);
       }
     }
-    return [...m.values()].sort((a, b) => b.venda - a.venda);
+    return [...m.values()].sort((a, b) => b.lucro - a.lucro);
   }, [entregues]);
 
   async function corrigirCustosHistoricos() {
@@ -392,23 +398,29 @@ function Relatorios() {
       </section>
 
       <section className="mb-6">
-        <h2 className="mb-3 text-lg font-semibold">Vendas por produto</h2>
-        <p className="mb-3 text-xs text-muted-foreground">Somente pedidos entregues. Os custos dos produtos cadastrados usam os preços e a receita cadastrados atualmente.</p>
+        <h2 className="mb-3 text-lg font-semibold">Rentabilidade estimada por produto</h2>
+        <p className="mb-3 text-xs text-muted-foreground">Somente pedidos entregues no período. A venda e as taxas/impostos do pedido são rateados proporcionalmente entre os itens para considerar descontos e entrega. Os custos usam a receita e os preços atuais cadastrados; embalagens precisam estar cadastradas como insumos da receita.</p>
         {!porProduto.length ? <Empty>Nenhuma venda entregue no período.</Empty> : (
           <div className="divide-y">
             {porProduto.map((p, i) => (
               <div key={i} className="py-3">
-                <div className="flex justify-between gap-2">
-                  <span className="break-words">{p.nome}</span>
-                  <b className="whitespace-nowrap">{brl(p.venda)}</b>
+                <div className="flex items-start justify-between gap-3">
+                  <div className="min-w-0">
+                    <p className="break-words font-medium">{i + 1}. {p.nome}</p>
+                    <p className="text-xs text-muted-foreground">{num(p.qtd)} unidades · Venda considerada {brl(p.venda)}</p>
+                  </div>
+                  <b className={p.lucro >= 0 ? "whitespace-nowrap text-success" : "whitespace-nowrap text-destructive"}>{brl(p.lucro)}</b>
                 </div>
-                <div className="text-xs text-muted-foreground">
-                  {num(p.qtd)} unidades · Custo {brl(p.custo)} · Lucro bruto estimado {brl(p.venda - p.custo)} · Margem {String((p.venda > 0 ? ((p.venda - p.custo) / p.venda) * 100 : 0).toLocaleString("pt-BR", { maximumFractionDigits: 1 }))}%
+                <div className="mt-2 grid grid-cols-2 gap-x-3 gap-y-1 text-xs text-muted-foreground">
+                  <span>Custo total: {brl(p.custo)}</span>
+                  <span>Taxas/impostos: {brl(p.taxas)}</span>
+                  <span>Margem estimada: {String((p.venda > 0 ? (p.lucro / p.venda) * 100 : 0).toLocaleString("pt-BR", { maximumFractionDigits: 1 }))}%</span>
                 </div>
               </div>
             ))}
           </div>
         )}
+        <p className="mt-3 text-xs text-muted-foreground">É uma margem de contribuição estimada, não o lucro contábil final: despesas gerais não são rateadas automaticamente. Gás, energia e mão de obra entram quando cadastrados no custo da receita; evite lançá-los novamente como despesas se já estiverem incluídos.</p>
       </section>
 
       <section className="mb-5">
