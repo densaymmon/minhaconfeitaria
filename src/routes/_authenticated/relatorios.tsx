@@ -392,7 +392,7 @@ function Relatorios() {
       </section>
 
       <section className="mb-6">
-        <h2 className="mb-3 text-lg font-semibold">Vendas por produto</h2>
+        <h2 className="mb-3 text-lg font-semibold">Rentabilidade estimada por produto</h2>
         <p className="mb-3 text-xs text-muted-foreground">Somente pedidos entregues. Os custos dos produtos cadastrados usam os preços e a receita cadastrados atualmente.</p>
         {!porProduto.length ? <Empty>Nenhuma venda entregue no período.</Empty> : (
           <div className="divide-y">
