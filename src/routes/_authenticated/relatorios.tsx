@@ -24,6 +24,7 @@ export const Route = createFileRoute("/_authenticated/relatorios")({
       context.queryClient.ensureQueryData(appQueries.insumosQ),
       context.queryClient.ensureQueryData(appQueries.contasPagarQ),
       context.queryClient.ensureQueryData(appQueries.comprasQ),
+      context.queryClient.ensureQueryData(appQueries.pedidoPagamentosQ),
     ]);
   },
   errorComponent: ({ error }) => (
@@ -53,6 +54,8 @@ function Relatorios() {
   const { inicio, fim } = Route.useSearch();
   const qc = useQueryClient();
   const [corrigindoCustos, setCorrigindoCustos] = useState(false);
+  const [inicioRecebimentos, setInicioRecebimentos] = useState(mesISO() + "-01");
+  const [fimRecebimentos, setFimRecebimentos] = useState(hojeISO());
   const navigate = Route.useNavigate();
   const { data: pedidos } = useSuspenseQuery(pedidosQ);
   const { data: config } = useSuspenseQuery(configQ);
@@ -61,6 +64,7 @@ function Relatorios() {
   const { data: despesas } = useSuspenseQuery(despesasQ);
   const { data: contasPagar } = useSuspenseQuery(appQueries.contasPagarQ);
   const { data: compras } = useSuspenseQuery(appQueries.comprasQ);
+  const { data: pagamentosPedidos } = useSuspenseQuery(appQueries.pedidoPagamentosQ);
   const intervaloValido = inicio <= fim;
   const contasAbertas = contasPagar.filter((c) => !c.cancelada_em && ["pendente", "parcial"].includes(c.status));
   const saldoContasAbertas = contasAbertas.reduce((s, c) => s + Math.max(0, Number(c.valor) - Number(c.valor_pago)), 0);
@@ -116,6 +120,9 @@ function Relatorios() {
     ? compras.filter((c) => !c.cancelada_em && c.data_compra >= inicio && c.data_compra <= fim)
     : [];
   const totalComprasInsumos = comprasNoPeriodo.reduce((s, c) => s + Math.max(0, Number(c.total) || 0), 0);
+  const intervaloRecebimentosValido = inicioRecebimentos <= fimRecebimentos;
+  const recebimentosNoPeriodo = intervaloRecebimentosValido ? pagamentosPedidos.filter((p) => p.data_pagamento >= inicioRecebimentos && p.data_pagamento <= fimRecebimentos) : [];
+  const totalRecebidoNoPeriodo = recebimentosNoPeriodo.reduce((s, p) => s + Math.max(0, Number(p.valor) || 0), 0);
   const comprasPorForma = useMemo(() => {
     const totais = new Map<string, number>();
     for (const compra of comprasNoPeriodo) {
@@ -212,16 +219,38 @@ function Relatorios() {
         <Stat label="Vendas entregues" value={brl(realizado.venda)} tone="primary" />
         <Stat label="Lucro bruto estimado" value={brl(lucroBruto)} tone={lucroBruto >= 0 ? "success" : "danger"} />
         <Stat label="Margem bruta estimada" value={String(margemBruta.toLocaleString("pt-BR", { maximumFractionDigits: 1 })) + "%"} />
-        <Stat label="Recebido nos pedidos" value={brl(contratado.recebido)} />
+        <Stat label="Pago cadastrado nos pedidos" value={brl(contratado.recebido)} />
         <Stat label="Saldo a receber" value={brl(contratado.saldo)} />
         <Stat label="Compras de insumos" value={brl(totalComprasInsumos)} />
         <Stat label="Contas a pagar em aberto" value={brl(saldoContasAbertas)} tone={saldoContasAbertas > 0 ? "danger" : "default"} />
         <Stat label="Resultado estimado" value={brl(resultado)} tone={resultado >= 0 ? "success" : "danger"} />
       </div>
       <p className="mb-6 text-xs text-muted-foreground">
-        Compras de insumos mostram o total registrado pela data da compra; contas a pagar mostram o saldo ainda pendente. Esses valores são informativos e não são descontados novamente do resultado estimado.
+        Recebimentos no período consideram somente pagamentos com data individual registrada. Pagamentos antigos sem histórico detalhado continuam no valor pago cadastrado, mas não são atribuídos a uma data fictícia. Compras de insumos e contas a pagar são indicadores separados e não são descontados novamente do resultado estimado.
       </p>
 
+      <section className="mb-6 rounded-xl border p-4">
+        <h2 className="mb-1 text-lg font-semibold">Fluxo de recebimentos</h2>
+        <p className="mb-3 text-sm text-muted-foreground">Pagamentos registrados pela data em que o dinheiro entrou no caixa.</p>
+        <div className="mb-4 grid grid-cols-2 gap-3">
+          <Field label="Recebimentos a partir de">
+            <Input type="date" value={inicioRecebimentos} onChange={(e) => setInicioRecebimentos(e.target.value)} className="h-11 bg-card" />
+          </Field>
+          <Field label="Até">
+            <Input type="date" value={fimRecebimentos} onChange={(e) => setFimRecebimentos(e.target.value)} className="h-11 bg-card" />
+          </Field>
+        </div>
+        {!intervaloRecebimentosValido && <p className="mb-3 text-sm text-destructive">A data final deve ser igual ou posterior à data inicial.</p>}
+        <Stat label="Total recebido no período" value={brl(totalRecebidoNoPeriodo)} tone="primary" />
+        <div className="mt-3 space-y-2">
+          {recebimentosNoPeriodo.length === 0 ? <p className="text-sm text-muted-foreground">Nenhum recebimento detalhado neste intervalo. Pagamentos antigos sem data individual não entram neste total.</p> : recebimentosNoPeriodo.slice().sort((a, b) => b.data_pagamento.localeCompare(a.data_pagamento)).map((p) => (
+            <div key={p.id} className="flex items-start justify-between gap-3 border-t pt-2 text-sm">
+              <div><p className="font-medium">{dataBR(p.data_pagamento)} · {p.forma_pagamento}</p>{p.observacoes && <p className="text-muted-foreground">{p.observacoes}</p>}</div>
+              <span className="shrink-0 font-semibold">{brl(Number(p.valor))}</span>
+            </div>
+          ))}
+        </div>
+      </section>
       <section className="mb-6 border-y py-4">
         <h2 className="mb-2 text-lg font-semibold">Resultado dos pedidos entregues</h2>
         <Row label="Vendas dos pedidos entregues" value={brl(realizado.venda)} />

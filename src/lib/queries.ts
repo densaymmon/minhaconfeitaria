@@ -9,6 +9,7 @@ export type Insumo = Tables<"insumos">;
 export type ReceitaItem = Tables<"receita_itens">;
 export type Produto = Tables<"produtos"> & { receita_itens: ReceitaItem[] };
 export type PedidoItem = Tables<"pedido_itens">;
+export type PedidoPagamento = Tables<"pedido_pagamentos">;
 export type Pedido = Tables<"pedidos"> & {
   pedido_itens: PedidoItem[];
   clientes: { nome: string; telefone: string | null } | null;
@@ -40,6 +41,11 @@ export const insumosQ = queryOptions({
 export const produtosQ = queryOptions({
   queryKey: ["produtos"],
   queryFn: () => must<Produto[]>(supabase.from("produtos").select("*, receita_itens(*)").order("nome")),
+});
+
+export const pedidoPagamentosQ = queryOptions({
+  queryKey: ["pedido-pagamentos"],
+  queryFn: () => must<PedidoPagamento[]>(supabase.from("pedido_pagamentos").select("*").order("data_pagamento", { ascending: false })),
 });
 
 export const pedidosQ = queryOptions({

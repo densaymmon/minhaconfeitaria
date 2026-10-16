@@ -7,10 +7,10 @@ import { useEffect, useRef, useState } from "react";
 import { toast } from "sonner";
 import { MessageCircle, Plus, Trash2 } from "lucide-react";
 import { supabase } from "@/integrations/supabase/client";
-import { clientesQ, configQ, pedidosQ } from "@/lib/queries";
+import { clientesQ, configQ, pedidosQ, type PedidoPagamento } from "@/lib/queries";
 import { useCustos } from "@/lib/hooks";
 import { totaisPedido } from "@/lib/calc";
-import { FORMAS, brl, hojeISO, parseNum, statusLabel } from "@/lib/format";
+import { FORMAS, brl, dataBR, hojeISO, parseNum, statusLabel } from "@/lib/format";
 import { Card, Field, NativeSelect, PageHeader, Row } from "@/components/app/ui";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -79,9 +79,50 @@ function PedidoForm() {
       })) ?? [],
   );
   const [salvando, setSalvando] = useState(false);
+  const [pagamentos, setPagamentos] = useState<PedidoPagamento[]>([]);
+  const [novoRecebimento, setNovoRecebimento] = useState({ valor: "", data_pagamento: hojeISO(), forma_pagamento: "pix", observacoes: "" });
+  const [salvandoRecebimento, setSalvandoRecebimento] = useState(false);
   const [clienteDialogOpen, setClienteDialogOpen] = useState(false);
   const [salvandoCliente, setSalvandoCliente] = useState(false);
   const [novoCliente, setNovoCliente] = useState({ nome: "", telefone: "", endereco: "", observacoes: "" });
+  useEffect(() => {
+    if (!existente?.id) { setPagamentos([]); return; }
+    let ativo = true;
+    void supabase.from("pedido_pagamentos").select("*").eq("pedido_id", existente.id).order("data_pagamento", { ascending: false }).then(({ data, error }) => {
+      if (!ativo) return;
+      if (error) { toast.error("Não foi possível carregar o histórico de recebimentos."); return; }
+      setPagamentos((data ?? []) as PedidoPagamento[]);
+    });
+    return () => { ativo = false; };
+  }, [existente?.id]);
+
+  async function registrarRecebimento() {
+    if (!existente || salvandoRecebimento) return;
+    const valor = Math.round(parseNum(novoRecebimento.valor) * 100) / 100;
+    if (!(valor > 0)) { toast.error("Informe um valor maior que zero."); return; }
+    setSalvandoRecebimento(true);
+    try {
+      const { error } = await supabase.rpc("registrar_recebimento_pedido", {
+        p_pedido_id: existente.id,
+        p_valor: valor,
+        p_data_pagamento: novoRecebimento.data_pagamento,
+        p_forma_pagamento: novoRecebimento.forma_pagamento,
+        p_observacoes: novoRecebimento.observacoes.trim() || null,
+      });
+      if (error) throw new Error(error.message);
+      const { data, error: loadError } = await supabase.from("pedido_pagamentos").select("*").eq("pedido_id", existente.id).order("data_pagamento", { ascending: false });
+      if (loadError) throw new Error(loadError.message);
+      setPagamentos((data ?? []) as PedidoPagamento[]);
+      setNovoRecebimento({ valor: "", data_pagamento: hojeISO(), forma_pagamento: "pix", observacoes: "" });
+      const novoTotalPago = Math.min(t.venda, valorPagoEfetivo + valor);
+      setF((atual) => ({ ...atual, valor_entrada: String(novoTotalPago), saldo_quitado: novoTotalPago >= t.venda }));
+      await qc.invalidateQueries({ queryKey: ["pedidos"] });
+      toast.success("Recebimento registrado.");
+    } catch (e) {
+      toast.error(e instanceof Error ? e.message : "Não foi possível registrar o recebimento.");
+    } finally { setSalvandoRecebimento(false); }
+  }
+
   // Bloqueia cliques repetidos mesmo antes de o React atualizar o estado visual.
   const saveLock = useRef(false);
 
@@ -217,14 +258,14 @@ function PedidoForm() {
         hora_entrega: f.hora_entrega || null,
         status: f.status === "finalizado" ? "entregue" : f.status,
         forma_pagamento: f.forma_pagamento,
-        valor_entrada: parseNum(f.valor_entrada),
-        saldo_quitado: f.saldo_quitado,
+        valor_entrada: !novo && pagamentos.length > 0 ? Number(existente?.valor_entrada ?? parseNum(f.valor_entrada)) : parseNum(f.valor_entrada),
+        saldo_quitado: !novo && pagamentos.length > 0 ? Boolean(existente?.saldo_quitado) : f.saldo_quitado,
         desconto: parseNum(f.desconto),
         taxa_entrega: parseNum(f.taxa_entrega),
         observacoes: f.observacoes.trim() || null,
       };
-      const { error } = await supabase.rpc("salvar_pedido", {
-        payload,
+      const { data: pedidoSalvoId, error } = await supabase.rpc("salvar_pedido", {
+        payload: novo && parseNum(f.valor_entrada) > 0 ? { ...payload, valor_entrada: 0, saldo_quitado: false } : payload,
         itens: itens.map((i) => ({
           produto_id: i.produto_id,
           descricao: i.descricao.trim(),
@@ -238,6 +279,21 @@ function PedidoForm() {
         ...(existente ? { registro_id: existente.id } : {}),
       });
       if (error) throw error;
+      if (novo && parseNum(f.valor_entrada) > 0) {
+        const { error: recebimentoError } = await supabase.rpc("registrar_recebimento_pedido", {
+          p_pedido_id: pedidoSalvoId,
+          p_valor: Math.round(parseNum(f.valor_entrada) * 100) / 100,
+          p_data_pagamento: hojeISO(),
+          p_forma_pagamento: f.forma_pagamento,
+          p_observacoes: "Entrada registrada na criação do pedido",
+        });
+        if (recebimentoError) {
+          await qc.invalidateQueries({ queryKey: ["pedidos"] });
+          toast.error("Pedido criado, mas a entrada não foi registrada: " + recebimentoError.message);
+          navigate({ to: "/pedidos", search: { filtro: undefined, dataInicial: undefined, dataFinal: undefined } });
+          return;
+        }
+      }
       await qc.invalidateQueries({ queryKey: ["pedidos"] });
       toast.success(novo ? "Pedido criado!" : "Pedido atualizado!");
       navigate({ to: "/pedidos", search: { filtro: undefined, dataInicial: undefined, dataFinal: undefined } });
@@ -426,7 +482,7 @@ function PedidoForm() {
                   </NativeSelect>
                 </Field>
                 <Field label="Entrada / valor pago (R$)">
-                  <Input inputMode="decimal" value={f.valor_entrada} onFocus={() => limparZeroAoFocar(f.valor_entrada, setValorPago)} onChange={(e) => setValorPago(e.target.value)} className="h-11" />
+                  <Input inputMode="decimal" value={f.valor_entrada} disabled={pagamentos.length > 0} onFocus={() => limparZeroAoFocar(f.valor_entrada, setValorPago)} onChange={(e) => setValorPago(e.target.value)} className="h-11" />
                 </Field>
               </div>
               <div className="rounded-xl bg-muted/60 p-3">
@@ -470,7 +526,7 @@ function PedidoForm() {
               </Field>
               <div className="grid grid-cols-3 gap-2">
                 <Field label="Valor pago R$">
-                  <Input inputMode="decimal" value={f.valor_entrada} onFocus={() => limparZeroAoFocar(f.valor_entrada, setValorPago)} onChange={(e) => setValorPago(e.target.value)} className="h-11" />
+                  <Input inputMode="decimal" value={f.valor_entrada} disabled={pagamentos.length > 0} onFocus={() => limparZeroAoFocar(f.valor_entrada, setValorPago)} onChange={(e) => setValorPago(e.target.value)} className="h-11" />
                 </Field>
                 <Field label="Frete R$">
                   <Input inputMode="decimal" value={f.taxa_entrega} onFocus={() => limparZeroAoFocar(f.taxa_entrega, (valor) => set("taxa_entrega", valor))} onChange={(e) => set("taxa_entrega", e.target.value)} className="h-11" />
@@ -486,6 +542,57 @@ function PedidoForm() {
                 <div className="my-2 border-t" />
                 <Row label="Saldo pendente" value={brl(saldoPendente)} strong />
               </div>
+            </Card>
+
+            <Card className="space-y-3">
+              <div>
+                <h2 className="text-lg font-semibold">Histórico de recebimentos</h2>
+                <p className="text-sm text-muted-foreground">Registre cada entrada com sua data e forma de pagamento. Saldo atual: {brl(saldoPendente)}.</p>
+              </div>
+              {existente?.status !== "cancelado" && saldoPendente > 0.009 && (
+                <div className="space-y-3 rounded-xl border p-3">
+                  <div className="grid grid-cols-1 gap-3 sm:grid-cols-2">
+                    <Field label="Valor recebido (R$)">
+                      <Input inputMode="decimal" value={novoRecebimento.valor} onChange={(e) => setNovoRecebimento((s) => ({ ...s, valor: e.target.value }))} placeholder="0,00" className="h-11" />
+                    </Field>
+                    <Field label="Data do recebimento">
+                      <Input type="date" value={novoRecebimento.data_pagamento} max={hojeISO()} onChange={(e) => setNovoRecebimento((s) => ({ ...s, data_pagamento: e.target.value }))} className="h-11" />
+                    </Field>
+                  </div>
+                  <Field label="Forma de pagamento">
+                    <NativeSelect value={novoRecebimento.forma_pagamento} onChange={(e) => setNovoRecebimento((s) => ({ ...s, forma_pagamento: e.target.value }))}>
+                      {FORMAS.map((forma) => <option key={forma.value} value={forma.value}>{forma.label}</option>)}
+                    </NativeSelect>
+                  </Field>
+                  <Field label="Observação (opcional)">
+                    <Input value={novoRecebimento.observacoes} onChange={(e) => setNovoRecebimento((s) => ({ ...s, observacoes: e.target.value }))} placeholder="Ex.: sinal, parcela final..." className="h-11" />
+                  </Field>
+                  <Button type="button" className="h-11 w-full" disabled={salvandoRecebimento} onClick={() => void registrarRecebimento()}>
+                    {salvandoRecebimento ? "Registrando..." : "Registrar recebimento"}
+                  </Button>
+                </div>
+              )}
+              <div className="rounded-xl bg-muted/60 p-3">
+                <Row label="Total do pedido" value={brl(t.venda)} />
+                <Row label="Total recebido no cadastro" value={brl(valorPagoEfetivo)} />
+                <Row label="Registros detalhados" value={brl(pagamentos.reduce((s, p) => s + Number(p.valor || 0), 0))} />
+                <Row label="Saldo pendente" value={brl(saldoPendente)} strong />
+              </div>
+              {pagamentos.length === 0 ? (
+                <p className="text-sm text-muted-foreground">Nenhum recebimento detalhado registrado ainda. Os valores pagos anteriormente permanecem no cadastro, mas não possuem data individual no histórico.</p>
+              ) : (
+                <div className="divide-y rounded-xl border">
+                  {pagamentos.map((p) => (
+                    <div key={p.id} className="flex items-start justify-between gap-3 p-3 text-sm">
+                      <div>
+                        <p className="font-medium">{dataBR(p.data_pagamento)} · {FORMAS.find((forma) => forma.value === p.forma_pagamento)?.label ?? p.forma_pagamento}</p>
+                        {p.observacoes && <p className="text-muted-foreground">{p.observacoes}</p>}
+                      </div>
+                      <span className="shrink-0 font-semibold">{brl(Number(p.valor))}</span>
+                    </div>
+                  ))}
+                </div>
+              )}
             </Card>
 
             <Card>
