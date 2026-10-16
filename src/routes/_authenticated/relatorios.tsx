@@ -216,14 +216,15 @@ function Relatorios() {
         <Stat label="Vendas entregues" value={brl(realizado.venda)} tone="primary" />
         <Stat label="Lucro bruto estimado" value={brl(lucroBruto)} tone={lucroBruto >= 0 ? "success" : "danger"} />
         <Stat label="Margem bruta estimada" value={String(margemBruta.toLocaleString("pt-BR", { maximumFractionDigits: 1 })) + "%"} />
-        <Stat label="Recebido nos pedidos" value={brl(contratado.recebido)} />
+        <Stat label="Recebimentos no período" value={brl(totalRecebidoNoPeriodo)} tone="primary" />
+        <Stat label="Pago cadastrado nos pedidos" value={brl(contratado.recebido)} />
         <Stat label="Saldo a receber" value={brl(contratado.saldo)} />
         <Stat label="Compras de insumos" value={brl(totalComprasInsumos)} />
         <Stat label="Contas a pagar em aberto" value={brl(saldoContasAbertas)} tone={saldoContasAbertas > 0 ? "danger" : "default"} />
         <Stat label="Resultado estimado" value={brl(resultado)} tone={resultado >= 0 ? "success" : "danger"} />
       </div>
       <p className="mb-6 text-xs text-muted-foreground">
-        Compras de insumos mostram o total registrado pela data da compra; contas a pagar mostram o saldo ainda pendente. Esses valores são informativos e não são descontados novamente do resultado estimado.
+        Recebimentos no período consideram somente pagamentos com data individual registrada. Pagamentos antigos sem histórico detalhado continuam no valor pago cadastrado, mas não são atribuídos a uma data fictícia. Compras de insumos e contas a pagar são indicadores separados e não são descontados novamente do resultado estimado.
       </p>
 
       <section className="mb-6 border-y py-4">
