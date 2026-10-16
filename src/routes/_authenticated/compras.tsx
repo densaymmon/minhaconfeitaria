@@ -321,7 +321,17 @@ function Compras() {
       await qc.invalidateQueries({ queryKey: ["estoque"] });
       toast.success("Contagem física registrada e saldo ajustado.");
     } catch (erro) {
-      toast.error(erro instanceof Error ? erro.message : "Não foi possível registrar o inventário.");
+      // Supabase/PostgREST retorna erros como objetos simples, não necessariamente Error.
+      // Mostrar a mensagem do banco evita esconder a causa real atrás de um aviso genérico.
+      const detalhe =
+        typeof erro === "object" && erro !== null && "message" in erro && typeof erro.message === "string"
+          ? erro.message
+          : erro instanceof Error
+            ? erro.message
+            : typeof erro === "string"
+              ? erro
+              : "";
+      toast.error(detalhe || "Não foi possível registrar o inventário. Verifique os dados e tente novamente.");
     } finally {
       setBusy(false);
     }
