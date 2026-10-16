@@ -54,6 +54,8 @@ function Relatorios() {
   const { inicio, fim } = Route.useSearch();
   const qc = useQueryClient();
   const [corrigindoCustos, setCorrigindoCustos] = useState(false);
+  const [inicioRecebimentos, setInicioRecebimentos] = useState(mesISO() + "-01");
+  const [fimRecebimentos, setFimRecebimentos] = useState(hojeISO());
   const navigate = Route.useNavigate();
   const { data: pedidos } = useSuspenseQuery(pedidosQ);
   const { data: config } = useSuspenseQuery(configQ);
@@ -118,7 +120,8 @@ function Relatorios() {
     ? compras.filter((c) => !c.cancelada_em && c.data_compra >= inicio && c.data_compra <= fim)
     : [];
   const totalComprasInsumos = comprasNoPeriodo.reduce((s, c) => s + Math.max(0, Number(c.total) || 0), 0);
-  const recebimentosNoPeriodo = intervaloValido ? pagamentosPedidos.filter((p) => p.data_pagamento >= inicio && p.data_pagamento <= fim) : [];
+  const intervaloRecebimentosValido = inicioRecebimentos <= fimRecebimentos;
+  const recebimentosNoPeriodo = intervaloRecebimentosValido ? pagamentosPedidos.filter((p) => p.data_pagamento >= inicioRecebimentos && p.data_pagamento <= fimRecebimentos) : [];
   const totalRecebidoNoPeriodo = recebimentosNoPeriodo.reduce((s, p) => s + Math.max(0, Number(p.valor) || 0), 0);
   const comprasPorForma = useMemo(() => {
     const totais = new Map<string, number>();
@@ -216,7 +219,6 @@ function Relatorios() {
         <Stat label="Vendas entregues" value={brl(realizado.venda)} tone="primary" />
         <Stat label="Lucro bruto estimado" value={brl(lucroBruto)} tone={lucroBruto >= 0 ? "success" : "danger"} />
         <Stat label="Margem bruta estimada" value={String(margemBruta.toLocaleString("pt-BR", { maximumFractionDigits: 1 })) + "%"} />
-        <Stat label="Recebimentos no período" value={brl(totalRecebidoNoPeriodo)} tone="primary" />
         <Stat label="Pago cadastrado nos pedidos" value={brl(contratado.recebido)} />
         <Stat label="Saldo a receber" value={brl(contratado.saldo)} />
         <Stat label="Compras de insumos" value={brl(totalComprasInsumos)} />
