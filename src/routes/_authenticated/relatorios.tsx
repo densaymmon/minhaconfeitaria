@@ -276,7 +276,7 @@ function Relatorios() {
           ["caixa", "Fluxo de caixa"],
           ["despesas", "Despesas e custos"],
         ].map(([valor, rotulo]) => (
-          <Button key={valor} type="button" size="sm" variant={categoriaRelatorio === valor ? "default" : "outline"} aria-pressed={categoriaRelatorio === valor} onClick={() => setCategoriaRelatorio(valor)}>
+          <Button key={valor} type="button" size="sm" variant={categoriaRelatorio === valor ? "default" : "outline"} aria-pressed={categoriaRelatorio === valor} onClick={() => setCategoriaRelatorio(valor ?? "visao-geral")}>
             {rotulo}
           </Button>
         ))}
