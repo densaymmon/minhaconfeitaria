@@ -1,7 +1,5 @@
 import * as appQueries from "@/lib/queries";
 import { createFileRoute, Link } from "@tanstack/react-router";
-import { useMemo } from "react";
-import { useSuspenseQuery } from "@tanstack/react-query";
 import { Plus, AlertTriangle } from "lucide-react";
 import { usePedidosCalc } from "@/lib/hooks";
 import { brl, dataCurta, hojeISO, mesISO } from "@/lib/format";
@@ -30,14 +28,6 @@ export const Route = createFileRoute("/_authenticated/painel")({
 
 function Painel() {
   const pedidos = usePedidosCalc();
-  const { data: pagamentosPedidos } = useSuspenseQuery(appQueries.pedidoPagamentosQ);
-  const totalPagoPorPedido = useMemo(() => {
-    const totais = new Map<string, number>();
-    for (const pagamento of pagamentosPedidos) {
-      totais.set(pagamento.pedido_id, (totais.get(pagamento.pedido_id) ?? 0) + Math.max(0, Number(pagamento.valor) || 0));
-    }
-    return totais;
-  }, [pagamentosPedidos]);
   const hoje = hojeISO();
   const mes = mesISO();
   const doMes = pedidos.filter((p) => p.status !== "cancelado" && p.data_entrega.startsWith(mes));
@@ -46,17 +36,11 @@ function Painel() {
   const valorEmCaixa = doMes
     .filter((p) => p.t.venda > 0 && p.t.saldo <= 0)
     .reduce((s, p) => s + p.t.venda, 0);
-  // Inclui entradas antigas e os recebimentos detalhados registrados no histórico.
+  // O hook compartilhado calcula o saldo usando entrada acumulada e histórico,
+  // sem ignorar recebimentos nem contar o mesmo pagamento duas vezes.
   const pedidosAReceber = pedidos
     .filter((p) => p.status !== "cancelado")
-    .reduce((soma, p) => {
-      const pagamentosDetalhados = totalPagoPorPedido.get(p.id) ?? 0;
-      // Se existe histórico detalhado, ele já representa os recebimentos do pedido;
-      // somá-lo à entrada legada duplicaria pagamentos migrados.
-      const totalRecebido = Math.min(p.t.venda, pagamentosDetalhados > 0 ? pagamentosDetalhados : Math.max(0, Number(p.t.recebido) || 0));
-      const saldoPendente = p.saldo_quitado ? 0 : Math.max(0, p.t.venda - totalRecebido);
-      return soma + saldoPendente;
-    }, 0);
+    .reduce((soma, p) => soma + Math.max(0, Number(p.t.saldo) || 0), 0);
   const atrasados = pedidos.filter((p) => p.data_entrega < hoje && !["finalizado", "entregue", "cancelado"].includes(p.status)).length;
 
   const proximas = pedidos
