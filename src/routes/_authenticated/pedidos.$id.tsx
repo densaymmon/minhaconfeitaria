@@ -518,8 +518,7 @@ function PedidoForm() {
             <Card className="space-y-4">
               <div className="flex items-start justify-between gap-3">
                 <div>
-                  <h2 className="text-lg font-semibold">Pagamento e recebimentos</h2>
-                  <p className="mt-0.5 text-sm text-muted-foreground">Valores do pedido e registro dos pagamentos em um só lugar.</p>
+                  <h2 className="text-lg font-semibold">Pagamento</h2>
                 </div>
                 {t.venda > 0 && saldoPendente <= 0.009 && (
                   <span className="shrink-0 rounded-full bg-success/15 px-2.5 py-1 text-xs font-semibold text-success">Pago</span>
@@ -571,14 +570,13 @@ function PedidoForm() {
               {existente?.status !== "cancelado" && saldoPendente > 0.009 && (
                 <div className="space-y-3 rounded-xl border p-3">
                   <div>
-                    <h3 className="font-semibold">Registrar recebimento</h3>
-                    <p className="text-xs text-muted-foreground">Informe o valor, a data e a forma usada neste pagamento.</p>
+                    <h3 className="font-semibold">Confirmar pagamento</h3>
                   </div>
                   <div className="grid grid-cols-1 gap-3 sm:grid-cols-2">
                     <Field label="Valor recebido (R$)">
                       <Input inputMode="decimal" value={novoRecebimento.valor} onChange={(e) => setNovoRecebimento((s) => ({ ...s, valor: e.target.value }))} placeholder="0,00" className="h-11" />
                     </Field>
-                    <Field label="Data do recebimento">
+                    <Field label="Data de pagamento">
                       <Input type="date" value={novoRecebimento.data_pagamento} max={hojeISO()} onChange={(e) => setNovoRecebimento((s) => ({ ...s, data_pagamento: e.target.value }))} className="h-11" />
                     </Field>
                   </div>
@@ -591,34 +589,11 @@ function PedidoForm() {
                     <Input value={novoRecebimento.observacoes} onChange={(e) => setNovoRecebimento((s) => ({ ...s, observacoes: e.target.value }))} placeholder="Ex.: sinal, parcela final..." className="h-11" />
                   </Field>
                   <Button type="button" className="h-11 w-full" disabled={salvandoRecebimento} onClick={() => void registrarRecebimento()}>
-                    {salvandoRecebimento ? "Registrando..." : "Registrar recebimento"}
+                    {salvandoRecebimento ? "Confirmando..." : "Confirmar pagamento"}
                   </Button>
                 </div>
               )}
 
-              <details className="rounded-xl border">
-                <summary className="flex cursor-pointer list-none items-center justify-between gap-3 p-3 font-semibold">
-                  <span>Histórico de recebimentos</span>
-                  <span className="rounded-full bg-muted px-2 py-0.5 text-xs font-medium">{pagamentos.length} registro(s)</span>
-                </summary>
-                <div className="border-t px-3 py-2">
-                  {pagamentos.length === 0 ? (
-                    <p className="py-2 text-sm text-muted-foreground">Nenhum recebimento com data individual registrado. Valores antigos cadastrados no pedido continuam considerados no total pago.</p>
-                  ) : (
-                    <div className="divide-y">
-                      {pagamentos.map((pagamento) => (
-                        <div key={pagamento.id} className="flex items-start justify-between gap-3 py-3 text-sm">
-                          <div className="min-w-0">
-                            <p className="font-medium">{dataBR(pagamento.data_pagamento)} · {FORMAS.find((forma) => forma.value === pagamento.forma_pagamento)?.label ?? pagamento.forma_pagamento}</p>
-                            {pagamento.observacoes && <p className="mt-0.5 break-words text-xs text-muted-foreground">{pagamento.observacoes}</p>}
-                          </div>
-                          <span className="shrink-0 font-semibold tabular-nums">{brl(Number(pagamento.valor))}</span>
-                        </div>
-                      ))}
-                    </div>
-                  )}
-                </div>
-              </details>
             </Card>
 
             <Card>
