@@ -240,8 +240,61 @@ function Relatorios() {
   }
 
   function exportar() {
+    const sufixo = inicio + "-" + fim;
+    if (categoriaRelatorio === "visao-geral") {
+      baixarCSV("relatorio-visao-geral-" + sufixo, ["Indicador", "Valor"], [
+        ["Vendas totais", contratado.venda],
+        ["Compra de insumos", totalComprasInsumos],
+        ["Contas a pagar", saldoContasAbertas],
+        ["Lucro total estimado", lucroTotalPeriodo],
+      ]);
+      return;
+    }
+    if (categoriaRelatorio === "compras") {
+      baixarCSV("relatorio-compras-insumos-" + sufixo,
+        ["Data da compra", "Local da compra", "Forma de pagamento", "Parcelas", "Total"],
+        comprasNoPeriodo.map((c) => [
+          dataBR(c.data_compra), c.local_compra || "", c.forma_pagamento_compra || "não informado",
+          c.numero_parcelas, Number(c.total) || 0,
+        ]),
+      );
+      return;
+    }
+    if (categoriaRelatorio === "despesas") {
+      const despesasNoPeriodo = intervaloValido
+        ? despesas.filter((d) => d.data >= inicio && d.data <= fim)
+        : [];
+      baixarCSV("relatorio-despesas-custos-" + sufixo,
+        ["Data", "Categoria", "Descrição", "Valor"],
+        despesasNoPeriodo.map((d) => [dataBR(d.data), d.categoria || "Sem categoria", d.descricao, Number(d.valor) || 0]),
+      );
+      return;
+    }
+    if (categoriaRelatorio === "contas") {
+      baixarCSV("relatorio-contas-a-pagar-" + sufixo,
+        ["Vencimento", "Descrição", "Fornecedor", "Status", "Valor", "Valor pago", "Saldo pendente"],
+        contasPagar.filter((c) => !c.cancelada_em).map((c) => [
+          dataBR(c.data_vencimento), c.descricao, c.fornecedor || "", c.status,
+          Number(c.valor) || 0, Number(c.valor_pago) || 0,
+          Math.max(0, Number(c.valor) - Number(c.valor_pago)),
+        ]),
+      );
+      return;
+    }
+    if (categoriaRelatorio === "caixa") {
+      const movimentos = [
+        ...recebimentosNoPeriodo.map((p) => [dataBR(p.data_pagamento), "Entrada", "Recebimento de pedido", p.forma_pagamento, Number(p.valor) || 0]),
+        ...estornosContasNoPeriodo.map((e) => [dataBR(e.created_at.slice(0, 10)), "Entrada", "Estorno de conta a pagar", e.motivo, Number(e.valor) || 0]),
+        ...despesasCaixaNoPeriodo.map((d) => [dataBR(d.data), "Saída", d.categoria || "Despesa", d.descricao, Number(d.valor) || 0]),
+        ...comprasAvistaNoPeriodo.map((c) => [dataBR(c.data_compra), "Saída", "Compra de insumos", c.local_compra || c.forma_pagamento_compra || "", Number(c.total) || 0]),
+        ...pagamentosContasNoPeriodo.map((p) => [dataBR(p.data_pagamento), "Saída", "Pagamento de conta", p.forma_pagamento, Number(p.valor) || 0]),
+      ].sort((a, b) => String(a[0]).localeCompare(String(b[0])));
+      baixarCSV("relatorio-fluxo-caixa-" + inicioRecebimentos + "-" + fimRecebimentos,
+        ["Data", "Tipo", "Categoria", "Descrição / forma", "Valor"], movimentos);
+      return;
+    }
     baixarCSV(
-      "relatorio-" + inicio + "-" + fim,
+      "relatorio-vendas-lucro-" + sufixo,
       ["Pedido", "Entrega", "Cliente", "Status", "Vendido", "Custo estimado atual", "Taxas estimadas", "Resultado estimado", "Recebido estimado", "Saldo estimado"],
       lista.map((p) => [
         p.numero, dataBR(p.data_entrega), p.clientes?.nome, p.status, p.t.venda, p.t.custo,
