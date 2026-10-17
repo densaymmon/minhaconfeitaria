@@ -767,13 +767,21 @@ function Compras() {
         <Field label="Local da compra (opcional)">
           <Input
             type="text"
+            list="locais-compra-anteriores"
             autoComplete="organization"
             maxLength={120}
-            placeholder="Ex.: Atacadão, Assaí, loja ou fornecedor"
+            placeholder="Digite ou selecione um local já usado"
             className="h-11"
             value={localCompra}
             onChange={(e) => setLocalCompra(e.target.value)}
           />
+          <datalist id="locais-compra-anteriores">
+            {[...new Set(compras
+              .map((compra) => compra.local_compra?.trim())
+              .filter((local): local is string => Boolean(local))
+              .sort((a, b) => a.localeCompare(b, "pt-BR", { sensitivity: "base" })))]
+              .map((local) => <option key={local.toLocaleLowerCase("pt-BR")} value={local} />)}
+          </datalist>
         </Field>
         <div className="grid grid-cols-1 gap-3 sm:grid-cols-2">
           <Field label="Método de pagamento">
