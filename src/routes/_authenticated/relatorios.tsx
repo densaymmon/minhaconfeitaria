@@ -218,6 +218,38 @@ function Relatorios() {
           ? (Math.max(0, Number(b.valor) - Number(b.valor_pago))) - (Math.max(0, Number(a.valor) - Number(a.valor_pago)))
           : (Math.max(0, Number(b.valor) - Number(b.valor_pago))) - (Math.max(0, Number(a.valor) - Number(a.valor_pago)))),
     [contasPagar, comprasPorId, inicio, fim, filtroFormaCompra, ordenacaoCompras]);
+  const parcelasFuturasPorMes = useMemo(() => {
+    const hoje = hojeISO();
+    const abertas = contasPagar.filter((conta) => {
+      if (conta.cancelada_em || conta.status === "cancelado" || !conta.compra_id) return false;
+      const compra = comprasPorId.get(conta.compra_id);
+      if (!compra || compra.cancelada_em) return false;
+      if (filtroFormaCompra !== "todas" && (compra.forma_pagamento_compra || "não informado") !== filtroFormaCompra) return false;
+      return conta.data_vencimento >= hoje && Math.max(0, Number(conta.valor) - Number(conta.valor_pago)) > 0.009;
+    });
+    const grupos = new Map<string, { mes: string; total: number; parcelas: typeof abertas }>();
+    for (const conta of abertas) {
+      const mes = conta.data_vencimento.slice(0, 7);
+      const saldo = Math.max(0, Number(conta.valor) - Number(conta.valor_pago));
+      const grupo = grupos.get(mes);
+      if (grupo) { grupo.total += saldo; grupo.parcelas.push(conta); }
+      else grupos.set(mes, { mes, total: saldo, parcelas: [conta] });
+    }
+    return [...grupos.values()].sort((x, y) => x.mes.localeCompare(y.mes)).map((grupo) => ({
+      ...grupo,
+      titulo: new Date(Number(grupo.mes.slice(0, 4)), Number(grupo.mes.slice(5, 7)) - 1, 1).toLocaleDateString("pt-BR", { month: "long", year: "numeric" }),
+      parcelas: grupo.parcelas.sort((x, y) => x.data_vencimento.localeCompare(y.data_vencimento)),
+    }));
+  }, [contasPagar, comprasPorId, filtroFormaCompra]);
+  const parcelasCompraVencidas = useMemo(() => contasPagar.filter((conta) => {
+    if (conta.cancelada_em || conta.status === "cancelado" || !conta.compra_id || conta.data_vencimento >= hojeISO()) return false;
+    const compra = comprasPorId.get(conta.compra_id);
+    if (!compra || compra.cancelada_em) return false;
+    if (filtroFormaCompra !== "todas" && (compra.forma_pagamento_compra || "não informado") !== filtroFormaCompra) return false;
+    return Math.max(0, Number(conta.valor) - Number(conta.valor_pago)) > 0.009;
+  }), [contasPagar, comprasPorId, filtroFormaCompra]);
+  const totalParcelasFuturas = parcelasFuturasPorMes.reduce((s, grupo) => s + grupo.total, 0);
+  const totalParcelasVencidas = parcelasCompraVencidas.reduce((s, conta) => s + Math.max(0, Number(conta.valor) - Number(conta.valor_pago)), 0);
   const totalComprasFiltradas = comprasFiltradasForma.reduce((s, c) => s + Math.max(0, Number(c.total) || 0), 0);
   const gastosPorInsumo = useMemo(() => {
     const idsComprasValidas = new Set(comprasFiltradasForma.map((compra) => compra.id));
