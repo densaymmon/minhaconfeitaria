@@ -212,15 +212,17 @@ function Producao() {
   async function mudarStatus(p: PedidoCalc, status: "pronto") {
     setFinalizandoId(p.id);
     try {
-      // Process sequentially. Each RPC is atomic and delta-based; retrying a partially
-      // completed order won't deduct the same quantity twice.
-      for (const i of p.pedido_itens) {
-        const { error } = await supabase.rpc("ajustar_producao", {
-          pedido_item_id: i.id,
-          quantidade_resultado: Number(i.quantidade),
-          evento_id: crypto.randomUUID(),
-        });
-        if (error) throw new Error(`Não foi possível registrar produção/estoque do item "${i.descricao}": ${error.message}`);
+      // A quantidade produzida e o consumo dos ingredientes são registrados
+      // progressivamente pelos controles de produção, via ajustar_producao.
+      // Nunca completar automaticamente o restante ao mudar o status.
+      const pendentes = p.pedido_itens.filter(
+        (item) => Number(item.quantidade_produzida) < Number(item.quantidade),
+      );
+      if (pendentes.length > 0) {
+        const resumo = pendentes
+          .map((item) => `${item.descricao}: faltam ${num(Number(item.quantidade) - Number(item.quantidade_produzida))}`)
+          .join("; ");
+        throw new Error(`Ainda há itens não produzidos. Registre a produção real antes de marcar como pronto. ${resumo}`);
       }
 
       const { error } = await supabase.from("pedidos").update({ status }).eq("id", p.id);
