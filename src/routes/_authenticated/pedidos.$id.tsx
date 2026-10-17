@@ -117,7 +117,7 @@ function PedidoForm() {
         p_valor: valor,
         p_data_pagamento: dataPagamento,
         p_forma_pagamento: f.forma_pagamento,
-        p_observacoes: null,
+        p_observacoes: undefined,
       });
       if (error) throw new Error(error.message);
       const { data, error: loadError } = await supabase.from("pedido_pagamentos").select("*").eq("pedido_id", existente.id).order("data_pagamento", { ascending: false });
