@@ -143,7 +143,7 @@ function dataDocumento(valor: string): string {
   const data = valor.slice(0, 10);
   return /^\d{4}-\d{2}-\d{2}$/.test(data) ? data : hojeISO();
 }
-function interpretarXmlNfe(xml: string, insumosAtuais: { id: string; nome: string }[]): DocumentoCompra {
+function interpretarXmlNfe(xml: string, insumosAtuais: { id: string; nome: string; unidade?: string | null; unidade_embalagem?: string | null }[]): DocumentoCompra {
   const doc = new DOMParser().parseFromString(xml, "application/xml");
   if (doc.getElementsByTagName("parsererror").length) throw new Error("O XML não é válido. Confira se selecionou o XML da nota fiscal.");
   const raiz = doc.documentElement;
@@ -158,7 +158,7 @@ function interpretarXmlNfe(xml: string, insumosAtuais: { id: string; nome: strin
     const unidade = unidadeDocumento(textoXml(produto, "uCom"));
     const total = decimalXml(textoXml(produto, "vProd")) || quantidade * decimalXml(textoXml(produto, "vUnCom"));
     if (!nome || quantidade <= 0 || total < 0) return null;
-    const existente = insumosAtuais.find((item) => normalizar(item.nome) === normalizar(nome));
+    const existente = unidade ? insumosAtuais.find((item) => normalizar(item.nome) === normalizar(nome) && medidasCompativeis(item.unidade_embalagem ?? item.unidade ?? "un").includes(unidade)) : undefined;
     return { id: `linha-${i}-${textoXml(produto, "cProd")}`, nome, codigo: textoXml(produto, "cProd"), quantidade, unidade, total, insumoId: existente?.id ?? "" };
   }).filter((item): item is NonNullable<typeof item> => Boolean(item));
   if (!linhas.length) throw new Error("A nota não contém itens com quantidade e valor reconhecíveis.");
