@@ -293,7 +293,7 @@ function PedidoForm() {
         const { error: recebimentoError } = await supabase.rpc("registrar_recebimento_pedido", {
           p_pedido_id: pedidoSalvoId,
           p_valor: Math.round(parseNum(f.valor_entrada) * 100) / 100,
-          p_data_pagamento: hojeISO(),
+          p_data_pagamento: dataPagamento,
           p_forma_pagamento: f.forma_pagamento,
           p_observacoes: "Entrada registrada na criação do pedido",
         });
