@@ -621,7 +621,7 @@ function Relatorios() {
             <Button type="button" onClick={() => {
               const destino = resumoAtivo;
               setResumoAtivo(null);
-              if (destino === "compras") navigate({ to: "/compras" });
+              if (destino === "compras") navigate({ to: "/compras", search: { secao: "compras" } });
               else if (destino === "contas") navigate({ to: "/contas-pagar" });
               else if (destino === "vendas" || destino === "lucro") navigate({ search: (s) => ({ ...s, secao: "vendas" }) });
               else navigate({ to: "/pedidos", search: { filtro: "a_receber", dataInicial: undefined, dataFinal: undefined } });
