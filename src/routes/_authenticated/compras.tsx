@@ -521,7 +521,7 @@ function Compras() {
       const idCompraSalva = compraSalvaId as string;
       const { error: erroLocal } = await supabase.rpc("registrar_local_compra", {
         registro_id: idCompraSalva,
-        local_compra: localCompra.trim() || null,
+        local_compra: localCompra.trim(),
       });
       if (erroLocal) throw erroLocal;
       const { error: erroFinanceiro } = await supabase.rpc("registrar_pagamento_compra", {
