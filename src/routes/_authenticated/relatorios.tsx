@@ -2,10 +2,7 @@ import * as appQueries from "@/lib/queries";
 import { createFileRoute, Link } from "@tanstack/react-router";
 import { useSuspenseQuery } from "@tanstack/react-query";
 import { useEffect, useMemo, useState } from "react";
-import { useQueryClient } from "@tanstack/react-query";
 import { endOfMonth, format } from "date-fns";
-import { toast } from "sonner";
-import { supabase } from "@/integrations/supabase/client";
 import { Download } from "lucide-react";
 import { configQ, despesasQ, pedidosQ } from "@/lib/queries";
 import { calcularRecebimentoPedido, custoUnitario, ratearVendaETaxas, totaisPedido } from "@/lib/calc";
@@ -68,8 +65,6 @@ export const Route = createFileRoute("/_authenticated/relatorios")({
 
 function Relatorios() {
   const { inicio, fim, secao, dataBase } = Route.useSearch();
-  const qc = useQueryClient();
-  const [corrigindoCustos, setCorrigindoCustos] = useState(false);
   const [inicioRecebimentos, setInicioRecebimentos] = useState(inicio);
   const [fimRecebimentos, setFimRecebimentos] = useState(fim);
   const navigate = Route.useNavigate();
@@ -81,6 +76,7 @@ function Relatorios() {
   const [filtroStatusConta, setFiltroStatusConta] = useState("todas");
   const [filtroFormaCompra, setFiltroFormaCompra] = useState("todas");
   const [filtroCategoriaDespesa, setFiltroCategoriaDespesa] = useState("todas");
+  const [filtroClienteVendas, setFiltroClienteVendas] = useState("todos");
   const [resumoAtivo, setResumoAtivo] = useState<"vendas" | "compras" | "contas" | "lucro" | "futuros" | null>(null);
   const { data: pedidos } = useSuspenseQuery(pedidosQ);
   const { data: config } = useSuspenseQuery(configQ);
@@ -152,7 +148,7 @@ function Relatorios() {
     return { ...pedido, pedido_itens: itens, t: { ...totais, ...recebimento } };
   }), [pedidos, produtosPorId, custoAtual, config, pagamentosPedidos]);
 
-  const lista = intervaloValido
+  const listaPeriodo = intervaloValido
     ? pedidosCalculados.filter((p) => {
       if (p.status === "cancelado") return false;
       const dataReferencia = dataBase === "criacao"
@@ -161,6 +157,14 @@ function Relatorios() {
       return dataReferencia >= inicio && dataReferencia <= fim;
     })
     : [];
+  const clientesDisponiveis = [...new Map(listaPeriodo.map((p) => [
+    p.cliente_id ?? "sem-cliente",
+    { id: p.cliente_id ?? "sem-cliente", nome: p.clientes?.nome ?? "Sem cliente" },
+  ])).values()].sort((a, b) => a.nome.localeCompare(b.nome, "pt-BR"));
+  const lista = listaPeriodo.filter((p) =>
+    filtroClienteVendas === "todos" ||
+    (p.cliente_id ?? "sem-cliente") === filtroClienteVendas,
+  );
   const entregues = lista.filter((p) => ["finalizado", "entregue"].includes(p.status));
   const gastos = intervaloValido
     ? despesas.filter((d) => d.data >= inicio && d.data <= fim).reduce((s, d) => s + Number(d.valor), 0)
@@ -349,21 +353,6 @@ function Relatorios() {
     return [...m.values()].sort((a, b) => b.lucro - a.lucro);
   }, [entregues]);
 
-  async function corrigirCustosHistoricos() {
-    if (!confirm("Isso atualizará o custo salvo de todos os itens de pedidos vinculados a produtos cadastrados, usando os preços e receitas atuais. Valores de venda, pagamentos e datas não serão alterados. Deseja continuar?")) return;
-    setCorrigindoCustos(true);
-    try {
-      const { data, error } = await supabase.rpc("recalcular_custos_historicos");
-      if (error) throw error;
-      await qc.invalidateQueries({ queryKey: ["pedidos"] });
-      toast.success(`Custos atualizados em ${Number(data ?? 0)} itens de pedidos.`);
-    } catch (e) {
-      toast.error(e instanceof Error ? e.message : "Não foi possível corrigir os custos antigos.");
-    } finally {
-      setCorrigindoCustos(false);
-    }
-  }
-
   function exportar() {
     const sufixo = inicio + "-" + fim;
     if (categoriaRelatorio === "visao-geral") {
@@ -461,6 +450,15 @@ function Relatorios() {
           </Button>
         ))}
       </nav>
+
+      {categoriaRelatorio === "vendas" && <div className="mb-5">
+        <Field label="Filtrar cliente">
+          <select className="h-11 w-full rounded-md border bg-card px-3 text-sm" value={filtroClienteVendas} onChange={(e) => setFiltroClienteVendas(e.target.value)}>
+            <option value="todos">Todos os clientes</option>
+            {clientesDisponiveis.map((cliente) => <option key={cliente.id} value={cliente.id}>{cliente.nome}</option>)}
+          </select>
+        </Field>
+      </div>}
 
       {categoriaRelatorio === "visao-geral" && <>
       <h2 className="mb-3 text-lg font-semibold">Visão geral do período</h2>
@@ -649,12 +647,6 @@ function Relatorios() {
         <Row label="Taxas e impostos estimados" value={brl(realizado.taxas)} />
         <Row label="Despesas registradas no período" value={brl(gastos)} />
         <Row label="Resultado estimado após despesas" value={brl(resultado)} strong />
-        <div className="mt-4 space-y-2">
-          <Button variant="outline" className="w-full" disabled={corrigindoCustos} onClick={corrigirCustosHistoricos}>
-            {corrigindoCustos ? "Atualizando custos antigos..." : "Corrigir custos das vendas antigas"}
-          </Button>
-          <p className="text-xs text-muted-foreground">Essa ação atualiza os custos salvos dos pedidos usando os preços atuais cadastrados. Faça isso porque você confirmou que as vendas antigas usaram insumos comprados juntos. Os valores de venda e pagamento permanecem iguais.</p>
-        </div>
         <p className="mt-3 text-xs text-muted-foreground">
           O resultado considera apenas pedidos entregues/finalizados no período selecionado. As despesas são filtradas pela data em que foram registradas. Não lance novamente como despesa ingredientes, embalagens, gás, energia ou mão de obra que já estejam incluídos no custo da receita, pois isso pode duplicar o desconto.
         </p>
@@ -781,7 +773,6 @@ function Relatorios() {
 
       {categoriaRelatorio === "vendas" && <section className="mb-6">
         <h2 className="mb-3 text-lg font-semibold">Rentabilidade estimada por produto</h2>
-        <p className="mb-3 text-xs text-muted-foreground">Somente pedidos entregues no período. A venda e as taxas/impostos do pedido são rateados proporcionalmente entre os itens para considerar descontos e entrega. Os custos usam a receita e os preços atuais cadastrados; embalagens precisam estar cadastradas como insumos da receita.</p>
         {!porProduto.length ? <Empty>Nenhuma venda entregue no período.</Empty> : (
           <div className="divide-y">
             {porProduto.map((p, i) => (
@@ -802,7 +793,6 @@ function Relatorios() {
             ))}
           </div>
         )}
-        <p className="mt-3 text-xs text-muted-foreground">É uma margem de contribuição estimada, não o lucro contábil final: despesas gerais não são rateadas automaticamente. Gás, energia e mão de obra entram quando cadastrados no custo da receita; evite lançá-los novamente como despesas se já estiverem incluídos.</p>
       </section>}
 
       {categoriaRelatorio === "vendas" && <section className="mb-5">
@@ -825,14 +815,6 @@ function Relatorios() {
         )}
       </section>}
 
-      {categoriaRelatorio === "vendas" && <>
-      <p className="mb-2 text-xs text-muted-foreground">
-        Valores recebidos e saldo são estimativas dos pedidos com entrega no período, não um extrato por data de pagamento. O sistema ainda não registra cada pagamento parcial com sua própria data.
-      </p>
-      <p className="text-xs text-muted-foreground">
-        Para itens avulsos sem produto/receita cadastrada, o relatório mantém o custo salvo no pedido. Taxas e impostos são estimativas conforme as configurações atuais.
-      </p>
-      </>}
     </>
   );
 }
