@@ -648,7 +648,7 @@ function Relatorios() {
         <Row label="Despesas registradas no período" value={brl(gastos)} />
         <Row label="Resultado estimado após despesas" value={brl(resultado)} strong />
         <p className="mt-3 text-xs text-muted-foreground">
-          O resultado considera apenas pedidos entregues/finalizados no período selecionado. As despesas são filtradas pela data em que foram registradas. Não lance novamente como despesa ingredientes, embalagens, gás, energia ou mão de obra que já estejam incluídos no custo da receita, pois isso pode duplicar o desconto.
+          
         </p>
       </section>}
 
