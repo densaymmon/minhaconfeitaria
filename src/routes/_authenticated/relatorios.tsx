@@ -15,6 +15,7 @@ import { baixarCSV } from "@/lib/csv";
 import { PageHeader, Field, Stat, Row, Empty } from "@/components/app/ui";
 import { Input } from "@/components/ui/input";
 import { Button } from "@/components/ui/button";
+import { Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, DialogTitle } from "@/components/ui/dialog";
 
 export const Route = createFileRoute("/_authenticated/relatorios")({
   loader: async ({ context }) => {
@@ -80,6 +81,7 @@ function Relatorios() {
   const [filtroStatusConta, setFiltroStatusConta] = useState("todas");
   const [filtroFormaCompra, setFiltroFormaCompra] = useState("todas");
   const [filtroCategoriaDespesa, setFiltroCategoriaDespesa] = useState("todas");
+  const [resumoAtivo, setResumoAtivo] = useState<"vendas" | "compras" | "contas" | "lucro" | "futuros" | null>(null);
   const { data: pedidos } = useSuspenseQuery(pedidosQ);
   const { data: config } = useSuspenseQuery(configQ);
   const { data: produtos } = useSuspenseQuery(appQueries.produtosQ);
@@ -463,19 +465,103 @@ function Relatorios() {
       {categoriaRelatorio === "visao-geral" && <>
       <h2 className="mb-3 text-lg font-semibold">Visão geral do período</h2>
       <div className="mb-6 grid grid-cols-2 gap-3">
-        <Stat label="Vendas totais" value={brl(contratado.venda)} tone="primary" />
-        <Stat label="Compra de insumos" value={brl(totalComprasInsumos)} />
-        <Stat label="Contas a pagar" value={brl(saldoContasAbertas)} tone={saldoContasAbertas > 0 ? "danger" : "default"} />
-        <Stat label="Lucro total estimado" value={brl(lucroTotalPeriodo)} tone={lucroTotalPeriodo >= 0 ? "success" : "danger"} />
+        <button type="button" onClick={() => setResumoAtivo("vendas")} aria-label="Ver pedidos que compõem as vendas totais" className="w-full rounded-xl text-left focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring">
+          <Stat label="Vendas totais" value={brl(contratado.venda)} tone="primary" />
+        </button>
+        <button type="button" onClick={() => setResumoAtivo("compras")} aria-label="Ver compras de insumos" className="w-full rounded-xl text-left focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring">
+          <Stat label="Compra de insumos" value={brl(totalComprasInsumos)} />
+        </button>
+        <button type="button" onClick={() => setResumoAtivo("contas")} aria-label="Ver contas a pagar" className="w-full rounded-xl text-left focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring">
+          <Stat label="Contas a pagar" value={brl(saldoContasAbertas)} tone={saldoContasAbertas > 0 ? "danger" : "default"} />
+        </button>
+        <button type="button" onClick={() => setResumoAtivo("lucro")} aria-label="Ver composição do lucro estimado" className="w-full rounded-xl text-left focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring">
+          <Stat label="Lucro total estimado" value={brl(lucroTotalPeriodo)} tone={lucroTotalPeriodo >= 0 ? "success" : "danger"} />
+        </button>
       </div>
       <section className="mb-6 rounded-xl border p-4">
-        <h2 className="mb-1 text-lg font-semibold">Pedidos futuros a receber</h2>
-        <p className="mb-3 text-sm text-muted-foreground">Saldo pendente de pedidos com entrega após hoje, mesmo fora do período selecionado.</p>
+        <h2 className="mb-3 text-lg font-semibold">Pedidos futuros a receber</h2>
         <div className="grid grid-cols-2 gap-3">
-          <Stat label="Saldo a receber" value={brl(saldoPedidosFuturosAReceber)} tone={saldoPedidosFuturosAReceber > 0 ? "primary" : "default"} />
-          <Stat label="Pedidos com saldo" value={String(pedidosFuturosComSaldo.length)} />
+          <button type="button" onClick={() => setResumoAtivo("futuros")} aria-label="Ver saldo a receber de pedidos futuros" className="w-full rounded-xl text-left focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring">
+            <Stat label="Saldo a receber" value={brl(saldoPedidosFuturosAReceber)} tone={saldoPedidosFuturosAReceber > 0 ? "primary" : "default"} />
+          </button>
+          <button type="button" onClick={() => setResumoAtivo("futuros")} aria-label="Ver pedidos futuros com saldo" className="w-full rounded-xl text-left focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring">
+            <Stat label="Pedidos com saldo" value={String(pedidosFuturosComSaldo.length)} />
+          </button>
         </div>
       </section>
+      <Dialog open={resumoAtivo !== null} onOpenChange={(aberto) => { if (!aberto) setResumoAtivo(null); }}>
+        <DialogContent className="max-h-[82vh] overflow-hidden p-4 sm:max-w-xl">
+          <DialogHeader className="pr-8 text-left">
+            <DialogTitle>
+              {resumoAtivo === "vendas" ? "Pedidos que compõem as vendas"
+                : resumoAtivo === "compras" ? "Compras de insumos"
+                : resumoAtivo === "contas" ? "Contas a pagar"
+                : resumoAtivo === "lucro" ? "Composição do lucro estimado"
+                : "Pedidos futuros a receber"}
+            </DialogTitle>
+            <DialogDescription className="text-xs">
+              {resumoAtivo === "vendas" || resumoAtivo === "lucro" ? `Período: ${dataBR(inicio)} a ${dataBR(fim)}`
+                : resumoAtivo === "compras" ? `Compras registradas de ${dataBR(inicio)} a ${dataBR(fim)}`
+                : resumoAtivo === "contas" ? "Posição atual das contas não canceladas."
+                : "Pedidos com entrega após hoje e saldo pendente, fora do filtro de datas."}
+            </DialogDescription>
+          </DialogHeader>
+          <div className="max-h-[52vh] space-y-2 overflow-y-auto pr-1">
+            {resumoAtivo === "vendas" && (lista.length === 0
+              ? <Empty>Nenhum pedido encontrado neste período.</Empty>
+              : lista.slice().sort((a, b) => b.data_entrega.localeCompare(a.data_entrega)).map((p) => (
+                <Link key={p.id} to="/pedidos/$id" params={{ id: p.id }} onClick={() => setResumoAtivo(null)} className="flex items-start justify-between gap-3 rounded-lg border p-3 text-sm hover:bg-muted/50">
+                  <div className="min-w-0"><p className="font-medium">Pedido #{p.numero} · {p.clientes?.nome ?? "Sem cliente"}</p><p className="text-xs text-muted-foreground">{dataBR(p.data_entrega)} · {p.status === "em_producao" ? "Em produção" : p.status === "recebido" ? "Recebido" : p.status === "pronto" ? "Pronto" : p.status === "entregue" || p.status === "finalizado" ? "Entregue" : p.status}</p><p className="text-xs text-muted-foreground">Recebido: {brl(p.t.recebido)} · Saldo: {brl(Math.max(0, Number(p.t.saldo) || 0))}</p></div>
+                  <b className="shrink-0">{brl(p.t.venda)}</b>
+                </Link>
+              )))}
+            {resumoAtivo === "compras" && (comprasNoPeriodo.length === 0
+              ? <Empty>Nenhuma compra encontrada neste período.</Empty>
+              : comprasNoPeriodo.slice().sort((a, b) => b.data_compra.localeCompare(a.data_compra)).map((compra) => {
+                const itens = itensCompra.filter((item) => item.compra_id === compra.id);
+                return <div key={compra.id} className="rounded-lg border p-3 text-sm">
+                  <div className="flex items-start justify-between gap-3"><div className="min-w-0"><p className="font-medium">{compra.local_compra || "Local não informado"}</p><p className="text-xs text-muted-foreground">{dataBR(compra.data_compra)} · {compra.forma_pagamento_compra || "Forma não informada"}</p></div><b className="shrink-0">{brl(Number(compra.total) || 0)}</b></div>
+                  {itens.length > 0 && <div className="mt-2 space-y-1 border-t pt-2">{itens.map((item) => <div key={item.id} className="flex justify-between gap-3 text-xs"><span>{insumosPorId.get(item.insumo_id)?.nome ?? "Insumo removido"} · {num(Number(item.quantidade) || 0)} {item.unidade}</span><span className="shrink-0">{brl(Number(item.total) || 0)}</span></div>)}</div>}
+                </div>;
+              }))}
+            {resumoAtivo === "contas" && (contasAbertas.length === 0
+              ? <Empty>Nenhuma conta em aberto.</Empty>
+              : contasAbertas.slice().sort((a, b) => a.data_vencimento.localeCompare(b.data_vencimento)).map((conta) => (
+                <div key={conta.id} className="flex items-start justify-between gap-3 rounded-lg border p-3 text-sm">
+                  <div className="min-w-0"><p className="font-medium">{conta.descricao}</p><p className="text-xs text-muted-foreground">{conta.fornecedor || "Fornecedor não informado"} · Vencimento {dataBR(conta.data_vencimento)}</p><p className="text-xs text-muted-foreground">Pago: {brl(Number(conta.valor_pago) || 0)} · Saldo: {brl(Math.max(0, Number(conta.valor) - Number(conta.valor_pago)))}</p></div>
+                  <b className="shrink-0">{brl(Number(conta.valor) || 0)}</b>
+                </div>
+              )))}
+            {resumoAtivo === "lucro" && <>
+              <div className="grid grid-cols-2 gap-2">
+                <div className="rounded-lg bg-muted/50 p-3"><p className="text-xs text-muted-foreground">Vendas contratadas</p><b>{brl(contratado.venda)}</b></div>
+                <div className="rounded-lg bg-muted/50 p-3"><p className="text-xs text-muted-foreground">Custos de produção</p><b>{brl(custosProducaoPeriodo)}</b></div>
+                <div className="rounded-lg bg-muted/50 p-3"><p className="text-xs text-muted-foreground">Taxas estimadas</p><b>{brl(taxasPeriodo)}</b></div>
+                <div className="rounded-lg bg-muted/50 p-3"><p className="text-xs text-muted-foreground">Despesas</p><b>{brl(gastos)}</b></div>
+              </div>
+              {lista.length === 0 ? <Empty>Nenhum pedido encontrado neste período.</Empty> : lista.slice().sort((a, b) => b.data_entrega.localeCompare(a.data_entrega)).map((p) => <div key={p.id} className="flex items-start justify-between gap-3 border-b py-2 text-sm"><div className="min-w-0"><p className="font-medium">Pedido #{p.numero} · {p.clientes?.nome ?? "Sem cliente"}</p><p className="text-xs text-muted-foreground">Venda {brl(p.t.venda)} · Custo {brl(p.t.custo)} · Taxas {brl(p.t.taxas)}</p></div><b className="shrink-0">{brl(p.t.lucroLiquido)}</b></div>)}
+            </>}
+            {resumoAtivo === "futuros" && (pedidosFuturosComSaldo.length === 0
+              ? <Empty>Nenhum pedido futuro com saldo pendente.</Empty>
+              : pedidosFuturosComSaldo.slice().sort((a, b) => a.data_entrega.localeCompare(b.data_entrega)).map((p) => (
+                <Link key={p.id} to="/pedidos/$id" params={{ id: p.id }} onClick={() => setResumoAtivo(null)} className="flex items-start justify-between gap-3 rounded-lg border p-3 text-sm hover:bg-muted/50">
+                  <div className="min-w-0"><p className="font-medium">Pedido #{p.numero} · {p.clientes?.nome ?? "Sem cliente"}</p><p className="text-xs text-muted-foreground">Entrega {dataBR(p.data_entrega)} · Saldo pendente {brl(Math.max(0, Number(p.t.saldo) || 0))}</p></div><b className="shrink-0">{brl(p.t.venda)}</b>
+                </Link>
+              )))}
+          </div>
+          <DialogFooter className="flex-row gap-2 sm:justify-between sm:space-x-0">
+            <Button type="button" variant="outline" onClick={() => setResumoAtivo(null)}>Fechar</Button>
+            <Button type="button" onClick={() => {
+              const destino = resumoAtivo;
+              setResumoAtivo(null);
+              if (destino === "compras") navigate({ to: "/compras" });
+              else if (destino === "contas") navigate({ to: "/contas-pagar" });
+              else if (destino === "vendas" || destino === "lucro") navigate({ search: (s) => ({ ...s, secao: "vendas" }) });
+              else navigate({ to: "/pedidos", search: { filtro: "a_receber", dataInicial: undefined, dataFinal: undefined } });
+            }}>Ver mais detalhes</Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
       </>}
       {categoriaRelatorio === "contas" && <section className="mb-6 rounded-xl border p-4">
         <h2 className="mb-1 text-lg font-semibold">Saúde financeira atual</h2>
@@ -494,9 +580,7 @@ function Relatorios() {
           O total a receber usa o saldo cadastrado em cada pedido não cancelado. Contas a pagar consideram apenas o saldo ainda não quitado. Isso não substitui a conferência dos extratos bancários nem inclui um saldo inicial de caixa.
         </p>
       </section>}
-      {categoriaRelatorio === "visao-geral" && <p className="mb-6 text-xs text-muted-foreground">
-        Recebimentos no período consideram somente pagamentos com data individual registrada. Pagamentos antigos sem histórico detalhado continuam no valor pago cadastrado, mas não são atribuídos a uma data fictícia. Compras de insumos e contas a pagar são indicadores separados e não são descontados novamente do resultado estimado.
-      </p>}
+
 
       {categoriaRelatorio === "caixa" && <>
       <section className="mb-6 rounded-xl border p-4">
