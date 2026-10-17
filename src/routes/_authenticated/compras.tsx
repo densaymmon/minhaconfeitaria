@@ -705,7 +705,6 @@ function Compras() {
               const documento = mime === "application/xml"
                 ? parseInvoiceXml(await arquivo.text(), insumos)
                 : await readPurchaseDocumentLocally(arquivo, insumos);
-              if (!documento.linhas.length) throw new Error("Não foi possível identificar itens automaticamente. Tente uma imagem mais nítida ou registre os itens manualmente.");
               setDocumentoCompra(documento);
               toast.success("Documento lido. Revise todos os campos antes de confirmar.");
             } catch (erro) {
