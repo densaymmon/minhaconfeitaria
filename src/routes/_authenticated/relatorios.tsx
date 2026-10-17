@@ -207,6 +207,8 @@ function Relatorios() {
       if (conta.cancelada_em || conta.status === "cancelado" || !conta.compra_id) return false;
       const compra = comprasPorId.get(conta.compra_id);
       if (!compra || compra.cancelada_em) return false;
+      // Somente compras no cartão de crédito representam parcelas/cobranças futuras.
+      if (compra.forma_pagamento_compra !== "credito") return false;
       if (conta.data_vencimento < inicio || conta.data_vencimento > fim) return false;
       return filtroFormaCompra === "todas" || (compra.forma_pagamento_compra || "não informado") === filtroFormaCompra;
     })
@@ -224,6 +226,8 @@ function Relatorios() {
       if (conta.cancelada_em || conta.status === "cancelado" || !conta.compra_id) return false;
       const compra = comprasPorId.get(conta.compra_id);
       if (!compra || compra.cancelada_em) return false;
+      // Débito, Pix e dinheiro são pagamentos à vista e não entram em vencimentos futuros.
+      if (compra.forma_pagamento_compra !== "credito") return false;
       if (filtroFormaCompra !== "todas" && (compra.forma_pagamento_compra || "não informado") !== filtroFormaCompra) return false;
       return conta.data_vencimento >= hoje && Math.max(0, Number(conta.valor) - Number(conta.valor_pago)) > 0.009;
     });
@@ -245,6 +249,7 @@ function Relatorios() {
     if (conta.cancelada_em || conta.status === "cancelado" || !conta.compra_id || conta.data_vencimento >= hojeISO()) return false;
     const compra = comprasPorId.get(conta.compra_id);
     if (!compra || compra.cancelada_em) return false;
+    if (compra.forma_pagamento_compra !== "credito") return false;
     if (filtroFormaCompra !== "todas" && (compra.forma_pagamento_compra || "não informado") !== filtroFormaCompra) return false;
     return Math.max(0, Number(conta.valor) - Number(conta.valor_pago)) > 0.009;
   }), [contasPagar, comprasPorId, filtroFormaCompra]);
@@ -852,7 +857,7 @@ function Relatorios() {
           </div>}
         </>}
         {visaoCompras === "parcelas" && <>
-          <p className="mb-3 text-xs text-muted-foreground">Esta visão usa a data de vencimento e mostra somente contas vinculadas a compras não canceladas. O valor pendente não é somado novamente ao total comprado.</p>
+          <p className="mb-3 text-xs text-muted-foreground">Esta visão mostra somente parcelas de compras pagas no cartão de crédito. Débito, Pix e dinheiro são pagamentos à vista e não geram cobranças futuras. O valor pendente não é somado novamente ao total comprado.</p>
           {!parcelasComprasNoPeriodo.length ? <Empty>Nenhuma parcela de compra encontrada no período de vencimento.</Empty> : <div className="divide-y">
             {parcelasComprasNoPeriodo.map((conta) => {
               const compra = conta.compra_id ? comprasPorId.get(conta.compra_id) : undefined;
