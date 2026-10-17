@@ -10,10 +10,9 @@ import { medida, medidaLabel, medidasCompativeis, numeroIngrediente } from "@/li
 import { Card, Empty, Field, PageHeader } from "@/components/app/ui";
 import { Input } from "@/components/ui/input";
 import { Button } from "@/components/ui/button";
-import { useServerFn } from "@tanstack/react-start";
-import { extractPurchaseDocument } from "@/lib/purchase-document.functions";
 import { DOCUMENT_ACCEPT, parseInvoiceXml, possibleDuplicate, reviewDocument, validateDocumentFile, type PurchaseDocument } from "@/lib/purchase-document";
 import { PurchaseDocumentReview } from "@/components/app/purchase-document-review";
+import { readPurchaseDocumentLocally } from "@/lib/purchase-document-ocr";
 
 export const Route = createFileRoute("/_authenticated/compras")({
   validateSearch: (search: Record<string, unknown>) => ({
@@ -169,7 +168,6 @@ function Compras() {
   const [erroDocumento, setErroDocumento] = useState("");
   const [processandoDocumento, setProcessandoDocumento] = useState(false);
   const [confirmandoDocumento, setConfirmandoDocumento] = useState(false);
-  const extractDocument = useServerFn(extractPurchaseDocument);
   const documentReview = documentoCompra ? reviewDocument(documentoCompra, insumos) : null;
   const possibleExistingPurchase = documentoCompra ? possibleDuplicate(documentoCompra, compras) : undefined;
   const [acknowledgedReview, setAcknowledgedReview] = useState(false);
@@ -698,7 +696,7 @@ function Compras() {
 
       <section className="mb-6 rounded-xl border p-4">
         <div className="mb-2 flex items-center gap-2"><FileUp className="size-5" /><h2 className="text-lg font-semibold">Importar compra por documento</h2></div>
-        <p className="mb-3 text-sm text-muted-foreground">Envie XML, PDF ou foto do cupom/recibo fiscal. XML é lido localmente; PDF e fotos usam Lovable AI e consomem créditos do workspace. A compra só é registrada quando você salvar o formulário após a conferência.</p>
+        <p className="mb-3 text-sm text-muted-foreground">Envie XML, PDF ou foto do cupom/recibo fiscal. A leitura de PDF e fotos é feita localmente no navegador, sem enviar seu documento para uma IA paga ou consumir créditos do Lovable. A compra só é registrada quando você salvar o formulário após a conferência.</p>
         <label className="flex min-h-12 cursor-pointer items-center justify-center gap-2 rounded-lg border border-dashed p-3 text-sm font-medium hover:bg-muted/50">
           <FileText className="size-4" />{processandoDocumento ? "Lendo documento..." : arquivoDocumento || "Selecionar XML, PDF ou foto"}
           <input aria-label="Documento da compra" type="file" accept={DOCUMENT_ACCEPT} className="sr-only" disabled={processandoDocumento || busy || confirmandoDocumento || !!documentoCompra} onChange={async (event) => {
@@ -709,16 +707,7 @@ function Compras() {
               if (mime === "application/xml") {
                 setDocumentoCompra(parseInvoiceXml(await arquivo.text(), insumos));
               } else {
-                if (!window.confirm("A leitura de PDF e fotos usa Lovable AI e consome créditos do workspace. Deseja continuar?")) { setArquivoDocumento(""); return; }
-                const base64 = await new Promise<string>((resolve, reject) => {
-                  const reader = new FileReader();
-                  reader.onload = () => resolve(String(reader.result).split(",")[1] ?? "");
-                  reader.onerror = () => reject(new Error("Não foi possível abrir o arquivo."));
-                  reader.readAsDataURL(arquivo);
-                });
-                const response = await extractDocument({ data: { name: arquivo.name, mime: mime as "application/pdf" | "image/jpeg" | "image/png" | "image/webp", base64 } });
-                if (!response.ok) throw new Error(response.error);
-                setDocumentoCompra(response.document);
+                setDocumentoCompra(await readPurchaseDocumentLocally(arquivo, insumos));
               }
               toast.success("Documento lido. Confira e corrija os campos antes de continuar.");
             } catch (erro) {
