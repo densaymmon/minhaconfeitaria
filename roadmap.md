@@ -1,4 +1,9 @@
 # Finalização
+## Importação de documentos de compras
+- [ ] Reutilizar XML/conferência e gravação de compras para PDF e imagens, com leitura visual real e revisão obrigatória.
+- [ ] Validar arquivos, valores ausentes, associação segura, descontos e prevenção de duplicidade sem migrações.
+- [ ] Executar testes e verificar a conferência autenticada sem gravar compras no banco ativo.
+
 ## Custos proporcionais dos ingredientes
 - [x] Adicionar embalagem, medidas da receita e validações, com migração que preserva valores e medidas existentes.
 - [x] Atualizar cadastro, cálculo, sinalização persistente e consultas de receitas; manter projeções legadas para compatibilidade.
