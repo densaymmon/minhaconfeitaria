@@ -218,6 +218,38 @@ function Relatorios() {
           ? (Math.max(0, Number(b.valor) - Number(b.valor_pago))) - (Math.max(0, Number(a.valor) - Number(a.valor_pago)))
           : (Math.max(0, Number(b.valor) - Number(b.valor_pago))) - (Math.max(0, Number(a.valor) - Number(a.valor_pago)))),
     [contasPagar, comprasPorId, inicio, fim, filtroFormaCompra, ordenacaoCompras]);
+  const parcelasFuturasPorMes = useMemo(() => {
+    const hoje = hojeISO();
+    const abertas = contasPagar.filter((conta) => {
+      if (conta.cancelada_em || conta.status === "cancelado" || !conta.compra_id) return false;
+      const compra = comprasPorId.get(conta.compra_id);
+      if (!compra || compra.cancelada_em) return false;
+      if (filtroFormaCompra !== "todas" && (compra.forma_pagamento_compra || "não informado") !== filtroFormaCompra) return false;
+      return conta.data_vencimento >= hoje && Math.max(0, Number(conta.valor) - Number(conta.valor_pago)) > 0.009;
+    });
+    const grupos = new Map<string, { mes: string; total: number; parcelas: typeof abertas }>();
+    for (const conta of abertas) {
+      const mes = conta.data_vencimento.slice(0, 7);
+      const saldo = Math.max(0, Number(conta.valor) - Number(conta.valor_pago));
+      const grupo = grupos.get(mes);
+      if (grupo) { grupo.total += saldo; grupo.parcelas.push(conta); }
+      else grupos.set(mes, { mes, total: saldo, parcelas: [conta] });
+    }
+    return [...grupos.values()].sort((x, y) => x.mes.localeCompare(y.mes)).map((grupo) => ({
+      ...grupo,
+      titulo: new Date(Number(grupo.mes.slice(0, 4)), Number(grupo.mes.slice(5, 7)) - 1, 1).toLocaleDateString("pt-BR", { month: "long", year: "numeric" }),
+      parcelas: grupo.parcelas.sort((x, y) => x.data_vencimento.localeCompare(y.data_vencimento)),
+    }));
+  }, [contasPagar, comprasPorId, filtroFormaCompra]);
+  const parcelasCompraVencidas = useMemo(() => contasPagar.filter((conta) => {
+    if (conta.cancelada_em || conta.status === "cancelado" || !conta.compra_id || conta.data_vencimento >= hojeISO()) return false;
+    const compra = comprasPorId.get(conta.compra_id);
+    if (!compra || compra.cancelada_em) return false;
+    if (filtroFormaCompra !== "todas" && (compra.forma_pagamento_compra || "não informado") !== filtroFormaCompra) return false;
+    return Math.max(0, Number(conta.valor) - Number(conta.valor_pago)) > 0.009;
+  }), [contasPagar, comprasPorId, filtroFormaCompra]);
+  const totalParcelasFuturas = parcelasFuturasPorMes.reduce((s, grupo) => s + grupo.total, 0);
+  const totalParcelasVencidas = parcelasCompraVencidas.reduce((s, conta) => s + Math.max(0, Number(conta.valor) - Number(conta.valor_pago)), 0);
   const totalComprasFiltradas = comprasFiltradasForma.reduce((s, c) => s + Math.max(0, Number(c.total) || 0), 0);
   const gastosPorInsumo = useMemo(() => {
     const idsComprasValidas = new Set(comprasFiltradasForma.map((compra) => compra.id));
@@ -714,12 +746,13 @@ function Relatorios() {
               <option value="compra">Compra individual</option>
               <option value="local">Local de compra</option>
               <option value="parcelas">Parcelas a pagar</option>
+              <option value="vencimentos">Vencimentos por mês</option>
             </select>
           </Field>
           <Field label="Forma de pagamento">
             <select className="h-11 w-full rounded-md border bg-card px-3 text-sm" value={filtroFormaCompra} onChange={(e) => setFiltroFormaCompra(e.target.value)}>
               <option value="todas">Todas as formas</option>
-              {[...new Set(comprasNoPeriodo.map((c) => c.forma_pagamento_compra || "não informado"))].sort().map((forma) => <option key={forma} value={forma}>{forma.replaceAll("_", " ")}</option>)}
+              {[...new Set(compras.filter((c) => !c.cancelada_em).map((c) => c.forma_pagamento_compra || "não informado"))].sort().map((forma) => <option key={forma} value={forma}>{forma.replaceAll("_", " ")}</option>)}
             </select>
           </Field>
           <Field label="Ordenar por">
@@ -733,7 +766,7 @@ function Relatorios() {
         </div>
         <div className="mb-3 grid grid-cols-2 gap-3">
           <Stat label="Total comprado no período" value={brl(totalComprasFiltradas)} />
-          <Stat label={visaoCompras === "insumo" ? "Insumos comprados" : visaoCompras === "compra" ? "Compras registradas" : visaoCompras === "local" ? "Locais de compra" : "Parcelas no período"} value={String(visaoCompras === "insumo" ? gastosPorInsumo.length : visaoCompras === "compra" ? comprasFiltradasForma.length : visaoCompras === "local" ? comprasAgrupadasPorLocal.length : parcelasComprasNoPeriodo.length)} />
+          <Stat label={visaoCompras === "insumo" ? "Insumos comprados" : visaoCompras === "compra" ? "Compras registradas" : visaoCompras === "local" ? "Locais de compra" : visaoCompras === "vencimentos" ? "Meses com vencimentos" : "Parcelas no período"} value={String(visaoCompras === "insumo" ? gastosPorInsumo.length : visaoCompras === "compra" ? comprasFiltradasForma.length : visaoCompras === "local" ? comprasAgrupadasPorLocal.length : visaoCompras === "vencimentos" ? parcelasFuturasPorMes.length : parcelasComprasNoPeriodo.length)} />
         </div>
         {visaoCompras === "insumo" && <>
           {!gastosPorInsumo.length ? <Empty>Nenhuma compra com itens registrada no período.</Empty> : (
@@ -777,7 +810,7 @@ function Relatorios() {
                   <b className="shrink-0">{brl(Number(compra.total) || 0)}</b>
                 </summary>
                 <div className="mt-2 space-y-2 border-t pt-2">
-                  {itensDaCompra.length ? itensDaCompra.map((item) => <div key={item.id} className="flex justify-between gap-3 text-sm"><span>{item.descricao} · {num(Number(item.quantidade) || 0)} {item.unidade}</span><span className="shrink-0">{brl(Number(item.total) || 0)}</span></div>) : <p className="text-xs text-muted-foreground">Esta compra não possui itens vinculados.</p>}
+                  {itensDaCompra.length ? itensDaCompra.map((item) => <div key={item.id} className="flex justify-between gap-3 text-sm"><span>{insumosPorId.get(item.insumo_id)?.nome ?? "Insumo removido"} · {num(Number(item.quantidade) || 0)} {item.unidade}</span><span className="shrink-0">{brl(Number(item.total) || 0)}</span></div>) : <p className="text-xs text-muted-foreground">Esta compra não possui itens vinculados.</p>}
                   <p className="text-xs text-muted-foreground">Total registrado da compra: {brl(Number(compra.total) || 0)}</p>
                 </div>
               </details>;
@@ -787,6 +820,35 @@ function Relatorios() {
         {visaoCompras === "local" && <>
           {!comprasAgrupadasPorLocal.length ? <Empty>Nenhuma compra encontrada para os filtros selecionados.</Empty> : <div className="divide-y">
             {comprasAgrupadasPorLocal.map((grupo) => <div key={grupo.local} className="py-3"><div className="flex items-start justify-between gap-3"><div><p className="font-medium">{grupo.local}</p><p className="text-xs text-muted-foreground">{grupo.quantidade} compra(s) · última em {dataBR(grupo.dataMaisRecente)}</p></div><b>{brl(grupo.total)}</b></div></div>)}
+          </div>}
+        </>}
+        {visaoCompras === "vencimentos" && <>
+          <p className="mb-3 text-xs text-muted-foreground">Compromissos ainda em aberto, agrupados pelo mês de vencimento. O saldo considera somente a parte não paga de cada parcela e não é somado novamente ao total comprado. Este resumo considera todos os vencimentos futuros, independentemente do período de compra selecionado.</p>
+          <div className="mb-4 grid grid-cols-2 gap-3">
+            <Stat label="Total a vencer" value={brl(totalParcelasFuturas)} />
+            <Stat label="Parcelas vencidas" value={brl(totalParcelasVencidas)} tone={totalParcelasVencidas > 0 ? "danger" : "default"} />
+          </div>
+          {parcelasCompraVencidas.length > 0 && <details className="mb-3 rounded-lg border border-destructive/30 px-3">
+            <summary className="cursor-pointer py-3 text-sm font-medium">Ver parcelas vencidas ({parcelasCompraVencidas.length})</summary>
+            <div className="divide-y">
+              {[...parcelasCompraVencidas].sort((a, b) => a.data_vencimento.localeCompare(b.data_vencimento)).map((conta) => {
+                const compra = conta.compra_id ? comprasPorId.get(conta.compra_id) : undefined;
+                const saldo = Math.max(0, Number(conta.valor) - Number(conta.valor_pago));
+                return <div key={conta.id} className="flex items-start justify-between gap-3 py-3 text-sm"><div className="min-w-0"><p className="font-medium">{conta.descricao}</p><p className="text-xs text-muted-foreground">{compra?.local_compra?.trim() || conta.fornecedor || "Local não informado"} · Venceu em {dataBR(conta.data_vencimento)}</p><p className="text-xs text-muted-foreground">Pago: {brl(Number(conta.valor_pago) || 0)} · Pendente: {brl(saldo)}</p></div><b className="shrink-0">{brl(saldo)}</b></div>;
+              })}
+            </div>
+          </details>}
+          {!parcelasFuturasPorMes.length ? <Empty>Nenhum vencimento futuro em aberto para os filtros selecionados.</Empty> : <div className="space-y-3">
+            {parcelasFuturasPorMes.map((grupo, index) => <details key={grupo.mes} className="rounded-lg border px-3" open={index === 0}>
+              <summary className="flex cursor-pointer list-none items-center justify-between gap-3 py-3"><span className="font-medium capitalize">{grupo.titulo} · {grupo.parcelas.length} parcela(s)</span><b>{brl(grupo.total)}</b></summary>
+              <div className="divide-y border-t">
+                {grupo.parcelas.map((conta) => {
+                  const compra = conta.compra_id ? comprasPorId.get(conta.compra_id) : undefined;
+                  const saldo = Math.max(0, Number(conta.valor) - Number(conta.valor_pago));
+                  return <div key={conta.id} className="flex items-start justify-between gap-3 py-3 text-sm"><div className="min-w-0"><p className="font-medium">{conta.descricao}</p><p className="text-xs text-muted-foreground">{compra?.local_compra?.trim() || conta.fornecedor || "Local não informado"} · Vencimento {dataBR(conta.data_vencimento)}</p><p className="text-xs text-muted-foreground">Valor original: {brl(Number(conta.valor) || 0)} · Pago: {brl(Number(conta.valor_pago) || 0)}</p></div><b className="shrink-0">{brl(saldo)}</b></div>;
+                })}
+              </div>
+            </details>)}
           </div>}
         </>}
         {visaoCompras === "parcelas" && <>
