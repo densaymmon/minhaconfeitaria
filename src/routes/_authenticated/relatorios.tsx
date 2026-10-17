@@ -75,6 +75,8 @@ function Relatorios() {
   }, [inicio, fim]);
   const [filtroStatusConta, setFiltroStatusConta] = useState("todas");
   const [filtroFormaCompra, setFiltroFormaCompra] = useState("todas");
+  const [visaoCompras, setVisaoCompras] = useState("insumo");
+  const [ordenacaoCompras, setOrdenacaoCompras] = useState("gasto");
   const [filtroCategoriaDespesa, setFiltroCategoriaDespesa] = useState("todas");
   const [filtroClienteVendas, setFiltroClienteVendas] = useState("todos");
   const [resumoAtivo, setResumoAtivo] = useState<"vendas" | "compras" | "contas" | "lucro" | "futuros" | null>(null);
@@ -178,6 +180,44 @@ function Relatorios() {
   // Normaliza quantidades antes de somar: 1 kg + 200 g = 1,2 kg,
   // e 1 L + 200 ml = 1,2 L. Nunca soma valores de unidades diferentes diretamente.
   const comprasFiltradasForma = useMemo(() => comprasNoPeriodo.filter((compra) => filtroFormaCompra === "todas" || (compra.forma_pagamento_compra || "não informado") === filtroFormaCompra), [comprasNoPeriodo, filtroFormaCompra]);
+  const comprasPorId = useMemo(() => new Map(compras.map((compra) => [compra.id, compra])), [compras]);
+  const comprasAgrupadasPorLocal = useMemo(() => {
+    const grupos = new Map<string, { local: string; total: number; quantidade: number; dataMaisRecente: string }>();
+    for (const compra of comprasFiltradasForma) {
+      const local = compra.local_compra?.trim() || "Local não informado";
+      const atual = grupos.get(local);
+      if (atual) {
+        atual.total += Math.max(0, Number(compra.total) || 0);
+        atual.quantidade += 1;
+        if (compra.data_compra > atual.dataMaisRecente) atual.dataMaisRecente = compra.data_compra;
+      } else {
+        grupos.set(local, { local, total: Math.max(0, Number(compra.total) || 0), quantidade: 1, dataMaisRecente: compra.data_compra });
+      }
+    }
+    return [...grupos.values()].sort((a, b) => ordenacaoCompras === "recente"
+      ? b.dataMaisRecente.localeCompare(a.dataMaisRecente)
+      : ordenacaoCompras === "quantidade"
+        ? b.quantidade - a.quantidade
+        : ordenacaoCompras === "preco"
+          ? (b.quantidade ? b.total / b.quantidade : 0) - (a.quantidade ? a.total / a.quantidade : 0)
+          : b.total - a.total);
+  }, [comprasFiltradasForma, ordenacaoCompras]);
+  const parcelasComprasNoPeriodo = useMemo(() => contasPagar
+    .filter((conta) => {
+      if (conta.cancelada_em || conta.status === "cancelado" || !conta.compra_id) return false;
+      const compra = comprasPorId.get(conta.compra_id);
+      if (!compra || compra.cancelada_em) return false;
+      if (conta.data_vencimento < inicio || conta.data_vencimento > fim) return false;
+      return filtroFormaCompra === "todas" || (compra.forma_pagamento_compra || "não informado") === filtroFormaCompra;
+    })
+    .sort((a, b) => ordenacaoCompras === "recente"
+      ? b.data_vencimento.localeCompare(a.data_vencimento)
+      : ordenacaoCompras === "quantidade"
+        ? (Number(b.valor) || 0) - (Number(a.valor) || 0)
+        : ordenacaoCompras === "preco"
+          ? (Math.max(0, Number(b.valor) - Number(b.valor_pago))) - (Math.max(0, Number(a.valor) - Number(a.valor_pago)))
+          : (Math.max(0, Number(b.valor) - Number(b.valor_pago))) - (Math.max(0, Number(a.valor) - Number(a.valor_pago)))),
+    [contasPagar, comprasPorId, inicio, fim, filtroFormaCompra, ordenacaoCompras]);
   const totalComprasFiltradas = comprasFiltradasForma.reduce((s, c) => s + Math.max(0, Number(c.total) || 0), 0);
   const gastosPorInsumo = useMemo(() => {
     const idsComprasValidas = new Set(comprasFiltradasForma.map((compra) => compra.id));
@@ -673,23 +713,51 @@ function Relatorios() {
       </section>}
 
       {categoriaRelatorio === "compras" && <section className="mb-6">
-        <h2 className="mb-1 text-lg font-semibold">Gastos por insumo</h2>
-        <p className="mb-3 text-sm text-muted-foreground">Veja quanto foi gasto com cada produto comprado no período selecionado. Quantidades de peso são convertidas para kg, de volume para L e de dúzias para unidades antes da soma. Compras canceladas não entram no cálculo.</p>
-        <Field label="Filtrar forma de pagamento">
-          <select className="h-11 w-full rounded-md border bg-card px-3 text-sm" value={filtroFormaCompra} onChange={(e) => setFiltroFormaCompra(e.target.value)}>
-            <option value="todas">Todas as formas</option>
-            {[...new Set(comprasNoPeriodo.map((c) => c.forma_pagamento_compra || "não informado"))].sort().map((forma) => <option key={forma} value={forma}>{forma.replaceAll("_", " ")}</option>)}
-          </select>
-        </Field>
-        <div className="mb-3 grid grid-cols-2 gap-3">
-          <Stat label="Total de compras filtradas" value={brl(totalComprasFiltradas)} />
-          <Stat label="Insumos comprados" value={String(gastosPorInsumo.length)} />
+        <h2 className="mb-1 text-lg font-semibold">Compras e insumos</h2>
+        <p className="mb-3 text-sm text-muted-foreground">Período pela data da compra, exceto na visão de parcelas, que usa o vencimento. Compras canceladas não entram nos totais.</p>
+        <div className="mb-4 grid grid-cols-1 gap-3 sm:grid-cols-2">
+          <Field label="Mostrar por">
+            <select className="h-11 w-full rounded-md border bg-card px-3 text-sm" value={visaoCompras} onChange={(e) => setVisaoCompras(e.target.value)}>
+              <option value="insumo">Insumo</option>
+              <option value="compra">Compra individual</option>
+              <option value="local">Local de compra</option>
+              <option value="parcelas">Parcelas a pagar</option>
+            </select>
+          </Field>
+          <Field label="Forma de pagamento">
+            <select className="h-11 w-full rounded-md border bg-card px-3 text-sm" value={filtroFormaCompra} onChange={(e) => setFiltroFormaCompra(e.target.value)}>
+              <option value="todas">Todas as formas</option>
+              {[...new Set(comprasNoPeriodo.map((c) => c.forma_pagamento_compra || "não informado"))].sort().map((forma) => <option key={forma} value={forma}>{forma.replaceAll("_", " ")}</option>)}
+            </select>
+          </Field>
+          <Field label="Ordenar por">
+            <select className="h-11 w-full rounded-md border bg-card px-3 text-sm" value={ordenacaoCompras} onChange={(e) => setOrdenacaoCompras(e.target.value)}>
+              <option value="gasto">Maior gasto / saldo pendente</option>
+              <option value="quantidade">Maior quantidade / valor</option>
+              <option value="preco">Maior valor médio</option>
+              <option value="recente">Mais recente</option>
+            </select>
+          </Field>
         </div>
-        <details className="mt-3 rounded-xl border px-3">
-          <summary className="cursor-pointer py-3 text-sm font-medium">Detalhar gastos por insumo ({gastosPorInsumo.length})</summary>
+        <div className="mb-3 grid grid-cols-2 gap-3">
+          <Stat label="Total comprado no período" value={brl(totalComprasFiltradas)} />
+          <Stat label={visaoCompras === "insumo" ? "Insumos comprados" : visaoCompras === "compra" ? "Compras registradas" : visaoCompras === "local" ? "Locais de compra" : "Parcelas no período"} value={String(visaoCompras === "insumo" ? gastosPorInsumo.length : visaoCompras === "compra" ? comprasFiltradasForma.length : visaoCompras === "local" ? comprasAgrupadasPorLocal.length : parcelasComprasNoPeriodo.length)} />
+        </div>
+        {visaoCompras === "insumo" && <>
           {!gastosPorInsumo.length ? <Empty>Nenhuma compra com itens registrada no período.</Empty> : (
             <div className="divide-y">
-              {gastosPorInsumo.map((item) => (
+              {[...gastosPorInsumo].sort((a, b) => {
+                if (ordenacaoCompras === "quantidade") return (b.quantidade ?? -1) - (a.quantidade ?? -1);
+                if (ordenacaoCompras === "preco") {
+                  const preco = (item: typeof a) => item.quantidade && item.quantidade > 0 ? item.total / item.quantidade : -1;
+                  return preco(b) - preco(a);
+                }
+                if (ordenacaoCompras === "recente") {
+                  const dataMaisRecente = (id: string) => comprasFiltradasForma.filter((c) => itensCompra.some((i) => i.compra_id === c.id && i.insumo_id === id)).reduce((mais, c) => c.data_compra > mais ? c.data_compra : mais, "");
+                  return dataMaisRecente(b.id).localeCompare(dataMaisRecente(a.id));
+                }
+                return b.total - a.total;
+              }).map((item) => (
                 <div key={item.id} className="py-3">
                   <div className="flex items-start justify-between gap-3">
                     <div className="min-w-0">
@@ -701,23 +769,49 @@ function Relatorios() {
                   <div className="mt-2 h-1.5 overflow-hidden rounded-full bg-muted">
                     <div className="h-full rounded-full bg-primary" style={{ width: totalComprasFiltradas > 0 ? Math.min(100, (item.total / totalComprasFiltradas) * 100) + "%" : "0%" }} />
                   </div>
-                  <p className="mt-1 text-right text-xs text-muted-foreground">{(totalComprasFiltradas > 0 ? (item.total / totalComprasFiltradas) * 100 : 0).toLocaleString("pt-BR", { maximumFractionDigits: 1 })}% dos gastos</p>
+                  <p className="mt-1 text-right text-xs text-muted-foreground">{(totalComprasFiltradas > 0 ? (item.total / totalComprasFiltradas) * 100 : 0).toLocaleString("pt-BR", { maximumFractionDigits: 1 })}% dos gastos dos itens</p>
                 </div>
               ))}
             </div>
           )}
-        </details>
-        <details className="mt-3 rounded-xl border px-3">
-          <summary className="cursor-pointer py-3 text-sm font-medium">Gastos por forma de pagamento ({comprasPorForma.length})</summary>
-          {!comprasPorForma.length ? <p className="pb-3 text-sm text-muted-foreground">Nenhuma compra registrada no período.</p> : (
-            <div className="divide-y">
-              {comprasPorForma.map(([forma, valor]) => (
-                <Row key={forma} label={forma.replaceAll("_", " ")} value={brl(valor)} />
-              ))}
-            </div>
-          )}
-        </details>
-        <p className="mt-2 text-xs text-muted-foreground">O gasto por insumo usa o valor de cada item da compra; a forma de pagamento é um resumo separado do total das compras, não do valor efetivamente pago em cada data.</p>
+          <details className="mt-3 rounded-xl border px-3">
+            <summary className="cursor-pointer py-3 text-sm font-medium">Gastos por forma de pagamento ({comprasPorForma.length})</summary>
+            {!comprasPorForma.length ? <p className="pb-3 text-sm text-muted-foreground">Nenhuma compra registrada no período.</p> : <div className="divide-y">{comprasPorForma.map(([forma, valor]) => <Row key={forma} label={forma.replaceAll("_", " ")} value={brl(valor)} />)}</div>}
+          </details>
+        </>}
+        {visaoCompras === "compra" && <>
+          {!comprasFiltradasForma.length ? <Empty>Nenhuma compra encontrada para os filtros selecionados.</Empty> : <div className="divide-y">
+            {[...comprasFiltradasForma].sort((a, b) => ordenacaoCompras === "recente" ? b.data_compra.localeCompare(a.data_compra) : ordenacaoCompras === "quantidade" ? (Number(b.total) || 0) - (Number(a.total) || 0) : ordenacaoCompras === "preco" ? (Number(b.total) || 0) - (Number(a.total) || 0) : (Number(b.total) || 0) - (Number(a.total) || 0)).map((compra) => {
+              const itensDaCompra = itensCompra.filter((item) => item.compra_id === compra.id);
+              return <details key={compra.id} className="py-3">
+                <summary className="flex cursor-pointer list-none items-start justify-between gap-3">
+                  <span className="min-w-0"><span className="block font-medium">{compra.local_compra?.trim() || "Local não informado"}</span><span className="block text-xs text-muted-foreground">{dataBR(compra.data_compra)} · {(compra.forma_pagamento_compra || "não informado").replaceAll("_", " ")} · {itensDaCompra.length} item(ns)</span></span>
+                  <b className="shrink-0">{brl(Number(compra.total) || 0)}</b>
+                </summary>
+                <div className="mt-2 space-y-2 border-t pt-2">
+                  {itensDaCompra.length ? itensDaCompra.map((item) => <div key={item.id} className="flex justify-between gap-3 text-sm"><span>{item.descricao} · {num(Number(item.quantidade) || 0)} {item.unidade}</span><span className="shrink-0">{brl(Number(item.total) || 0)}</span></div>) : <p className="text-xs text-muted-foreground">Esta compra não possui itens vinculados.</p>}
+                  <p className="text-xs text-muted-foreground">Total registrado da compra: {brl(Number(compra.total) || 0)}</p>
+                </div>
+              </details>;
+            })}
+          </div>}
+        </>}
+        {visaoCompras === "local" && <>
+          {!comprasAgrupadasPorLocal.length ? <Empty>Nenhuma compra encontrada para os filtros selecionados.</Empty> : <div className="divide-y">
+            {comprasAgrupadasPorLocal.map((grupo) => <div key={grupo.local} className="py-3"><div className="flex items-start justify-between gap-3"><div><p className="font-medium">{grupo.local}</p><p className="text-xs text-muted-foreground">{grupo.quantidade} compra(s) · última em {dataBR(grupo.dataMaisRecente)}</p></div><b>{brl(grupo.total)}</b></div></div>)}
+          </div>}
+        </>}
+        {visaoCompras === "parcelas" && <>
+          <p className="mb-3 text-xs text-muted-foreground">Esta visão usa a data de vencimento e mostra somente contas vinculadas a compras não canceladas. O valor pendente não é somado novamente ao total comprado.</p>
+          {!parcelasComprasNoPeriodo.length ? <Empty>Nenhuma parcela de compra encontrada no período de vencimento.</Empty> : <div className="divide-y">
+            {parcelasComprasNoPeriodo.map((conta) => {
+              const compra = conta.compra_id ? comprasPorId.get(conta.compra_id) : undefined;
+              const saldo = Math.max(0, Number(conta.valor) - Number(conta.valor_pago));
+              return <div key={conta.id} className="py-3"><div className="flex items-start justify-between gap-3"><div className="min-w-0"><p className="font-medium">{conta.descricao}</p><p className="text-xs text-muted-foreground">{compra?.local_compra?.trim() || conta.fornecedor || "Local não informado"} · Vencimento {dataBR(conta.data_vencimento)}</p><p className="text-xs text-muted-foreground">Pago: {brl(Number(conta.valor_pago) || 0)} · Pendente: {brl(saldo)} · {conta.status}</p></div><b className="shrink-0">{brl(Number(conta.valor) || 0)}</b></div></div>;
+            })}
+          </div>}
+        </>}
+        <p className="mt-3 text-xs text-muted-foreground">O total comprado usa o valor registrado nas compras; o gasto por insumo usa os valores dos itens. Parcelas e pagamentos são uma visão financeira separada e não são adicionados novamente ao total das compras.</p>
       </section>}
 
       {categoriaRelatorio === "contas" && <section className="mb-6 rounded-xl border p-4">
