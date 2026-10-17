@@ -42,7 +42,7 @@ export const Route = createFileRoute("/_authenticated/relatorios")({
   validateSearch: (s: Record<string, unknown>) => {
     const hoje = hojeISO();
     const dataValida = (valor: unknown): valor is string =>
-      typeof valor === "string" && /^\\d{4}-\\d{2}-\\d{2}$/.test(valor);
+      typeof valor === "string" && /^\d{4}-\d{2}-\d{2}$/.test(valor);
     const inicioInformado = dataValida(s["inicio"]) ? s["inicio"] : mesISO() + "-01";
     const fimInformado = dataValida(s["fim"]) ? s["fim"] : hoje;
     const fim = fimInformado > hoje ? hoje : fimInformado;
