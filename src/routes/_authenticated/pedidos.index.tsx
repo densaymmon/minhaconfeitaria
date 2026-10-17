@@ -17,7 +17,7 @@ export const Route = createFileRoute("/_authenticated/pedidos/")({
    filtro: typeof search["filtro"] === "string" ? search["filtro"] : undefined,
    dataInicial: typeof search["dataInicial"] === "string" ? search["dataInicial"] : undefined,
    dataFinal: typeof search["dataFinal"] === "string" ? search["dataFinal"] : undefined,
-   dataReferencia: search["dataReferencia"] === "recebimento" ? "recebimento" : "entrega",
+   dataReferencia: search["dataReferencia"] === "recebimento" ? ("recebimento" as const) : undefined,
  }),
  loader: async ({ context }) => { await Promise.all([context.queryClient.ensureQueryData(appQueries.pedidosQ),context.queryClient.ensureQueryData(appQueries.configQ),context.queryClient.ensureQueryData(appQueries.pedidoPagamentosQ)]); },
  errorComponent: ({error}) => <p role="alert" className="py-8 text-destructive">{error instanceof Error ? error.message : "Não foi possível carregar os registros."}</p>,
