@@ -160,7 +160,7 @@ function ContasPagar() {
     try {
       const { error } = await supabase.rpc("salvar_conta_pagar", {
         p_dados: payload,
-        p_conta_id: id,
+        p_conta_id: id ?? undefined,
         p_operacao_id,
       });
       if (error) throw error;
