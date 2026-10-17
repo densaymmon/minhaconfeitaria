@@ -99,7 +99,8 @@ function PedidoForm() {
   async function registrarRecebimento() {
     if (!existente || salvandoRecebimento) return;
     const valorTotalDesejado = Math.round(parseNum(f.valor_entrada) * 100) / 100;
-    const valorAtual = Math.round((existente.saldo_quitado ? t.venda : Math.min(Math.max(0, Number(existente.valor_entrada ?? 0)), t.venda)) * 100) / 100;
+    const totalPagamentosRegistrados = pagamentos.reduce((total, pagamento) => total + Number(pagamento.valor ?? 0), 0);
+    const valorAtual = Math.round((existente.saldo_quitado ? t.venda : Math.min(Math.max(0, Math.max(Number(existente.valor_entrada ?? 0), totalPagamentosRegistrados)), t.venda)) * 100) / 100;
     const valor = Math.round((valorTotalDesejado - valorAtual) * 100) / 100;
     if (!(valor > 0)) {
       toast.error("Informe um total pago maior que o valor já registrado.");
@@ -492,7 +493,7 @@ function PedidoForm() {
                   </NativeSelect>
                 </Field>
                 <Field label="Entrada / valor pago (R$)">
-                  <Input inputMode="decimal" value={f.valor_entrada} onFocus={() => limparZeroAoFocar(f.valor_entrada, setValorPago)} onChange={(e) => setValorPago(e.target.value)} className="h-11" />
+                  <Input inputMode="decimal" value={f.valor_entrada} disabled={pagamentos.length > 0} onFocus={() => limparZeroAoFocar(f.valor_entrada, setValorPago)} onChange={(e) => setValorPago(e.target.value)} className="h-11" />
                 </Field>
               </div>
               <div className="rounded-xl bg-muted/60 p-3">
@@ -541,7 +542,7 @@ function PedidoForm() {
                   </NativeSelect>
                 </Field>
                 <Field label="Valor já pago (R$)">
-                  <Input inputMode="decimal" value={f.valor_entrada} disabled={pagamentos.length > 0} onFocus={() => limparZeroAoFocar(f.valor_entrada, setValorPago)} onChange={(e) => setValorPago(e.target.value)} className="h-11" />
+                  <Input inputMode="decimal" value={f.valor_entrada} onFocus={() => limparZeroAoFocar(f.valor_entrada, setValorPago)} onChange={(e) => setValorPago(e.target.value)} className="h-11" />
                 </Field>
                 <Field label="Frete (R$)">
                   <Input inputMode="decimal" value={f.taxa_entrega} onFocus={() => limparZeroAoFocar(f.taxa_entrega, (valor) => set("taxa_entrega", valor))} onChange={(e) => set("taxa_entrega", e.target.value)} className="h-11" />
