@@ -434,10 +434,10 @@ function Compras() {
     }
     setBusy(true);
     try {
-      const { error } = await supabase.rpc("registrar_inventario_fisico", {
+      const { error } = await supabase.rpc("registrar_inventario_fisico" as never, {
         itens: itensInventario,
         evento_id: eventoInventarioRef.current.id,
-      });
+      } as never);
       if (error) throw error;
       eventoInventarioRef.current = null;
       setInventarioFisico({});
@@ -517,7 +517,7 @@ function Compras() {
         evento_id: eventoSalvarRef.current.id,
       });
       if (error) throw error;
-      if (!compraSalvaId) throw new Error("A compra foi processada sem retornar seu identificador.");
+      if (typeof compraSalvaId !== "string" || !compraSalvaId) throw new Error("A compra foi processada sem retornar seu identificador.");
       const { error: erroLocal } = await supabase.rpc("registrar_local_compra", {
         registro_id: compraSalvaId,
         local_compra: localCompra.trim() || null,
