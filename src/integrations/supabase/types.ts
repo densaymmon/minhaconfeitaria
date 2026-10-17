@@ -906,8 +906,12 @@ export type Database = {
       }
       medida_base: { Args: { u: string }; Returns: string }
       medida_fator: { Args: { u: string }; Returns: number }
+      registrar_inventario_fisico: {
+        Args: { evento_id: string; itens: Json }
+        Returns: boolean
+      }
       registrar_local_compra: {
-        Args: { local_compra: string; registro_id: string }
+        Args: { local_compra: string | null; registro_id: string }
         Returns: undefined
       }
       registrar_pagamento_compra: {
@@ -924,7 +928,7 @@ export type Database = {
           p_conta_id: string
           p_data_pagamento: string
           p_forma_pagamento: string
-          p_observacoes: string
+          p_observacoes: string | null
           p_operacao_id: string
           p_valor: number
         }
@@ -934,7 +938,7 @@ export type Database = {
         Args: {
           p_data_pagamento: string
           p_forma_pagamento: string
-          p_observacoes?: string
+          p_observacoes?: string | null
           p_pedido_id: string
           p_valor: number
         }
