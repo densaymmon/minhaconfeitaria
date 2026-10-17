@@ -66,11 +66,11 @@ function extractDate(text: string): string | null {
   return Number.isFinite(date.getTime()) && date.toISOString().slice(0, 10) === candidate ? candidate : null;
 }
 
-function parseOcrText(text: string): InvoiceExtraction {
+export function parseOcrText(text: string): InvoiceExtraction {
   const lines = text.split(/\r?\n/).map((line) => line.replace(/\s+/g, " ").trim()).filter(Boolean).slice(0, 500);
   const fullText = lines.join("\n");
-  const supplier = lines.find((line) => /TENDA ATACADO/i.test(line))?.match(/TENDA ATACADO(?:\\s+SA)?/i)?.[0]
-    ?? lines.find((line) => line.length >= 3 && line.length <= 100 && !/\\b(CNPJ|CPF|DANFE|CUPOM FISCAL|NOTA FISCAL|DOCUMENTO AUXILIAR|CONSUMIDOR|RUA|AVENIDA|CEP|HORTOLANDIA|SUMAR[EÉ])\\b/i.test(line) && !/\\d{2}[/.]\\d{2}[/.]\\d{4}/.test(line)) ?? null;
+  const supplier = lines.find((line) => /TENDA ATACADO/i.test(line))?.match(/TENDA ATACADO(?:\s+SA)?/i)?.[0]
+    ?? lines.find((line) => line.length >= 3 && line.length <= 100 && !/\b(CNPJ|CPF|DANFE|CUPOM FISCAL|NOTA FISCAL|DOCUMENTO AUXILIAR|CONSUMIDOR|RUA|AVENIDA|CEP|HORTOLANDIA|SUMAR[EÉ])\b/i.test(line) && !/\d{2}[/.]\d{2}[/.]\d{4}/.test(line)) ?? null;
   const date = extractDate(fullText);
   const totalMatches = [...fullText.matchAll(/(?:VALOR\s+TOTAL|TOTAL\s+A\s+PAGAR|TOTAL\s+GERAL|TOTAL\s+DA\s+NOTA|TOTAL\s+R\$)[^\d]{0,30}(\d{1,7}(?:\.\d{3})*,\d{2})/gi)];
   const total = totalMatches.length ? parseNumber(totalMatches[totalMatches.length - 1]?.[1] ?? "") : null;
@@ -80,7 +80,7 @@ function parseOcrText(text: string): InvoiceExtraction {
   const items: InvoiceExtraction["itens"] = [];
   for (const line of lines) {
     // NF-e DANFE product table: stop at product total, not the trailing tax values.
-    const nfeRow = line.match(/^\\s*(\\d{3,8})\\s+(.+?)\\s+\\d{8}\\s+\\d{3}\\s+\\d{4}\\s+([A-Z*0-9]+)\\s+(\\d+(?:[,.]\\d+)?)\\s+(\\d{1,7}(?:\\.\\d{3})*,\\d{2})\\s+(\\d{1,7}(?:\\.\\d{3})*,\\d{2})\\s+(\\d{1,7}(?:\\.\\d{3})*,\\d{2})\\b/i);
+    const nfeRow = line.match(/^\s*(\d{3,8})\s+(.+?)\s+\d{8}\s+\d{3}\s+\d{4}\s+([A-Z*0-9]+)\s+(\d+(?:[,.]\d+)?)\s+(\d{1,7}(?:\.\d{3})*,\d{2})\s+(\d{1,7}(?:\.\d{3})*,\d{2})\s+(\d{1,7}(?:\.\d{3})*,\d{2})\b/i);
     if (nfeRow) {
       const [, code, description, rawUnit, rawQty, rawPrice, rawDiscount, rawTotal] = nfeRow;
       const unitToken = (rawUnit ?? "").toUpperCase();
@@ -91,7 +91,7 @@ function parseOcrText(text: string): InvoiceExtraction {
       const unit = /KG/.test(unitToken) ? "kg" : /LT|L001L/.test(unitToken) ? "L" : /ML/.test(unitToken) ? "ml" : /UN|PT|PC/.test(unitToken) ? "un" : null;
       if (description && itemTotal !== null) {
         items.push({ descricao: description.trim().slice(0, 120), codigo: code ?? null, quantidade: quantity, unidade: unit,
-          valor_unitario: unitPrice, valor_total: itemTotal, desconto, duvidas: ["Item extraído da tabela NF-e; confira o insumo correspondente e a unidade antes de confirmar."] });
+          valor_unitario: unitPrice, valor_total: itemTotal, desconto: discount, duvidas: ["Item extraído da tabela NF-e; confira o insumo correspondente e a unidade antes de confirmar."] });
         continue;
       }
     }
