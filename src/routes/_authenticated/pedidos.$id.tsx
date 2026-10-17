@@ -99,7 +99,7 @@ function PedidoForm() {
   async function registrarRecebimento() {
     if (!existente || salvandoRecebimento) return;
     const valorTotalDesejado = Math.round(parseNum(f.valor_entrada) * 100) / 100;
-    const valorAtual = Math.round(valorPagoEfetivo * 100) / 100;
+    const valorAtual = Math.round((existente.saldo_quitado ? t.venda : Math.min(Math.max(0, Number(existente.valor_entrada ?? 0)), t.venda)) * 100) / 100;
     const valor = Math.round((valorTotalDesejado - valorAtual) * 100) / 100;
     if (!(valor > 0)) {
       toast.error("Informe um total pago maior que o valor já registrado.");
