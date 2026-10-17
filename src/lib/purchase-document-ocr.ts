@@ -40,7 +40,7 @@ function loadScript(src: string, available: () => boolean): Promise<void> {
     const script = document.createElement("script");
     script.src = src;
     script.async = true;
-    script.dataset.documentOcr = src;
+    script.dataset["documentOcr"] = src;
     script.onload = finish;
     script.onerror = () => { script.remove(); reject(new Error("Falha ao carregar o mecanismo de leitura. Verifique sua conexão.")); };
     document.head.appendChild(script);
@@ -113,7 +113,7 @@ function parseOcrText(text: string): InvoiceExtraction {
   if (!date) duvidas.push("Data não identificada; informe a data correta.");
   if (total === null) duvidas.push("Total do documento não identificado; confira o comprovante.");
   if (!items.length) duvidas.push("Não foi possível separar os itens automaticamente. Cadastre-os manualmente na conferência.");
-  return { fornecedor: supplier, data, documento: null, chave: null, desconto: parseNumber(discountMatch?.[1] ?? ""), despesas: parseNumber(expenseMatch?.[1] ?? ""), total, duvidas, itens: items.slice(0, 100) };
+  return { fornecedor: supplier, data: date, documento: null, chave: null, desconto: parseNumber(discountMatch?.[1] ?? ""), despesas: parseNumber(expenseMatch?.[1] ?? ""), total, duvidas, itens: items.slice(0, 100) };
 }
 
 async function getPdfText(bytes: Uint8Array): Promise<{ text: string; pages: PdfPage[] }> {
