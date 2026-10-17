@@ -774,8 +774,11 @@ function Compras() {
                 const { data: criado, error } = await supabase.from("insumos").insert({ nome: item.nome.slice(0, 120), tipo: "ingrediente", preco_embalagem: item.total, quantidade_embalagem: item.quantidade, unidade_embalagem: item.unidade, unidade: item.unidade }).select("id").single();
                 if (error) throw error; idsNovos[item.id] = criado.id;
               }
-              const novasLinhas: Linha[] = documentoCompra.linhas.map((item) => ({ insumo_id: item.insumoId === "__novo__" ? idsNovos[item.id] : item.insumoId, quantidade: String(item.quantidade), unidade: item.unidade, preco: String(Math.round(item.total * 100)) }));
-              if (novasLinhas.some((item) => !item.insumo_id)) throw new Error("Não foi possível vincular todos os itens aos insumos.");
+              const novasLinhas: Linha[] = documentoCompra.linhas.map((item) => {
+                const insumoId = item.insumoId === "__novo__" ? idsNovos[item.id] : item.insumoId;
+                if (!insumoId) throw new Error("Não foi possível vincular todos os itens aos insumos.");
+                return { insumo_id: insumoId, quantidade: String(item.quantidade), unidade: item.unidade, preco: String(Math.round(item.total * 100)) };
+              });
               await qc.invalidateQueries({ queryKey: ["insumos"] }); await qc.refetchQueries({ queryKey: ["insumos"] });
               setData(documentoCompra.data); if (documentoCompra.fornecedor) setLocalCompra(documentoCompra.fornecedor.slice(0, 120)); setLinhas(novasLinhas);
               setDocumentoCompra(null); setArquivoDocumento(""); toast.success("Itens carregados no formulário. Confira os dados e a forma de pagamento antes de salvar.");

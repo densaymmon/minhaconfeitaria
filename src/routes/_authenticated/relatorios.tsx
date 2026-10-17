@@ -202,24 +202,58 @@ function Relatorios() {
           ? (b.quantidade ? b.total / b.quantidade : 0) - (a.quantidade ? a.total / a.quantidade : 0)
           : b.total - a.total);
   }, [comprasFiltradasForma, ordenacaoCompras]);
-  const parcelasComprasNoPeriodo = useMemo(() => contasPagar
-    .filter((conta) => {
+  const parcelasComprasNoPeriodo = useMemo(() => {
+    // Primeiro usa as parcelas reais. Compras antigas no crédito podem não ter
+    // contas_pagar vinculadas; nesses casos, monta uma visualização de contingência
+    // a partir dos dados da compra, sem gravar nem duplicar lançamentos financeiros.
+    const contasReais = contasPagar.filter((conta) => {
       if (conta.cancelada_em || conta.status === "cancelado" || !conta.compra_id) return false;
       const compra = comprasPorId.get(conta.compra_id);
-      if (!compra || compra.cancelada_em) return false;
-      // Somente compras no cartão de crédito representam parcelas/cobranças futuras.
-      if (compra.forma_pagamento_compra !== "credito") return false;
+      if (!compra || compra.cancelada_em || compra.forma_pagamento_compra !== "credito") return false;
       if (conta.data_vencimento < inicio || conta.data_vencimento > fim) return false;
-      return filtroFormaCompra === "todas" || (compra.forma_pagamento_compra || "não informado") === filtroFormaCompra;
-    })
-    .sort((a, b) => ordenacaoCompras === "recente"
+      if (Math.max(0, Number(conta.valor) - Number(conta.valor_pago)) <= 0.009) return false;
+      return filtroFormaCompra === "todas" || compra.forma_pagamento_compra === filtroFormaCompra;
+    });
+    const comprasSemParcelasRegistradas = compras.filter((compra) => {
+      if (compra.cancelada_em || compra.forma_pagamento_compra !== "credito") return false;
+      if (compra.data_compra > fim && (compra.primeiro_vencimento ?? compra.data_compra) > fim) return false;
+      if (filtroFormaCompra !== "todas" && compra.forma_pagamento_compra !== filtroFormaCompra) return false;
+      // Não reconstruir uma compra que já tenha qualquer conta vinculada, inclusive cancelada.
+      return !contasPagar.some((conta) => conta.compra_id === compra.id);
+    });
+    const parcelasLegadas = comprasSemParcelasRegistradas.flatMap((compra) => {
+      const quantidade = Math.min(24, Math.max(1, Math.trunc(Number(compra.numero_parcelas) || 1)));
+      const totalCentavos = Math.max(0, Math.round(Number(compra.total || 0) * 100));
+      const baseCentavos = Math.floor(totalCentavos / quantidade);
+      const primeiroVencimento = compra.primeiro_vencimento || compra.data_compra;
+      return Array.from({ length: quantidade }, (_, index) => {
+        const data = new Date(`${primeiroVencimento}T12:00:00`);
+        data.setMonth(data.getMonth() + index);
+        const vencimento = `${data.getFullYear()}-${String(data.getMonth() + 1).padStart(2, "0")}-${String(data.getDate()).padStart(2, "0")}`;
+        const centavos = index === quantidade - 1 ? totalCentavos - baseCentavos * (quantidade - 1) : baseCentavos;
+        return {
+          id: `legada-${compra.id}-${index + 1}`,
+          compra_id: compra.id,
+          descricao: `Compra no cartão de crédito · Parcela ${index + 1}/${quantidade}`,
+          fornecedor: compra.local_compra,
+          data_vencimento: vencimento,
+          valor: centavos / 100,
+          valor_pago: 0,
+          status: "pendente",
+          cancelada_em: null,
+          forma_pagamento: "Cartão de crédito",
+          compra_parcela_numero: index + 1,
+          compra_parcelas_total: quantidade,
+          gerada_automaticamente: true,
+        };
+      }).filter((parcela) => parcela.data_vencimento >= inicio && parcela.data_vencimento <= fim);
+    });
+    return [...contasReais, ...parcelasLegadas].sort((a, b) => ordenacaoCompras === "recente"
       ? b.data_vencimento.localeCompare(a.data_vencimento)
       : ordenacaoCompras === "quantidade"
         ? (Number(b.valor) || 0) - (Number(a.valor) || 0)
-        : ordenacaoCompras === "preco"
-          ? (Math.max(0, Number(b.valor) - Number(b.valor_pago))) - (Math.max(0, Number(a.valor) - Number(a.valor_pago)))
-          : (Math.max(0, Number(b.valor) - Number(b.valor_pago))) - (Math.max(0, Number(a.valor) - Number(a.valor_pago)))),
-    [contasPagar, comprasPorId, inicio, fim, filtroFormaCompra, ordenacaoCompras]);
+        : (Math.max(0, Number(b.valor) - Number(b.valor_pago))) - (Math.max(0, Number(a.valor) - Number(a.valor_pago))));
+  }, [contasPagar, compras, comprasPorId, inicio, fim, filtroFormaCompra, ordenacaoCompras]);
   const parcelasFuturasPorMes = useMemo(() => {
     const hoje = hojeISO();
     const abertas = contasPagar.filter((conta) => {
