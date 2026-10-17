@@ -58,7 +58,7 @@ describe("documentos de compra", () => {
       "DADOS DO PRODUTO/SERVIÇO",
       "966092 ACUCAR REF SELECT 1KG 17019900 020 5102 UN001UN 5 2,79 0,00 13,95 5,43 0,98 18.00 0.00",
       "262510 LEITE INTEGRAL LIDER 1L 04012010 060 5405 LT001LT 12 4,89 0,00 58,68 0,00 0,00 0.00 0.00",
-    ].join("\n"), ingredients), ingredients);
+    ].join("\n"), ingredients));
     expect(doc.fornecedor).toBe("TENDA ATACADO SA");
     expect(doc.data).toBe("2026-10-15");
     expect(doc.total).toBe(487.29);
