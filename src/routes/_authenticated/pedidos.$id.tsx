@@ -568,10 +568,7 @@ function PedidoForm() {
               </div>
 
               {existente?.status !== "cancelado" && saldoPendente > 0.009 && (
-                <div className="space-y-3 rounded-xl border p-3">
-                  <div>
-                    <h3 className="font-semibold">Confirmar pagamento</h3>
-                  </div>
+                <div className="space-y-3 pt-1">
                   <div className="grid grid-cols-1 gap-3 sm:grid-cols-2">
                     <Field label="Valor recebido (R$)">
                       <Input inputMode="decimal" value={novoRecebimento.valor} onChange={(e) => setNovoRecebimento((s) => ({ ...s, valor: e.target.value }))} placeholder="0,00" className="h-11" />
