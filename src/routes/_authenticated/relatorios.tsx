@@ -216,16 +216,24 @@ function Relatorios() {
     : [];
   const totalRecebidoDetalhadoNoPeriodo = recebimentosNoPeriodo.reduce((s, p) => s + Math.max(0, Number(p.valor) || 0), 0);
   // Pedidos antigos podem ter valor pago consolidado, mas nenhum lançamento em pedido_pagamentos.
-  // Para a conciliação inicial, usa-se a data de entrega já cadastrada como referência visível,
-  // sem gravar um pagamento fictício no histórico. Somente a diferença ainda não detalhada é somada.
+  // Como não há data individual de recebimento, usa-se uma data já registrada no pedido:
+  // prioriza a entrega quando estiver no período; caso contrário, considera a data de cadastro.
+  // Não cria histórico fictício e só soma a diferença que ainda não está detalhada.
   const recebimentosLegadosNoPeriodo = intervaloRecebimentosValido
     ? pedidosCalculados.flatMap((pedido) => {
-      if (pedido.status === "cancelado" || pedido.data_entrega < inicioRecebimentos || pedido.data_entrega > fimRecebimentos) return [];
+      if (pedido.status === "cancelado") return [];
+      const dataCadastro = String(pedido.created_at ?? "").slice(0, 10);
+      const entregaNoPeriodo = pedido.data_entrega >= inicioRecebimentos && pedido.data_entrega <= fimRecebimentos;
+      const cadastroNoPeriodo = dataCadastro >= inicioRecebimentos && dataCadastro <= fimRecebimentos;
+      if (!entregaNoPeriodo && !cadastroNoPeriodo) return [];
+      const dataReferencia = entregaNoPeriodo ? pedido.data_entrega : dataCadastro;
       const detalhado = pagamentosPedidos
         .filter((pagamento) => pagamento.pedido_id === pedido.id)
         .reduce((soma, pagamento) => soma + Math.max(0, Number(pagamento.valor) || 0), 0);
       const faltante = Math.max(0, Number(pedido.t.recebido) - detalhado);
-      return faltante > 0.009 ? [{ id: pedido.id, numero: pedido.numero, data_pagamento: pedido.data_entrega, valor: Math.round(faltante * 100) / 100 }] : [];
+      return faltante > 0.009
+        ? [{ id: pedido.id, numero: pedido.numero, data_pagamento: dataReferencia, valor: Math.round(faltante * 100) / 100 }]
+        : [];
     })
     : [];
   const totalRecebidoLegadoNoPeriodo = recebimentosLegadosNoPeriodo.reduce((s, p) => s + p.valor, 0);
@@ -393,7 +401,7 @@ function Relatorios() {
     if (categoriaRelatorio === "caixa") {
       const movimentos = [
         ...recebimentosNoPeriodo.map((p) => [dataBR(p.data_pagamento), "Entrada", "Recebimento de pedido", p.forma_pagamento, Number(p.valor) || 0]),
-        ...recebimentosLegadosNoPeriodo.map((p) => [dataBR(p.data_pagamento), "Entrada", "Recebimento legado (data de entrega como referência)", "Pedido #" + p.numero + " · precisa conferir a data real", p.valor]),
+        ...recebimentosLegadosNoPeriodo.map((p) => [dataBR(p.data_pagamento), "Entrada", "Recebimento legado (data do pedido como referência)", "Pedido #" + p.numero + " · precisa conferir a data real", p.valor]),
         ...estornosContasNoPeriodo.map((e) => [dataBR(e.created_at.slice(0, 10)), "Entrada", "Estorno de conta a pagar", e.motivo, Number(e.valor) || 0]),
         ...despesasCaixaNoPeriodo.map((d) => [dataBR(d.data), "Saída", d.categoria || "Despesa", d.descricao, Number(d.valor) || 0]),
         ...comprasAvistaNoPeriodo.map((c) => [dataBR(c.data_compra), "Saída", "Compra de insumos", c.local_compra || c.forma_pagamento_compra || "", Number(c.total) || 0]),
@@ -520,7 +528,7 @@ function Relatorios() {
               <div key={"legado-" + p.id} className="flex items-start justify-between gap-3 border-t border-dashed pt-2 text-sm">
                 <div>
                   <p className="font-medium">Pedido #{p.numero} · {dataBR(p.data_pagamento)}</p>
-                  <p className="text-amber-700 dark:text-amber-400">Pagamento antigo sem histórico detalhado · data de entrega usada como referência</p>
+                  <p className="text-amber-700 dark:text-amber-400">Pagamento antigo sem histórico detalhado · data do pedido usada como referência</p>
                 </div>
                 <span className="shrink-0 font-semibold">{brl(p.valor)}</span>
               </div>
@@ -541,14 +549,14 @@ function Relatorios() {
         </div>
         <div className="space-y-2">
           <Row label="Recebimentos detalhados" value={brl(totalRecebidoDetalhadoNoPeriodo)} />
-          <Row label="Pedidos antigos sem histórico (data de entrega como referência)" value={brl(totalRecebidoLegadoNoPeriodo)} />
+          <Row label="Pedidos antigos sem histórico (data do pedido como referência)" value={brl(totalRecebidoLegadoNoPeriodo)} />
           <Row label="Estornos de pagamentos (entrada)" value={brl(totalEstornosContas)} />
           <Row label="Despesas registradas" value={brl(totalDespesasCaixa)} />
           <Row label="Compras pagas sem crédito" value={brl(totalComprasAvista)} />
           <Row label="Pagamentos de contas a pagar" value={brl(totalPagamentosContas)} />
         </div>
         <p className="mt-3 text-xs text-muted-foreground">
-          Para pedidos antigos sem histórico de pagamento, a data de entrega é usada apenas como referência de conciliação e fica identificada na lista/CSV; confirme a data real antes de usar como extrato bancário. Compras no crédito entram quando as parcelas são pagas. O saldo não inclui saldo inicial nem movimentações externas ao sistema.
+          Para pedidos antigos sem histórico de pagamento, a data de entrega é priorizada quando está no período; caso contrário, usa-se a data de cadastro. É uma referência de conciliação, não uma confirmação da data real do recebimento. Compras no crédito entram quando as parcelas são pagas. O saldo não inclui saldo inicial nem movimentações externas ao sistema.
         </p>
       </section>
       </>}
