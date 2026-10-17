@@ -518,13 +518,14 @@ function Compras() {
       });
       if (error) throw error;
       if (typeof compraSalvaId !== "string" || !compraSalvaId) throw new Error("A compra foi processada sem retornar seu identificador.");
+      const idCompraSalva = compraSalvaId as string;
       const { error: erroLocal } = await supabase.rpc("registrar_local_compra", {
-        registro_id: compraSalvaId,
+        registro_id: idCompraSalva,
         local_compra: localCompra.trim() || null,
       });
       if (erroLocal) throw erroLocal;
       const { error: erroFinanceiro } = await supabase.rpc("registrar_pagamento_compra", {
-        p_compra_id: compraSalvaId,
+        p_compra_id: idCompraSalva,
         p_forma_pagamento: formaPagamentoCompra,
         p_numero_parcelas: formaPagamentoCompra === "credito" ? Number(numeroParcelasCompra) : 1,
         p_primeiro_vencimento: formaPagamentoCompra === "credito" ? primeiroVencimentoCompra : data,
