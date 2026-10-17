@@ -557,7 +557,7 @@ function Relatorios() {
               if (destino === "compras") navigate({ to: "/compras" });
               else if (destino === "contas") navigate({ to: "/contas-pagar" });
               else if (destino === "vendas" || destino === "lucro") navigate({ search: (s) => ({ ...s, secao: "vendas" }) });
-              else navigate({ to: "/pedidos" });
+              else navigate({ to: "/pedidos", search: { filtro: "a_receber" } });
             }}>Ver mais detalhes</Button>
           </DialogFooter>
         </DialogContent>
