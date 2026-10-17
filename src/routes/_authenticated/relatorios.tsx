@@ -752,7 +752,7 @@ function Relatorios() {
           <Field label="Forma de pagamento">
             <select className="h-11 w-full rounded-md border bg-card px-3 text-sm" value={filtroFormaCompra} onChange={(e) => setFiltroFormaCompra(e.target.value)}>
               <option value="todas">Todas as formas</option>
-              {[...new Set(comprasNoPeriodo.map((c) => c.forma_pagamento_compra || "não informado"))].sort().map((forma) => <option key={forma} value={forma}>{forma.replaceAll("_", " ")}</option>)}
+              {[...new Set(compras.filter((c) => !c.cancelada_em).map((c) => c.forma_pagamento_compra || "não informado"))].sort().map((forma) => <option key={forma} value={forma}>{forma.replaceAll("_", " ")}</option>)}
             </select>
           </Field>
           <Field label="Ordenar por">
