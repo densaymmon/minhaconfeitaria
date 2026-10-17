@@ -810,7 +810,7 @@ function Relatorios() {
                   <b className="shrink-0">{brl(Number(compra.total) || 0)}</b>
                 </summary>
                 <div className="mt-2 space-y-2 border-t pt-2">
-                  {itensDaCompra.length ? itensDaCompra.map((item) => <div key={item.id} className="flex justify-between gap-3 text-sm"><span>{item.descricao} · {num(Number(item.quantidade) || 0)} {item.unidade}</span><span className="shrink-0">{brl(Number(item.total) || 0)}</span></div>) : <p className="text-xs text-muted-foreground">Esta compra não possui itens vinculados.</p>}
+                  {itensDaCompra.length ? itensDaCompra.map((item) => <div key={item.id} className="flex justify-between gap-3 text-sm"><span>{insumosPorId.get(item.insumo_id)?.nome ?? "Insumo removido"} · {num(Number(item.quantidade) || 0)} {item.unidade}</span><span className="shrink-0">{brl(Number(item.total) || 0)}</span></div>) : <p className="text-xs text-muted-foreground">Esta compra não possui itens vinculados.</p>}
                   <p className="text-xs text-muted-foreground">Total registrado da compra: {brl(Number(compra.total) || 0)}</p>
                 </div>
               </details>;
