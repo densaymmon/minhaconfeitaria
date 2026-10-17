@@ -1,4 +1,5 @@
 import { describe, expect, it } from "vitest";
+import { parseOcrText } from "./purchase-document-ocr";
 import { DOCUMENT_MAX_BYTES, normalizeInvoice, parseInvoiceXml, possibleDuplicate, reviewDocument, safeIngredientMatch, validateDocumentFile, validateVisualBytes, type InvoiceExtraction } from "./purchase-document";
 
 const ingredients = [{ id: "sugar", nome: "Açúcar", unidade: "kg" }];
@@ -47,6 +48,28 @@ describe("documentos de compra", () => {
   it("sinaliza compra existente de mesmo fornecedor/data/valor", () => {
     expect(possibleDuplicate(normalizeInvoice(input, ingredients), [{ id: "purchase", data_compra: "2026-10-17", local_compra: "loja", total: 18, cancelada_em: null }])?.id).toBe("purchase");
   });
+
+  it("extrai fornecedor, total e linhas de produto do texto de uma DANFE", () => {
+    const doc = parseOcrText([
+      "TENDA ATACADO SA DANFE",
+      "HORTOLANDIA - SP",
+      "DATA DA EMISSÃO 15.10.2026",
+      "VALOR TOTAL DA NOTA 487,29",
+      "DADOS DO PRODUTO/SERVIÇO",
+      "966092 ACUCAR REF SELECT 1KG 17019900 020 5102 UN001UN 5 2,79 0,00 13,95 5,43 0,98 18.00 0.00",
+      "262510 LEITE INTEGRAL LIDER 1L 04012010 060 5405 LT001LT 12 4,89 0,00 58,68 0,00 0,00 0.00 0.00",
+    ], ingredients);
+    expect(doc.fornecedor).toBe("TENDA ATACADO SA");
+    expect(doc.data).toBe("2026-10-15");
+    expect(doc.total).toBe(487.29);
+    expect(doc.linhas).toHaveLength(2);
+    expect(doc.linhas[0]?.descricao).toContain("ACUCAR REF SELECT 1KG");
+    expect(doc.linhas[0]?.quantidade).toBe(5);
+    expect(doc.linhas[0]?.precoUnitario).toBe(2.79);
+    expect(doc.linhas[0]?.total).toBe(13.95);
+    expect(doc.linhas[1]?.total).toBe(58.68);
+  });
+
   it("mantém XML NF-e com namespace, desconto e vínculo existentes", () => {
     const doc = parseInvoiceXml('<nfeProc xmlns="http://www.portalfiscal.inf.br/nfe"><NFe><infNFe Id="NFe123"><ide><nNF>7</nNF><dhEmi>2026-10-17T10:00:00-03:00</dhEmi></ide><emit><xNome>Loja</xNome></emit><det><prod><cProd>1</cProd><xProd>Açúcar</xProd><qCom>2</qCom><uCom>kg</uCom><vUnCom>10</vUnCom><vProd>20</vProd><vDesc>2</vDesc></prod></det><total><ICMSTot><vNF>18</vNF><vDesc>2</vDesc></ICMSTot></total></infNFe></NFe></nfeProc>', ingredients);
     expect(doc.numero).toBe("7"); expect(doc.chave).toBe("123"); expect(doc.linhas[0]?.insumoId).toBe("sugar"); expect(doc.linhas[0]?.total).toBe(18); expect(reviewDocument(doc, ingredients).errors).toHaveLength(0);
