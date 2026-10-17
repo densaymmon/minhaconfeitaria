@@ -100,6 +100,7 @@ export type Database = {
           cancelada_em: string | null
           created_at: string
           data_compra: string
+          estoque_integrado: boolean
           forma_pagamento_compra: string
           id: string
           local_compra: string | null
@@ -112,6 +113,7 @@ export type Database = {
           cancelada_em?: string | null
           created_at?: string
           data_compra: string
+          estoque_integrado?: boolean
           forma_pagamento_compra?: string
           id?: string
           local_compra?: string | null
@@ -124,6 +126,7 @@ export type Database = {
           cancelada_em?: string | null
           created_at?: string
           data_compra?: string
+          estoque_integrado?: boolean
           forma_pagamento_compra?: string
           id?: string
           local_compra?: string | null
@@ -134,20 +137,50 @@ export type Database = {
         }
         Relationships: []
       }
+      configuracoes: {
+        Row: {
+          imposto_pct: number
+          taxa_credito: number
+          taxa_debito: number
+          taxa_dinheiro: number
+          taxa_outros: number
+          taxa_pix: number
+          user_id: string
+        }
+        Insert: {
+          imposto_pct?: number
+          taxa_credito?: number
+          taxa_debito?: number
+          taxa_dinheiro?: number
+          taxa_outros?: number
+          taxa_pix?: number
+          user_id?: string
+        }
+        Update: {
+          imposto_pct?: number
+          taxa_credito?: number
+          taxa_debito?: number
+          taxa_dinheiro?: number
+          taxa_outros?: number
+          taxa_pix?: number
+          user_id?: string
+        }
+        Relationships: []
+      }
       contas_pagar: {
         Row: {
           cancelada_em: string | null
           compra_id: string | null
+          compra_parcela_numero: number | null
+          compra_parcelas_total: number | null
           created_at: string
           data_emissao: string
           data_pagamento: string | null
           data_vencimento: string
           descricao: string
-          fornecedor: string | null
           forma_pagamento: string | null
+          fornecedor: string | null
           gerada_automaticamente: boolean
-          compra_parcela_numero: number | null
-          compra_parcelas_total: number | null
           id: string
           motivo_cancelamento: string | null
           observacoes: string | null
@@ -160,16 +193,16 @@ export type Database = {
         Insert: {
           cancelada_em?: string | null
           compra_id?: string | null
+          compra_parcela_numero?: number | null
+          compra_parcelas_total?: number | null
           created_at?: string
           data_emissao?: string
           data_pagamento?: string | null
           data_vencimento?: string
           descricao: string
-          fornecedor?: string | null
           forma_pagamento?: string | null
+          fornecedor?: string | null
           gerada_automaticamente?: boolean
-          compra_parcela_numero?: number | null
-          compra_parcelas_total?: number | null
           id?: string
           motivo_cancelamento?: string | null
           observacoes?: string | null
@@ -182,16 +215,16 @@ export type Database = {
         Update: {
           cancelada_em?: string | null
           compra_id?: string | null
+          compra_parcela_numero?: number | null
+          compra_parcelas_total?: number | null
           created_at?: string
           data_emissao?: string
           data_pagamento?: string | null
           data_vencimento?: string
           descricao?: string
-          fornecedor?: string | null
           forma_pagamento?: string | null
+          fornecedor?: string | null
           gerada_automaticamente?: boolean
-          compra_parcela_numero?: number | null
-          compra_parcelas_total?: number | null
           id?: string
           motivo_cancelamento?: string | null
           observacoes?: string | null
@@ -207,6 +240,127 @@ export type Database = {
             columns: ["compra_id"]
             isOneToOne: false
             referencedRelation: "compras"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      contas_pagar_auditoria: {
+        Row: {
+          conta_id: string
+          created_at: string
+          dados: Json
+          evento: string
+          id: string
+          operacao_id: string
+          user_id: string
+        }
+        Insert: {
+          conta_id: string
+          created_at?: string
+          dados?: Json
+          evento: string
+          id?: string
+          operacao_id: string
+          user_id: string
+        }
+        Update: {
+          conta_id?: string
+          created_at?: string
+          dados?: Json
+          evento?: string
+          id?: string
+          operacao_id?: string
+          user_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "contas_pagar_auditoria_conta_id_fkey"
+            columns: ["conta_id"]
+            isOneToOne: false
+            referencedRelation: "contas_pagar"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      contas_pagar_estornos: {
+        Row: {
+          conta_id: string
+          created_at: string
+          id: string
+          motivo: string
+          pagamento_id: string
+          user_id: string
+          valor: number
+        }
+        Insert: {
+          conta_id: string
+          created_at?: string
+          id?: string
+          motivo: string
+          pagamento_id: string
+          user_id: string
+          valor: number
+        }
+        Update: {
+          conta_id?: string
+          created_at?: string
+          id?: string
+          motivo?: string
+          pagamento_id?: string
+          user_id?: string
+          valor?: number
+        }
+        Relationships: [
+          {
+            foreignKeyName: "contas_pagar_estornos_conta_id_user_id_fkey"
+            columns: ["conta_id", "user_id"]
+            isOneToOne: false
+            referencedRelation: "contas_pagar"
+            referencedColumns: ["id", "user_id"]
+          },
+          {
+            foreignKeyName: "contas_pagar_estornos_pagamento_id_conta_id_user_id_fkey"
+            columns: ["pagamento_id", "conta_id", "user_id"]
+            isOneToOne: false
+            referencedRelation: "contas_pagar_pagamentos"
+            referencedColumns: ["id", "conta_id", "user_id"]
+          },
+        ]
+      }
+      contas_pagar_operacoes: {
+        Row: {
+          conta_id: string
+          created_at: string
+          operacao_id: string
+          payload_hash: string
+          resultado_id: string
+          tipo_operacao: string
+          user_id: string
+        }
+        Insert: {
+          conta_id: string
+          created_at?: string
+          operacao_id: string
+          payload_hash: string
+          resultado_id: string
+          tipo_operacao: string
+          user_id: string
+        }
+        Update: {
+          conta_id?: string
+          created_at?: string
+          operacao_id?: string
+          payload_hash?: string
+          resultado_id?: string
+          tipo_operacao?: string
+          user_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "contas_pagar_operacoes_conta_id_fkey"
+            columns: ["conta_id"]
+            isOneToOne: false
+            referencedRelation: "contas_pagar"
             referencedColumns: ["id"]
           },
         ]
@@ -252,141 +406,6 @@ export type Database = {
           },
         ]
       }
-      contas_pagar_estornos: {
-        Row: {
-          conta_id: string
-          created_at: string
-          id: string
-          motivo: string
-          pagamento_id: string
-          user_id: string
-          valor: number
-        }
-        Insert: {
-          conta_id: string
-          created_at?: string
-          id?: string
-          motivo: string
-          pagamento_id: string
-          user_id: string
-          valor: number
-        }
-        Update: {
-          conta_id?: string
-          created_at?: string
-          id?: string
-          motivo?: string
-          pagamento_id?: string
-          user_id?: string
-          valor?: number
-        }
-        Relationships: [
-          {
-            foreignKeyName: "contas_pagar_estornos_pagamento_id_conta_id_user_id_fkey"
-            columns: ["pagamento_id", "conta_id", "user_id"]
-            isOneToOne: false
-            referencedRelation: "contas_pagar_pagamentos"
-            referencedColumns: ["id", "conta_id", "user_id"]
-          },
-          {
-            foreignKeyName: "contas_pagar_estornos_conta_id_user_id_fkey"
-            columns: ["conta_id", "user_id"]
-            isOneToOne: false
-            referencedRelation: "contas_pagar"
-            referencedColumns: ["id", "user_id"]
-          },
-        ]
-      }
-      contas_pagar_operacoes: {
-        Row: {
-          conta_id: string
-          created_at: string
-          operacao_id: string
-          payload_hash: string
-          resultado_id: string
-          tipo_operacao: string
-          user_id: string
-        }
-        Insert: {
-          conta_id: string
-          created_at?: string
-          operacao_id: string
-          payload_hash: string
-          resultado_id: string
-          tipo_operacao: string
-          user_id: string
-        }
-        Update: {
-          conta_id?: string
-          created_at?: string
-          operacao_id?: string
-          payload_hash?: string
-          resultado_id?: string
-          tipo_operacao?: string
-          user_id?: string
-        }
-        Relationships: []
-      }
-      contas_pagar_auditoria: {
-        Row: {
-          conta_id: string
-          created_at: string
-          dados: Json
-          evento: string
-          id: string
-          operacao_id: string
-          user_id: string
-        }
-        Insert: {
-          conta_id: string
-          created_at?: string
-          dados?: Json
-          evento: string
-          id?: string
-          operacao_id: string
-          user_id: string
-        }
-        Update: {
-          conta_id?: string
-          created_at?: string
-          dados?: Json
-          evento?: string
-          id?: string
-          operacao_id?: string
-          user_id?: string
-        }
-        Relationships: []
-      }
-      configuracoes: {
-        Row: {
-          imposto_pct: number
-          taxa_credito: number
-          taxa_debito: number
-          taxa_dinheiro: number
-          taxa_outros: number
-          taxa_pix: number
-          user_id: string
-        }
-        Insert: {
-          imposto_pct?: number
-          taxa_credito?: number
-          taxa_debito?: number
-          taxa_dinheiro?: number
-          taxa_outros?: number
-          taxa_pix?: number
-          user_id?: string
-        }
-        Update: {
-          imposto_pct?: number
-          taxa_credito?: number
-          taxa_debito?: number
-          taxa_dinheiro?: number
-          taxa_outros?: number
-          taxa_pix?: number
-          user_id?: string
-        }
-        Relationships: []
-      }
       despesas: {
         Row: {
           categoria: string
@@ -416,6 +435,93 @@ export type Database = {
           valor?: number
         }
         Relationships: []
+      }
+      estoque_eventos: {
+        Row: {
+          compra_id: string | null
+          created_at: string
+          evento_id: string
+          id: string
+          tipo: string
+          user_id: string
+        }
+        Insert: {
+          compra_id?: string | null
+          created_at?: string
+          evento_id: string
+          id?: string
+          tipo: string
+          user_id: string
+        }
+        Update: {
+          compra_id?: string | null
+          created_at?: string
+          evento_id?: string
+          id?: string
+          tipo?: string
+          user_id?: string
+        }
+        Relationships: []
+      }
+      estoque_movimentos: {
+        Row: {
+          created_at: string
+          evento_id: string
+          id: string
+          insumo_id: string
+          observacao: string | null
+          origem_id: string | null
+          origem_tipo: string
+          quantidade_delta_base: number
+          reverte_movimento_id: string | null
+          tipo_movimento: string
+          unidade_base: string
+          user_id: string
+        }
+        Insert: {
+          created_at?: string
+          evento_id: string
+          id?: string
+          insumo_id: string
+          observacao?: string | null
+          origem_id?: string | null
+          origem_tipo: string
+          quantidade_delta_base: number
+          reverte_movimento_id?: string | null
+          tipo_movimento: string
+          unidade_base: string
+          user_id?: string
+        }
+        Update: {
+          created_at?: string
+          evento_id?: string
+          id?: string
+          insumo_id?: string
+          observacao?: string | null
+          origem_id?: string | null
+          origem_tipo?: string
+          quantidade_delta_base?: number
+          reverte_movimento_id?: string | null
+          tipo_movimento?: string
+          unidade_base?: string
+          user_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "estoque_movimentos_insumo_id_fkey"
+            columns: ["insumo_id"]
+            isOneToOne: false
+            referencedRelation: "insumos"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "estoque_movimentos_reverte_movimento_id_fkey"
+            columns: ["reverte_movimento_id"]
+            isOneToOne: false
+            referencedRelation: "estoque_movimentos"
+            referencedColumns: ["id"]
+          },
+        ]
       }
       insumos: {
         Row: {
@@ -525,6 +631,47 @@ export type Database = {
           },
         ]
       }
+      pedido_pagamentos: {
+        Row: {
+          created_at: string
+          data_pagamento: string
+          forma_pagamento: string
+          id: string
+          observacoes: string | null
+          pedido_id: string
+          user_id: string
+          valor: number
+        }
+        Insert: {
+          created_at?: string
+          data_pagamento?: string
+          forma_pagamento: string
+          id?: string
+          observacoes?: string | null
+          pedido_id: string
+          user_id?: string
+          valor: number
+        }
+        Update: {
+          created_at?: string
+          data_pagamento?: string
+          forma_pagamento?: string
+          id?: string
+          observacoes?: string | null
+          pedido_id?: string
+          user_id?: string
+          valor?: number
+        }
+        Relationships: [
+          {
+            foreignKeyName: "pedido_pagamentos_pedido_id_fkey"
+            columns: ["pedido_id"]
+            isOneToOne: false
+            referencedRelation: "pedidos"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       pedidos: {
         Row: {
           cliente_id: string | null
@@ -584,46 +731,35 @@ export type Database = {
           },
         ]
       }
-      pedido_pagamentos: {
+      producao_eventos: {
         Row: {
           created_at: string
-          data_pagamento: string
-          forma_pagamento: string
+          evento_id: string
           id: string
-          observacoes: string | null
-          pedido_id: string
+          pedido_item_id: string
+          quantidade_resultado: number
+          quantidade_resultante: number
           user_id: string
-          valor: number
         }
         Insert: {
           created_at?: string
-          data_pagamento?: string
-          forma_pagamento: string
+          evento_id: string
           id?: string
-          observacoes?: string | null
-          pedido_id: string
-          user_id?: string
-          valor: number
+          pedido_item_id: string
+          quantidade_resultado: number
+          quantidade_resultante: number
+          user_id: string
         }
         Update: {
           created_at?: string
-          data_pagamento?: string
-          forma_pagamento?: string
+          evento_id?: string
           id?: string
-          observacoes?: string | null
-          pedido_id?: string
+          pedido_item_id?: string
+          quantidade_resultado?: number
+          quantidade_resultante?: number
           user_id?: string
-          valor?: number
         }
-        Relationships: [
-          {
-            foreignKeyName: "pedido_pagamentos_pedido_id_fkey"
-            columns: ["pedido_id"]
-            isOneToOne: false
-            referencedRelation: "pedidos"
-            referencedColumns: ["id"]
-          },
-        ]
+        Relationships: []
       }
       produtos: {
         Row: {
@@ -726,16 +862,29 @@ export type Database = {
       [_ in never]: never
     }
     Functions: {
+      _conta_pagar_operacao_existente: {
+        Args: {
+          p_hash: string
+          p_operacao_id: string
+          p_tipo: string
+          p_user_id: string
+        }
+        Returns: string
+      }
+      _recalcular_resumo_conta_pagar: {
+        Args: { p_conta_id: string; p_user_id: string }
+        Returns: undefined
+      }
       ajustar_producao: {
-        Args: { pedido_item_id: string; quantidade_resultado: number; evento_id: string }
+        Args: {
+          evento_id: string
+          pedido_item_id: string
+          quantidade_resultado: number
+        }
         Returns: number
       }
       cancelar_compra: {
-        Args: { registro_id: string; evento_id: string }
-        Returns: boolean
-      }
-      excluir_compra: {
-        Args: { registro_id: string; evento_id: string }
+        Args: { evento_id: string; registro_id: string }
         Returns: boolean
       }
       cancelar_conta_pagar: {
@@ -743,46 +892,74 @@ export type Database = {
         Returns: string
       }
       estornar_pagamento_conta_pagar: {
-        Args: { p_pagamento_id: string; p_valor: number; p_motivo: string; p_operacao_id: string }
+        Args: {
+          p_motivo: string
+          p_operacao_id: string
+          p_pagamento_id: string
+          p_valor: number
+        }
         Returns: string
+      }
+      excluir_compra: {
+        Args: { evento_id: string; registro_id: string }
+        Returns: boolean
+      }
+      medida_base: { Args: { u: string }; Returns: string }
+      medida_fator: { Args: { u: string }; Returns: number }
+      registrar_local_compra: {
+        Args: { local_compra: string; registro_id: string }
+        Returns: undefined
+      }
+      registrar_pagamento_compra: {
+        Args: {
+          p_compra_id: string
+          p_forma_pagamento: string
+          p_numero_parcelas?: number
+          p_primeiro_vencimento?: string
+        }
+        Returns: boolean
       }
       registrar_pagamento_conta_pagar: {
         Args: {
           p_conta_id: string
-          p_valor: number
           p_data_pagamento: string
           p_forma_pagamento: string
-          p_observacoes: string | null
+          p_observacoes: string
           p_operacao_id: string
+          p_valor: number
         }
-        Returns: string
-      }
-      salvar_conta_pagar: {
-        Args: { p_dados: Json; p_conta_id?: string | null; p_operacao_id?: string | null }
-        Returns: string
-      }
-      medida_base: { Args: { u: string }; Returns: string }
-      medida_fator: { Args: { u: string }; Returns: number }
-      recalcular_custos_historicos: { Args: Record<PropertyKey, never>; Returns: number }
-      registrar_inventario_fisico: { Args: { itens: Json; evento_id: string }; Returns: boolean }
-      registrar_local_compra: { Args: { registro_id: string; local_compra: string | null }; Returns: undefined }
-      registrar_pagamento_compra: { Args: { p_compra_id: string; p_forma_pagamento: string; p_numero_parcelas?: number; p_primeiro_vencimento?: string }; Returns: boolean }
-      saldo_estoque: {
-        Args: Record<PropertyKey, never>
-        Returns: { insumo_id: string; nome: string; unidade_base: string | null; saldo: number }[]
-      }
-      salvar_compra: {
-        Args: { payload: Json; itens: Json; registro_id?: string | null; evento_id?: string | null }
         Returns: string
       }
       registrar_recebimento_pedido: {
         Args: {
-          p_pedido_id: string
-          p_valor: number
           p_data_pagamento: string
           p_forma_pagamento: string
-          p_observacoes?: string | null
+          p_observacoes?: string
+          p_pedido_id: string
+          p_valor: number
         }
+        Returns: string
+      }
+      saldo_estoque: {
+        Args: never
+        Returns: {
+          insumo_id: string
+          nome: string
+          saldo: number
+          unidade_base: string
+        }[]
+      }
+      salvar_compra: {
+        Args: {
+          evento_id?: string
+          itens: Json
+          payload: Json
+          registro_id?: string
+        }
+        Returns: string
+      }
+      salvar_conta_pagar: {
+        Args: { p_conta_id?: string; p_dados: Json; p_operacao_id?: string }
         Returns: string
       }
       salvar_pedido: {
