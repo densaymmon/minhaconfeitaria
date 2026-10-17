@@ -13,7 +13,7 @@ import { cn } from "@/lib/utils";
 const STATUS_ATIVOS = ["recebido", "confirmado", "em_producao", "pronto"];
 
 export const Route = createFileRoute("/_authenticated/pedidos/")({
- validateSearch: (search: Record<string, unknown>) => ({
+ validateSearch: (search: Record<string, unknown>): { filtro?: string; dataInicial?: string; dataFinal?: string; dataReferencia?: "recebimento" } => ({
    filtro: typeof search["filtro"] === "string" ? search["filtro"] : undefined,
    dataInicial: typeof search["dataInicial"] === "string" ? search["dataInicial"] : undefined,
    dataFinal: typeof search["dataFinal"] === "string" ? search["dataFinal"] : undefined,
