@@ -16,7 +16,7 @@ import { readPurchaseDocumentLocally } from "@/lib/purchase-document-ocr";
 
 export const Route = createFileRoute("/_authenticated/compras")({
   validateSearch: (search: Record<string, unknown>) => ({
-    secao: search["secao"] === "integracao" || search["secao"] === "estoque" ? search["secao"] : "compras",
+    secao: search["secao"] === "integracao" || search["secao"] === "estoque" || search["secao"] === "gastos" ? search["secao"] : "compras",
   }),
   loader: async ({ context }) => {
     await Promise.all([
