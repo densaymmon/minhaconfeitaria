@@ -203,27 +203,31 @@ function Relatorios() {
           : b.total - a.total);
   }, [comprasFiltradasForma, ordenacaoCompras]);
   const parcelasComprasNoPeriodo = useMemo(() => {
-    // Primeiro usa as parcelas reais. Compras antigas no crédito podem não ter
-    // contas_pagar vinculadas; nesses casos, monta uma visualização de contingência
-    // a partir dos dados da compra, sem gravar nem duplicar lançamentos financeiros.
+    // "Parcelas a pagar" lista compromissos ainda abertos, inclusive vencimentos futuros.
+    // O filtro geral do relatório limita a data final a hoje; por isso não pode limitar
+    // esta visão, que precisa mostrar também parcelas futuras de compras no crédito.
     const contasReais = contasPagar.filter((conta) => {
       if (conta.cancelada_em || conta.status === "cancelado" || !conta.compra_id) return false;
       const compra = comprasPorId.get(conta.compra_id);
       if (!compra || compra.cancelada_em || compra.forma_pagamento_compra !== "credito") return false;
-      if (conta.data_vencimento < inicio || conta.data_vencimento > fim) return false;
       if (Math.max(0, Number(conta.valor) - Number(conta.valor_pago)) <= 0.009) return false;
       return filtroFormaCompra === "todas" || compra.forma_pagamento_compra === filtroFormaCompra;
     });
-    const comprasSemParcelasRegistradas = compras.filter((compra) => {
+
+    const comprasSemParcelasAtivas = compras.filter((compra) => {
       if (compra.cancelada_em || compra.forma_pagamento_compra !== "credito") return false;
-      if (compra.data_compra > fim && (compra.primeiro_vencimento ?? compra.data_compra) > fim) return false;
       if (filtroFormaCompra !== "todas" && compra.forma_pagamento_compra !== filtroFormaCompra) return false;
-      // Não reconstruir uma compra que já tenha qualquer conta vinculada, inclusive cancelada.
-      return !contasPagar.some((conta) => conta.compra_id === compra.id);
+      // Se já existe uma conta não cancelada, usa somente os lançamentos reais.
+      // Se só restaram contas canceladas, recupera a visualização sem gravar no banco.
+      return !contasPagar.some((conta) =>
+        conta.compra_id === compra.id && !conta.cancelada_em && conta.status !== "cancelado"
+      );
     });
-    const parcelasLegadas = comprasSemParcelasRegistradas.flatMap((compra) => {
+
+    const parcelasLegadas = comprasSemParcelasAtivas.flatMap((compra) => {
       const quantidade = Math.min(24, Math.max(1, Math.trunc(Number(compra.numero_parcelas) || 1)));
       const totalCentavos = Math.max(0, Math.round(Number(compra.total || 0) * 100));
+      if (totalCentavos <= 0) return [];
       const baseCentavos = Math.floor(totalCentavos / quantidade);
       const primeiroVencimento = compra.primeiro_vencimento || compra.data_compra;
       return Array.from({ length: quantidade }, (_, index) => {
@@ -246,14 +250,15 @@ function Relatorios() {
           compra_parcelas_total: quantidade,
           gerada_automaticamente: true,
         };
-      }).filter((parcela) => parcela.data_vencimento >= inicio && parcela.data_vencimento <= fim);
+      });
     });
+
     return [...contasReais, ...parcelasLegadas].sort((a, b) => ordenacaoCompras === "recente"
       ? b.data_vencimento.localeCompare(a.data_vencimento)
       : ordenacaoCompras === "quantidade"
         ? (Number(b.valor) || 0) - (Number(a.valor) || 0)
         : (Math.max(0, Number(b.valor) - Number(b.valor_pago))) - (Math.max(0, Number(a.valor) - Number(a.valor_pago))));
-  }, [contasPagar, compras, comprasPorId, inicio, fim, filtroFormaCompra, ordenacaoCompras]);
+  }, [contasPagar, compras, comprasPorId, filtroFormaCompra, ordenacaoCompras]);
   const parcelasFuturasPorMes = useMemo(() => {
     const hoje = hojeISO();
     const abertas = contasPagar.filter((conta) => {
