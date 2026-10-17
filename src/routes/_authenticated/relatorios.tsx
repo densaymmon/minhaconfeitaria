@@ -317,14 +317,6 @@ function Relatorios() {
   const totalEntradasCaixa = totalRecebidoNoPeriodo + totalEstornosContas;
   const totalSaidasCaixa = totalDespesasCaixa + totalComprasAvista + totalPagamentosContas;
   const saldoMovimentoCaixa = totalEntradasCaixa - totalSaidasCaixa;
-  const comprasPorForma = useMemo(() => {
-    const totais = new Map<string, number>();
-    for (const compra of comprasNoPeriodo) {
-      const forma = compra.forma_pagamento_compra || "não informado";
-      totais.set(forma, (totais.get(forma) ?? 0) + Math.max(0, Number(compra.total) || 0));
-    }
-    return [...totais.entries()].sort((a, b) => b[1] - a[1]);
-  }, [comprasNoPeriodo]);
   const categoriasDespesasDisponiveis = useMemo(() => [...new Set(despesas.filter((d) => !intervaloValido || (d.data >= inicio && d.data <= fim)).map((d) => d.categoria?.trim() || "Sem categoria"))].sort((a, b) => a.localeCompare(b, "pt-BR")), [despesas, inicio, fim, intervaloValido]);
   const despesasPorCategoria = useMemo(() => {
     const totais = new Map<string, number>();
@@ -774,10 +766,6 @@ function Relatorios() {
               ))}
             </div>
           )}
-          <details className="mt-3 rounded-xl border px-3">
-            <summary className="cursor-pointer py-3 text-sm font-medium">Gastos por forma de pagamento ({comprasPorForma.length})</summary>
-            {!comprasPorForma.length ? <p className="pb-3 text-sm text-muted-foreground">Nenhuma compra registrada no período.</p> : <div className="divide-y">{comprasPorForma.map(([forma, valor]) => <Row key={forma} label={forma.replaceAll("_", " ")} value={brl(valor)} />)}</div>}
-          </details>
         </>}
         {visaoCompras === "compra" && <>
           {!comprasFiltradasForma.length ? <Empty>Nenhuma compra encontrada para os filtros selecionados.</Empty> : <div className="divide-y">
@@ -811,7 +799,6 @@ function Relatorios() {
             })}
           </div>}
         </>}
-        <p className="mt-3 text-xs text-muted-foreground">O total comprado usa o valor registrado nas compras; o gasto por insumo usa os valores dos itens. Parcelas e pagamentos são uma visão financeira separada e não são adicionados novamente ao total das compras.</p>
       </section>}
 
       {categoriaRelatorio === "contas" && <section className="mb-6 rounded-xl border p-4">
