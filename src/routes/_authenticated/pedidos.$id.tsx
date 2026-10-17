@@ -80,7 +80,7 @@ function PedidoForm() {
   );
   const [salvando, setSalvando] = useState(false);
   const [pagamentos, setPagamentos] = useState<PedidoPagamento[]>([]);
-  const [novoRecebimento, setNovoRecebimento] = useState({ valor: "", data_pagamento: hojeISO(), forma_pagamento: "pix", observacoes: "" });
+  const [dataPagamento, setDataPagamento] = useState(hojeISO());
   const [salvandoRecebimento, setSalvandoRecebimento] = useState(false);
   const [clienteDialogOpen, setClienteDialogOpen] = useState(false);
   const [salvandoCliente, setSalvandoCliente] = useState(false);
@@ -90,7 +90,7 @@ function PedidoForm() {
     let ativo = true;
     void supabase.from("pedido_pagamentos").select("*").eq("pedido_id", existente.id).order("data_pagamento", { ascending: false }).then(({ data, error }) => {
       if (!ativo) return;
-      if (error) { toast.error("Não foi possível carregar o histórico de recebimentos."); return; }
+      if (error) { toast.error("Não foi possível carregar os pagamentos registrados."); return; }
       setPagamentos((data ?? []) as PedidoPagamento[]);
     });
     return () => { ativo = false; };
@@ -98,31 +98,39 @@ function PedidoForm() {
 
   async function registrarRecebimento() {
     if (!existente || salvandoRecebimento) return;
-    const valor = Math.round(parseNum(novoRecebimento.valor) * 100) / 100;
-    if (!(valor > 0)) { toast.error("Informe um valor maior que zero."); return; }
+    const valorTotalDesejado = Math.round(parseNum(f.valor_entrada) * 100) / 100;
+    const totalPagamentosRegistrados = pagamentos.reduce((total, pagamento) => total + Number(pagamento.valor ?? 0), 0);
+    const valorAtual = Math.round((existente.saldo_quitado ? t.venda : Math.min(Math.max(0, Math.max(Number(existente.valor_entrada ?? 0), totalPagamentosRegistrados)), t.venda)) * 100) / 100;
+    const valor = Math.round((valorTotalDesejado - valorAtual) * 100) / 100;
+    if (!(valor > 0)) {
+      toast.error("Informe um total pago maior que o valor já registrado.");
+      return;
+    }
+    if (valorTotalDesejado > t.venda + 0.009) {
+      toast.error("O valor pago não pode ser maior que o total do pedido.");
+      return;
+    }
     setSalvandoRecebimento(true);
     try {
       const { error } = await supabase.rpc("registrar_recebimento_pedido", {
         p_pedido_id: existente.id,
         p_valor: valor,
-        p_data_pagamento: novoRecebimento.data_pagamento,
-        p_forma_pagamento: novoRecebimento.forma_pagamento,
-        p_observacoes: novoRecebimento.observacoes.trim() || null,
+        p_data_pagamento: dataPagamento,
+        p_forma_pagamento: f.forma_pagamento,
+        p_observacoes: null,
       });
       if (error) throw new Error(error.message);
       const { data, error: loadError } = await supabase.from("pedido_pagamentos").select("*").eq("pedido_id", existente.id).order("data_pagamento", { ascending: false });
       if (loadError) throw new Error(loadError.message);
       setPagamentos((data ?? []) as PedidoPagamento[]);
-      setNovoRecebimento({ valor: "", data_pagamento: hojeISO(), forma_pagamento: "pix", observacoes: "" });
-      const novoTotalPago = Math.min(t.venda, valorPagoEfetivo + valor);
-      setF((atual) => ({ ...atual, valor_entrada: String(novoTotalPago), saldo_quitado: novoTotalPago >= t.venda }));
+      setF((atual) => ({ ...atual, valor_entrada: String(valorTotalDesejado), saldo_quitado: valorTotalDesejado >= t.venda }));
       await Promise.all([
         qc.invalidateQueries({ queryKey: ["pedidos"] }),
         qc.invalidateQueries({ queryKey: ["pedido-pagamentos"] }),
       ]);
-      toast.success("Recebimento registrado.");
+      toast.success("Pagamento registrado.");
     } catch (e) {
-      toast.error(e instanceof Error ? e.message : "Não foi possível registrar o recebimento.");
+      toast.error(e instanceof Error ? e.message : "Não foi possível registrar o pagamento.");
     } finally { setSalvandoRecebimento(false); }
   }
 
@@ -286,7 +294,7 @@ function PedidoForm() {
         const { error: recebimentoError } = await supabase.rpc("registrar_recebimento_pedido", {
           p_pedido_id: pedidoSalvoId,
           p_valor: Math.round(parseNum(f.valor_entrada) * 100) / 100,
-          p_data_pagamento: hojeISO(),
+          p_data_pagamento: dataPagamento,
           p_forma_pagamento: f.forma_pagamento,
           p_observacoes: "Entrada registrada na criação do pedido",
         });
@@ -526,7 +534,7 @@ function PedidoForm() {
               </div>
 
               <div className="grid grid-cols-1 gap-3 sm:grid-cols-2">
-                <Field label="Forma de pagamento principal">
+                <Field label="Forma de pagamento">
                   <NativeSelect value={f.forma_pagamento} onChange={(e) => set("forma_pagamento", e.target.value)}>
                     {FORMAS.map((forma) => (
                       <option key={forma.value} value={forma.value}>{forma.label}</option>
@@ -534,13 +542,16 @@ function PedidoForm() {
                   </NativeSelect>
                 </Field>
                 <Field label="Valor já pago (R$)">
-                  <Input inputMode="decimal" value={f.valor_entrada} disabled={pagamentos.length > 0} onFocus={() => limparZeroAoFocar(f.valor_entrada, setValorPago)} onChange={(e) => setValorPago(e.target.value)} className="h-11" />
+                  <Input inputMode="decimal" value={f.valor_entrada} onFocus={() => limparZeroAoFocar(f.valor_entrada, setValorPago)} onChange={(e) => setValorPago(e.target.value)} className="h-11" />
                 </Field>
                 <Field label="Frete (R$)">
                   <Input inputMode="decimal" value={f.taxa_entrega} onFocus={() => limparZeroAoFocar(f.taxa_entrega, (valor) => set("taxa_entrega", valor))} onChange={(e) => set("taxa_entrega", e.target.value)} className="h-11" />
                 </Field>
                 <Field label="Desconto (R$)">
                   <Input inputMode="decimal" value={f.desconto} onFocus={() => limparZeroAoFocar(f.desconto, (valor) => set("desconto", valor))} onChange={(e) => set("desconto", e.target.value)} className="h-11" />
+                </Field>
+                <Field label="Data de pagamento">
+                  <Input type="date" value={dataPagamento} max={hojeISO()} onChange={(e) => setDataPagamento(e.target.value)} className="h-11" />
                 </Field>
               </div>
 
@@ -567,28 +578,10 @@ function PedidoForm() {
                 <Row label="Total final" value={brl(t.venda)} strong />
               </div>
 
-              {existente?.status !== "cancelado" && saldoPendente > 0.009 && (
-                <div className="space-y-3 pt-1">
-                  <div className="grid grid-cols-1 gap-3 sm:grid-cols-2">
-                    <Field label="Valor recebido (R$)">
-                      <Input inputMode="decimal" value={novoRecebimento.valor} onChange={(e) => setNovoRecebimento((s) => ({ ...s, valor: e.target.value }))} placeholder="0,00" className="h-11" />
-                    </Field>
-                    <Field label="Data de pagamento">
-                      <Input type="date" value={novoRecebimento.data_pagamento} max={hojeISO()} onChange={(e) => setNovoRecebimento((s) => ({ ...s, data_pagamento: e.target.value }))} className="h-11" />
-                    </Field>
-                  </div>
-                  <Field label="Forma de pagamento deste recebimento">
-                    <NativeSelect value={novoRecebimento.forma_pagamento} onChange={(e) => setNovoRecebimento((s) => ({ ...s, forma_pagamento: e.target.value }))}>
-                      {FORMAS.map((forma) => <option key={forma.value} value={forma.value}>{forma.label}</option>)}
-                    </NativeSelect>
-                  </Field>
-                  <Field label="Observação (opcional)">
-                    <Input value={novoRecebimento.observacoes} onChange={(e) => setNovoRecebimento((s) => ({ ...s, observacoes: e.target.value }))} placeholder="Ex.: sinal, parcela final..." className="h-11" />
-                  </Field>
-                  <Button type="button" className="h-11 w-full" disabled={salvandoRecebimento} onClick={() => void registrarRecebimento()}>
-                    {salvandoRecebimento ? "Confirmando..." : "Confirmar pagamento"}
-                  </Button>
-                </div>
+              {existente?.status !== "cancelado" && t.venda > 0 && (valorPagoEfetivo < t.venda - 0.009 || Number(existente?.valor_entrada ?? 0) < t.venda - 0.009) && (
+                <Button type="button" className="h-11 w-full" disabled={salvandoRecebimento} onClick={() => void registrarRecebimento()}>
+                  {salvandoRecebimento ? "Confirmando..." : "Confirmar pagamento"}
+                </Button>
               )}
 
             </Card>
