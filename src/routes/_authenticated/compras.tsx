@@ -13,7 +13,7 @@ import { Button } from "@/components/ui/button";
 
 export const Route = createFileRoute("/_authenticated/compras")({
   validateSearch: (search: Record<string, unknown>) => ({
-    secao: search.secao === "integracao" || search.secao === "estoque" ? search.secao : "compras",
+    secao: search["secao"] === "integracao" || search["secao"] === "estoque" ? search["secao"] : "compras",
   }),
   loader: async ({ context }) => {
     await Promise.all([
