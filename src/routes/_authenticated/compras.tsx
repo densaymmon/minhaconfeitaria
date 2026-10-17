@@ -12,6 +12,9 @@ import { Input } from "@/components/ui/input";
 import { Button } from "@/components/ui/button";
 
 export const Route = createFileRoute("/_authenticated/compras")({
+  validateSearch: (search: Record<string, unknown>) => ({
+    secao: search.secao === "integracao" || search.secao === "estoque" ? search.secao : "compras",
+  }),
   loader: async ({ context }) => {
     await Promise.all([
       context.queryClient.ensureQueryData(appQueries.insumosQ),
@@ -121,6 +124,7 @@ function valorExistenteEmCentavos(valor: string): string {
 }
 
 function Compras() {
+  const { secao } = Route.useSearch();
   const { data: insumos } = useSuspenseQuery(appQueries.insumosQ);
   const { data: compras } = useSuspenseQuery(appQueries.comprasQ);
   const { data: itens } = useSuspenseQuery(appQueries.compraItensQ);
@@ -544,9 +548,9 @@ function Compras() {
 
   return (
     <>
-      <PageHeader title="Compras de insumos" back="/mais" />
+      <PageHeader title={secao === "integracao" ? "Conferência de integração" : secao === "estoque" ? "Controle de estoque" : "Compras de insumos"} back="/mais" />
 
-      <section className="mb-8 rounded-xl border p-4">
+      {secao === "integracao" && <section className="mb-8 rounded-xl border p-4">
         <div className="mb-2 flex items-center justify-between gap-3">
           <h2 className="text-lg font-semibold">Conferência de integração</h2>
           <span className={auditoriaIntegracao.problemas.length || estoqueNegativo.length ? "rounded-full bg-destructive/10 px-2 py-1 text-xs font-semibold text-destructive" : "rounded-full bg-muted px-2 py-1 text-xs font-semibold"}>
@@ -601,8 +605,9 @@ function Compras() {
         <p className="mt-3 text-xs text-muted-foreground">
           Compras anteriores a 15/10/2026 sem vínculo automático ficam sinalizadas como conferência parcial. A tela não altera estoque, compras ou financeiro automaticamente e não substitui a conferência dos extratos.
         </p>
-      </section>
+      </section>}
 
+      {secao === "estoque" && <>
       <section className="mb-8">
         <h2 className="mb-2 text-lg font-semibold">Estoque atual</h2>
         <p className="mb-3 text-sm text-muted-foreground">
@@ -672,7 +677,9 @@ function Compras() {
           </Button>
         </form>
       </section>
+      </>}
 
+      {secao === "compras" && <>
       <form ref={formularioCompraRef} onSubmit={salvar} className="mb-8 scroll-mt-4 space-y-4">
         <h2 className="text-lg font-semibold">{editandoCompraId ? "Editar compra" : "Registrar compra"}</h2>
         <Field label="Data da compra">
@@ -843,6 +850,7 @@ function Compras() {
           </div>
         )}
       </section>
+      </>}
     </>
   );
 }
