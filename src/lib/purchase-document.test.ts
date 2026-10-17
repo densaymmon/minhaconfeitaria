@@ -50,7 +50,7 @@ describe("documentos de compra", () => {
   });
 
   it("extrai fornecedor, total e linhas de produto do texto de uma DANFE", () => {
-    const doc = parseOcrText([
+    const doc = normalizeInvoice(parseOcrText([
       "TENDA ATACADO SA DANFE",
       "HORTOLANDIA - SP",
       "DATA DA EMISSÃO 15.10.2026",
@@ -63,9 +63,9 @@ describe("documentos de compra", () => {
     expect(doc.data).toBe("2026-10-15");
     expect(doc.total).toBe(487.29);
     expect(doc.linhas).toHaveLength(2);
-    expect(doc.linhas[0]?.descricao).toContain("ACUCAR REF SELECT 1KG");
+    expect(doc.linhas[0]?.nome).toContain("ACUCAR REF SELECT 1KG");
     expect(doc.linhas[0]?.quantidade).toBe(5);
-    expect(doc.linhas[0]?.precoUnitario).toBe(2.79);
+    expect(doc.linhas[0]?.unitario).toBe(2.79);
     expect(doc.linhas[0]?.total).toBe(13.95);
     expect(doc.linhas[1]?.total).toBe(58.68);
   });
