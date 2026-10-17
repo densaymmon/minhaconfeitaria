@@ -295,6 +295,14 @@ function Relatorios() {
   const pedidosEmAberto = pedidosCalculados.filter((p) => p.status !== "cancelado");
   const saldoTotalAReceber = pedidosEmAberto.reduce((s, p) => s + Math.max(0, Number(p.t.saldo) || 0), 0);
   const pedidosComSaldo = pedidosEmAberto.filter((p) => Number(p.t.saldo) > 0).length;
+  // Pedidos futuros são identificados pela data de entrega, sem depender do filtro do relatório.
+  const pedidosFuturosComSaldo = pedidosEmAberto.filter(
+    (p) => p.data_entrega > hojeISO() && Number(p.t.saldo) > 0,
+  );
+  const saldoPedidosFuturosAReceber = pedidosFuturosComSaldo.reduce(
+    (s, p) => s + Math.max(0, Number(p.t.saldo) || 0),
+    0,
+  );
   const saldoAReceberNoPeriodo = lista.reduce((soma, pedido) => soma + Math.max(0, Number(pedido.t.saldo) || 0), 0);
 
   const contratado = lista.reduce((s, p) => ({
@@ -361,6 +369,7 @@ function Relatorios() {
         ["Vendas totais", contratado.venda],
         ["Compra de insumos", totalComprasInsumos],
         ["Contas a pagar", saldoContasAbertas],
+        ["A receber de pedidos futuros", saldoPedidosFuturosAReceber],
         ["Lucro total estimado", lucroTotalPeriodo],
       ]);
       return;
@@ -459,6 +468,14 @@ function Relatorios() {
         <Stat label="Contas a pagar" value={brl(saldoContasAbertas)} tone={saldoContasAbertas > 0 ? "danger" : "default"} />
         <Stat label="Lucro total estimado" value={brl(lucroTotalPeriodo)} tone={lucroTotalPeriodo >= 0 ? "success" : "danger"} />
       </div>
+      <section className="mb-6 rounded-xl border p-4">
+        <h2 className="mb-1 text-lg font-semibold">Pedidos futuros a receber</h2>
+        <p className="mb-3 text-sm text-muted-foreground">Saldo pendente de pedidos com entrega após hoje, mesmo fora do período selecionado.</p>
+        <div className="grid grid-cols-2 gap-3">
+          <Stat label="Saldo a receber" value={brl(saldoPedidosFuturosAReceber)} tone={saldoPedidosFuturosAReceber > 0 ? "primary" : "default"} />
+          <Stat label="Pedidos com saldo" value={String(pedidosFuturosComSaldo.length)} />
+        </div>
+      </section>
       </>}
       {categoriaRelatorio === "contas" && <section className="mb-6 rounded-xl border p-4">
         <h2 className="mb-1 text-lg font-semibold">Saúde financeira atual</h2>
