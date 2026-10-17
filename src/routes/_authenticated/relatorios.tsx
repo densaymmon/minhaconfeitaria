@@ -160,7 +160,7 @@ function Relatorios() {
   const clientesDisponiveis = [...new Map(listaPeriodo.map((p) => [
     p.cliente_id ?? "sem-cliente",
     { id: p.cliente_id ?? "sem-cliente", nome: p.clientes?.nome ?? "Sem cliente" },
-  ])).values()].sort((a, b) => a.nome.localeCompare(b.nome, "pt-BR"));
+  ] as const)).values()].sort((a, b) => a.nome.localeCompare(b.nome, "pt-BR"));
   const lista = listaPeriodo.filter((p) =>
     filtroClienteVendas === "todos" ||
     (p.cliente_id ?? "sem-cliente") === filtroClienteVendas,
