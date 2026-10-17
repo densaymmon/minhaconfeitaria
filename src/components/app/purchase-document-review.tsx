@@ -1,7 +1,7 @@
 import { Input } from "@/components/ui/input";
 import { Button } from "@/components/ui/button";
 import { Field } from "./ui";
-import { Trash2 } from "lucide-react";
+import { Plus, Trash2 } from "lucide-react";
 import { brl } from "@/lib/format";
 import { numeroIngrediente } from "@/lib/ingredient-cost";
 import { reviewDocument, type DocumentLine, type IngredientMatch, type PurchaseDocument } from "@/lib/purchase-document";
@@ -24,6 +24,7 @@ export function PurchaseDocumentReview({ document, ingredients, change, disabled
     </div>
     {document.chave && <p className="break-all text-xs text-muted-foreground">Chave: {document.chave}</p>}
     {document.duvidas.map((d, i) => <p key={i} role="alert" className="text-sm text-destructive">{d}</p>)}
+    <Button type="button" variant="outline" className="w-full" onClick={() => change({ ...document, linhas: [...document.linhas, { id: `manual-${Date.now()}`, nome: "", codigo: "", quantidade: null, unidade: "", total: null, unitario: null, desconto: null, insumoId: "", ignorar: false, duvidas: [] }] })}><Plus className="size-4" />Adicionar item manualmente</Button>
     {document.linhas.map((line, index) => <div key={line.id} className="space-y-3 rounded-lg border p-3">
       <div className="flex items-center justify-between"><h3 className="font-medium">Item {index + 1}</h3><Button type="button" variant="ghost" size="icon" aria-label={line.ignorar ? `Incluir item ${index + 1}` : `Ignorar item ${index + 1}`} onClick={() => lineChange(line.id, { ignorar: !line.ignorar })}><Trash2 className="size-4" /></Button></div>
       {line.ignorar ? <p className="text-sm text-muted-foreground">Item ignorado</p> : <>
