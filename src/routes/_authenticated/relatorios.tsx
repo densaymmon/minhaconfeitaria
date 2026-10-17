@@ -38,12 +38,20 @@ export const Route = createFileRoute("/_authenticated/relatorios")({
     </p>
   ),
   notFoundComponent: () => <p>Registro não encontrado.</p>,
-  validateSearch: (s: Record<string, unknown>) => ({
-    inicio: typeof s["inicio"] === "string" && /^\d{4}-\d{2}-\d{2}$/.test(s["inicio"]) ? s["inicio"] : mesISO() + "-01",
-    fim: typeof s["fim"] === "string" && /^\d{4}-\d{2}-\d{2}$/.test(s["fim"]) ? s["fim"] : format(endOfMonth(new Date()), "yyyy-MM-dd"),
-    secao: ["visao-geral", "vendas", "compras", "contas", "caixa", "despesas"].includes(String(s["secao"])) ? String(s["secao"]) : "visao-geral",
-    dataBase: s["dataBase"] === "criacao" ? "criacao" : "entrega",
-  }),
+  validateSearch: (s: Record<string, unknown>) => {
+    const hoje = hojeISO();
+    const dataValida = (valor: unknown): valor is string =>
+      typeof valor === "string" && /^\\d{4}-\\d{2}-\\d{2}$/.test(valor);
+    const inicioInformado = dataValida(s["inicio"]) ? s["inicio"] : mesISO() + "-01";
+    const fimInformado = dataValida(s["fim"]) ? s["fim"] : hoje;
+    const fim = fimInformado > hoje ? hoje : fimInformado;
+    return {
+      inicio: inicioInformado > fim ? fim : inicioInformado,
+      fim,
+      secao: ["visao-geral", "vendas", "compras", "contas", "caixa", "despesas"].includes(String(s["secao"])) ? String(s["secao"]) : "visao-geral",
+      dataBase: s["dataBase"] === "criacao" ? "criacao" : "entrega",
+    };
+  },
   head: () => ({
     meta: [
       { title: "Relatórios — Doce Gestão" },
@@ -430,10 +438,10 @@ function Relatorios() {
       } />
       <div className="mb-5 grid grid-cols-2 gap-3">
         <Field label="Data inicial">
-          <Input type="date" value={inicio} onChange={(e) => navigate({ search: (s) => ({ ...s, inicio: e.target.value }) })} className="h-11 bg-card" />
+          <Input type="date" value={inicio} max={fim} onChange={(e) => navigate({ search: (s) => ({ ...s, inicio: e.target.value }) })} className="h-11 bg-card" />
         </Field>
         <Field label="Data final">
-          <Input type="date" value={fim} onChange={(e) => navigate({ search: (s) => ({ ...s, fim: e.target.value }) })} className="h-11 bg-card" />
+          <Input type="date" value={fim} min={inicio} max={hojeISO()} onChange={(e) => navigate({ search: (s) => ({ ...s, fim: e.target.value }) })} className="h-11 bg-card" />
         </Field>
       </div>
       {!intervaloValido && <p className="mb-4 text-destructive">A data final deve ser igual ou posterior à data inicial.</p>}
