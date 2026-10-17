@@ -10,6 +10,10 @@ import { medida, medidaLabel, medidasCompativeis, numeroIngrediente } from "@/li
 import { Card, Empty, Field, PageHeader } from "@/components/app/ui";
 import { Input } from "@/components/ui/input";
 import { Button } from "@/components/ui/button";
+import { useServerFn } from "@tanstack/react-start";
+import { extractPurchaseDocument } from "@/lib/purchase-document.functions";
+import { DOCUMENT_ACCEPT, parseInvoiceXml, possibleDuplicate, reviewDocument, validateDocumentFile, type PurchaseDocument } from "@/lib/purchase-document";
+import { PurchaseDocumentReview } from "@/components/app/purchase-document-review";
 
 export const Route = createFileRoute("/_authenticated/compras")({
   validateSearch: (search: Record<string, unknown>) => ({
@@ -124,49 +128,6 @@ function valorExistenteEmCentavos(valor: string): string {
 }
 
 
-type LinhaDocumentoCompra = { id: string; nome: string; codigo: string; quantidade: number; unidade: string; total: number; insumoId: string };
-type DocumentoCompra = { fornecedor: string; data: string; chave: string; total: number; linhas: LinhaDocumentoCompra[] };
-function textoXml(elemento: Element | Document, nome: string): string {
-  return Array.from(elemento.getElementsByTagName("*")).find((item) => item.localName === nome)?.textContent?.trim() ?? "";
-}
-function decimalXml(valor: string): number { const numero = Number(valor.replace(",", ".")); return Number.isFinite(numero) ? numero : 0; }
-function unidadeDocumento(valor: string): string {
-  const u = valor.trim().toLocaleLowerCase("pt-BR");
-  if (["kg", "quilo", "quilos"].includes(u)) return "kg";
-  if (["g", "gr", "grama", "gramas"].includes(u)) return "g";
-  if (["l", "lt", "litro", "litros"].includes(u)) return "L";
-  if (["ml", "mililitro", "mililitros"].includes(u)) return "ml";
-  if (["un", "und", "unid", "unidade", "unidades", "pc", "peça", "peca"].includes(u)) return "un";
-  return "";
-}
-function dataDocumento(valor: string): string {
-  const data = valor.slice(0, 10);
-  return /^\d{4}-\d{2}-\d{2}$/.test(data) ? data : hojeISO();
-}
-function interpretarXmlNfe(xml: string, insumosAtuais: { id: string; nome: string; unidade?: string | null; unidade_embalagem?: string | null }[]): DocumentoCompra {
-  const doc = new DOMParser().parseFromString(xml, "application/xml");
-  if (doc.getElementsByTagName("parsererror").length) throw new Error("O XML não é válido. Confira se selecionou o XML da nota fiscal.");
-  const raiz = doc.documentElement;
-  const detalhes = Array.from(raiz.getElementsByTagName("*")).filter((el) => el.localName === "det");
-  if (!detalhes.length) throw new Error("Não encontrei produtos nesse XML. Envie o XML completo da NF-e ou NFC-e.");
-  const normalizar = (s: string) => s.normalize("NFD").replace(/[\u0300-\u036f]/g, "").trim().toLocaleLowerCase("pt-BR").replace(/\s+/g, " ");
-  const linhas = detalhes.map((detalhe, i) => {
-    const produto = Array.from(detalhe.getElementsByTagName("*")).find((el) => el.localName === "prod");
-    if (!produto) return null;
-    const nome = textoXml(produto, "xProd");
-    const quantidade = decimalXml(textoXml(produto, "qCom"));
-    const unidade = unidadeDocumento(textoXml(produto, "uCom"));
-    const total = decimalXml(textoXml(produto, "vProd")) || quantidade * decimalXml(textoXml(produto, "vUnCom"));
-    if (!nome || quantidade <= 0 || total < 0) return null;
-    const existente = unidade ? insumosAtuais.find((item) => normalizar(item.nome) === normalizar(nome) && medidasCompativeis(item.unidade_embalagem ?? item.unidade ?? "un").includes(unidade)) : undefined;
-    return { id: `linha-${i}-${textoXml(produto, "cProd")}`, nome, codigo: textoXml(produto, "cProd"), quantidade, unidade, total, insumoId: existente?.id ?? "" };
-  }).filter((item): item is NonNullable<typeof item> => Boolean(item));
-  if (!linhas.length) throw new Error("A nota não contém itens com quantidade e valor reconhecíveis.");
-  const emissao = textoXml(raiz, "dhEmi") || textoXml(raiz, "dEmi");
-  const inf = Array.from(raiz.getElementsByTagName("*")).find((el) => el.localName === "infNFe");
-  return { fornecedor: textoXml(raiz, "xNome"), data: dataDocumento(emissao), chave: (inf?.getAttribute("Id") ?? "").replace(/^NFe/, ""), total: decimalXml(textoXml(raiz, "vNF")), linhas };
-}
-
 function Compras() {
   const { secao } = Route.useSearch();
   const { data: insumos } = useSuspenseQuery(appQueries.insumosQ);
@@ -203,11 +164,15 @@ function Compras() {
       formularioCompraRef.current?.scrollIntoView({ behavior: "smooth", block: "start" });
     }
   }, [editandoCompraId]);
-  const [documentoCompra, setDocumentoCompra] = useState<DocumentoCompra | null>(null);
+  const [documentoCompra, setDocumentoCompra] = useState<PurchaseDocument | null>(null);
   const [arquivoDocumento, setArquivoDocumento] = useState("");
   const [erroDocumento, setErroDocumento] = useState("");
   const [processandoDocumento, setProcessandoDocumento] = useState(false);
   const [confirmandoDocumento, setConfirmandoDocumento] = useState(false);
+  const extractDocument = useServerFn(extractPurchaseDocument);
+  const documentReview = documentoCompra ? reviewDocument(documentoCompra, insumos) : null;
+  const possibleExistingPurchase = documentoCompra ? possibleDuplicate(documentoCompra, compras) : undefined;
+  const [acknowledgedReview, setAcknowledgedReview] = useState(false);
   const [de, setDe] = useState("");
   const [ate, setAte] = useState("");
 
@@ -469,10 +434,10 @@ function Compras() {
     }
     setBusy(true);
     try {
-      const { error } = await supabase.rpc("registrar_inventario_fisico", {
+      const { error } = await supabase.rpc("registrar_inventario_fisico" as never, {
         itens: itensInventario,
         evento_id: eventoInventarioRef.current.id,
-      });
+      } as never);
       if (error) throw error;
       eventoInventarioRef.current = null;
       setInventarioFisico({});
@@ -552,14 +517,15 @@ function Compras() {
         evento_id: eventoSalvarRef.current.id,
       });
       if (error) throw error;
-      if (!compraSalvaId) throw new Error("A compra foi processada sem retornar seu identificador.");
+      if (typeof compraSalvaId !== "string" || !compraSalvaId) throw new Error("A compra foi processada sem retornar seu identificador.");
+      const idCompraSalva = compraSalvaId as string;
       const { error: erroLocal } = await supabase.rpc("registrar_local_compra", {
-        registro_id: compraSalvaId,
-        local_compra: localCompra.trim() || null,
+        registro_id: idCompraSalva,
+        local_compra: localCompra.trim(),
       });
       if (erroLocal) throw erroLocal;
       const { error: erroFinanceiro } = await supabase.rpc("registrar_pagamento_compra", {
-        p_compra_id: compraSalvaId,
+        p_compra_id: idCompraSalva,
         p_forma_pagamento: formaPagamentoCompra,
         p_numero_parcelas: formaPagamentoCompra === "credito" ? Number(numeroParcelasCompra) : 1,
         p_primeiro_vencimento: formaPagamentoCompra === "credito" ? primeiroVencimentoCompra : data,
@@ -732,61 +698,75 @@ function Compras() {
 
       <section className="mb-6 rounded-xl border p-4">
         <div className="mb-2 flex items-center gap-2"><FileUp className="size-5" /><h2 className="text-lg font-semibold">Importar compra por documento</h2></div>
-        <p className="mb-3 text-sm text-muted-foreground">Envie o XML original da NF-e/NFC-e para preencher a compra. Os itens serão revisados antes de serem colocados no formulário; nada será salvo no estoque ou financeiro nesta etapa.</p>
+        <p className="mb-3 text-sm text-muted-foreground">Envie XML, PDF ou foto do cupom/recibo fiscal. XML é lido localmente; PDF e fotos usam Lovable AI e consomem créditos do workspace. A compra só é registrada quando você salvar o formulário após a conferência.</p>
         <label className="flex min-h-12 cursor-pointer items-center justify-center gap-2 rounded-lg border border-dashed p-3 text-sm font-medium hover:bg-muted/50">
-          <FileText className="size-4" />{processandoDocumento ? "Lendo XML..." : arquivoDocumento || "Selecionar arquivo XML da nota"}
-          <input type="file" accept=".xml,text/xml,application/xml" className="sr-only" disabled={processandoDocumento || busy} onChange={async (event) => {
+          <FileText className="size-4" />{processandoDocumento ? "Lendo documento..." : arquivoDocumento || "Selecionar XML, PDF ou foto"}
+          <input aria-label="Documento da compra" type="file" accept={DOCUMENT_ACCEPT} className="sr-only" disabled={processandoDocumento || busy || confirmandoDocumento || !!documentoCompra} onChange={async (event) => {
             const arquivo = event.currentTarget.files?.[0]; event.currentTarget.value = ""; if (!arquivo) return;
-            setErroDocumento(""); setDocumentoCompra(null); setProcessandoDocumento(true); setArquivoDocumento(arquivo.name);
-            try { if (arquivo.size > 10 * 1024 * 1024) throw new Error("O XML deve ter no máximo 10 MB.");
-              setDocumentoCompra(interpretarXmlNfe(await arquivo.text(), insumos));
-              toast.success("Nota lida. Revise os itens e confirme antes de usar na compra.");
-            } catch (erro) { setErroDocumento(erro instanceof Error ? erro.message : "Não foi possível ler este XML."); setArquivoDocumento(""); }
-            finally { setProcessandoDocumento(false); }
+            setErroDocumento(""); setDocumentoCompra(null); setProcessandoDocumento(true); setArquivoDocumento(arquivo.name); setAcknowledgedReview(false);
+            try {
+              const mime = validateDocumentFile(arquivo);
+              if (mime === "application/xml") {
+                setDocumentoCompra(parseInvoiceXml(await arquivo.text(), insumos));
+              } else {
+                if (!window.confirm("A leitura de PDF e fotos usa Lovable AI e consome créditos do workspace. Deseja continuar?")) { setArquivoDocumento(""); return; }
+                const base64 = await new Promise<string>((resolve, reject) => {
+                  const reader = new FileReader();
+                  reader.onload = () => resolve(String(reader.result).split(",")[1] ?? "");
+                  reader.onerror = () => reject(new Error("Não foi possível abrir o arquivo."));
+                  reader.readAsDataURL(arquivo);
+                });
+                const response = await extractDocument({ data: { name: arquivo.name, mime: mime as "application/pdf" | "image/jpeg" | "image/png" | "image/webp", base64 } });
+                if (!response.ok) throw new Error(response.error);
+                setDocumentoCompra(response.document);
+              }
+              toast.success("Documento lido. Confira e corrija os campos antes de continuar.");
+            } catch (erro) {
+              setErroDocumento(erro instanceof Error ? erro.message : "Não foi possível ler este documento.");
+              setArquivoDocumento("");
+            } finally { setProcessandoDocumento(false); }
           }} />
         </label>
-        <p className="mt-2 text-xs text-muted-foreground">PDF e fotos exigem integração segura de OCR/IA, ainda não configurada. Esta versão não vai afirmar que esses formatos foram importados automaticamente.</p>
         {erroDocumento && <p role="alert" className="mt-3 rounded-md border border-destructive/40 p-3 text-sm text-destructive">{erroDocumento}</p>}
-        {documentoCompra && <>
-          <div className="mt-4 rounded-lg bg-muted/60 p-3 text-sm">
-            <p className="font-medium">{documentoCompra.fornecedor || "Fornecedor não identificado no XML"}</p>
-            <p className="text-muted-foreground">Emissão: {dataBR(documentoCompra.data)} · {documentoCompra.linhas.length} item(ns)</p>
-            {documentoCompra.chave && <p className="mt-1 break-all text-xs text-muted-foreground">Chave NF-e: {documentoCompra.chave}</p>}
-            <p className="mt-1 font-semibold">Total informado na nota: {brl(documentoCompra.total || documentoCompra.linhas.reduce((s, item) => s + item.total, 0))}</p>
-          </div>
-          <div className="mt-3 space-y-3">{documentoCompra.linhas.map((linha) => <div key={linha.id} className="rounded-lg border p-3">
-            <p className="font-medium">{linha.nome}</p><p className="mb-2 text-xs text-muted-foreground">{linha.quantidade.toLocaleString("pt-BR")} {linha.unidade || "unidade não reconhecida"} · {brl(linha.total)}</p>
-            <Field label="Vincular ao cadastro"><select value={linha.insumoId} onChange={(event) => setDocumentoCompra((atual) => atual ? ({ ...atual, linhas: atual.linhas.map((item) => item.id === linha.id ? { ...item, insumoId: event.target.value } : item) }) : atual)} className="h-11 w-full rounded-md border border-input bg-background px-3 text-sm">
-              <option value="">Selecione um insumo existente</option>{insumos.map((insumo) => <option key={insumo.id} value={insumo.id}>{insumo.nome}</option>)}
-              <option value="__novo__" disabled={!linha.unidade}>Cadastrar novo insumo após confirmação{!linha.unidade ? " (unidade precisa ser revisada)" : ""}</option>
-            </select></Field>
-            {!linha.unidade && <p className="mt-2 text-xs text-amber-700">A unidade não foi reconhecida. Escolha um insumo existente com unidade compatível.</p>}
-          </div>)}</div>
-          {Math.abs(documentoCompra.total - documentoCompra.linhas.reduce((s, item) => s + item.total, 0)) > 0.02 && <p className="mt-3 rounded-md border border-amber-500/40 p-3 text-sm">A soma dos itens ({brl(documentoCompra.linhas.reduce((s, item) => s + item.total, 0))}) difere do total da nota ({brl(documentoCompra.total)}). Confira descontos, frete e outros valores antes de confirmar.</p>}
-          <Button type="button" className="mt-3 w-full" disabled={busy || confirmandoDocumento || documentoCompra.linhas.some((item) => !item.insumoId)} onClick={async () => {
-            if (!documentoCompra) return; setConfirmandoDocumento(true);
+        {documentoCompra && documentReview && <>
+          <PurchaseDocumentReview document={documentoCompra} ingredients={insumos} disabled={confirmandoDocumento || busy} change={setDocumentoCompra} />
+          {possibleExistingPurchase && <p role="alert" className="mt-3 rounded-md border border-destructive/40 p-3 text-sm text-destructive">Atenção: já existe uma compra com fornecedor, data e valor semelhantes ({brl(Number(possibleExistingPurchase.total) || 0)}). Confira o histórico antes de continuar para evitar duplicidade.</p>}
+          {(documentReview.divergence || documentReview.itemDivergences.length > 0 || documentoCompra.duvidas.length > 0 || documentoCompra.linhas.some((l) => l.duvidas.length > 0)) && <label className="mt-3 flex items-start gap-2 text-sm"><input type="checkbox" checked={acknowledgedReview} onChange={(e) => setAcknowledgedReview(e.target.checked)} className="mt-1" /><span>Conferi manualmente os campos duvidosos e as diferenças entre os totais. Quero continuar sem rateios automáticos.</span></label>}
+          <Button type="button" className="mt-3 w-full" disabled={busy || confirmandoDocumento || documentReview.errors.length > 0 || ((documentReview.divergence || documentReview.itemDivergences.length > 0 || documentoCompra.duvidas.length > 0 || documentoCompra.linhas.some((l) => l.duvidas.length > 0) || !!possibleExistingPurchase) && !acknowledgedReview)} onClick={async () => {
+            if (!documentoCompra) return;
+            const revisao = reviewDocument(documentoCompra, insumos);
+            if (revisao.errors.length) { toast.error(revisao.errors[0] ?? "Revise os itens antes de continuar."); return; }
+            if (possibleDuplicate(documentoCompra, compras) && !acknowledgedReview) { toast.error("Confira a possível compra duplicada e confirme a revisão."); return; }
+            setConfirmandoDocumento(true);
             try {
               const idsNovos: Record<string, string> = {};
-              for (const item of documentoCompra.linhas.filter((linha) => linha.insumoId === "__novo__")) {
-                const existente = insumos.find((insumo) => insumo.nome.trim().toLocaleLowerCase("pt-BR") === item.nome.trim().toLocaleLowerCase("pt-BR"));
-                if (existente) { idsNovos[item.id] = existente.id; continue; }
-                if (!item.unidade) throw new Error(`Revise a unidade do item "${item.nome}" antes de cadastrá-lo.`);
-                const { data: criado, error } = await supabase.from("insumos").insert({ nome: item.nome.slice(0, 120), tipo: "ingrediente", preco_embalagem: item.total, quantidade_embalagem: item.quantidade, unidade_embalagem: item.unidade, unidade: item.unidade }).select("id").single();
-                if (error) throw error; idsNovos[item.id] = criado.id;
+              for (const item of documentoCompra.linhas.filter((linha) => !linha.ignorar && linha.insumoId === "__novo__")) {
+                const { data: criado, error } = await supabase.from("insumos").insert({
+                  nome: item.nome.slice(0, 120), tipo: "ingrediente", preco_embalagem: item.total,
+                  quantidade_embalagem: item.quantidade, unidade_embalagem: item.unidade, unidade: item.unidade,
+                }).select("id").single();
+                if (error) throw error;
+                idsNovos[item.id] = criado.id;
               }
-              const novasLinhas: Linha[] = documentoCompra.linhas.map((item) => {
+              const novasLinhas: Linha[] = documentoCompra.linhas.filter((item) => !item.ignorar).map((item) => {
                 const insumoId = item.insumoId === "__novo__" ? idsNovos[item.id] : item.insumoId;
                 if (!insumoId) throw new Error("Não foi possível vincular todos os itens aos insumos.");
+                if (item.quantidade === null || item.total === null) throw new Error(`Revise quantidade e valor do item "${item.nome}".`);
                 return { insumo_id: insumoId, quantidade: String(item.quantidade), unidade: item.unidade, preco: String(Math.round(item.total * 100)) };
               });
-              await qc.invalidateQueries({ queryKey: ["insumos"] }); await qc.refetchQueries({ queryKey: ["insumos"] });
-              setData(documentoCompra.data); if (documentoCompra.fornecedor) setLocalCompra(documentoCompra.fornecedor.slice(0, 120)); setLinhas(novasLinhas);
-              setDocumentoCompra(null); setArquivoDocumento(""); toast.success("Itens carregados no formulário. Confira os dados e a forma de pagamento antes de salvar.");
+              await qc.invalidateQueries({ queryKey: ["insumos"] });
+              await qc.refetchQueries({ queryKey: ["insumos"] });
+              setData(documentoCompra.data);
+              if (documentoCompra.fornecedor) setLocalCompra(documentoCompra.fornecedor.slice(0, 120));
+              setLinhas(novasLinhas);
+              setDocumentoCompra(null); setArquivoDocumento(""); setErroDocumento(""); setAcknowledgedReview(false);
+              toast.success("Itens preparados no formulário. Confira forma de pagamento e total e clique em Salvar compra.");
               formularioCompraRef.current?.scrollIntoView({ behavior: "smooth", block: "start" });
-            } catch (erro) { toast.error(erro instanceof Error ? erro.message : "Não foi possível confirmar os itens da nota."); }
-            finally { setConfirmandoDocumento(false); }
+            } catch (erro) {
+              toast.error(erro instanceof Error ? erro.message : "Não foi possível confirmar os insumos.");
+            } finally { setConfirmandoDocumento(false); }
           }}><CheckCircle2 className="size-4" />{confirmandoDocumento ? "Confirmando insumos..." : "Confirmar insumos e preencher compra"}</Button>
-          <Button type="button" variant="outline" className="mt-2 w-full" disabled={confirmandoDocumento} onClick={() => { setDocumentoCompra(null); setArquivoDocumento(""); setErroDocumento(""); }}>Descartar importação</Button>
+          <Button type="button" variant="outline" className="mt-2 w-full" disabled={confirmandoDocumento} onClick={() => { setDocumentoCompra(null); setArquivoDocumento(""); setErroDocumento(""); setAcknowledgedReview(false); }}>Descartar importação</Button>
         </>}
       </section>
 

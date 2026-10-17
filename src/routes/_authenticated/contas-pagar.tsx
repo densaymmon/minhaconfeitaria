@@ -160,7 +160,7 @@ function ContasPagar() {
     try {
       const { error } = await supabase.rpc("salvar_conta_pagar", {
         p_dados: payload,
-        p_conta_id: id,
+        ...(id ? { p_conta_id: id } : {}),
         p_operacao_id,
       });
       if (error) throw error;
@@ -208,7 +208,7 @@ function ContasPagar() {
         p_valor: valor,
         p_data_pagamento: dataPagamento,
         p_forma_pagamento: formaPagamento,
-        p_observacoes: obsPagamento.trim() || null,
+        p_observacoes: obsPagamento.trim(),
         p_operacao_id,
       });
       if (error) throw error;
