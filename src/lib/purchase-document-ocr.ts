@@ -138,7 +138,7 @@ async function recognizeImage(input: unknown): Promise<string> {
   await loadScript(TESSERACT_URL, () => Boolean(window.Tesseract));
   const tesseract = window.Tesseract;
   if (!tesseract) throw new Error("O leitor de imagem não ficou disponível.");
-  const worker = await tesseract.createWorker("por", 1, { logger: "false" });
+  const worker = await tesseract.createWorker("por", 1);
   try {
     const result = await worker.recognize(input);
     return result.data.text;
