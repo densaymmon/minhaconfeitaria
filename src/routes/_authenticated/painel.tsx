@@ -165,7 +165,7 @@ function Painel() {
             </div>
             <div className="min-w-0">
               <h2 className="font-semibold">Entregas deste mês</h2>
-              <p className="mt-0.5 text-xs text-muted-foreground">Pedidos agendados para entregar</p>
+              <p className="mt-0.5 text-xs text-muted-foreground">Pedidos totais no mês</p>
             </div>
           </div>
           <div className="flex shrink-0 items-center gap-2">
