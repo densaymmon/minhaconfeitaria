@@ -13,10 +13,11 @@ import { cn } from "@/lib/utils";
 const STATUS_ATIVOS = ["recebido", "confirmado", "em_producao", "pronto"];
 
 export const Route = createFileRoute("/_authenticated/pedidos/")({
- validateSearch: (search: Record<string, unknown>) => ({
+ validateSearch: (search: Record<string, unknown>): { filtro?: string | undefined; dataInicial?: string | undefined; dataFinal?: string | undefined; dataReferencia?: "recebimento" | undefined } => ({
    filtro: typeof search["filtro"] === "string" ? search["filtro"] : undefined,
    dataInicial: typeof search["dataInicial"] === "string" ? search["dataInicial"] : undefined,
    dataFinal: typeof search["dataFinal"] === "string" ? search["dataFinal"] : undefined,
+   dataReferencia: search["dataReferencia"] === "recebimento" ? ("recebimento" as const) : undefined,
  }),
  loader: async ({ context }) => { await Promise.all([context.queryClient.ensureQueryData(appQueries.pedidosQ),context.queryClient.ensureQueryData(appQueries.configQ),context.queryClient.ensureQueryData(appQueries.pedidoPagamentosQ)]); },
  errorComponent: ({error}) => <p role="alert" className="py-8 text-destructive">{error instanceof Error ? error.message : "Não foi possível carregar os registros."}</p>,
@@ -50,6 +51,7 @@ function Pedidos() {
   const [mostrarFiltros, setMostrarFiltros] = useState(Boolean(search.dataInicial || search.dataFinal || (search.filtro && !["abertos", "prontos", "todos"].includes(search.filtro))));
   const [dataInicial, setDataInicial] = useState(search.dataInicial ?? "");
   const [dataFinal, setDataFinal] = useState(search.dataFinal ?? "");
+  const [dataReferencia, setDataReferencia] = useState<"entrega" | "recebimento">(search.dataReferencia ?? "entrega");
   const hoje = hojeISO();
 
   const contagens = useMemo(() => ({
@@ -65,8 +67,9 @@ function Pedidos() {
   const lista = useMemo(() => {
     const q = busca.trim().toLowerCase();
     return pedidos.filter((p) => {
-      if (dataInicial && p.data_entrega < dataInicial) return false;
-      if (dataFinal && p.data_entrega > dataFinal) return false;
+      const dataPedido = dataReferencia === "recebimento" ? (p.created_at ?? "").slice(0, 10) : p.data_entrega;
+      if (dataInicial && (!dataPedido || dataPedido < dataInicial)) return false;
+      if (dataFinal && (!dataPedido || dataPedido > dataFinal)) return false;
       if (status === "abertos" && ["pronto", "finalizado", "entregue", "cancelado"].includes(p.status)) return false;
       if (status === "prontos" && p.status !== "pronto") return false;
       if (status === "em_andamento" && !["recebido", "confirmado", "em_producao"].includes(p.status)) return false;
@@ -87,7 +90,7 @@ function Pedidos() {
         p.pedido_itens.some((i) => i.descricao.toLowerCase().includes(q))
       );
     });
-  }, [pedidos, busca, status, dataInicial, dataFinal, hoje]);
+  }, [pedidos, busca, status, dataInicial, dataFinal, dataReferencia, hoje]);
 
   function exportar() {
     baixarCSV(
@@ -188,6 +191,13 @@ function Pedidos() {
       {mostrarFiltros && (
         <Card className="mb-4 space-y-3 p-3">
           <label className="block space-y-1 text-sm font-medium">
+            <span>Filtrar datas por</span>
+            <select aria-label="Filtrar datas por" value={dataReferencia} onChange={(e) => setDataReferencia(e.target.value as "entrega" | "recebimento")} className="h-10 w-full rounded-md border border-input bg-background px-3 text-sm font-normal">
+              <option value="entrega">Data de entrega</option>
+              <option value="recebimento">Data de recebimento do pedido</option>
+            </select>
+          </label>
+          <label className="block space-y-1 text-sm font-medium">
             <span>Status do pedido</span>
             <select aria-label="Status do pedido" value={status} onChange={(e) => setStatus(e.target.value)} className="h-10 w-full rounded-md border border-input bg-background px-3 text-sm font-normal">
               <option value="abertos">Em aberto</option>
@@ -198,17 +208,17 @@ function Pedidos() {
           </label>
           <div className="grid grid-cols-1 gap-3 sm:grid-cols-2">
             <label className="space-y-1 text-sm font-medium">
-              <span>Entrega a partir de</span>
-              <Input type="date" aria-label="Data inicial de entrega" value={dataInicial} max={dataFinal || undefined} onChange={(e) => setDataInicial(e.target.value)} className="h-10 bg-background" />
+              <span>{dataReferencia === "entrega" ? "Entrega a partir de" : "Recebido a partir de"}</span>
+              <Input type="date" aria-label={dataReferencia === "entrega" ? "Data inicial de entrega" : "Data inicial de recebimento"} value={dataInicial} max={dataFinal || undefined} onChange={(e) => setDataInicial(e.target.value)} className="h-10 bg-background" />
             </label>
             <label className="space-y-1 text-sm font-medium">
-              <span>Entrega até</span>
-              <Input type="date" aria-label="Data final de entrega" value={dataFinal} min={dataInicial || undefined} onChange={(e) => setDataFinal(e.target.value)} className="h-10 bg-background" />
+              <span>{dataReferencia === "entrega" ? "Entrega até" : "Recebido até"}</span>
+              <Input type="date" aria-label={dataReferencia === "entrega" ? "Data final de entrega" : "Data final de recebimento"} value={dataFinal} min={dataInicial || undefined} onChange={(e) => setDataFinal(e.target.value)} className="h-10 bg-background" />
             </label>
           </div>
           <div className="flex flex-wrap items-center justify-between gap-2 border-t pt-3">
             <span className="text-xs text-muted-foreground">{lista.length} pedido(s) encontrado(s)</span>
-            <Button type="button" variant="ghost" size="sm" onClick={() => { setStatus("abertos"); setDataInicial(""); setDataFinal(""); setBusca(""); }}>
+            <Button type="button" variant="ghost" size="sm" onClick={() => { setStatus("abertos"); setDataInicial(""); setDataFinal(""); setDataReferencia("entrega"); setBusca(""); }}>
               Limpar filtros
             </Button>
           </div>
