@@ -919,6 +919,15 @@ export type Database = {
         }
         Returns: boolean
       }
+      reconciliar_compra_com_pagamentos: {
+        Args: {
+          p_compra_id: string
+          p_forma_pagamento: string
+          p_numero_parcelas?: number
+          p_primeiro_vencimento?: string
+        }
+        Returns: boolean
+      }
       registrar_pagamento_conta_pagar: {
         Args: {
           p_conta_id: string
