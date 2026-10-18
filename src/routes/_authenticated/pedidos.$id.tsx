@@ -170,8 +170,9 @@ function PedidoForm() {
       const { data, error: loadError } = await supabase.from("pedido_pagamentos").select("*").eq("pedido_id", existente.id).order("data_pagamento", { ascending: false });
       if (loadError) throw new Error(loadError.message);
       setPagamentos((data ?? []) as PedidoPagamento[]);
-      const totalPago = (data ?? []).reduce((soma, pagamento) => soma + Number(pagamento.valor ?? 0), 0);
-      setF((atual) => ({ ...atual, valor_entrada: String(Math.min(t.venda, Math.round(totalPago * 100) / 100)), saldo_quitado: totalPago >= t.venda - 0.009 }));
+      const { data: pedidoAtualizado, error: pedidoError } = await supabase.from("pedidos").select("valor_entrada,saldo_quitado").eq("id", existente.id).single();
+      if (pedidoError) throw new Error(pedidoError.message);
+      setF((atual) => ({ ...atual, valor_entrada: String(pedidoAtualizado.valor_entrada ?? 0), saldo_quitado: Boolean(pedidoAtualizado.saldo_quitado) }));
       setPagamentoEmEdicao(null);
       await Promise.all([
         qc.invalidateQueries({ queryKey: ["pedidos"] }),
