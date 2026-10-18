@@ -10,6 +10,10 @@ import { medida, medidaLabel, medidasCompativeis, numeroIngrediente } from "@/li
 import { Card, Empty, Field, PageHeader } from "@/components/app/ui";
 import { Input } from "@/components/ui/input";
 import { Button } from "@/components/ui/button";
+import {
+  AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent,
+  AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle,
+} from "@/components/ui/alert-dialog";
 import { DOCUMENT_ACCEPT, parseInvoiceXml, possibleDuplicate, reviewDocument, validateDocumentFile, type PurchaseDocument } from "@/lib/purchase-document";
 import { PurchaseDocumentReview } from "@/components/app/purchase-document-review";
 import { readPurchaseDocumentLocally } from "@/lib/purchase-document-ocr";
@@ -129,6 +133,7 @@ function valorExistenteEmCentavos(valor: string): string {
 
 function Compras() {
   const { secao } = Route.useSearch();
+  const navigate = Route.useNavigate();
   const { data: insumos } = useSuspenseQuery(appQueries.insumosQ);
   const { data: compras } = useSuspenseQuery(appQueries.comprasQ);
   const { data: itens } = useSuspenseQuery(appQueries.compraItensQ);
@@ -155,14 +160,17 @@ function Compras() {
   const eventoCancelarRef = useRef<{ compraId: string; id: string } | null>(null);
   const eventoExcluirRef = useRef<{ compraId: string; id: string } | null>(null);
   const [editandoCompraId, setEditandoCompraId] = useState<string | null>(null);
+  const [compraParaExcluir, setCompraParaExcluir] = useState<{ id: string; cancelada_em: string | null } | null>(null);
   const formularioCompraRef = useRef<HTMLFormElement | null>(null);
 
   // Ao iniciar uma edição, leve o formulário para o início da área de registro.
   useEffect(() => {
-    if (editandoCompraId) {
+    // O histórico fica na seção "gastos" e o formulário na seção "compras".
+    // Só tente rolar depois que a navegação montar o formulário de edição.
+    if (editandoCompraId && secao === "compras") {
       formularioCompraRef.current?.scrollIntoView({ behavior: "smooth", block: "start" });
     }
-  }, [editandoCompraId]);
+  }, [editandoCompraId, secao]);
   const [documentoCompra, setDocumentoCompra] = useState<PurchaseDocument | null>(null);
   const [arquivoDocumento, setArquivoDocumento] = useState("");
   const [erroDocumento, setErroDocumento] = useState("");
@@ -369,7 +377,6 @@ function Compras() {
   }
 
   async function excluirCompra(compra: { id: string; cancelada_em: string | null }) {
-    if (!confirm("Excluir permanentemente esta compra? Ela sairá do histórico. Se movimentou o estoque, o saldo será estornado. Contas a pagar não canceladas impedem a exclusão; contas canceladas serão preservadas no histórico financeiro e desvinculadas pela operação segura do banco.")) return;
     if (!eventoExcluirRef.current || eventoExcluirRef.current.compraId !== compra.id) {
       eventoExcluirRef.current = { compraId: compra.id, id: crypto.randomUUID() };
     }
@@ -921,11 +928,14 @@ function Compras() {
                             setPrimeiroVencimentoCompra(c.primeiro_vencimento ?? c.data_compra);
                             setLinhas(itensCompra.map((i) => ({ compraItemId: i.id, insumo_id: i.insumo_id, quantidade: textoCampoNumerico(i.quantidade), unidade: i.unidade, preco: valorExistenteEmCentavos(valorTotalEditavel(i)) })));
                             setEditandoCompraId(c.id);
+                            // A edição precisa mudar para a seção que contém o formulário;
+                            // caso contrário, o estado muda mas o formulário continua oculto.
+                            void navigate({ search: (prev) => ({ ...prev, secao: "compras" }) });
                           }}>Editar</Button>
                           <Button type="button" variant="outline" size="sm" disabled={busy} onClick={() => void cancelarCompra(c)}>Cancelar</Button>
                         </>
                       )}
-                      <Button type="button" variant="destructive" size="sm" disabled={busy} onClick={() => void excluirCompra(c)}>
+                      <Button type="button" variant="destructive" size="sm" disabled={busy} onClick={() => setCompraParaExcluir(c)}>
                         <Trash2 className="mr-1 size-3.5" /> Excluir
                       </Button>
                     </div>
@@ -940,6 +950,34 @@ function Compras() {
         )}
       </section>
       </>}
+
+      <AlertDialog open={!!compraParaExcluir} onOpenChange={(open) => { if (!open && !busy) setCompraParaExcluir(null); }}>
+        <AlertDialogContent>
+          <AlertDialogHeader>
+            <AlertDialogTitle>Excluir compra permanentemente?</AlertDialogTitle>
+            <AlertDialogDescription>
+              A compra será removida do histórico. Se ela movimentou o estoque, o saldo será estornado. Contas a pagar não canceladas impedem a exclusão; contas canceladas serão preservadas no histórico financeiro e desvinculadas com segurança.
+              Esta ação não pode ser desfeita.
+            </AlertDialogDescription>
+          </AlertDialogHeader>
+          <AlertDialogFooter>
+            <AlertDialogCancel disabled={busy}>Voltar</AlertDialogCancel>
+            <AlertDialogAction
+              disabled={busy || !compraParaExcluir}
+              className="bg-destructive text-destructive-foreground hover:bg-destructive/90"
+              onClick={(event) => {
+                event.preventDefault();
+                const compra = compraParaExcluir;
+                if (!compra || busy) return;
+                setCompraParaExcluir(null);
+                void excluirCompra(compra);
+              }}
+            >
+              {busy ? "Excluindo..." : "Sim, excluir compra"}
+            </AlertDialogAction>
+          </AlertDialogFooter>
+        </AlertDialogContent>
+      </AlertDialog>
     </>
   );
 }
