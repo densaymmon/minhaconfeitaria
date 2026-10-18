@@ -484,7 +484,7 @@ function Compras() {
         if (!compraOriginal) throw new Error("Não foi possível localizar a compra original. Atualize a tela e tente novamente.");
         const { data: contasGeradas, error: erroContas } = await supabase
           .from("contas_pagar")
-          .select("id")
+          .select("id, valor_pago")
           .eq("compra_id", editandoCompraId)
           .eq("gerada_automaticamente", true);
         if (erroContas) throw erroContas;
@@ -492,30 +492,17 @@ function Compras() {
         if (idsContas.length) {
           const { data: pagamentosExistentes, error: erroPagamentos } = await supabase
             .from("contas_pagar_pagamentos")
-            .select("id")
+            .select("id, conta_id")
             .in("conta_id", idsContas);
           if (erroPagamentos) throw erroPagamentos;
           if ((pagamentosExistentes ?? []).length) {
-            const totalOriginal = Number(compraOriginal.total);
-            const totalAtual = Math.round(total * 100);
-            const totalAnterior = Math.round(totalOriginal * 100);
-            const dataOriginal = compraOriginal.data_compra;
-            const localOriginal = (compraOriginal.local_compra ?? "").trim();
-            const formaOriginal = compraOriginal.forma_pagamento_compra ?? "pix";
-            const parcelasOriginais = Number(compraOriginal.numero_parcelas ?? 1);
-            const vencimentoOriginal = compraOriginal.primeiro_vencimento ?? dataOriginal;
-            if (
-              !Number.isFinite(totalOriginal) ||
-              totalAtual !== totalAnterior ||
-              data !== dataOriginal ||
-              localCompra.trim() !== localOriginal ||
-              formaPagamentoCompra !== formaOriginal ||
-              (formaPagamentoCompra === "credito" && (
-                Number(numeroParcelasCompra) !== parcelasOriginais ||
-                primeiroVencimentoCompra !== vencimentoOriginal
-              ))
-            ) {
-              throw new Error("Esta compra já possui pagamento registrado. Você pode corrigir os itens mantendo o mesmo total, data, local e condições de pagamento. Para alterar esses dados financeiros, faça o ajuste pelo financeiro para preservar o extrato.");
+            // Nunca permita que uma correção reduza o total da compra abaixo do que
+            // já foi efetivamente pago. Os lançamentos de pagamento são imutáveis.
+            const contasComPagamento = new Set((pagamentosExistentes ?? []).map((pagamento) => pagamento.conta_id));
+            const totalJaPago = (contasGeradas ?? []).reduce((soma, conta) =>
+              soma + (contasComPagamento.has(conta.id) ? Math.max(0, Number(conta.valor_pago) || 0) : 0), 0);
+            if (Math.round(total * 100) < Math.round(totalJaPago * 100)) {
+              throw new Error(`O novo total não pode ser menor que o valor já pago (${brl(totalJaPago)}). Ajuste os pagamentos no financeiro antes de reduzir a compra.`);
             }
             preservarFinanceiroExistente = true;
           }
@@ -554,7 +541,17 @@ function Compras() {
         local_compra: localCompra.trim(),
       });
       if (erroLocal) throw erroLocal;
-      if (!preservarFinanceiroExistente) {
+      if (preservarFinanceiroExistente) {
+        // Reconcilia o saldo futuro sem editar ou apagar os lançamentos de pagamento
+        // já realizados. A função também atualiza as condições financeiras da compra.
+        const { error: erroFinanceiro } = await supabase.rpc("reconciliar_compra_com_pagamentos", {
+          p_compra_id: idCompraSalva,
+          p_forma_pagamento: formaPagamentoCompra,
+          p_numero_parcelas: formaPagamentoCompra === "credito" ? Number(numeroParcelasCompra) : 1,
+          p_primeiro_vencimento: formaPagamentoCompra === "credito" ? primeiroVencimentoCompra : data,
+        });
+        if (erroFinanceiro) throw erroFinanceiro;
+      } else {
         const { error: erroFinanceiro } = await supabase.rpc("registrar_pagamento_compra", {
           p_compra_id: idCompraSalva,
           p_forma_pagamento: formaPagamentoCompra,
