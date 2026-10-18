@@ -146,6 +146,8 @@ function Compras() {
       return data ?? [];
     },
   });
+  const { data: pedidos = [] } = useQuery(appQueries.pedidosQ);
+  const { data: produtos = [] } = useQuery(appQueries.produtosQ);
   const qc = useQueryClient();
   const [data, setData] = useState(hojeISO());
   const [localCompra, setLocalCompra] = useState("");
@@ -200,6 +202,51 @@ function Compras() {
   const total = calculadas.reduce((s, l) => s + (Number.isFinite(l.total) ? l.total : 0), 0);
 
   const noPeriodo = (iso: string) => (!de || iso >= de) && (!ate || iso <= ate);
+
+  // Simulação somente de leitura: compras não canceladas menos consumo calculado pelas receitas atuais.
+  // Pedidos entregues/finalizados sem produção registrada usam a quantidade pedida; pedidos em produção
+  // usam somente a quantidade efetivamente registrada. Nenhum saldo é alterado até confirmar o inventário.
+  const estoqueTeorico = useMemo(() => {
+    const saldo = new Map<string, number>();
+    for (const insumo of insumos) saldo.set(insumo.id, 0);
+
+    for (const compra of compras) {
+      if (compra.cancelada_em) continue;
+      for (const item of itens) {
+        if (item.compra_id !== compra.id) continue;
+        const unidadeCompra = medida(item.unidade ?? "");
+        const insumo = insumos.find((i) => i.id === item.insumo_id);
+        const unidadeInsumo = medida(String(insumo?.unidade_embalagem ?? insumo?.unidade ?? "un"));
+        if (!unidadeCompra || !unidadeInsumo || unidadeCompra.base !== unidadeInsumo.base) continue;
+        saldo.set(item.insumo_id, (saldo.get(item.insumo_id) ?? 0) + Number(item.quantidade || 0) * unidadeCompra.fator);
+      }
+    }
+
+    const produtosPorId = new Map(produtos.map((produto) => [produto.id, produto]));
+    for (const pedido of pedidos) {
+      const entregue = ["entregue", "finalizado"].includes(String(pedido.status).toLowerCase());
+      for (const item of pedido.pedido_itens ?? []) {
+        const registrada = Number(item.quantidade_produzida ?? 0);
+        if (!entregue && registrada <= 0) continue;
+        const quantidadeProduzida = entregue && registrada <= 0 ? Number(item.quantidade ?? 0) : registrada;
+        if (!Number.isFinite(quantidadeProduzida) || quantidadeProduzida <= 0) continue;
+        if (!item.produto_id) continue;
+        const produto = produtosPorId.get(item.produto_id);
+        const rendimento = Number(produto?.rendimento ?? 0);
+        if (!produto || !Number.isFinite(rendimento) || rendimento <= 0) continue;
+        for (const receita of produto.receita_itens ?? []) {
+          const quantidadeReceita = Number(receita.quantidade_utilizada ?? receita.quantidade ?? 0);
+          const unidadeReceita = medida(receita.unidade_receita ?? "");
+          if (!unidadeReceita || !Number.isFinite(quantidadeReceita) || quantidadeReceita <= 0) continue;
+          const consumo = quantidadeReceita * unidadeReceita.fator * quantidadeProduzida / rendimento;
+          saldo.set(receita.insumo_id, (saldo.get(receita.insumo_id) ?? 0) - consumo);
+        }
+      }
+    }
+
+    return Object.fromEntries(saldo.entries()) as Record<string, number>;
+  }, [insumos, compras, itens, pedidos, produtos]);
+
   const comprasPeriodo = compras.filter((c) => noPeriodo(c.data_compra));
   const comprasNoPeriodo = comprasPeriodo.filter((c) => !c.cancelada_em);
   const idsNoPeriodo = new Set(comprasNoPeriodo.map((c) => c.id));
@@ -664,8 +711,20 @@ function Compras() {
       <section className="mb-8 rounded-xl border p-4">
         <h2 className="mb-2 text-lg font-semibold">Conferência física do estoque</h2>
         <p className="mb-3 text-sm text-muted-foreground">
-          Conte o que existe agora e informe a quantidade na unidade indicada. O sistema ajustará apenas a diferença. Compras antigas não serão importadas automaticamente; insumos sem unidade compatível precisam ser corrigidos no cadastro antes da contagem.
+          O sistema sugere o saldo teórico (compras não canceladas menos consumo estimado pelas receitas atuais). Use “Preencher com estoque calculado” para carregar as sugestões, edite livremente cada quantidade após conferir fisicamente e só então registre. O registro ajusta apenas a diferença no histórico; não altera compras nem recalcula custos históricos. Saldos teóricos negativos são exibidos como zero para conferência física.
         </p>
+        <Button
+          type="button"
+          variant="outline"
+          className="mb-3 h-10 w-full"
+          disabled={busy || carregandoEstoque}
+          onClick={() => setInventarioFisico(Object.fromEntries(estoque.filter((item) => item.unidade_base).map((item) => {
+            const estimado = Number(estoqueTeorico[item.insumo_id] ?? 0);
+            return [item.insumo_id, String(Math.max(0, Number.isFinite(estimado) ? estimado : 0))];
+          })))}
+        >
+          Preencher com estoque calculado
+        </Button>
         <form onSubmit={salvarInventario} className="space-y-3">
           {estoque.map((item) => {
             const saldo = Number(item.saldo);
@@ -675,7 +734,11 @@ function Compras() {
                 <div className="min-w-0">
                   <p className="font-medium">{item.nome}</p>
                   <p className="text-xs text-muted-foreground">
-                    Saldo calculado: {saldo.toLocaleString("pt-BR", { maximumFractionDigits: 3 })} {unidade ?? ""}
+                    Saldo atual registrado: {saldo.toLocaleString("pt-BR", { maximumFractionDigits: 3 })} {unidade ?? ""}
+                  </p>
+                  <p className="text-xs text-muted-foreground">
+                    Estimativa por compras e receitas: {Number(estoqueTeorico[item.insumo_id] ?? 0).toLocaleString("pt-BR", { maximumFractionDigits: 3 })} {unidade ?? ""}
+                    {Number(estoqueTeorico[item.insumo_id] ?? 0) < 0 ? " · negativo, confira fisicamente" : ""}
                   </p>
                 </div>
                 <label className="space-y-1 text-xs">
