@@ -1,5 +1,35 @@
 -- Permite ajustar apenas preços e encargos de pedidos com produção registrada.
 -- Não substitui itens nem altera quantidades produzidas ou movimentos de estoque.
+-- Permite atualizar o preço sem mexer na composição física do item produzido.
+-- Alterações de produto, descrição, quantidade, custo, exclusão ou quantidade produzida
+-- continuam bloqueadas quando já existe produção registrada.
+CREATE OR REPLACE FUNCTION public.bloquear_edicao_item_com_producao()
+RETURNS trigger
+LANGUAGE plpgsql
+SET search_path TO 'pg_catalog', 'public'
+AS $function$
+BEGIN
+  IF COALESCE(OLD.quantidade_produzida, 0) > 0 THEN
+    IF TG_OP = 'UPDATE'
+       AND NEW.user_id IS NOT DISTINCT FROM OLD.user_id
+       AND NEW.pedido_id IS NOT DISTINCT FROM OLD.pedido_id
+       AND NEW.produto_id IS NOT DISTINCT FROM OLD.produto_id
+       AND NEW.descricao IS NOT DISTINCT FROM OLD.descricao
+       AND NEW.quantidade IS NOT DISTINCT FROM OLD.quantidade
+       AND NEW.custo_unitario IS NOT DISTINCT FROM OLD.custo_unitario
+       AND NEW.quantidade_produzida IS NOT DISTINCT FROM OLD.quantidade_produzida THEN
+      RETURN NEW;
+    END IF;
+    RAISE EXCEPTION
+      'Este item já tem produção registrada e não pode ser substituído ou excluído. Estorne a produção por um fluxo próprio antes de editar o pedido.';
+  END IF;
+  IF TG_OP = 'DELETE' THEN
+    RETURN OLD;
+  END IF;
+  RETURN NEW;
+END;
+$function$;
+
 CREATE OR REPLACE FUNCTION public.editar_valores_pedido_com_producao(
   p_pedido_id uuid,
   p_itens jsonb,
