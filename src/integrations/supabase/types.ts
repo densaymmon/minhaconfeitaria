@@ -145,6 +145,7 @@ export type Database = {
           taxa_dinheiro: number
           taxa_outros: number
           taxa_pix: number
+          pix_chave: string
           user_id: string
         }
         Insert: {
@@ -154,6 +155,7 @@ export type Database = {
           taxa_dinheiro?: number
           taxa_outros?: number
           taxa_pix?: number
+          pix_chave?: string
           user_id?: string
         }
         Update: {
@@ -163,6 +165,7 @@ export type Database = {
           taxa_dinheiro?: number
           taxa_outros?: number
           taxa_pix?: number
+          pix_chave?: string
           user_id?: string
         }
         Relationships: []
