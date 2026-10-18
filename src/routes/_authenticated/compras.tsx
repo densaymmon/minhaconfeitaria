@@ -214,7 +214,7 @@ function Compras() {
       if (compra.cancelada_em) continue;
       for (const item of itens) {
         if (item.compra_id !== compra.id) continue;
-        const unidadeCompra = medida(item.unidade);
+        const unidadeCompra = medida(item.unidade ?? "");
         const insumo = insumos.find((i) => i.id === item.insumo_id);
         const unidadeInsumo = medida(insumo?.unidade_embalagem ?? insumo?.unidade ?? "un");
         if (!unidadeCompra || !unidadeInsumo || unidadeCompra.base !== unidadeInsumo.base) continue;
@@ -235,7 +235,7 @@ function Compras() {
         if (!produto || !Number.isFinite(rendimento) || rendimento <= 0) continue;
         for (const receita of produto.receita_itens ?? []) {
           const quantidadeReceita = Number(receita.quantidade_utilizada ?? receita.quantidade ?? 0);
-          const unidadeReceita = medida(receita.unidade_receita);
+          const unidadeReceita = medida(receita.unidade_receita ?? "");
           if (!unidadeReceita || !Number.isFinite(quantidadeReceita) || quantidadeReceita <= 0) continue;
           const consumo = quantidadeReceita * unidadeReceita.fator * quantidadeProduzida / rendimento;
           saldo.set(receita.insumo_id, (saldo.get(receita.insumo_id) ?? 0) - consumo);
