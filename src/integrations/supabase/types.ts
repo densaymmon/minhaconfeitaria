@@ -956,6 +956,16 @@ export type Database = {
         }
         Returns: string
       }
+      editar_recebimento_pedido: {
+        Args: {
+          p_data_pagamento: string
+          p_forma_pagamento: string
+          p_observacoes?: string
+          p_pagamento_id: string
+          p_valor: number
+        }
+        Returns: string
+      }
       saldo_estoque: {
         Args: never
         Returns: {
