@@ -128,7 +128,23 @@ function Insumos({ insumos }: { insumos: Insumo[] }) {
   async function excluir(i: Insumo) {
     if (!confirm(`Excluir ${i.nome}?`)) return;
     const { error } = await supabase.from("insumos").delete().eq("id", i.id);
-    if (error) return void toast.error(error.message.includes("foreign") ? "Este insumo está em uma receita. Remova-o da receita primeiro." : error.message);
+    if (error) {
+      if (error.code === "23503") {
+        const detalhe = `${error.message} ${error.details ?? ""}`;
+        if (detalhe.includes("receita_itens_insumo_id_fkey")) {
+          toast.error("Este insumo está em uma receita. Remova-o da receita primeiro.");
+        } else if (detalhe.includes("estoque_movimentos_insumo_id_fkey")) {
+          toast.error("Este insumo possui movimentações de estoque registradas. Para preservar o histórico, não é possível excluí-lo diretamente.");
+        } else if (detalhe.includes("compra_itens_insumo_id_fkey")) {
+          toast.error("Este insumo está vinculado a compras registradas. Para preservar o histórico das compras, não é possível excluí-lo diretamente.");
+        } else {
+          toast.error("Este insumo está vinculado a outros registros e não pode ser excluído sem comprometer o histórico.");
+        }
+        return;
+      }
+      toast.error(error.message);
+      return;
+    }
     qc.invalidateQueries({ queryKey: ["insumos"] });
   }
 
