@@ -213,15 +213,29 @@ BEGIN
     RAISE EXCEPTION 'Correção do custo histórico incorreta: itens %, custo %', itens_corrigidos, custo_corrigido;
   END IF;
 
+  -- A baixa deve acompanhar cada quantidade realmente produzida, usando
+  -- apenas a diferença em relação ao valor já registrado.
   PERFORM public.ajustar_producao(
-    'eeeeeeee-eeee-4eee-8eee-eeeeeeeeeeee', item_id, 2
+    'eeeeeeee-eeee-4eee-8eee-eeeeeeeeeee1', item_id, 0.5
   );
   SELECT s.saldo INTO saldo FROM public.saldo_estoque() s WHERE s.insumo_id = iid;
-  IF saldo <> 230 THEN RAISE EXCEPTION 'Consumo da produção incorreto: %', saldo; END IF;
+  IF saldo <> 245 THEN RAISE EXCEPTION 'Baixa progressiva de 0,5 unidade incorreta: %', saldo; END IF;
+
+  PERFORM public.ajustar_producao(
+    'eeeeeeee-eeee-4eee-8eee-eeeeeeeeeee2', item_id, 1
+  );
+  SELECT s.saldo INTO saldo FROM public.saldo_estoque() s WHERE s.insumo_id = iid;
+  IF saldo <> 240 THEN RAISE EXCEPTION 'Baixa incremental até 1 unidade incorreta: %', saldo; END IF;
+
+  PERFORM public.ajustar_producao(
+    'eeeeeeee-eeee-4eee-8eee-eeeeeeeeeee3', item_id, 2
+  );
+  SELECT s.saldo INTO saldo FROM public.saldo_estoque() s WHERE s.insumo_id = iid;
+  IF saldo <> 230 THEN RAISE EXCEPTION 'Baixa incremental até 2 unidades incorreta: %', saldo; END IF;
 
   -- Replaying the same production event must not append a second stock movement.
   PERFORM public.ajustar_producao(
-    'eeeeeeee-eeee-4eee-8eee-eeeeeeeeeeee', item_id, 2
+    'eeeeeeee-eeee-4eee-8eee-eeeeeeeeeee3', item_id, 2
   );
   SELECT s.saldo INTO saldo FROM public.saldo_estoque() s WHERE s.insumo_id = iid;
   IF saldo <> 230 THEN RAISE EXCEPTION 'Retry da produção duplicou a baixa: %', saldo; END IF;
