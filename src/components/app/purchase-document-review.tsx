@@ -1,3 +1,4 @@
+import { useState } from "react";
 import { Input } from "@/components/ui/input";
 import { Button } from "@/components/ui/button";
 import { Field } from "./ui";
@@ -8,7 +9,32 @@ import { reviewDocument, type DocumentLine, type IngredientMatch, type PurchaseD
 
 const numeric = (s: string) => { const value = numeroIngrediente(s); return Number.isFinite(value) ? value : null; };
 function NumberField({ label, value, change }: { label: string; value: number | null; change: (v: number | null) => void }) {
-  return <Field label={label}><Input aria-label={label} type="text" inputMode="decimal" value={value === null ? "" : String(value)} onChange={(e) => change(numeric(e.target.value))} /></Field>;
+  // Preserve the raw text while the user types. A trailing comma/period (e.g. "12,")
+  // is a valid intermediate state and must not clear the field on rerender.
+  // Only finite values enter the document model; NaN is never stored or displayed.
+  const [draft, setDraft] = useState(value === null || !Number.isFinite(value) ? "" : String(value).replace(".", ","));
+  const parsed = numeric(draft);
+  return <Field label={label}><Input
+    aria-label={label}
+    type="text"
+    inputMode="decimal"
+    autoComplete="off"
+    value={draft}
+    onChange={(e) => {
+      const text = e.currentTarget.value;
+      setDraft(text);
+      if (!text.trim()) {
+        change(null);
+        return;
+      }
+      const next = numeric(text);
+      if (next !== null) change(next);
+    }}
+    onBlur={() => {
+      // An unfinished number is invalid for calculations, but remains visible for correction.
+      if (draft.trim() && parsed === null) change(null);
+    }}
+  /></Field>;
 }
 export function PurchaseDocumentReview({ document, ingredients, change, disabled }: { document: PurchaseDocument; ingredients: IngredientMatch[]; change: (doc: PurchaseDocument) => void; disabled: boolean }) {
   const review = reviewDocument(document, ingredients);
