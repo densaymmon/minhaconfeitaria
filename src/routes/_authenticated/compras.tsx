@@ -216,7 +216,7 @@ function Compras() {
         if (item.compra_id !== compra.id) continue;
         const unidadeCompra = medida(item.unidade ?? "");
         const insumo = insumos.find((i) => i.id === item.insumo_id);
-        const unidadeInsumo = medida(insumo?.unidade_embalagem ?? insumo?.unidade ?? "un");
+        const unidadeInsumo = medida(String(insumo?.unidade_embalagem ?? insumo?.unidade ?? "un"));
         if (!unidadeCompra || !unidadeInsumo || unidadeCompra.base !== unidadeInsumo.base) continue;
         saldo.set(item.insumo_id, (saldo.get(item.insumo_id) ?? 0) + Number(item.quantidade || 0) * unidadeCompra.fator);
       }
