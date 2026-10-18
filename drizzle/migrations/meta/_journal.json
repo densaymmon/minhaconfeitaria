@@ -48,7 +48,7 @@
       "idx": 6,
       "version": "7",
       "when": 1791942000001,
-      "tag": "0006_producao_estoque_atomico",
+      "tag": "0006_ajustar_producao_rpc",
       "breakpoints": true
     },
     {
@@ -91,13 +91,6 @@
       "version": "7",
       "when": 1791942000007,
       "tag": "0012_bloquear_receita_com_producao_ativa",
-      "breakpoints": true
-    },
-    {
-      "idx": 13,
-      "version": "7",
-      "when": 1791942000008,
-      "tag": "0013_ajustar_producao_assinatura_compativel",
       "breakpoints": true
     }
   ]
