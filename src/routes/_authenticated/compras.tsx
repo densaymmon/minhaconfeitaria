@@ -476,32 +476,13 @@ function Compras() {
     setBusy(true);
     let preservarFinanceiroExistente = false;
     try {
-      // Compras com pagamentos registrados podem ter seus itens corrigidos, desde que
-      // data, local, total e condições de pagamento permaneçam iguais. Nesse caso,
-      // preservamos o extrato existente e não tentamos recriar contas já pagas.
+      // Toda compra editada deve reconciliar seus lançamentos financeiros,
+      // mesmo sem pagamentos anteriores. Isso permite alterar qualquer valor,
+      // data e forma de pagamento sem deixar parcelas antigas inconsistentes.
       if (editandoCompraId) {
         const compraOriginal = compras.find((compra) => compra.id === editandoCompraId);
         if (!compraOriginal) throw new Error("Não foi possível localizar a compra original. Atualize a tela e tente novamente.");
-        const { data: contasGeradas, error: erroContas } = await supabase
-          .from("contas_pagar")
-          .select("id, valor_pago")
-          .eq("compra_id", editandoCompraId)
-          .eq("gerada_automaticamente", true);
-        if (erroContas) throw erroContas;
-        const idsContas = (contasGeradas ?? []).map((conta) => conta.id);
-        if (idsContas.length) {
-          const { data: pagamentosExistentes, error: erroPagamentos } = await supabase
-            .from("contas_pagar_pagamentos")
-            .select("id, conta_id")
-            .in("conta_id", idsContas);
-          if (erroPagamentos) throw erroPagamentos;
-          if ((pagamentosExistentes ?? []).length) {
-            // Preserva o extrato de pagamentos existente. A correção do total da compra
-            // não deve ser bloqueada por pagamentos históricos acima do novo total.
-            // A reconciliação financeira não cria parcelas quando não há saldo restante.
-            preservarFinanceiroExistente = true;
-          }
-        }
+        preservarFinanceiroExistente = true;
       }
       const payload = { data_compra: data };
       const itensPayload = calculadas.map((l) => {
