@@ -3,7 +3,7 @@ import { toast } from "sonner";
 import { useQueryClient } from "@tanstack/react-query";
 import { supabase } from "@/integrations/supabase/client";
 import type { Insumo } from "@/lib/queries";
-import { MEDIDAS, custoPorMedida, medidaLabel, medidasCompativeis } from "@/lib/ingredient-cost";
+import { MEDIDAS, custoPorMedida, medidaLabel } from "@/lib/ingredient-cost";
 import { brl } from "@/lib/format";
 import { Field, NativeSelect } from "./ui";
 import { Input } from "@/components/ui/input";
@@ -53,7 +53,10 @@ export function IngredientForm({ insumo, onDone }: { insumo?: Insumo; onDone?: (
     } catch (e) { toast.error(e instanceof Error ? e.message : "Não foi possível salvar o ingrediente."); }
     finally { setBusy(false); }
   }
-  const unidades = insumo ? medidasCompativeis(insumo.unidade) : MEDIDAS;
+  // A unidade da embalagem é independente da unidade usada nas receitas.
+  // Ao editar um insumo existente, permita trocar entre peso, volume e unidade,
+  // assim como no cadastro inicial, em vez de restringir pelas medidas antigas.
+  const unidades = MEDIDAS;
   return <form onSubmit={salvar} className="space-y-3">
     <Field label="Nome do ingrediente"><Input required maxLength={120} value={f.nome} onChange={(e) => set("nome", e.target.value)} className="h-11" /></Field>
     <Field label="Tipo"><NativeSelect value={f.tipo} onChange={(e) => set("tipo", e.target.value)}><option value="ingrediente">Ingrediente</option><option value="embalagem">Embalagem</option></NativeSelect></Field>
