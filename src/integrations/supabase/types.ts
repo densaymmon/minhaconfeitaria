@@ -865,6 +865,10 @@ export type Database = {
       [_ in never]: never
     }
     Functions: {
+      excluir_insumo_se_sem_receita: {
+        Args: { p_insumo_id: string }
+        Returns: undefined
+      }
       _conta_pagar_operacao_existente: {
         Args: {
           p_hash: string
