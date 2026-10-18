@@ -74,9 +74,9 @@ begin
   if total_centavos <= 0 then
     raise exception 'O total da compra precisa ser maior que zero.';
   end if;
-  if total_centavos < pago_centavos then
-    raise exception 'O novo total não pode ser menor que o valor já pago. Ajuste ou estorne pagamentos no financeiro antes de reduzir a compra.';
-  end if;
+  -- A edição pode corrigir o total para um valor inferior ao já pago.
+  -- Mantemos o histórico de pagamentos imutável e não criamos saldo a pagar
+  -- quando o valor pago é igual ou superior ao novo total.
 
   update public.compras
   set forma_pagamento_compra = p_forma_pagamento,
