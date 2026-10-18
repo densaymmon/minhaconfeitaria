@@ -80,7 +80,7 @@ export const configQ = queryOptions({
     const row = await must<Tables<"configuracoes"> | null>(supabase.from("configuracoes").select("*").maybeSingle());
     if (!row) return CONFIG_PADRAO;
     const { user_id: _u, ...rest } = row;
-    return Object.fromEntries(Object.entries(rest).map(([k, v]) => [k, Number(v)])) as Config;
+    return Object.fromEntries(Object.entries(rest).map(([k, v]) => [k, k === "pix_chave" ? String(v ?? "") : Number(v)])) as Config;
   },
 });
 
