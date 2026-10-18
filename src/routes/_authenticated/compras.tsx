@@ -474,10 +474,14 @@ function Compras() {
     }
     if (total <= 0) { toast.error("O total da compra precisa ser maior que zero."); return; }
     setBusy(true);
+    let preservarFinanceiroExistente = false;
     try {
-      // Se já houve pagamento de alguma parcela, bloqueie a edição antes de alterar
-      // os itens da compra, para não deixar o histórico financeiro inconsistente.
+      // Compras com pagamentos registrados podem ter seus itens corrigidos, desde que
+      // data, local, total e condições de pagamento permaneçam iguais. Nesse caso,
+      // preservamos o extrato existente e não tentamos recriar contas já pagas.
       if (editandoCompraId) {
+        const compraOriginal = compras.find((compra) => compra.id === editandoCompraId);
+        if (!compraOriginal) throw new Error("Não foi possível localizar a compra original. Atualize a tela e tente novamente.");
         const { data: contasGeradas, error: erroContas } = await supabase
           .from("contas_pagar")
           .select("id")
@@ -492,7 +496,28 @@ function Compras() {
             .in("conta_id", idsContas);
           if (erroPagamentos) throw erroPagamentos;
           if ((pagamentosExistentes ?? []).length) {
-            throw new Error("Esta compra já possui parcela com pagamento registrado. Para proteger o extrato financeiro, não é possível editar a compra; registre os ajustes necessários separadamente.");
+            const totalOriginal = Number(compraOriginal.total);
+            const totalAtual = Math.round(total * 100);
+            const totalAnterior = Math.round(totalOriginal * 100);
+            const dataOriginal = compraOriginal.data_compra;
+            const localOriginal = (compraOriginal.local_compra ?? "").trim();
+            const formaOriginal = compraOriginal.forma_pagamento_compra ?? "pix";
+            const parcelasOriginais = Number(compraOriginal.numero_parcelas ?? 1);
+            const vencimentoOriginal = compraOriginal.primeiro_vencimento ?? dataOriginal;
+            if (
+              !Number.isFinite(totalOriginal) ||
+              totalAtual !== totalAnterior ||
+              data !== dataOriginal ||
+              localCompra.trim() !== localOriginal ||
+              formaPagamentoCompra !== formaOriginal ||
+              (formaPagamentoCompra === "credito" && (
+                Number(numeroParcelasCompra) !== parcelasOriginais ||
+                primeiroVencimentoCompra !== vencimentoOriginal
+              ))
+            ) {
+              throw new Error("Esta compra já possui pagamento registrado. Você pode corrigir os itens mantendo o mesmo total, data, local e condições de pagamento. Para alterar esses dados financeiros, faça o ajuste pelo financeiro para preservar o extrato.");
+            }
+            preservarFinanceiroExistente = true;
           }
         }
       }
@@ -529,13 +554,15 @@ function Compras() {
         local_compra: localCompra.trim(),
       });
       if (erroLocal) throw erroLocal;
-      const { error: erroFinanceiro } = await supabase.rpc("registrar_pagamento_compra", {
-        p_compra_id: idCompraSalva,
-        p_forma_pagamento: formaPagamentoCompra,
-        p_numero_parcelas: formaPagamentoCompra === "credito" ? Number(numeroParcelasCompra) : 1,
-        p_primeiro_vencimento: formaPagamentoCompra === "credito" ? primeiroVencimentoCompra : data,
-      });
-      if (erroFinanceiro) throw erroFinanceiro;
+      if (!preservarFinanceiroExistente) {
+        const { error: erroFinanceiro } = await supabase.rpc("registrar_pagamento_compra", {
+          p_compra_id: idCompraSalva,
+          p_forma_pagamento: formaPagamentoCompra,
+          p_numero_parcelas: formaPagamentoCompra === "credito" ? Number(numeroParcelasCompra) : 1,
+          p_primeiro_vencimento: formaPagamentoCompra === "credito" ? primeiroVencimentoCompra : data,
+        });
+        if (erroFinanceiro) throw erroFinanceiro;
+      }
       eventoSalvarRef.current = null;
       await Promise.all([
         qc.invalidateQueries({ queryKey: ["compras"] }),
