@@ -508,6 +508,7 @@ function PedidoForm() {
         </Card>
 
         <Card className="space-y-3">
+          {temProducaoRegistrada && <p className="rounded-lg border border-amber-300 bg-amber-50 p-3 text-sm text-amber-900">Este pedido já tem produção registrada. Para preservar o histórico e o estoque, somente os preços unitários, o frete e o desconto podem ser alterados.</p>}
           <div className="flex items-center justify-between">
             <h2 className="text-lg font-semibold">Itens</h2>
             <Button
@@ -607,7 +608,7 @@ function PedidoForm() {
 
               <div className="grid grid-cols-1 gap-3 sm:grid-cols-2">
                 <Field label="Forma de pagamento">
-                  <NativeSelect value={f.forma_pagamento} onChange={(e) => set("forma_pagamento", e.target.value)}>
+                  <NativeSelect value={f.forma_pagamento} disabled={temProducaoRegistrada} onChange={(e) => set("forma_pagamento", e.target.value)}>
                     {FORMAS.map((forma) => (
                       <option key={forma.value} value={forma.value}>{forma.label}</option>
                     ))}
@@ -705,7 +706,7 @@ function PedidoForm() {
 
             <Card>
               <Field label="Observações e personalizações">
-                <Textarea rows={3} value={f.observacoes} onChange={(e) => set("observacoes", e.target.value)} placeholder="Ex.: escrever 'Parabéns Ana', sem lactose..." />
+                <Textarea rows={3} value={f.observacoes} disabled={temProducaoRegistrada} onChange={(e) => set("observacoes", e.target.value)} placeholder="Ex.: escrever 'Parabéns Ana', sem lactose..." />
               </Field>
             </Card>
           </>
