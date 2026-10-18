@@ -454,7 +454,8 @@ function Producao() {
                   const total = p.pedido_itens.reduce((s, i) => s + Number(i.quantidade), 0);
                   const feito = p.pedido_itens.reduce((s, i) => s + Number(i.quantidade_produzida), 0);
                   const percentual = total > 0 ? Math.min(100, (feito / total) * 100) : 0;
-                  const ativo = ["recebido", "confirmado", "em_producao"].includes(p.status);
+                  const ativo = ["recebido", "confirmado", "em_producao"].includes(p.status)
+                    || (p.status === "pronto" && p.pedido_itens.some((item) => Number(item.quantidade_produzida) < Number(item.quantidade)));
                   return (
                     <Card
                       key={p.id}
