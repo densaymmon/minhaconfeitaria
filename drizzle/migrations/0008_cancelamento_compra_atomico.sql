@@ -3,7 +3,7 @@
 -- edits have already appended compensating reversals. Historical rows are retained.
 
 ALTER TABLE public.compras
-  ADD COLUMN cancelada_em timestamptz;
+  ADD COLUMN IF NOT EXISTS cancelada_em timestamptz;
 
 ALTER TABLE public.estoque_eventos
   DROP CONSTRAINT IF EXISTS estoque_eventos_tipo_check;
@@ -25,6 +25,7 @@ BEGIN
 END;
 $function$;
 
+DROP TRIGGER IF EXISTS compras_bloquear_edicao_cancelada ON public.compras;
 CREATE TRIGGER compras_bloquear_edicao_cancelada
 BEFORE UPDATE ON public.compras
 FOR EACH ROW EXECUTE FUNCTION public.bloquear_edicao_compra_cancelada();

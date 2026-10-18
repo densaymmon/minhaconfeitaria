@@ -29,10 +29,12 @@ BEGIN
 END;
 $function$;
 
+DROP TRIGGER IF EXISTS pedido_item_bloquear_delete_com_producao ON public.pedido_itens;
 CREATE TRIGGER pedido_item_bloquear_delete_com_producao
 BEFORE DELETE ON public.pedido_itens
 FOR EACH ROW EXECUTE FUNCTION public.bloquear_edicao_item_com_producao();
 
+DROP TRIGGER IF EXISTS pedido_item_bloquear_alteracao_com_producao ON public.pedido_itens;
 CREATE TRIGGER pedido_item_bloquear_alteracao_com_producao
 BEFORE UPDATE OF pedido_id, produto_id, descricao, quantidade ON public.pedido_itens
 FOR EACH ROW EXECUTE FUNCTION public.bloquear_edicao_item_com_producao();

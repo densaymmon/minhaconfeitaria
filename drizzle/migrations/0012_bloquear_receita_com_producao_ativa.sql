@@ -3,7 +3,7 @@
 -- correct, recipe quantities and product yield cannot change until all produced
 -- quantities referencing that product have been reversed back to zero.
 
-CREATE INDEX pedido_itens_producao_ativa_idx
+CREATE INDEX IF NOT EXISTS pedido_itens_producao_ativa_idx
   ON public.pedido_itens (user_id, produto_id)
   WHERE quantidade_produzida > 0;
 
@@ -70,6 +70,7 @@ BEGIN
 END;
 $function$;
 
+DROP TRIGGER IF EXISTS receita_itens_bloquear_edicao_producao ON public.receita_itens;
 CREATE TRIGGER receita_itens_bloquear_edicao_producao
 BEFORE INSERT OR UPDATE OR DELETE ON public.receita_itens
 FOR EACH ROW EXECUTE FUNCTION public.bloquear_receita_com_producao_ativa();
@@ -95,6 +96,7 @@ BEGIN
 END;
 $function$;
 
+DROP TRIGGER IF EXISTS produto_bloquear_rendimento_producao ON public.produtos;
 CREATE TRIGGER produto_bloquear_rendimento_producao
 BEFORE UPDATE OF rendimento ON public.produtos
 FOR EACH ROW EXECUTE FUNCTION public.bloquear_rendimento_com_producao_ativa();
