@@ -158,6 +158,7 @@ function Compras() {
   const [busy, setBusy] = useState(false);
   const eventoSalvarRef = useRef<{ assinatura: string; id: string } | null>(null);
   const [inventarioFisico, setInventarioFisico] = useState<Record<string, string>>({});
+  const [inventarioUnidade, setInventarioUnidade] = useState<Record<string, string>>({});
   const eventoInventarioRef = useRef<{ assinatura: string; id: string } | null>(null);
   const eventoCancelarRef = useRef<{ compraId: string; id: string } | null>(null);
   const eventoExcluirRef = useRef<{ compraId: string; id: string } | null>(null);
@@ -471,11 +472,18 @@ function Compras() {
       toast.error("Informe a quantidade física de pelo menos um insumo.");
       return;
     }
-    const itensInventario = preenchidos.map((item) => ({
-      insumo_id: item.insumo_id,
-      quantidade_fisica: numeroIngrediente(inventarioFisico[item.insumo_id] ?? ""),
-      unidade_base: item.unidade_base!,
-    }));
+    const itensInventario = preenchidos.map((item) => {
+      const unidadeDigitada = inventarioUnidade[item.insumo_id] ?? item.unidade_base!;
+      const conversao = medida(unidadeDigitada);
+      if (!conversao || conversao.base !== item.unidade_base) {
+        throw new Error(`A unidade informada para ${item.nome} não corresponde ao estoque.`);
+      }
+      return {
+        insumo_id: item.insumo_id,
+        quantidade_fisica: numeroIngrediente(inventarioFisico[item.insumo_id] ?? "") * conversao.fator,
+        unidade_base: item.unidade_base!,
+      };
+    });
     if (itensInventario.some((item) => !Number.isFinite(item.quantidade_fisica) || item.quantidade_fisica < 0)) {
       toast.error("Confira as quantidades físicas. Use valores iguais ou maiores que zero.");
       return;
@@ -711,17 +719,20 @@ function Compras() {
       <section className="mb-8 rounded-xl border p-4">
         <h2 className="mb-2 text-lg font-semibold">Conferência física do estoque</h2>
         <p className="mb-3 text-sm text-muted-foreground">
-          O sistema sugere o saldo teórico (compras não canceladas menos consumo estimado pelas receitas atuais). Use “Preencher com estoque calculado” para carregar as sugestões, edite livremente cada quantidade após conferir fisicamente e só então registre. O registro ajusta apenas a diferença no histórico; não altera compras nem recalcula custos históricos. Saldos teóricos negativos são exibidos como zero para conferência física.
+          O sistema sugere o saldo teórico (compras não canceladas menos consumo estimado pelas receitas atuais). Use “Preencher com estoque calculado” para carregar as sugestões, confira fisicamente e registre. Você pode informar em kg ou g, L ou ml, e dúzias ou unidades; o sistema converte para a unidade-base automaticamente. O registro ajusta apenas a diferença no histórico; não altera compras nem recalcula custos históricos. Saldos teóricos negativos são exibidos como zero para conferência física.
         </p>
         <Button
           type="button"
           variant="outline"
           className="mb-3 h-10 w-full"
           disabled={busy || carregandoEstoque}
-          onClick={() => setInventarioFisico(Object.fromEntries(estoque.filter((item) => item.unidade_base).map((item) => {
-            const estimado = Number(estoqueTeorico[item.insumo_id] ?? 0);
-            return [item.insumo_id, String(Math.max(0, Number.isFinite(estimado) ? estimado : 0))];
-          })))}
+          onClick={() => {
+            setInventarioFisico(Object.fromEntries(estoque.filter((item) => item.unidade_base).map((item) => {
+              const estimado = Number(estoqueTeorico[item.insumo_id] ?? 0);
+              return [item.insumo_id, String(Math.max(0, Number.isFinite(estimado) ? estimado : 0))];
+            })));
+            setInventarioUnidade(Object.fromEntries(estoque.filter((item) => item.unidade_base).map((item) => [item.insumo_id, item.unidade_base!])));
+          }}
         >
           Preencher com estoque calculado
         </Button>
@@ -741,17 +752,40 @@ function Compras() {
                     {Number(estoqueTeorico[item.insumo_id] ?? 0) < 0 ? " · negativo, confira fisicamente" : ""}
                   </p>
                 </div>
-                <label className="space-y-1 text-xs">
-                  <span className="text-muted-foreground">Físico ({unidade ?? "indefinido"})</span>
+                <div className="space-y-1 text-xs">
+                  <label className="block text-muted-foreground" htmlFor={`inventario-unidade-${item.insumo_id}`}>Unidade digitada</label>
+                  <select
+                    id={`inventario-unidade-${item.insumo_id}`}
+                    aria-label={`Unidade da quantidade física de ${item.nome}`}
+                    className="h-9 w-full rounded-md border border-input bg-background px-2 text-sm"
+                    disabled={!unidade || busy}
+                    value={inventarioUnidade[item.insumo_id] ?? unidade ?? "un"}
+                    onChange={(e) => {
+                      const novaUnidade = e.target.value;
+                      const unidadeAnterior = inventarioUnidade[item.insumo_id] ?? unidade ?? "un";
+                      const fatorAnterior = medida(unidadeAnterior)?.fator ?? 1;
+                      const fatorNovo = medida(novaUnidade)?.fator ?? 1;
+                      const valorAtual = inventarioFisico[item.insumo_id] ?? "";
+                      const numeroAtual = numeroIngrediente(valorAtual);
+                      setInventarioUnidade((s) => ({ ...s, [item.insumo_id]: novaUnidade }));
+                      if (valorAtual.trim() && Number.isFinite(numeroAtual)) {
+                        setInventarioFisico((s) => ({ ...s, [item.insumo_id]: String(numeroAtual * fatorAnterior / fatorNovo) }));
+                      }
+                    }}
+                  >
+                    {(unidade === "g" ? ["g", "kg"] : unidade === "ml" ? ["ml", "L"] : unidade === "un" ? ["un", "dúzia"] : unidade ? [unidade] : []).map((u) => (
+                      <option key={u} value={u}>{u}</option>
+                    ))}
+                  </select>
                   <Input
                     inputMode="decimal"
                     aria-label={`Quantidade física de ${item.nome}`}
-                    placeholder={unidade ? "Ex.: 250" : "Corrigir unidade"}
+                    placeholder={unidade ? "Quantidade contada" : "Corrigir unidade"}
                     disabled={!unidade || busy}
                     value={inventarioFisico[item.insumo_id] ?? ""}
                     onChange={(e) => setInventarioFisico((s) => ({ ...s, [item.insumo_id]: e.target.value }))}
                   />
-                </label>
+                </div>
               </div>
             );
           })}
