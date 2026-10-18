@@ -457,7 +457,7 @@ function PedidoForm() {
       <div className="space-y-4">
         <Card className="space-y-3">
           <Field label="Cliente">
-            <NativeSelect value={f.cliente_id} onChange={(e) => set("cliente_id", e.target.value)}>
+            <NativeSelect value={f.cliente_id} disabled={temProducaoRegistrada} onChange={(e) => set("cliente_id", e.target.value)}>
               <option value="">— Sem cliente —</option>
               {clientes.map((c) => (
                 <option key={c.id} value={c.id}>{c.nome}</option>
@@ -483,16 +483,17 @@ function PedidoForm() {
           </div>
           <div className="grid grid-cols-2 gap-3">
             <Field label="Data de entrega">
-              <Input type="date" value={f.data_entrega} onChange={(e) => set("data_entrega", e.target.value)} className="h-11" />
+              <Input type="date" value={f.data_entrega} disabled={temProducaoRegistrada} onChange={(e) => set("data_entrega", e.target.value)} className="h-11" />
             </Field>
             <Field label="Horário">
-              <Input type="time" value={f.hora_entrega} onChange={(e) => set("hora_entrega", e.target.value)} className="h-11" />
+              <Input type="time" value={f.hora_entrega} disabled={temProducaoRegistrada} onChange={(e) => set("hora_entrega", e.target.value)} className="h-11" />
             </Field>
           </div>
           <Field label="Status do pedido">
             {existente && f.status !== "cancelado" ? (
               <NativeSelect
                 value={f.status === "finalizado" ? "entregue" : f.status === "confirmado" ? "recebido" : f.status}
+                disabled={temProducaoRegistrada}
                 onChange={(e) => alterarStatusPedido(e.target.value as "recebido" | "em_producao" | "pronto" | "entregue")}
               >
                 <option value="recebido">Recebido</option>
@@ -512,6 +513,7 @@ function PedidoForm() {
             <Button
               size="sm"
               variant="outline"
+              disabled={temProducaoRegistrada}
               onClick={() => setItens((s) => [...s, { produto_id: null, descricao: "", quantidade: "1", preco_unitario: "0", custo_unitario: 0, quantidade_produzida: 0 }])}
             >
               <Plus className="size-4" /> Item
@@ -521,20 +523,20 @@ function PedidoForm() {
           {itens.map((it, i) => (
             <div key={i} className="space-y-2 rounded-xl bg-muted/60 p-3">
               <div className="flex gap-2">
-                <NativeSelect value={it.produto_id ?? ""} onChange={(e) => escolherProduto(i, e.target.value)}>
+                <NativeSelect value={it.produto_id ?? ""} disabled={temProducaoRegistrada} onChange={(e) => escolherProduto(i, e.target.value)}>
                   <option value="">Produto avulso</option>
                   {produtos.filter((p) => p.ativo || p.id === it.produto_id).map((p) => (
                     <option key={p.id} value={p.id}>{p.nome}</option>
                   ))}
                 </NativeSelect>
-                <Button size="icon" variant="ghost" className="h-11 w-11 shrink-0" onClick={() => setItens((s) => s.filter((_, j) => j !== i))} aria-label="Remover item">
+                <Button size="icon" variant="ghost" className="h-11 w-11 shrink-0" disabled={temProducaoRegistrada} onClick={() => setItens((s) => s.filter((_, j) => j !== i))} aria-label="Remover item">
                   <Trash2 className="size-4 text-destructive" />
                 </Button>
               </div>
-              <Input placeholder="Descrição / personalização" value={it.descricao} onChange={(e) => setItem(i, { descricao: e.target.value })} className="h-11 bg-card" />
+              <Input placeholder="Descrição / personalização" value={it.descricao} disabled={temProducaoRegistrada} onChange={(e) => setItem(i, { descricao: e.target.value })} className="h-11 bg-card" />
               <div className="grid grid-cols-3 gap-2">
                 <Field label="Qtd.">
-                  <Input inputMode="decimal" value={it.quantidade} onFocus={() => limparZeroAoFocar(it.quantidade, (valor) => setItem(i, { quantidade: valor }))} onChange={(e) => setItem(i, { quantidade: e.target.value })} className="h-11 bg-card" />
+                  <Input inputMode="decimal" value={it.quantidade} disabled={temProducaoRegistrada} onFocus={() => limparZeroAoFocar(it.quantidade, (valor) => setItem(i, { quantidade: valor }))} onChange={(e) => setItem(i, { quantidade: e.target.value })} className="h-11 bg-card" />
                 </Field>
                 <Field label="Preço un.">
                   <Input inputMode="decimal" value={it.preco_unitario} onFocus={() => limparZeroAoFocar(it.preco_unitario, (valor) => setItem(i, { preco_unitario: valor }))} onChange={(e) => setItem(i, { preco_unitario: e.target.value })} className="h-11 bg-card" />
@@ -556,7 +558,7 @@ function PedidoForm() {
               </div>
               <div className="grid grid-cols-1 gap-3 sm:grid-cols-2">
                 <Field label="Forma de pagamento">
-                  <NativeSelect value={f.forma_pagamento} onChange={(e) => set("forma_pagamento", e.target.value)}>
+                  <NativeSelect value={f.forma_pagamento} disabled={temProducaoRegistrada} onChange={(e) => set("forma_pagamento", e.target.value)}>
                     {FORMAS.map((s) => (
                       <option key={s.value} value={s.value}>{s.label}</option>
                     ))}
@@ -586,7 +588,7 @@ function PedidoForm() {
                   </Field>
                 </div>
                 <Field label="Observações e personalizações">
-                  <Textarea rows={3} value={f.observacoes} onChange={(e) => set("observacoes", e.target.value)} placeholder="Ex.: escrever 'Parabéns Ana', sem lactose..." />
+                  <Textarea rows={3} value={f.observacoes} disabled={temProducaoRegistrada} onChange={(e) => set("observacoes", e.target.value)} placeholder="Ex.: escrever 'Parabéns Ana', sem lactose..." />
                 </Field>
               </div>
             </details>
@@ -612,7 +614,7 @@ function PedidoForm() {
                   </NativeSelect>
                 </Field>
                 <Field label="Valor já pago (R$)">
-                  <Input inputMode="decimal" value={f.valor_entrada} onFocus={() => limparZeroAoFocar(f.valor_entrada, setValorPago)} onChange={(e) => setValorPago(e.target.value)} className="h-11" />
+                  <Input inputMode="decimal" value={f.valor_entrada} disabled={temProducaoRegistrada} onFocus={() => limparZeroAoFocar(f.valor_entrada, setValorPago)} onChange={(e) => setValorPago(e.target.value)} className="h-11" />
                 </Field>
                 <Field label="Frete (R$)">
                   <Input inputMode="decimal" value={f.taxa_entrega} onFocus={() => limparZeroAoFocar(f.taxa_entrega, (valor) => set("taxa_entrega", valor))} onChange={(e) => set("taxa_entrega", e.target.value)} className="h-11" />
@@ -621,7 +623,7 @@ function PedidoForm() {
                   <Input inputMode="decimal" value={f.desconto} onFocus={() => limparZeroAoFocar(f.desconto, (valor) => set("desconto", valor))} onChange={(e) => set("desconto", e.target.value)} className="h-11" />
                 </Field>
                 <Field label="Data de pagamento">
-                  <Input type="date" value={dataPagamento} max={hojeISO()} onChange={(e) => setDataPagamento(e.target.value)} className="h-11" />
+                  <Input type="date" value={dataPagamento} disabled={temProducaoRegistrada} max={hojeISO()} onChange={(e) => setDataPagamento(e.target.value)} className="h-11" />
                 </Field>
               </div>
 
@@ -721,7 +723,7 @@ function PedidoForm() {
             </Button>
           )}
           <Button className="h-12 flex-1 text-base" onClick={salvar} disabled={salvando}>
-            {salvando ? "Salvando..." : "Salvar pedido"}
+            {salvando ? "Salvando..." : temProducaoRegistrada ? "Salvar valores" : "Salvar pedido"}
           </Button>
         </div>
       </div>
