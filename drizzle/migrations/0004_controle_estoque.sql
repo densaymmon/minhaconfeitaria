@@ -2,7 +2,7 @@
 -- This migration intentionally does not add purchase/production triggers yet.
 -- Those integrations must be implemented atomically and tested before activation.
 
-CREATE TABLE public.estoque_movimentos (
+CREATE TABLE IF NOT EXISTS public.estoque_movimentos (
   id uuid PRIMARY KEY DEFAULT gen_random_uuid(),
   user_id uuid NOT NULL DEFAULT auth.uid(),
   insumo_id uuid NOT NULL REFERENCES public.insumos(id) ON DELETE RESTRICT,
@@ -35,14 +35,15 @@ CREATE TABLE public.estoque_movimentos (
   CONSTRAINT estoque_evento_insumo_unico UNIQUE (user_id, evento_id, insumo_id)
 );
 
-CREATE INDEX estoque_movimentos_saldo_idx
+CREATE INDEX IF NOT EXISTS estoque_movimentos_saldo_idx
   ON public.estoque_movimentos (user_id, insumo_id, created_at);
 
-CREATE INDEX estoque_movimentos_origem_idx
+CREATE INDEX IF NOT EXISTS estoque_movimentos_origem_idx
   ON public.estoque_movimentos (user_id, origem_tipo, origem_id);
 
 ALTER TABLE public.estoque_movimentos ENABLE ROW LEVEL SECURITY;
 
+DROP POLICY IF EXISTS estoque_movimentos_dono_select ON public.estoque_movimentos;
 CREATE POLICY estoque_movimentos_dono_select
   ON public.estoque_movimentos
   FOR SELECT TO authenticated
