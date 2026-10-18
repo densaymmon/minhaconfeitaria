@@ -2,14 +2,14 @@
 -- Apply only in an isolated test database after review. Do not run on production yet.
 
 ALTER TABLE public.compras
-  ADD COLUMN estoque_integrado boolean NOT NULL DEFAULT false;
+  ADD COLUMN IF NOT EXISTS estoque_integrado boolean NOT NULL DEFAULT false;
 
 -- Event idempotency is separate from movements: one event may contain multiple
 -- movements for the same ingredient (e.g. compensating reversal + replacement).
 ALTER TABLE public.estoque_movimentos
   DROP CONSTRAINT IF EXISTS estoque_evento_insumo_unico;
 
-CREATE TABLE public.estoque_eventos (
+CREATE TABLE IF NOT EXISTS public.estoque_eventos (
   id uuid PRIMARY KEY DEFAULT gen_random_uuid(),
   user_id uuid NOT NULL,
   evento_id uuid NOT NULL,
@@ -20,6 +20,7 @@ CREATE TABLE public.estoque_eventos (
 );
 
 ALTER TABLE public.estoque_eventos ENABLE ROW LEVEL SECURITY;
+DROP POLICY IF EXISTS estoque_eventos_dono_select ON public.estoque_eventos;
 CREATE POLICY estoque_eventos_dono_select
   ON public.estoque_eventos FOR SELECT TO authenticated
   USING (auth.uid() = user_id);
