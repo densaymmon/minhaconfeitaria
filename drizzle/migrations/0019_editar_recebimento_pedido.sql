@@ -94,3 +94,6 @@ GRANT EXECUTE ON FUNCTION public.editar_recebimento_pedido(uuid, numeric, date, 
 
 COMMENT ON FUNCTION public.editar_recebimento_pedido(uuid, numeric, date, text, text) IS
   'Edita um recebimento existente e recalcula valor_entrada/saldo_quitado sem criar pagamento duplicado.';
+
+-- Solicita ao PostgREST atualizar o cache de funções RPC após a migração.
+NOTIFY pgrst, 'reload schema';

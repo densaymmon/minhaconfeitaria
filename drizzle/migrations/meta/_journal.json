@@ -92,6 +92,13 @@
       "when": 1791942000007,
       "tag": "0012_bloquear_receita_com_producao_ativa",
       "breakpoints": true
+    },
+    {
+      "idx": 13,
+      "version": "7",
+      "when": 1792360800000,
+      "tag": "0019_editar_recebimento_pedido",
+      "breakpoints": true
     }
   ]
 }
