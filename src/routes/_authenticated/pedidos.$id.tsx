@@ -36,6 +36,7 @@ export const Route = createFileRoute("/_authenticated/pedidos/$id")({
 });
 
 type Item = {
+  id?: string;
   produto_id: string | null;
   descricao: string;
   quantidade: string;
@@ -54,6 +55,7 @@ function PedidoForm() {
   const { data: config } = useSuspenseQuery(configQ);
   const { produtos, custo } = useCustos();
   const existente = novo ? undefined : pedidos.find((p) => p.id === id);
+  const temProducaoRegistrada = Boolean(existente?.pedido_itens.some((item) => Number(item.quantidade_produzida ?? 0) > 0));
 
   const [f, setF] = useState(() => ({
     cliente_id: existente?.cliente_id ?? "",
@@ -70,6 +72,7 @@ function PedidoForm() {
   const [itens, setItens] = useState<Item[]>(
     () =>
       existente?.pedido_itens.map((i) => ({
+        id: i.id,
         produto_id: i.produto_id,
         descricao: i.descricao,
         quantidade: String(i.quantidade),
@@ -206,6 +209,7 @@ function PedidoForm() {
     });
     setItens(
       existente?.pedido_itens.map((i) => ({
+        id: i.id,
         produto_id: i.produto_id,
         descricao: i.descricao,
         quantidade: String(i.quantidade),
@@ -315,6 +319,20 @@ function PedidoForm() {
     saveLock.current = true;
     setSalvando(true);
     try {
+      if (existente && temProducaoRegistrada) {
+        if (itens.some((item) => !item.id)) throw new Error("Não é possível adicionar itens a um pedido com produção registrada. Edite somente os preços, o frete e o desconto.");
+        const { error: valoresError } = await supabase.rpc("editar_valores_pedido_com_producao", {
+          p_pedido_id: existente.id,
+          p_itens: itens.map((item) => ({ id: item.id, preco_unitario: Math.round(parseNum(item.preco_unitario) * 100) / 100 })),
+          p_desconto: Math.round(parseNum(f.desconto) * 100) / 100,
+          p_taxa_entrega: Math.round(parseNum(f.taxa_entrega) * 100) / 100,
+        });
+        if (valoresError) throw new Error(valoresError.message);
+        await qc.invalidateQueries({ queryKey: ["pedidos"] });
+        toast.success("Valores atualizados sem alterar a produção ou o estoque.");
+        navigate({ to: "/pedidos", search: { filtro: undefined, dataInicial: undefined, dataFinal: undefined } });
+        return;
+      }
       const payload = {
         cliente_id: f.cliente_id || null,
         data_entrega: f.data_entrega,
