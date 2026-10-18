@@ -3,7 +3,7 @@ import { createFileRoute, Link, useNavigate } from "@tanstack/react-router";
 import { useQueryClient } from "@tanstack/react-query";
 import { useState } from "react";
 import { toast } from "sonner";
-import { Copy, Download, Plus, Trash2, Pencil } from "lucide-react";
+import { Copy, Download, Plus, Trash2, Pencil, Archive, RotateCcw } from "lucide-react";
 import { supabase } from "@/integrations/supabase/client";
 import { useCustos } from "@/lib/hooks";
 import { margemReal } from "@/lib/calc";
@@ -125,6 +125,16 @@ function Insumos({ insumos }: { insumos: Insumo[] }) {
   const qc = useQueryClient();
   const [editando, setEditando] = useState<string | null>(null);
 
+  async function alternarAtivo(i: Insumo) {
+    const ativo = i.ativo !== false;
+    const acao = ativo ? "inativar" : "reativar";
+    if (!confirm(`${ativo ? "Inativar" : "Reativar"} ${i.nome}? ${ativo ? "Ele deixará de aparecer em novos cadastros, mas o histórico será preservado." : "Ele voltará a aparecer nos novos cadastros."}`)) return;
+    const { error } = await supabase.from("insumos").update({ ativo: !ativo }).eq("id", i.id);
+    if (error) return void toast.error(`Não foi possível ${acao} o insumo: ${error.message}`);
+    await qc.invalidateQueries({ queryKey: ["insumos"] });
+    toast.success(ativo ? "Insumo inativado. O histórico foi preservado." : "Insumo reativado.");
+  }
+
   async function excluir(i: Insumo) {
     if (!confirm(`Excluir ${i.nome}?`)) return;
     const { error } = await supabase.from("insumos").delete().eq("id", i.id);
@@ -163,11 +173,12 @@ function Insumos({ insumos }: { insumos: Insumo[] }) {
             return <Card key={i.id} className="p-3">
               <div className="flex items-center gap-2">
                 <div className="min-w-0 flex-1">
-                  <div className="break-words font-medium">{i.nome}</div>
+                  <div className="break-words font-medium">{i.nome} {i.ativo === false && <span className="ml-1 rounded bg-muted px-2 py-0.5 text-xs font-normal text-muted-foreground">Inativo</span>}</div>
                   <div className="text-xs text-muted-foreground">{brl(i.preco_embalagem ?? i.preco_unidade)} / {i.quantidade_embalagem ?? 1} {medidaLabel(i.unidade_embalagem ?? i.unidade)}</div>
                   <div className="text-xs text-muted-foreground">Custo unitário: {brl(u.custo)} / {medidaLabel(u.unidade)}</div>
                 </div>
                 <Button size="icon" variant="ghost" onClick={() => setEditando(editando === i.id ? null : i.id)} aria-label={`Editar ${i.nome}`}><Pencil className="size-4" /></Button>
+                <Button size="icon" variant="ghost" onClick={() => alternarAtivo(i)} aria-label={`${i.ativo === false ? "Reativar" : "Inativar"} ${i.nome}`} title={i.ativo === false ? "Reativar insumo" : "Inativar insumo"}>{i.ativo === false ? <RotateCcw className="size-4" /> : <Archive className="size-4" />}</Button>
                 <Button size="icon" variant="ghost" onClick={() => excluir(i)} aria-label={`Excluir ${i.nome}`}><Trash2 className="size-4 text-destructive" /></Button>
               </div>
               {editando === i.id && <div className="mt-3 border-t pt-3"><IngredientForm insumo={i} onDone={() => setEditando(null)} /></div>}
