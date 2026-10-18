@@ -48,10 +48,8 @@ function Pedidos() {
     if (["abertos", "prontos", "todos", "em_andamento", "atrasados", "entregas_hoje", "a_receber", "recebido", "confirmado", "em_producao", "pronto", "finalizado", "entregue", "cancelado"].includes(filtro)) return filtro;
     return "abertos";
   });
-  const [mostrarFiltros, setMostrarFiltros] = useState(Boolean(search.dataInicial || search.dataFinal || (search.filtro && !["abertos", "prontos", "todos"].includes(search.filtro))));
-  const [dataInicial, setDataInicial] = useState(search.dataInicial ?? "");
-  const [dataFinal, setDataFinal] = useState(search.dataFinal ?? "");
-  const [dataReferencia, setDataReferencia] = useState<"entrega" | "recebimento">(search.dataReferencia ?? "entrega");
+  const [mostrarFiltros, setMostrarFiltros] = useState(Boolean(search.filtro && !["abertos", "prontos", "todos"].includes(search.filtro)));
+  const [ordem, setOrdem] = useState<"entrega" | "recebimento">("entrega");
   const hoje = hojeISO();
 
   const contagens = useMemo(() => ({
@@ -67,9 +65,6 @@ function Pedidos() {
   const lista = useMemo(() => {
     const q = busca.trim().toLowerCase();
     return pedidos.filter((p) => {
-      const dataPedido = dataReferencia === "recebimento" ? (p.created_at ?? "").slice(0, 10) : p.data_entrega;
-      if (dataInicial && (!dataPedido || dataPedido < dataInicial)) return false;
-      if (dataFinal && (!dataPedido || dataPedido > dataFinal)) return false;
       if (status === "abertos" && ["pronto", "finalizado", "entregue", "cancelado"].includes(p.status)) return false;
       if (status === "prontos" && p.status !== "pronto") return false;
       if (status === "em_andamento" && !["recebido", "confirmado", "em_producao"].includes(p.status)) return false;
@@ -89,8 +84,15 @@ function Pedidos() {
         (p.observacoes ?? "").toLowerCase().includes(q) ||
         p.pedido_itens.some((i) => i.descricao.toLowerCase().includes(q))
       );
+    }).sort((a, b) => {
+      const dataA = ordem === "entrega" ? (a.data_entrega || "9999-12-31") : (a.created_at ?? "9999-12-31").slice(0, 10);
+      const dataB = ordem === "entrega" ? (b.data_entrega || "9999-12-31") : (b.created_at ?? "9999-12-31").slice(0, 10);
+      const comparacaoData = dataA.localeCompare(dataB);
+      if (comparacaoData !== 0) return comparacaoData;
+      if (ordem === "entrega") return (a.hora_entrega ?? "23:59").localeCompare(b.hora_entrega ?? "23:59");
+      return (a.created_at ?? "").localeCompare(b.created_at ?? "");
     });
-  }, [pedidos, busca, status, dataInicial, dataFinal, dataReferencia, hoje]);
+  }, [pedidos, busca, status, ordem, hoje]);
 
   function exportar() {
     baixarCSV(
@@ -183,20 +185,21 @@ function Pedidos() {
             {f.label}
           </button>
         ))}
-        <Button type="button" variant="outline" size="sm" aria-expanded={mostrarFiltros} onClick={() => setMostrarFiltros((v) => !v)} className="ml-auto h-9">
+        <Button type="button" variant="outline" size="sm" aria-expanded={mostrarFiltros} onClick={() => setMostrarFiltros((v) => !v)} className="h-9">
           <SlidersHorizontal className="size-4" /> Filtros <ChevronDown className={cn("size-4 transition-transform", mostrarFiltros && "rotate-180")} />
         </Button>
       </div>
 
+      <div className="mb-4 flex flex-col gap-2 rounded-xl border bg-card p-3 sm:flex-row sm:items-center sm:justify-between">
+        <span className="text-sm font-medium">Organizar pedidos por</span>
+        <div className="flex gap-2">
+          <Button type="button" size="sm" variant={ordem === "entrega" ? "default" : "outline"} aria-pressed={ordem === "entrega"} onClick={() => setOrdem("entrega")} className="flex-1 sm:flex-none">Ordem de entrega</Button>
+          <Button type="button" size="sm" variant={ordem === "recebimento" ? "default" : "outline"} aria-pressed={ordem === "recebimento"} onClick={() => setOrdem("recebimento")} className="flex-1 sm:flex-none">Ordem de recebimento</Button>
+        </div>
+      </div>
+
       {mostrarFiltros && (
         <Card className="mb-4 space-y-3 p-3">
-          <label className="block space-y-1 text-sm font-medium">
-            <span>Filtrar datas por</span>
-            <select aria-label="Filtrar datas por" value={dataReferencia} onChange={(e) => setDataReferencia(e.target.value as "entrega" | "recebimento")} className="h-10 w-full rounded-md border border-input bg-background px-3 text-sm font-normal">
-              <option value="entrega">Data de entrega</option>
-              <option value="recebimento">Data de recebimento do pedido</option>
-            </select>
-          </label>
           <label className="block space-y-1 text-sm font-medium">
             <span>Status do pedido</span>
             <select aria-label="Status do pedido" value={status} onChange={(e) => setStatus(e.target.value)} className="h-10 w-full rounded-md border border-input bg-background px-3 text-sm font-normal">
@@ -206,19 +209,9 @@ function Pedidos() {
               {filtrosAvancados.map((f) => <option key={f.value} value={f.value}>{f.label}</option>)}
             </select>
           </label>
-          <div className="grid grid-cols-1 gap-3 sm:grid-cols-2">
-            <label className="space-y-1 text-sm font-medium">
-              <span>{dataReferencia === "entrega" ? "Entrega a partir de" : "Recebido a partir de"}</span>
-              <Input type="date" aria-label={dataReferencia === "entrega" ? "Data inicial de entrega" : "Data inicial de recebimento"} value={dataInicial} max={dataFinal || undefined} onChange={(e) => setDataInicial(e.target.value)} className="h-10 bg-background" />
-            </label>
-            <label className="space-y-1 text-sm font-medium">
-              <span>{dataReferencia === "entrega" ? "Entrega até" : "Recebido até"}</span>
-              <Input type="date" aria-label={dataReferencia === "entrega" ? "Data final de entrega" : "Data final de recebimento"} value={dataFinal} min={dataInicial || undefined} onChange={(e) => setDataFinal(e.target.value)} className="h-10 bg-background" />
-            </label>
-          </div>
           <div className="flex flex-wrap items-center justify-between gap-2 border-t pt-3">
             <span className="text-xs text-muted-foreground">{lista.length} pedido(s) encontrado(s)</span>
-            <Button type="button" variant="ghost" size="sm" onClick={() => { setStatus("abertos"); setDataInicial(""); setDataFinal(""); setDataReferencia("entrega"); setBusca(""); }}>
+            <Button type="button" variant="ghost" size="sm" onClick={() => { setStatus("abertos"); setBusca(""); }}>
               Limpar filtros
             </Button>
           </div>
