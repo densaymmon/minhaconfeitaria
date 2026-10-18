@@ -47,16 +47,8 @@ begin
   for update;
   if compra.id is null then raise exception 'Compra não encontrada.'; end if;
 
-  if not exists (
-    select 1
-    from public.contas_pagar cp
-    join public.contas_pagar_pagamentos cpp
-      on cpp.conta_id = cp.id and cpp.user_id = uid
-    where cp.user_id = uid and cp.compra_id = p_compra_id
-      and cp.gerada_automaticamente = true
-  ) then
-    raise exception 'Não há pagamentos registrados para reconciliar. Atualize a compra novamente.';
-  end if;
+  -- Também permite editar compras antigas sem parcelas ou pagamentos lançados.
+  -- Nesses casos pago_centavos permanece zero e o saldo futuro é reconstruído.
 
   -- valor_pago é o resumo líquido da conta; os registros individuais de pagamento
   -- nunca são excluídos nem atualizados por esta função.
