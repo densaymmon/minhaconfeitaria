@@ -252,12 +252,18 @@ function Pedidos() {
                   <div className="mt-1 line-clamp-2 text-xs text-muted-foreground">
                     {p.pedido_itens.map((i) => `${Number(i.quantidade)}× ${i.descricao}`).join(", ") || "Sem itens"}
                   </div>
-                  <div className="mt-2 flex items-center justify-between text-sm">
-                    <span className={cn(atrasado && "font-semibold text-destructive")}>
-                      {atrasado ? "Atrasado · " : ""}
-                      {dataBR(p.data_entrega)} {p.hora_entrega ?? ""}
+                  <div className="mt-2 flex items-center justify-between gap-3 text-sm">
+                    <span className={cn("min-w-0", ordem === "entrega" && atrasado && "font-semibold text-destructive")}>
+                      {ordem === "entrega" ? (
+                        <>{atrasado ? "Atrasado · " : "Entrega: "}{dataBR(p.data_entrega)} {p.hora_entrega ?? ""}</>
+                      ) : (
+                        <>
+                          <span className="block">Recebido: {p.created_at ? dataBR(p.created_at.slice(0, 10)) : "Data indisponível"}</span>
+                          <span className={cn("block text-xs", atrasado && "font-semibold text-destructive")}>{atrasado ? "Entrega atrasada · " : "Entrega: "}{dataBR(p.data_entrega)} {p.hora_entrega ?? ""}</span>
+                        </>
+                      )}
                     </span>
-                    <span className="font-semibold tabular-nums">{brl(p.t.venda)}</span>
+                    <span className="shrink-0 font-semibold tabular-nums">{brl(p.t.venda)}</span>
                   </div>
                   {p.t.saldo > 0 && <div className="mt-0.5 text-right text-xs text-warning-foreground">Falta receber {brl(p.t.saldo)}</div>}
               </Card>
