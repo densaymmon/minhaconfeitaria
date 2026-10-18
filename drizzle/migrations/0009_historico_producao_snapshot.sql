@@ -2,18 +2,18 @@
 -- when save_pedido replaces pedido_itens rows. Stock ledger rows remain append-only.
 
 ALTER TABLE public.producao_eventos
-  ADD COLUMN pedido_id uuid,
-  ADD COLUMN pedido_numero bigint,
-  ADD COLUMN produto_id uuid,
-  ADD COLUMN descricao_snapshot text,
-  ADD COLUMN quantidade_pedida_snapshot numeric(12,3),
-  ADD COLUMN receita_snapshot jsonb;
+  ADD COLUMN IF NOT EXISTS pedido_id uuid,
+  ADD COLUMN IF NOT EXISTS pedido_numero bigint,
+  ADD COLUMN IF NOT EXISTS produto_id uuid,
+  ADD COLUMN IF NOT EXISTS descricao_snapshot text,
+  ADD COLUMN IF NOT EXISTS quantidade_pedida_snapshot numeric(12,3),
+  ADD COLUMN IF NOT EXISTS receita_snapshot jsonb;
 
 ALTER TABLE public.estoque_movimentos
-  ADD COLUMN pedido_id uuid,
-  ADD COLUMN pedido_numero bigint,
-  ADD COLUMN produto_id uuid,
-  ADD COLUMN descricao_snapshot text;
+  ADD COLUMN IF NOT EXISTS pedido_id uuid,
+  ADD COLUMN IF NOT EXISTS pedido_numero bigint,
+  ADD COLUMN IF NOT EXISTS produto_id uuid,
+  ADD COLUMN IF NOT EXISTS descricao_snapshot text;
 
 CREATE OR REPLACE FUNCTION public.snapshot_producao_evento()
 RETURNS trigger
@@ -54,6 +54,7 @@ BEGIN
 END;
 $function$;
 
+DROP TRIGGER IF EXISTS producao_evento_snapshot ON public.producao_eventos;
 CREATE TRIGGER producao_evento_snapshot
 BEFORE INSERT ON public.producao_eventos
 FOR EACH ROW EXECUTE FUNCTION public.snapshot_producao_evento();
@@ -76,6 +77,7 @@ BEGIN
 END;
 $function$;
 
+DROP TRIGGER IF EXISTS estoque_movimento_producao_snapshot ON public.estoque_movimentos;
 CREATE TRIGGER estoque_movimento_producao_snapshot
 BEFORE INSERT ON public.estoque_movimentos
 FOR EACH ROW EXECUTE FUNCTION public.snapshot_movimento_producao();
@@ -116,9 +118,9 @@ WHERE m.origem_tipo = 'producao'
   AND m.origem_id = pi.id
   AND m.user_id = pi.user_id;
 
-CREATE INDEX producao_eventos_pedido_idx
+CREATE INDEX IF NOT EXISTS producao_eventos_pedido_idx
   ON public.producao_eventos (user_id, pedido_id, created_at);
-CREATE INDEX estoque_movimentos_pedido_idx
+CREATE INDEX IF NOT EXISTS estoque_movimentos_pedido_idx
   ON public.estoque_movimentos (user_id, pedido_id, created_at);
 
 COMMENT ON COLUMN public.producao_eventos.receita_snapshot IS
