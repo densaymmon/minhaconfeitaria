@@ -3,7 +3,7 @@
 -- No legacy purchase is imported automatically; this function reconciles against
 -- the current ledger balance explicitly supplied by the user.
 
-CREATE TABLE public.inventario_eventos (
+CREATE TABLE IF NOT EXISTS public.inventario_eventos (
   id uuid PRIMARY KEY DEFAULT gen_random_uuid(),
   user_id uuid NOT NULL,
   evento_id uuid NOT NULL,
