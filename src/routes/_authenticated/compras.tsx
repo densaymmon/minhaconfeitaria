@@ -10,6 +10,10 @@ import { medida, medidaLabel, medidasCompativeis, numeroIngrediente } from "@/li
 import { Card, Empty, Field, PageHeader } from "@/components/app/ui";
 import { Input } from "@/components/ui/input";
 import { Button } from "@/components/ui/button";
+import {
+  AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent,
+  AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle,
+} from "@/components/ui/alert-dialog";
 import { DOCUMENT_ACCEPT, parseInvoiceXml, possibleDuplicate, reviewDocument, validateDocumentFile, type PurchaseDocument } from "@/lib/purchase-document";
 import { PurchaseDocumentReview } from "@/components/app/purchase-document-review";
 import { readPurchaseDocumentLocally } from "@/lib/purchase-document-ocr";
@@ -129,6 +133,7 @@ function valorExistenteEmCentavos(valor: string): string {
 
 function Compras() {
   const { secao } = Route.useSearch();
+  const navigate = Route.useNavigate();
   const { data: insumos } = useSuspenseQuery(appQueries.insumosQ);
   const { data: compras } = useSuspenseQuery(appQueries.comprasQ);
   const { data: itens } = useSuspenseQuery(appQueries.compraItensQ);
@@ -155,14 +160,17 @@ function Compras() {
   const eventoCancelarRef = useRef<{ compraId: string; id: string } | null>(null);
   const eventoExcluirRef = useRef<{ compraId: string; id: string } | null>(null);
   const [editandoCompraId, setEditandoCompraId] = useState<string | null>(null);
+  const [compraParaExcluir, setCompraParaExcluir] = useState<{ id: string; cancelada_em: string | null } | null>(null);
   const formularioCompraRef = useRef<HTMLFormElement | null>(null);
 
   // Ao iniciar uma edição, leve o formulário para o início da área de registro.
   useEffect(() => {
-    if (editandoCompraId) {
+    // O histórico fica na seção "gastos" e o formulário na seção "compras".
+    // Só tente rolar depois que a navegação montar o formulário de edição.
+    if (editandoCompraId && secao === "compras") {
       formularioCompraRef.current?.scrollIntoView({ behavior: "smooth", block: "start" });
     }
-  }, [editandoCompraId]);
+  }, [editandoCompraId, secao]);
   const [documentoCompra, setDocumentoCompra] = useState<PurchaseDocument | null>(null);
   const [arquivoDocumento, setArquivoDocumento] = useState("");
   const [erroDocumento, setErroDocumento] = useState("");
@@ -369,7 +377,6 @@ function Compras() {
   }
 
   async function excluirCompra(compra: { id: string; cancelada_em: string | null }) {
-    if (!confirm("Excluir permanentemente esta compra? Ela sairá do histórico. Se movimentou o estoque, o saldo será estornado. Contas a pagar não canceladas impedem a exclusão; contas canceladas serão preservadas no histórico financeiro e desvinculadas pela operação segura do banco.")) return;
     if (!eventoExcluirRef.current || eventoExcluirRef.current.compraId !== compra.id) {
       eventoExcluirRef.current = { compraId: compra.id, id: crypto.randomUUID() };
     }
@@ -467,10 +474,14 @@ function Compras() {
     }
     if (total <= 0) { toast.error("O total da compra precisa ser maior que zero."); return; }
     setBusy(true);
+    let preservarFinanceiroExistente = false;
     try {
-      // Se já houve pagamento de alguma parcela, bloqueie a edição antes de alterar
-      // os itens da compra, para não deixar o histórico financeiro inconsistente.
+      // Compras com pagamentos registrados podem ter seus itens corrigidos, desde que
+      // data, local, total e condições de pagamento permaneçam iguais. Nesse caso,
+      // preservamos o extrato existente e não tentamos recriar contas já pagas.
       if (editandoCompraId) {
+        const compraOriginal = compras.find((compra) => compra.id === editandoCompraId);
+        if (!compraOriginal) throw new Error("Não foi possível localizar a compra original. Atualize a tela e tente novamente.");
         const { data: contasGeradas, error: erroContas } = await supabase
           .from("contas_pagar")
           .select("id")
@@ -485,7 +496,28 @@ function Compras() {
             .in("conta_id", idsContas);
           if (erroPagamentos) throw erroPagamentos;
           if ((pagamentosExistentes ?? []).length) {
-            throw new Error("Esta compra já possui parcela com pagamento registrado. Para proteger o extrato financeiro, não é possível editar a compra; registre os ajustes necessários separadamente.");
+            const totalOriginal = Number(compraOriginal.total);
+            const totalAtual = Math.round(total * 100);
+            const totalAnterior = Math.round(totalOriginal * 100);
+            const dataOriginal = compraOriginal.data_compra;
+            const localOriginal = (compraOriginal.local_compra ?? "").trim();
+            const formaOriginal = compraOriginal.forma_pagamento_compra ?? "pix";
+            const parcelasOriginais = Number(compraOriginal.numero_parcelas ?? 1);
+            const vencimentoOriginal = compraOriginal.primeiro_vencimento ?? dataOriginal;
+            if (
+              !Number.isFinite(totalOriginal) ||
+              totalAtual !== totalAnterior ||
+              data !== dataOriginal ||
+              localCompra.trim() !== localOriginal ||
+              formaPagamentoCompra !== formaOriginal ||
+              (formaPagamentoCompra === "credito" && (
+                Number(numeroParcelasCompra) !== parcelasOriginais ||
+                primeiroVencimentoCompra !== vencimentoOriginal
+              ))
+            ) {
+              throw new Error("Esta compra já possui pagamento registrado. Você pode corrigir os itens mantendo o mesmo total, data, local e condições de pagamento. Para alterar esses dados financeiros, faça o ajuste pelo financeiro para preservar o extrato.");
+            }
+            preservarFinanceiroExistente = true;
           }
         }
       }
@@ -522,13 +554,15 @@ function Compras() {
         local_compra: localCompra.trim(),
       });
       if (erroLocal) throw erroLocal;
-      const { error: erroFinanceiro } = await supabase.rpc("registrar_pagamento_compra", {
-        p_compra_id: idCompraSalva,
-        p_forma_pagamento: formaPagamentoCompra,
-        p_numero_parcelas: formaPagamentoCompra === "credito" ? Number(numeroParcelasCompra) : 1,
-        p_primeiro_vencimento: formaPagamentoCompra === "credito" ? primeiroVencimentoCompra : data,
-      });
-      if (erroFinanceiro) throw erroFinanceiro;
+      if (!preservarFinanceiroExistente) {
+        const { error: erroFinanceiro } = await supabase.rpc("registrar_pagamento_compra", {
+          p_compra_id: idCompraSalva,
+          p_forma_pagamento: formaPagamentoCompra,
+          p_numero_parcelas: formaPagamentoCompra === "credito" ? Number(numeroParcelasCompra) : 1,
+          p_primeiro_vencimento: formaPagamentoCompra === "credito" ? primeiroVencimentoCompra : data,
+        });
+        if (erroFinanceiro) throw erroFinanceiro;
+      }
       eventoSalvarRef.current = null;
       await Promise.all([
         qc.invalidateQueries({ queryKey: ["compras"] }),
@@ -921,11 +955,14 @@ function Compras() {
                             setPrimeiroVencimentoCompra(c.primeiro_vencimento ?? c.data_compra);
                             setLinhas(itensCompra.map((i) => ({ compraItemId: i.id, insumo_id: i.insumo_id, quantidade: textoCampoNumerico(i.quantidade), unidade: i.unidade, preco: valorExistenteEmCentavos(valorTotalEditavel(i)) })));
                             setEditandoCompraId(c.id);
+                            // A edição precisa mudar para a seção que contém o formulário;
+                            // caso contrário, o estado muda mas o formulário continua oculto.
+                            void navigate({ search: (prev) => ({ ...prev, secao: "compras" }) });
                           }}>Editar</Button>
                           <Button type="button" variant="outline" size="sm" disabled={busy} onClick={() => void cancelarCompra(c)}>Cancelar</Button>
                         </>
                       )}
-                      <Button type="button" variant="destructive" size="sm" disabled={busy} onClick={() => void excluirCompra(c)}>
+                      <Button type="button" variant="destructive" size="sm" disabled={busy} onClick={() => setCompraParaExcluir(c)}>
                         <Trash2 className="mr-1 size-3.5" /> Excluir
                       </Button>
                     </div>
@@ -940,6 +977,34 @@ function Compras() {
         )}
       </section>
       </>}
+
+      <AlertDialog open={!!compraParaExcluir} onOpenChange={(open) => { if (!open && !busy) setCompraParaExcluir(null); }}>
+        <AlertDialogContent>
+          <AlertDialogHeader>
+            <AlertDialogTitle>Excluir compra permanentemente?</AlertDialogTitle>
+            <AlertDialogDescription>
+              A compra será removida do histórico. Se ela movimentou o estoque, o saldo será estornado. Contas a pagar não canceladas impedem a exclusão; contas canceladas serão preservadas no histórico financeiro e desvinculadas com segurança.
+              Esta ação não pode ser desfeita.
+            </AlertDialogDescription>
+          </AlertDialogHeader>
+          <AlertDialogFooter>
+            <AlertDialogCancel disabled={busy}>Voltar</AlertDialogCancel>
+            <AlertDialogAction
+              disabled={busy || !compraParaExcluir}
+              className="bg-destructive text-destructive-foreground hover:bg-destructive/90"
+              onClick={(event) => {
+                event.preventDefault();
+                const compra = compraParaExcluir;
+                if (!compra || busy) return;
+                setCompraParaExcluir(null);
+                void excluirCompra(compra);
+              }}
+            >
+              {busy ? "Excluindo..." : "Sim, excluir compra"}
+            </AlertDialogAction>
+          </AlertDialogFooter>
+        </AlertDialogContent>
+      </AlertDialog>
     </>
   );
 }
