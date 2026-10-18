@@ -230,6 +230,7 @@ function Compras() {
         if (!entregue && registrada <= 0) continue;
         const quantidadeProduzida = entregue && registrada <= 0 ? Number(item.quantidade ?? 0) : registrada;
         if (!Number.isFinite(quantidadeProduzida) || quantidadeProduzida <= 0) continue;
+        if (!item.produto_id) continue;
         const produto = produtosPorId.get(item.produto_id);
         const rendimento = Number(produto?.rendimento ?? 0);
         if (!produto || !Number.isFinite(rendimento) || rendimento <= 0) continue;
