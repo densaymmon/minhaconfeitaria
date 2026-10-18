@@ -82,6 +82,9 @@ function PedidoForm() {
   const [pagamentos, setPagamentos] = useState<PedidoPagamento[]>([]);
   const [dataPagamento, setDataPagamento] = useState(hojeISO());
   const [salvandoRecebimento, setSalvandoRecebimento] = useState(false);
+  const [pagamentoEmEdicao, setPagamentoEmEdicao] = useState<string | null>(null);
+  const [rascunhoPagamento, setRascunhoPagamento] = useState({ valor: "", data: "", forma: "pix", observacoes: "" });
+  const [salvandoEdicaoPagamento, setSalvandoEdicaoPagamento] = useState(false);
   const [clienteDialogOpen, setClienteDialogOpen] = useState(false);
   const [salvandoCliente, setSalvandoCliente] = useState(false);
   const [novoCliente, setNovoCliente] = useState({ nome: "", telefone: "", endereco: "", observacoes: "" });
@@ -131,6 +134,56 @@ function PedidoForm() {
     } catch (e) {
       toast.error(e instanceof Error ? e.message : "Não foi possível registrar o pagamento.");
     } finally { setSalvandoRecebimento(false); }
+  }
+
+  function iniciarEdicaoPagamento(pagamento: PedidoPagamento) {
+    setPagamentoEmEdicao(pagamento.id);
+    setRascunhoPagamento({
+      valor: String(pagamento.valor ?? ""),
+      data: pagamento.data_pagamento,
+      forma: pagamento.forma_pagamento,
+      observacoes: pagamento.observacoes ?? "",
+    });
+  }
+
+  async function salvarEdicaoPagamento() {
+    if (!existente || !pagamentoEmEdicao || salvandoEdicaoPagamento) return;
+    const valor = Math.round(parseNum(rascunhoPagamento.valor) * 100) / 100;
+    if (!(valor > 0)) {
+      toast.error("Informe um valor de pagamento maior que zero.");
+      return;
+    }
+    if (!rascunhoPagamento.data || rascunhoPagamento.data > hojeISO()) {
+      toast.error("Informe uma data de pagamento válida.");
+      return;
+    }
+    setSalvandoEdicaoPagamento(true);
+    try {
+      const { error } = await supabase.rpc("editar_recebimento_pedido", {
+        p_pagamento_id: pagamentoEmEdicao,
+        p_valor: valor,
+        p_data_pagamento: rascunhoPagamento.data,
+        p_forma_pagamento: rascunhoPagamento.forma,
+        p_observacoes: rascunhoPagamento.observacoes,
+      });
+      if (error) throw new Error(error.message);
+      const { data, error: loadError } = await supabase.from("pedido_pagamentos").select("*").eq("pedido_id", existente.id).order("data_pagamento", { ascending: false });
+      if (loadError) throw new Error(loadError.message);
+      setPagamentos((data ?? []) as PedidoPagamento[]);
+      const { data: pedidoAtualizado, error: pedidoError } = await supabase.from("pedidos").select("valor_entrada,saldo_quitado").eq("id", existente.id).single();
+      if (pedidoError) throw new Error(pedidoError.message);
+      setF((atual) => ({ ...atual, valor_entrada: String(pedidoAtualizado.valor_entrada ?? 0), saldo_quitado: Boolean(pedidoAtualizado.saldo_quitado) }));
+      setPagamentoEmEdicao(null);
+      await Promise.all([
+        qc.invalidateQueries({ queryKey: ["pedidos"] }),
+        qc.invalidateQueries({ queryKey: ["pedido-pagamentos"] }),
+      ]);
+      toast.success("Pagamento atualizado e saldo recalculado.");
+    } catch (e) {
+      toast.error(e instanceof Error ? e.message : "Não foi possível editar o pagamento.");
+    } finally {
+      setSalvandoEdicaoPagamento(false);
+    }
   }
 
   // Bloqueia cliques repetidos mesmo antes de o React atualizar o estado visual.
@@ -588,12 +641,40 @@ function PedidoForm() {
                   <h3 className="text-sm font-semibold">Histórico de pagamentos</h3>
                   <div className="divide-y rounded-lg border">
                     {pagamentos.map((pagamento) => (
-                      <div key={pagamento.id} className="flex flex-wrap items-start justify-between gap-2 p-3 text-sm">
-                        <div className="min-w-0">
-                          <p className="font-medium">{dataBR(pagamento.data_pagamento)} · {FORMAS.find((forma) => forma.value === pagamento.forma_pagamento)?.label ?? pagamento.forma_pagamento}</p>
-                          {pagamento.observacoes && <p className="mt-1 text-xs text-muted-foreground">{pagamento.observacoes}</p>}
-                        </div>
-                        <p className="shrink-0 font-semibold tabular-nums">{brl(Number(pagamento.valor))}</p>
+                      <div key={pagamento.id} className="space-y-3 p-3 text-sm">
+                        {pagamentoEmEdicao === pagamento.id ? (
+                          <div className="grid grid-cols-1 gap-3 sm:grid-cols-2">
+                            <Field label="Valor do pagamento (R$)">
+                              <Input inputMode="decimal" value={rascunhoPagamento.valor} onChange={(e) => setRascunhoPagamento((atual) => ({ ...atual, valor: e.target.value }))} className="h-10" />
+                            </Field>
+                            <Field label="Data do pagamento">
+                              <Input type="date" max={hojeISO()} value={rascunhoPagamento.data} onChange={(e) => setRascunhoPagamento((atual) => ({ ...atual, data: e.target.value }))} className="h-10" />
+                            </Field>
+                            <Field label="Forma de pagamento">
+                              <NativeSelect value={rascunhoPagamento.forma} onChange={(e) => setRascunhoPagamento((atual) => ({ ...atual, forma: e.target.value }))}>
+                                {FORMAS.map((forma) => <option key={forma.value} value={forma.value}>{forma.label}</option>)}
+                              </NativeSelect>
+                            </Field>
+                            <Field label="Observações">
+                              <Input value={rascunhoPagamento.observacoes} onChange={(e) => setRascunhoPagamento((atual) => ({ ...atual, observacoes: e.target.value }))} className="h-10" placeholder="Opcional" />
+                            </Field>
+                            <div className="flex gap-2 sm:col-span-2">
+                              <Button type="button" className="h-10" disabled={salvandoEdicaoPagamento} onClick={() => void salvarEdicaoPagamento()}>{salvandoEdicaoPagamento ? "Salvando..." : "Salvar alteração"}</Button>
+                              <Button type="button" variant="outline" className="h-10" disabled={salvandoEdicaoPagamento} onClick={() => setPagamentoEmEdicao(null)}>Cancelar</Button>
+                            </div>
+                          </div>
+                        ) : (
+                          <div className="flex flex-wrap items-start justify-between gap-2">
+                            <div className="min-w-0">
+                              <p className="font-medium">{dataBR(pagamento.data_pagamento)} · {FORMAS.find((forma) => forma.value === pagamento.forma_pagamento)?.label ?? pagamento.forma_pagamento}</p>
+                              {pagamento.observacoes && <p className="mt-1 text-xs text-muted-foreground">{pagamento.observacoes}</p>}
+                            </div>
+                            <div className="flex items-center gap-3">
+                              <p className="shrink-0 font-semibold tabular-nums">{brl(Number(pagamento.valor))}</p>
+                              <Button type="button" variant="outline" className="h-9" onClick={() => iniciarEdicaoPagamento(pagamento)}>Editar</Button>
+                            </div>
+                          </div>
+                        )}
                       </div>
                     ))}
                   </div>
