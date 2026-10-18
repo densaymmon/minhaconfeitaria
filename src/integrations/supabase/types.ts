@@ -540,7 +540,6 @@ export type Database = {
         }
         Insert: {
           ativo?: boolean
-          ativo?: boolean
           created_at?: string
           id?: string
           nome: string
@@ -554,6 +553,7 @@ export type Database = {
           user_id?: string
         }
         Update: {
+          ativo?: boolean
           created_at?: string
           id?: string
           nome?: string
