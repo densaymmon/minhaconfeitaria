@@ -1,7 +1,9 @@
 import * as appQueries from "@/lib/queries";
 import { createFileRoute, Link, useNavigate } from "@tanstack/react-router";
 import { useMemo, useState } from "react";
-import { CalendarClock, ChevronDown, Download, Plus, Search, SlidersHorizontal, Wallet } from "lucide-react";
+import { useSuspenseQuery } from "@tanstack/react-query";
+import { toast } from "sonner";
+import { CalendarClock, ChevronDown, Download, MessageCircle, Plus, ReceiptText, Search, SlidersHorizontal, Wallet } from "lucide-react";
 import { usePedidosCalc } from "@/lib/hooks";
 import { STATUS, brl, dataBR, formaLabel, hojeISO, statusLabel } from "@/lib/format";
 import { baixarCSV } from "@/lib/csv";
@@ -36,8 +38,16 @@ export const Route = createFileRoute("/_authenticated/pedidos/")({
   component: Pedidos,
 });
 
+function normalizarTelefoneWhatsApp(telefone: string | null | undefined): string | null {
+  const digitos = (telefone ?? "").replace(/\D/g, "");
+  if (!digitos) return null;
+  const internacional = digitos.startsWith("55") ? digitos : `55${digitos}`;
+  return internacional.length >= 12 && internacional.length <= 13 ? internacional : null;
+}
+
 function Pedidos() {
   const pedidos = usePedidosCalc();
+  const { data: config } = useSuspenseQuery(appQueries.configQ);
   const search = Route.useSearch();
   const navigate = useNavigate();
   const [busca, setBusca] = useState("");
@@ -223,6 +233,27 @@ function Pedidos() {
         <div className="space-y-2">
           {lista.map((p) => {
             const atrasado = p.data_entrega < hoje && !["finalizado", "entregue", "cancelado"].includes(p.status);
+            const telefoneWhatsApp = normalizarTelefoneWhatsApp(p.clientes?.telefone);
+            const itensRecibo = p.pedido_itens.map((item) =>
+              `• ${Number(item.quantidade)} × ${item.descricao} — ${brl(Number(item.quantidade) * Number(item.preco_unitario))}`
+            );
+            const textoRecibo = [
+              "O CASAL DO BOLO — Amor em cada pedaço",
+              `RECIBO DO PEDIDO #${p.numero}`,
+              `Cliente: ${p.clientes?.nome ?? "Cliente"}`,
+              "",
+              "Itens:",
+              ...(itensRecibo.length ? itensRecibo : ["• Itens não informados"]),
+              "",
+              `Entrega: ${dataBR(p.data_entrega)}${p.hora_entrega ? ` às ${p.hora_entrega}` : ""}`,
+              `Total do pedido: ${brl(p.t.venda)}`,
+              `Valor recebido: ${brl(p.t.recebido)}`,
+              `Saldo restante: ${brl(p.t.saldo)}`,
+              ...(config.pix_chave?.trim() ? [`Chave Pix: ${config.pix_chave.trim()}`] : ["Chave Pix: entre em contato para confirmar os dados de pagamento."]),
+              "",
+              "Obrigado pela preferência! 💛",
+            ].join("\n");
+            const podeEmitirRecibo = ["pronto", "entregue", "finalizado"].includes(p.status);
             return (
               <Card
                 key={p.id}
@@ -266,6 +297,34 @@ function Pedidos() {
                     <span className="shrink-0 font-semibold tabular-nums">{brl(p.t.venda)}</span>
                   </div>
                   {p.t.saldo > 0 && <div className="mt-0.5 text-right text-xs text-warning-foreground">Falta receber {brl(p.t.saldo)}</div>}
+                  <div className="mt-3 flex flex-wrap gap-2 border-t pt-3">
+                    {podeEmitirRecibo && (
+                      <Button type="button" size="sm" variant="outline" onClick={async (e) => {
+                        e.stopPropagation();
+                        try {
+                          await navigator.clipboard.writeText(textoRecibo);
+                          toast.success("Recibo copiado. Você já pode colá-lo na conversa com o cliente.");
+                        } catch {
+                          toast.error("Não foi possível copiar o recibo neste dispositivo.");
+                        }
+                      }}>
+                        <ReceiptText className="size-4" /> Copiar recibo
+                      </Button>
+                    )}
+                    <Button type="button" size="sm" variant="outline" onClick={(e) => {
+                      e.stopPropagation();
+                      if (!telefoneWhatsApp) {
+                        toast.error(p.clientes?.telefone ? "O telefone cadastrado não parece válido para o WhatsApp." : "Cadastre o telefone do cliente para abrir o WhatsApp.");
+                        return;
+                      }
+                      const mensagem = podeEmitirRecibo
+                        ? textoRecibo
+                        : `Olá ${p.clientes?.nome ?? ""}! Estou entrando em contato sobre o pedido #${p.numero} da O Casal do Bolo.`;
+                      window.open(`https://wa.me/${telefoneWhatsApp}?text=${encodeURIComponent(mensagem)}`, "_blank", "noopener,noreferrer");
+                    }}>
+                      <MessageCircle className="size-4" /> {podeEmitirRecibo ? "Enviar recibo no WhatsApp" : "WhatsApp do cliente"}
+                    </Button>
+                  </div>
               </Card>
             );
           })}
