@@ -159,7 +159,7 @@ function ProdutoForm() {
                   <NativeSelect aria-label="Ingrediente da receita" value={it.insumo_id} onChange={(e) => {
                     const id = e.target.value;
                     setItens((s) => s.map((x, j) => j === i ? { ...x, insumo_id: id, unidade_receita: mapIns.get(id)?.unidade_embalagem ?? mapIns.get(id)?.unidade ?? "un" } : x));
-                  }}>{insumos.map((x) => <option key={x.id} value={x.id}>{x.nome}</option>)}</NativeSelect>
+                  }}>{insumos.filter((x) => x.ativo !== false || x.id === it.insumo_id).map((x) => <option key={x.id} value={x.id}>{x.nome}{x.ativo === false ? " (inativo — histórico)" : ""}</option>)}</NativeSelect>
                   <Button size="icon" variant="ghost" className="h-11 w-11 shrink-0" onClick={() => setItens((s) => s.filter((_, j) => j !== i))} aria-label="Remover"><Trash2 className="size-4 text-destructive" /></Button>
                 </div>
                 <Field label="Quantidade utilizada na receita">
@@ -175,7 +175,7 @@ function ProdutoForm() {
               </div>
             );
           })}
-          <Button size="sm" variant="outline" disabled={insumos.length === 0} onClick={() => setItens((s) => [...s, { insumo_id: insumos[0]?.id ?? "", quantidade: "", unidade_receita: insumos[0]?.unidade_embalagem ?? insumos[0]?.unidade ?? "un" }])}>
+          <Button size="sm" variant="outline" disabled={insumos.every((x) => x.ativo === false)} onClick={() => { const disponivel = insumos.find((x) => x.ativo !== false); if (disponivel) setItens((s) => [...s, { insumo_id: disponivel.id, quantidade: "", unidade_receita: disponivel.unidade_embalagem ?? disponivel.unidade ?? "un" }]); }}>
             <Plus className="size-4" /> Insumo
           </Button>
           {erroReceita && <p role="alert" className="text-sm text-destructive">{erroReceita}</p>}

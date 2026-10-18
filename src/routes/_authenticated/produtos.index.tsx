@@ -3,7 +3,7 @@ import { createFileRoute, Link, useNavigate } from "@tanstack/react-router";
 import { useQueryClient } from "@tanstack/react-query";
 import { useState } from "react";
 import { toast } from "sonner";
-import { Copy, Download, Plus, Trash2, Pencil } from "lucide-react";
+import { Copy, Download, Plus, Trash2, Pencil, Archive, RotateCcw } from "lucide-react";
 import { supabase } from "@/integrations/supabase/client";
 import { useCustos } from "@/lib/hooks";
 import { margemReal } from "@/lib/calc";
@@ -125,27 +125,31 @@ function Insumos({ insumos }: { insumos: Insumo[] }) {
   const qc = useQueryClient();
   const [editando, setEditando] = useState<string | null>(null);
 
+  async function alternarAtivo(i: Insumo) {
+    const ativo = i.ativo !== false;
+    const acao = ativo ? "inativar" : "reativar";
+    if (!confirm(`${ativo ? "Inativar" : "Reativar"} ${i.nome}? ${ativo ? "Ele deixará de aparecer em novos cadastros, mas o histórico será preservado." : "Ele voltará a aparecer nos novos cadastros."}`)) return;
+    const { error } = await supabase.from("insumos").update({ ativo: !ativo }).eq("id", i.id);
+    if (error) return void toast.error(`Não foi possível ${acao} o insumo: ${error.message}`);
+    await qc.invalidateQueries({ queryKey: ["insumos"] });
+    toast.success(ativo ? "Insumo inativado. O histórico foi preservado." : "Insumo reativado.");
+  }
+
   async function excluir(i: Insumo) {
-    if (!confirm(`Excluir ${i.nome}?`)) return;
-    const { error } = await supabase.from("insumos").delete().eq("id", i.id);
+    if (!confirm(`Excluir ${i.nome}? Essa ação removerá também os registros de estoque e os itens de compras vinculados a esse insumo. Só será permitido excluir se ele não estiver sendo usado em nenhuma receita.`)) return;
+    const { error } = await supabase.rpc("excluir_insumo_se_sem_receita", { p_insumo_id: i.id });
     if (error) {
-      if (error.code === "23503") {
-        const detalhe = `${error.message} ${error.details ?? ""}`;
-        if (detalhe.includes("receita_itens_insumo_id_fkey")) {
-          toast.error("Este insumo está em uma receita. Remova-o da receita primeiro.");
-        } else if (detalhe.includes("estoque_movimentos_insumo_id_fkey")) {
-          toast.error("Este insumo possui movimentações de estoque registradas. Para preservar o histórico, não é possível excluí-lo diretamente.");
-        } else if (detalhe.includes("compra_itens_insumo_id_fkey")) {
-          toast.error("Este insumo está vinculado a compras registradas. Para preservar o histórico das compras, não é possível excluí-lo diretamente.");
-        } else {
-          toast.error("Este insumo está vinculado a outros registros e não pode ser excluído sem comprometer o histórico.");
-        }
-        return;
+      if (error.message.includes("INSUMO_USADO_EM_RECEITA")) {
+        toast.error("Este insumo está sendo usado em uma receita. Remova-o de todas as receitas antes de excluí-lo.");
+      } else {
+        toast.error(`Não foi possível excluir o insumo: ${error.message}`);
       }
-      toast.error(error.message);
       return;
     }
-    qc.invalidateQueries({ queryKey: ["insumos"] });
+    await qc.invalidateQueries({ queryKey: ["insumos"] });
+    await qc.invalidateQueries({ queryKey: ["compras"] });
+    await qc.invalidateQueries({ queryKey: ["estoque"] });
+    toast.success("Insumo excluído.");
   }
 
   return (
@@ -163,11 +167,12 @@ function Insumos({ insumos }: { insumos: Insumo[] }) {
             return <Card key={i.id} className="p-3">
               <div className="flex items-center gap-2">
                 <div className="min-w-0 flex-1">
-                  <div className="break-words font-medium">{i.nome}</div>
+                  <div className="break-words font-medium">{i.nome} {i.ativo === false && <span className="ml-1 rounded bg-muted px-2 py-0.5 text-xs font-normal text-muted-foreground">Inativo</span>}</div>
                   <div className="text-xs text-muted-foreground">{brl(i.preco_embalagem ?? i.preco_unidade)} / {i.quantidade_embalagem ?? 1} {medidaLabel(i.unidade_embalagem ?? i.unidade)}</div>
                   <div className="text-xs text-muted-foreground">Custo unitário: {brl(u.custo)} / {medidaLabel(u.unidade)}</div>
                 </div>
                 <Button size="icon" variant="ghost" onClick={() => setEditando(editando === i.id ? null : i.id)} aria-label={`Editar ${i.nome}`}><Pencil className="size-4" /></Button>
+                <Button size="icon" variant="ghost" onClick={() => alternarAtivo(i)} aria-label={`${i.ativo === false ? "Reativar" : "Inativar"} ${i.nome}`} title={i.ativo === false ? "Reativar insumo" : "Inativar insumo"}>{i.ativo === false ? <RotateCcw className="size-4" /> : <Archive className="size-4" />}</Button>
                 <Button size="icon" variant="ghost" onClick={() => excluir(i)} aria-label={`Excluir ${i.nome}`}><Trash2 className="size-4 text-destructive" /></Button>
               </div>
               {editando === i.id && <div className="mt-3 border-t pt-3"><IngredientForm insumo={i} onDone={() => setEditando(null)} /></div>}

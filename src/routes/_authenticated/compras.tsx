@@ -830,7 +830,7 @@ function Compras() {
               <Field label="Insumo">
                 <select required value={l.insumo_id} onChange={(e) => escolherInsumo(index, e.target.value)} className="h-11 w-full rounded-md border border-input bg-background px-3 text-sm">
                   <option value="">Selecione um insumo</option>
-                  {insumos.map((i) => <option key={i.id} value={i.id}>{i.nome}</option>)}
+                  {insumos.filter((i) => i.ativo !== false || i.id === l.insumo_id).map((i) => <option key={i.id} value={i.id}>{i.nome}{i.ativo === false ? " (inativo — histórico)" : ""}</option>)}
                 </select>
               </Field>
               <div className="grid grid-cols-2 gap-3">
