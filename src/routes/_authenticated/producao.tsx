@@ -495,13 +495,15 @@ function Producao() {
                           const q = Number(i.quantidade);
                           const f = Number(i.quantidade_produzida);
                           const falta = Math.max(0, q - f);
+                          const itemAtivo = ["recebido", "confirmado", "em_producao"].includes(p.status)
+                            || (p.status === "pronto" && falta > 0);
                           return (
                             <div key={i.id} className="flex items-center gap-2">
                               <input
                                 type="checkbox"
                                 checked={q > 0 && f >= q}
                                 onChange={(e) => ajustar(i.id, e.target.checked ? q : 0, q)}
-                                disabled={!ativo}
+                                disabled={!itemAtivo}
                                 className="size-5 shrink-0 accent-primary"
                                 aria-label={`Marcar ${i.descricao} como produzido`}
                               />
@@ -511,7 +513,7 @@ function Producao() {
                                   {num(f)} / {num(q)} produzidos{falta > 0 ? ` · faltam ${num(falta)}` : " · concluído"}
                                 </div>
                               </div>
-                              {ativo && (
+                              {itemAtivo && (
                                 <div className="flex shrink-0 gap-1">
                                   <Button size="icon" variant="outline" className="size-9" onClick={() => ajustar(i.id, f - 1, q)} disabled={f <= 0} aria-label={`Diminuir quantidade produzida de ${i.descricao}`}>
                                     <Minus className="size-4" />
