@@ -99,6 +99,13 @@
       "when": 1792360800000,
       "tag": "0019_editar_recebimento_pedido",
       "breakpoints": true
+    },
+    {
+      "idx": 14,
+      "version": "7",
+      "when": 1792364400000,
+      "tag": "0020_editar_valores_pedido_com_producao",
+      "breakpoints": true
     }
   ]
 }

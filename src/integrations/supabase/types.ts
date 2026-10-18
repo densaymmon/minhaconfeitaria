@@ -966,6 +966,15 @@ export type Database = {
         }
         Returns: string
       }
+      editar_valores_pedido_com_producao: {
+        Args: {
+          p_desconto: number
+          p_itens: Json
+          p_pedido_id: string
+          p_taxa_entrega: number
+        }
+        Returns: Json
+      }
       saldo_estoque: {
         Args: never
         Returns: {
