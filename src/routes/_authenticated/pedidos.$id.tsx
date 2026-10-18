@@ -583,6 +583,23 @@ function PedidoForm() {
                 </Button>
               )}
 
+              {pagamentos.length > 0 && (
+                <div className="space-y-2">
+                  <h3 className="text-sm font-semibold">Histórico de pagamentos</h3>
+                  <div className="divide-y rounded-lg border">
+                    {pagamentos.map((pagamento) => (
+                      <div key={pagamento.id} className="flex flex-wrap items-start justify-between gap-2 p-3 text-sm">
+                        <div className="min-w-0">
+                          <p className="font-medium">{dataBR(pagamento.data_pagamento)} · {FORMAS.find((forma) => forma.value === pagamento.forma_pagamento)?.label ?? pagamento.forma_pagamento}</p>
+                          {pagamento.observacoes && <p className="mt-1 text-xs text-muted-foreground">{pagamento.observacoes}</p>}
+                        </div>
+                        <p className="shrink-0 font-semibold tabular-nums">{brl(Number(pagamento.valor))}</p>
+                      </div>
+                    ))}
+                  </div>
+                </div>
+              )}
+
             </Card>
 
             <Card>
