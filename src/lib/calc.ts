@@ -66,6 +66,7 @@ export type Config = {
   taxa_credito: number;
   taxa_outros: number;
   imposto_pct: number;
+  pix_chave: string;
 };
 
 export const CONFIG_PADRAO: Config = {
@@ -75,6 +76,7 @@ export const CONFIG_PADRAO: Config = {
   taxa_credito: 4.99,
   taxa_outros: 0,
   imposto_pct: 0,
+  pix_chave: "",
 };
 
 export function taxaDaForma(forma: string, c: Config) {
