@@ -525,6 +525,7 @@ export type Database = {
       }
       insumos: {
         Row: {
+          ativo: boolean
           created_at: string
           id: string
           nome: string
@@ -538,6 +539,8 @@ export type Database = {
           user_id: string
         }
         Insert: {
+          ativo?: boolean
+          ativo?: boolean
           created_at?: string
           id?: string
           nome: string
