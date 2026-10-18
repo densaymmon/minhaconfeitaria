@@ -496,14 +496,9 @@ function Compras() {
             .in("conta_id", idsContas);
           if (erroPagamentos) throw erroPagamentos;
           if ((pagamentosExistentes ?? []).length) {
-            // Nunca permita que uma correção reduza o total da compra abaixo do que
-            // já foi efetivamente pago. Os lançamentos de pagamento são imutáveis.
-            const contasComPagamento = new Set((pagamentosExistentes ?? []).map((pagamento) => pagamento.conta_id));
-            const totalJaPago = (contasGeradas ?? []).reduce((soma, conta) =>
-              soma + (contasComPagamento.has(conta.id) ? Math.max(0, Number(conta.valor_pago) || 0) : 0), 0);
-            if (Math.round(total * 100) < Math.round(totalJaPago * 100)) {
-              throw new Error(`O novo total não pode ser menor que o valor já pago (${brl(totalJaPago)}). Ajuste os pagamentos no financeiro antes de reduzir a compra.`);
-            }
+            // Preserva o extrato de pagamentos existente. A correção do total da compra
+            // não deve ser bloqueada por pagamentos históricos acima do novo total.
+            // A reconciliação financeira não cria parcelas quando não há saldo restante.
             preservarFinanceiroExistente = true;
           }
         }
