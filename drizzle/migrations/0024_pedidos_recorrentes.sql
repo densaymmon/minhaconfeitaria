@@ -72,7 +72,7 @@ BEGIN
   IF dono_recorrencia IS NULL OR dono_recorrencia <> NEW.user_id THEN
     RAISE EXCEPTION 'Recorrência não encontrada para esta conta.';
   END IF;
-  IF OLD IS NOT NULL AND OLD.pedido_id IS NOT NULL AND
+  IF TG_OP <> 'INSERT' AND OLD.pedido_id IS NOT NULL AND
      (NEW.pedido_id IS DISTINCT FROM OLD.pedido_id OR NEW.itens IS DISTINCT FROM OLD.itens OR NEW.data_entrega IS DISTINCT FROM OLD.data_entrega) THEN
     RAISE EXCEPTION 'Uma ocorrência já convertida em pedido não pode ser alterada por este fluxo.';
   END IF;
