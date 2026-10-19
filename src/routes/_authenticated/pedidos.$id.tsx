@@ -338,9 +338,7 @@ function PedidoForm() {
         observacoes: recorrenciaForm.observacoes.trim() || null,
       });
       if (erroOcorrencia) {
-        // Remove apenas a definição recém-criada, pois a primeira ocorrência não foi salva.
-        await db.from("pedidos_recorrentes").delete().eq("id", recorrencia.id);
-        throw new Error(erroOcorrencia.message);
+        throw new Error("A recorrência foi criada, mas a primeira entrega não foi preparada: " + erroOcorrencia.message);
       }
       toast.success("Recorrência criada com a primeira entrega preparada. Confirme-a na tela de Pedidos recorrentes para gerar o pedido normal.");
       setRecorrenciaDialogOpen(false);
