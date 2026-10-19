@@ -26,7 +26,7 @@ BEGIN
     WHERE pi.user_id = OLD.user_id AND pi.produto_id = OLD.produto_id
       AND lower(trim(coalesce(p.status, ''))) NOT IN ('entregue','finalizado','cancelado','perdido')
   ) THEN
-    RAISE EXCEPTION 'Não é possível alterar os ingredientes da receita enquanto houver produção registrada em pedido aberto. Finalize ou estorne a produção antes de editar.';
+    RAISE EXCEPTION 'Não é possível alterar os ingredientes da receita enquanto houver pedido em aberto para este produto. Finalize ou estorne a produção antes de editar.';
   END IF;
 
   IF TG_OP <> 'DELETE' AND NEW.produto_id IS NOT NULL AND EXISTS (
@@ -35,7 +35,7 @@ BEGIN
     WHERE pi.user_id = NEW.user_id AND pi.produto_id = NEW.produto_id
       AND lower(trim(coalesce(p.status, ''))) NOT IN ('entregue','finalizado','cancelado','perdido')
   ) THEN
-    RAISE EXCEPTION 'Não é possível alterar os ingredientes da receita enquanto houver produção registrada em pedido aberto. Finalize ou estorne a produção antes de editar.';
+    RAISE EXCEPTION 'Não é possível alterar os ingredientes da receita enquanto houver pedido em aberto para este produto. Finalize ou estorne a produção antes de editar.';
   END IF;
 
   IF TG_OP = 'DELETE' THEN RETURN OLD; END IF;
@@ -54,7 +54,7 @@ BEGIN
     WHERE pi.user_id = NEW.user_id AND pi.produto_id = OLD.id
       AND lower(trim(coalesce(p.status, ''))) NOT IN ('entregue','finalizado','cancelado','perdido')
   ) THEN
-    RAISE EXCEPTION 'Não é possível alterar o rendimento enquanto houver produção registrada em pedido aberto. Finalize ou estorne a produção antes de editar.';
+    RAISE EXCEPTION 'Não é possível alterar o rendimento enquanto houver pedido em aberto para este produto. Finalize ou estorne a produção antes de editar.';
   END IF;
   RETURN NEW;
 END;
