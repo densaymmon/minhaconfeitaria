@@ -133,6 +133,7 @@ BEGIN
     'data_entrega', ocorrencia.data_entrega,
     'hora_entrega', recorrencia.hora_entrega,
     'observacoes', concat_ws(E'\n', nullif(recorrencia.observacoes, ''), nullif(ocorrencia.observacoes, ''))
+    'status', 'recebido'
   );
 
   -- A criação do pedido e a vinculação da ocorrência ocorrem na mesma transação.
