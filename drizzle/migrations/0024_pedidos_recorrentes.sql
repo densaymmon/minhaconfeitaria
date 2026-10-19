@@ -44,6 +44,9 @@ BEGIN
     EXECUTE format('GRANT SELECT, INSERT, UPDATE ON public.%I TO authenticated', t);
     EXECUTE format('GRANT ALL ON public.%I TO service_role', t);
     EXECUTE format('ALTER TABLE public.%I ENABLE ROW LEVEL SECURITY', t);
+    EXECUTE format('DROP POLICY IF EXISTS "dono_select" ON public.%I', t);
+    EXECUTE format('DROP POLICY IF EXISTS "dono_insert" ON public.%I', t);
+    EXECUTE format('DROP POLICY IF EXISTS "dono_update" ON public.%I', t);
     EXECUTE format('CREATE POLICY "dono_select" ON public.%I FOR SELECT TO authenticated USING (auth.uid() = user_id)', t);
     EXECUTE format('CREATE POLICY "dono_insert" ON public.%I FOR INSERT TO authenticated WITH CHECK (auth.uid() = user_id)', t);
     EXECUTE format('CREATE POLICY "dono_update" ON public.%I FOR UPDATE TO authenticated USING (auth.uid() = user_id) WITH CHECK (auth.uid() = user_id)', t);
