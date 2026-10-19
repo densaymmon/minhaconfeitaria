@@ -60,3 +60,44 @@ jobs:
         run: psql "$DATABASE_URL" -v ON_ERROR_STOP=1 -f tests/db/recipe-edit-smoke.sql
       - name: Smoke-test recurring orders and duplicate confirmation protection
         run: psql "$DATABASE_URL" -v ON_ERROR_STOP=1 -f tests/db/recurring-orders-smoke.sql
+      - name: Create isolated database for migration-history repair test
+        run: psql "$DATABASE_URL" -v ON_ERROR_STOP=1 -c "CREATE DATABASE confeitaria_reconcile_test"
+      - name: Simulate the deployed schema with an incomplete Drizzle history
+        env:
+          RECONCILE_DATABASE_URL: postgresql://postgres:postgres@localhost:5432/confeitaria_reconcile_test
+        run: |
+          set -euo pipefail
+          psql "$RECONCILE_DATABASE_URL" -v ON_ERROR_STOP=1 -f tests/db/bootstrap.sql
+          for migration in drizzle/migrations/[0-9][0-9][0-9][0-9]_*.sql; do
+            case "$migration" in
+              drizzle/migrations/0021_*|drizzle/migrations/0022_*|drizzle/migrations/0023_*|drizzle/migrations/0024_*) break ;;
+            esac
+            echo "Applying pre-reconciliation schema: $migration"
+            psql "$RECONCILE_DATABASE_URL" -v ON_ERROR_STOP=1 -f "$migration"
+          done
+          psql "$RECONCILE_DATABASE_URL" -v ON_ERROR_STOP=1 <<'SQL'
+          CREATE SCHEMA drizzle;
+          CREATE TABLE drizzle.__drizzle_migrations (
+            id serial PRIMARY KEY,
+            hash text NOT NULL,
+            created_at bigint NOT NULL
+          );
+          INSERT INTO drizzle.__drizzle_migrations(hash, created_at) VALUES
+            ('0a3873f4ae3dba406069cec5826256a3c7bd6f5a8513e2b102d31906f1565f2c', 1791649342182),
+            ('c4fb68d48f9ef4ce8dc8c633eeeb33463390f79a51df789d03eceffc4428e37a', 1791651273207),
+            ('e4ff100c08e4b13387bf0f3af83f79593b6023924cb5985bb7c5bcc5758d3bbe', 1791713222554),
+            ('1e89567d6c3873b501aa3f264b73fdbe157845901309070e3d85b7a58c05951f', 1791914692295);
+          DROP FUNCTION public.recalcular_custos_historicos();
+          SQL
+          psql "$RECONCILE_DATABASE_URL" -v ON_ERROR_STOP=1 -f scripts/reconcile-drizzle-history.sql
+          psql "$RECONCILE_DATABASE_URL" -v ON_ERROR_STOP=1 -c "DO \$\$ BEGIN IF (SELECT count(*) FROM drizzle.__drizzle_migrations) <> 23 OR (SELECT max(created_at) FROM drizzle.__drizzle_migrations) <> 1792364400000 THEN RAISE EXCEPTION 'Drizzle history repair did not stop at migration 0020'; END IF; END \$\$;"
+      - name: Apply only the remaining migrations after reconciliation
+        env:
+          RECONCILE_DATABASE_URL: postgresql://postgres:postgres@localhost:5432/confeitaria_reconcile_test
+        run: |
+          set -euo pipefail
+          for migration in drizzle/migrations/0021_*.sql drizzle/migrations/0022_*.sql drizzle/migrations/0023_*.sql drizzle/migrations/0024_*.sql; do
+            echo "Applying pending migration: $migration"
+            psql "$RECONCILE_DATABASE_URL" -v ON_ERROR_STOP=1 -f "$migration"
+          done
+          psql "$RECONCILE_DATABASE_URL" -v ON_ERROR_STOP=1 -f tests/db/recurring-orders-smoke.sql
