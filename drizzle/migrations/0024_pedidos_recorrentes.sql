@@ -48,7 +48,7 @@ BEGIN
     EXECUTE format('CREATE POLICY "dono_insert" ON public.%I FOR INSERT TO authenticated WITH CHECK (auth.uid() = user_id)', t);
     EXECUTE format('CREATE POLICY "dono_update" ON public.%I FOR UPDATE TO authenticated USING (auth.uid() = user_id) WITH CHECK (auth.uid() = user_id)', t);
   END LOOP;
-END $;
+END $$;
 
 -- A tela pode editar os itens de uma ocorrência pendente, mas não pode forjar
 -- status/pedido_id nem marcar uma ocorrência como confirmada diretamente.
@@ -102,7 +102,7 @@ CREATE OR REPLACE FUNCTION public.confirmar_ocorrencia_recorrente(
   p_payload jsonb,
   p_itens jsonb
 ) RETURNS uuid
-LANGUAGE plpgsql SECURITY DEFINER SET search_path = pg_catalog, public AS $
+LANGUAGE plpgsql SECURITY DEFINER SET search_path = pg_catalog, public AS $$
 DECLARE
   ocorrencia public.pedidos_recorrentes_ocorrencias;
   recorrencia public.pedidos_recorrentes;
