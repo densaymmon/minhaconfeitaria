@@ -131,9 +131,7 @@ BEGIN
   FOR item IN
     SELECT table_name FROM (VALUES
       ('estoque_movimentos'),('estoque_eventos'),('producao_eventos'),
-      ('inventario_eventos'),('contas_pagar'),('contas_pagar_pagamentos'),
-      ('contas_pagar_auditoria'),('contas_pagar_estornos'),
-      ('contas_pagar_operacoes'),('pedido_pagamentos')
+      ('inventario_eventos'),('contas_pagar'),('pedido_pagamentos')
     ) AS required(table_name)
   LOOP
     IF to_regclass(format('public.%I', item.table_name)) IS NULL THEN
@@ -150,8 +148,7 @@ BEGIN
       ('estoque_movimentos','pedido_id'),('estoque_movimentos','pedido_numero'),('estoque_movimentos','produto_id'),('estoque_movimentos','descricao_snapshot'),
       ('producao_eventos','pedido_id'),('producao_eventos','pedido_numero'),('producao_eventos','produto_id'),
       ('producao_eventos','descricao_snapshot'),('producao_eventos','quantidade_pedida_snapshot'),('producao_eventos','receita_snapshot'),
-      ('contas_pagar','status'),('contas_pagar','valor_pago'),('contas_pagar','gerada_automaticamente'),
-      ('contas_pagar','compra_parcela_numero'),('contas_pagar','compra_parcelas_total'),
+      ('contas_pagar','status'),('contas_pagar','valor_pago'),
       ('pedido_pagamentos','valor'),('pedido_pagamentos','data_pagamento'),('pedido_pagamentos','forma_pagamento')
     ) AS required(table_name,column_name)
   LOOP
@@ -177,10 +174,6 @@ BEGIN
       ('public.editar_recebimento_pedido(uuid,numeric,date,text,text)'),
       ('public.editar_valores_pedido_com_producao(uuid,jsonb,numeric,numeric)'),
       ('public.salvar_pedido(jsonb,jsonb,uuid)'),
-      ('public.salvar_conta_pagar(jsonb,uuid,uuid)'),
-      ('public.registrar_pagamento_conta_pagar(uuid,numeric,date,text,text,uuid)'),
-      ('public.cancelar_conta_pagar(uuid,text,uuid)'),
-      ('public.estornar_pagamento_conta_pagar(uuid,numeric,text,uuid)'),
       ('public.recalcular_custos_historicos()')
     ) AS required(signature)
   LOOP
@@ -188,6 +181,38 @@ BEGIN
       missing := array_append(missing, 'função ' || item.signature);
     END IF;
   END LOOP;
+
+  IF to_regclass('public.contas_pagar_pagamentos') IS NOT NULL THEN
+    -- The live project has a newer ledger/RPC accounting model that supersedes
+    -- the old direct-write validation trigger from migration 0014.
+    FOREACH item IN ARRAY ARRAY['contas_pagar_auditoria','contas_pagar_estornos','contas_pagar_operacoes'] LOOP
+      IF to_regclass(format('public.%I', item::text)) IS NULL THEN
+        missing := array_append(missing, 'tabela public.' || item::text);
+      END IF;
+    END LOOP;
+    FOR item IN
+      SELECT signature FROM (VALUES
+        ('public.salvar_conta_pagar(jsonb,uuid,uuid)'),
+        ('public.registrar_pagamento_conta_pagar(uuid,numeric,date,text,text,uuid)'),
+        ('public.cancelar_conta_pagar(uuid,text,uuid)'),
+        ('public.estornar_pagamento_conta_pagar(uuid,numeric,text,uuid)')
+      ) AS required(signature)
+    LOOP
+      IF to_regprocedure(item.signature) IS NULL THEN
+        missing := array_append(missing, 'função ' || item.signature);
+      END IF;
+    END LOOP;
+  ELSE
+    -- Fresh installs must have the original validation trigger from migration 0014.
+    IF to_regprocedure('public.validar_conta_pagar()') IS NULL
+       OR NOT EXISTS (
+         SELECT 1 FROM pg_trigger
+         WHERE tgrelid = 'public.contas_pagar'::regclass
+           AND tgname = 'contas_pagar_validar' AND NOT tgisinternal
+       ) THEN
+      missing := array_append(missing, 'validação da tabela contas_pagar');
+    END IF;
+  END IF;
 
   IF cardinality(missing) > 0 THEN
     RAISE EXCEPTION 'Schema incompleto para reconciliar o histórico. Migrações não registradas: %', array_to_string(missing, '; ');
