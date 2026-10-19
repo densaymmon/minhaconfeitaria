@@ -2,7 +2,7 @@ import * as appQueries from "@/lib/queries";
 import { supabase } from "@/integrations/supabase/client";
 import { createFileRoute, Link } from "@tanstack/react-router";
 import { useQueryClient, useSuspenseQuery } from "@tanstack/react-query";
-import { useEffect, useMemo, useState } from "react";
+import { useCallback, useEffect, useMemo, useState, type FormEvent } from "react";
 import { ArrowLeft, CalendarPlus, Check, Plus, RefreshCw, Trash2 } from "lucide-react";
 import { toast } from "sonner";
 import { PageHeader, Card } from "@/components/app/ui";
@@ -66,7 +66,7 @@ function PedidosRecorrentes() {
   const [form, setForm] = useState({ cliente_id: "", frequencia: "semanal" as Recorrencia["frequencia"], data_inicio: hojeISO(), data_fim: "", hora_entrega: "", observacoes: "" });
   const [itemRascunho, setItemRascunho] = useState({ produto_id: "", quantidade: "1", preco_unitario: "" });
 
-  async function carregar() {
+  const carregar = useCallback(async () => {
     setCarregando(true);
     const db = supabase as any;
     const [r, o] = await Promise.all([
@@ -80,15 +80,15 @@ function PedidosRecorrentes() {
       setSelecionada((atual) => atual || r.data?.[0]?.id || "");
     }
     setCarregando(false);
-  }
-  useEffect(() => { void carregar(); }, []);
+  }, []);
+  useEffect(() => { void carregar(); }, [carregar]);
 
   const recorrenciaAtiva = recorrencias.find((r) => r.id === selecionada);
   const listaOcorrencias = useMemo(() => ocorrencias.filter((o) => o.recorrencia_id === selecionada), [ocorrencias, selecionada]);
   const ocorrenciaPendente = listaOcorrencias.find((o) => o.status === "pendente");
   const itensAtuais = ocorrenciaPendente?.itens ?? [];
 
-  async function criarRecorrencia(e: React.FormEvent) {
+  async function criarRecorrencia(e: FormEvent) {
     e.preventDefault();
     if (!form.cliente_id) { toast.error("Selecione um cliente."); return; }
     setSalvando(true);
