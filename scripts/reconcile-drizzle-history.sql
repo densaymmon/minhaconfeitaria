@@ -185,9 +185,13 @@ BEGIN
   IF to_regclass('public.contas_pagar_pagamentos') IS NOT NULL THEN
     -- The live project has a newer ledger/RPC accounting model that supersedes
     -- the old direct-write validation trigger from migration 0014.
-    FOREACH item IN ARRAY ARRAY['contas_pagar_auditoria','contas_pagar_estornos','contas_pagar_operacoes'] LOOP
-      IF to_regclass(format('public.%I', item::text)) IS NULL THEN
-        missing := array_append(missing, 'tabela public.' || item::text);
+    FOR item IN
+      SELECT table_name FROM (VALUES
+        ('contas_pagar_auditoria'),('contas_pagar_estornos'),('contas_pagar_operacoes')
+      ) AS required(table_name)
+    LOOP
+      IF to_regclass(format('public.%I', item.table_name)) IS NULL THEN
+        missing := array_append(missing, 'tabela public.' || item.table_name);
       END IF;
     END LOOP;
     FOR item IN
