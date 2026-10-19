@@ -6,6 +6,7 @@ import { useEffect, useMemo, useState } from "react";
 import { ArrowLeft, CalendarPlus, Check, Plus, RefreshCw, Trash2 } from "lucide-react";
 import { toast } from "sonner";
 import { PageHeader, Card } from "@/components/app/ui";
+import { useCustos } from "@/lib/hooks";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 
@@ -14,6 +15,7 @@ export const Route = createFileRoute("/_authenticated/pedidos-recorrentes")({
     await Promise.all([
       context.queryClient.ensureQueryData(appQueries.clientesQ),
       context.queryClient.ensureQueryData(appQueries.produtosQ),
+      context.queryClient.ensureQueryData(appQueries.insumosQ),
     ]);
   },
   component: PedidosRecorrentes,
@@ -54,6 +56,7 @@ function PedidosRecorrentes() {
   const qc = useQueryClient();
   const { data: clientes } = useSuspenseQuery(appQueries.clientesQ);
   const { data: produtos } = useSuspenseQuery(appQueries.produtosQ);
+  const { custo } = useCustos();
   const [recorrencias, setRecorrencias] = useState<Recorrencia[]>([]);
   const [ocorrencias, setOcorrencias] = useState<Ocorrencia[]>([]);
   const [carregando, setCarregando] = useState(true);
@@ -127,7 +130,7 @@ function PedidosRecorrentes() {
       toast.error("Selecione um produto e informe quantidade e preço válidos."); return;
     }
     if (!ocorrenciaPendente) { toast.error("Prepare ou selecione uma ocorrência pendente."); return; }
-    const itens = [...itensAtuais, { produto_id: produto.id, descricao: produto.nome, quantidade, preco_unitario: preco, custo_unitario: Number(produto.rendimento ? 0 : 0) }];
+    const itens = [...itensAtuais, { produto_id: produto.id, descricao: produto.nome, quantidade, preco_unitario: preco, custo_unitario: Number(custo.get(produto.id) ?? 0) }];
     void salvarItens(itens);
     setItemRascunho({ produto_id: "", quantidade: "1", preco_unitario: "" });
   }
