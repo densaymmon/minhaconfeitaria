@@ -184,6 +184,7 @@ export interface FileRoutesByTo {
   '/mais': typeof AuthenticatedMaisRoute
   '/painel': typeof AuthenticatedPainelRoute
   '/producao': typeof AuthenticatedProducaoRoute
+  '/pedidos-recorrentes': typeof AuthenticatedPedidosRecorrentesRoute
   '/relatorios': typeof AuthenticatedRelatoriosRoute
   '/.lovable/oauth/consent': typeof DotlovableOauthConsentRoute
   '/clientes/$id': typeof AuthenticatedClientesIdRoute
