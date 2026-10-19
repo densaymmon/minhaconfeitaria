@@ -257,6 +257,7 @@ export interface FileRouteTypes {
     | '/mais'
     | '/painel'
     | '/producao'
+    | '/pedidos-recorrentes'
     | '/relatorios'
     | '/.lovable/oauth/consent'
     | '/clientes/$id'
