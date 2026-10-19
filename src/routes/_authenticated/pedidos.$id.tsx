@@ -5,7 +5,7 @@ import { createFileRoute, Link, useNavigate } from "@tanstack/react-router";
 import { useQueryClient, useSuspenseQuery } from "@tanstack/react-query";
 import { useEffect, useRef, useState } from "react";
 import { toast } from "sonner";
-import { MessageCircle, Plus, Trash2 } from "lucide-react";
+import { CalendarClock, MessageCircle, Plus, Repeat, Trash2 } from "lucide-react";
 import { supabase } from "@/integrations/supabase/client";
 import { clientesQ, configQ, pedidosQ, type PedidoPagamento } from "@/lib/queries";
 import { useCustos } from "@/lib/hooks";
@@ -91,6 +91,9 @@ function PedidoForm() {
   const [clienteDialogOpen, setClienteDialogOpen] = useState(false);
   const [salvandoCliente, setSalvandoCliente] = useState(false);
   const [novoCliente, setNovoCliente] = useState({ nome: "", telefone: "", endereco: "", observacoes: "" });
+  const [recorrenciaDialogOpen, setRecorrenciaDialogOpen] = useState(false);
+  const [salvandoRecorrencia, setSalvandoRecorrencia] = useState(false);
+  const [recorrenciaForm, setRecorrenciaForm] = useState({ frequencia: "semanal" as "semanal" | "quinzenal" | "mensal", data_inicio: hojeISO(), data_fim: "", hora_entrega: "", observacoes: "" });
   useEffect(() => {
     if (!existente?.id) { setPagamentos([]); return; }
     let ativo = true;
@@ -177,8 +180,7 @@ function PedidoForm() {
       if (pedidoError) throw new Error(pedidoError.message);
       setF((atual) => ({ ...atual, valor_entrada: String(pedidoAtualizado.valor_entrada ?? 0), saldo_quitado: Boolean(pedidoAtualizado.saldo_quitado) }));
       setPagamentoEmEdicao(null);
-      await Promise.all([
-        qc.invalidateQueries({ queryKey: ["pedidos"] }),
+      await Promise.all([        qc.invalidateQueries({ queryKey: ["pedidos"] }),
         qc.invalidateQueries({ queryKey: ["pedido-pagamentos"] }),
       ]);
       toast.success("Pagamento atualizado e saldo recalculado.");
@@ -287,6 +289,70 @@ function PedidoForm() {
     toast.success("Rascunho preenchido. Revise os dados antes de salvar.");
   }
 
+  function abrirCriacaoRecorrencia() {
+    if (!f.cliente_id) { toast.error("Selecione um cliente antes de criar a recorrência."); return; }
+    if (!f.data_entrega) { toast.error("Informe a data da primeira entrega."); return; }
+    if (itens.length === 0 || itens.some((i) => !i.descricao.trim() || parseNum(i.quantidade) <= 0 || parseNum(i.preco_unitario) < 0)) {
+      toast.error("Adicione itens válidos ao pedido antes de criar a recorrência."); return;
+    }
+    setRecorrenciaForm((atual) => ({ ...atual, data_inicio: f.data_entrega, hora_entrega: f.hora_entrega, observacoes: f.observacoes }));
+    setRecorrenciaDialogOpen(true);
+  }
+
+  async function criarRecorrenciaDoPedido(e: React.FormEvent<HTMLFormElement>) {
+    e.preventDefault();
+    if (salvandoRecorrencia) return;
+    if (!f.cliente_id) { toast.error("Selecione um cliente."); return; }
+    if (!recorrenciaForm.data_inicio || (recorrenciaForm.data_fim && recorrenciaForm.data_fim < recorrenciaForm.data_inicio)) {
+      toast.error("Confira as datas da recorrência."); return;
+    }
+    if (itens.length === 0 || itens.length > 100 || itens.some((i) => !i.descricao.trim() || !Number.isFinite(parseNum(i.quantidade)) || parseNum(i.quantidade) <= 0 || !Number.isFinite(parseNum(i.preco_unitario)) || parseNum(i.preco_unitario) < 0)) {
+      toast.error("Confira os itens e valores do pedido."); return;
+    }
+    setSalvandoRecorrencia(true);
+    try {
+      // eslint-disable-next-line @typescript-eslint/no-explicit-any -- tabelas da migração 0024 ainda não estão nos tipos gerados.
+      const db = supabase as any;
+      const { data: recorrencia, error: erroRecorrencia } = await db.from("pedidos_recorrentes").insert({
+        cliente_id: f.cliente_id,
+        frequencia: recorrenciaForm.frequencia,
+        data_inicio: recorrenciaForm.data_inicio,
+        data_fim: recorrenciaForm.data_fim || null,
+        hora_entrega: recorrenciaForm.hora_entrega || null,
+        observacoes: recorrenciaForm.observacoes.trim() || null,
+        ativa: true,
+      }).select("id").single();
+      if (erroRecorrencia) throw new Error(erroRecorrencia.message);
+      const itensOcorrencia = itens.map((item) => ({
+        produto_id: item.produto_id,
+        descricao: item.descricao.trim(),
+        quantidade: parseNum(item.quantidade),
+        preco_unitario: parseNum(item.preco_unitario),
+        custo_unitario: Number.isFinite(item.custo_unitario) ? item.custo_unitario : 0,
+      }));
+      const { error: erroOcorrencia } = await db.from("pedidos_recorrentes_ocorrencias").insert({
+        recorrencia_id: recorrencia.id,
+        data_entrega: recorrenciaForm.data_inicio,
+        status: "pendente",
+        itens: itensOcorrencia,
+        observacoes: recorrenciaForm.observacoes.trim() || null,
+      });
+      if (erroOcorrencia) {
+        // Remove apenas a definição recém-criada, pois a primeira ocorrência não foi salva.
+        await db.from("pedidos_recorrentes").delete().eq("id", recorrencia.id);
+        throw new Error(erroOcorrencia.message);
+      }
+      toast.success("Recorrência criada com a primeira entrega preparada. Confirme-a na tela de Pedidos recorrentes para gerar o pedido normal.");
+      setRecorrenciaDialogOpen(false);
+      await qc.invalidateQueries({ queryKey: ["pedidos-recorrentes"] });
+      navigate({ to: "/pedidos-recorrentes" });
+    } catch (e) {
+      toast.error(e instanceof Error ? e.message : "Não foi possível criar a recorrência.");
+    } finally {
+      setSalvandoRecorrencia(false);
+    }
+  }
+
   async function salvarCliente() {
     if (!novoCliente.nome.trim()) return void toast.error("Informe o nome do cliente.");
     setSalvandoCliente(true);
@@ -357,8 +423,7 @@ function PedidoForm() {
           // na edição, preserva a quantidade já registrada.
           quantidade_produzida: Number.isFinite(i.quantidade_produzida) ? i.quantidade_produzida : 0,
         })),
-        ...(existente ? { registro_id: existente.id } : {}),
-      });
+        ...(existente ? { registro_id: existente.id } : {}),      });
       if (error) throw error;
       if (novo && parseNum(f.valor_entrada) > 0) {
         const { error: recebimentoError } = await supabase.rpc("registrar_recebimento_pedido", {
@@ -424,6 +489,49 @@ function PedidoForm() {
     <>
       <PageHeader title={novo ? "Novo pedido" : `Pedido #${existente?.numero}`} back="/pedidos" />
       {novo && <OrderMessage onApply={aplicarRascunho} />}
+      <Dialog open={recorrenciaDialogOpen} onOpenChange={(open) => { if (!salvandoRecorrencia) setRecorrenciaDialogOpen(open); }}>
+        <DialogContent className="max-w-md">
+          <DialogHeader>
+            <DialogTitle className="flex items-center gap-2"><Repeat className="size-5" /> Criar recorrência</DialogTitle>
+          </DialogHeader>
+          <p className="text-sm text-muted-foreground">Os itens e preços atuais serão usados como sugestão para a primeira entrega. Nenhum pedido normal será criado até você confirmar a ocorrência.</p>
+          <form onSubmit={(e) => void criarRecorrenciaDoPedido(e)} className="space-y-3">
+            <Field label="Cliente">
+              <Input value={clientes.find((c) => c.id === f.cliente_id)?.nome ?? ""} readOnly className="h-11" />
+            </Field>
+            <Field label="Frequência da recorrência *">
+              <NativeSelect required value={recorrenciaForm.frequencia} onChange={(e) => setRecorrenciaForm((atual) => ({ ...atual, frequencia: e.target.value as typeof atual.frequencia }))}>
+                <option value="semanal">Semanal (a cada 7 dias)</option>
+                <option value="quinzenal">Quinzenal (a cada 14 dias)</option>
+                <option value="mensal">Mensal</option>
+              </NativeSelect>
+            </Field>
+            <div className="grid grid-cols-2 gap-3">
+              <Field label="Primeira entrega *">
+                <Input type="date" required value={recorrenciaForm.data_inicio} onChange={(e) => setRecorrenciaForm((atual) => ({ ...atual, data_inicio: e.target.value }))} className="h-11" />
+              </Field>
+              <Field label="Horário">
+                <Input type="time" value={recorrenciaForm.hora_entrega} onChange={(e) => setRecorrenciaForm((atual) => ({ ...atual, hora_entrega: e.target.value }))} className="h-11" />
+              </Field>
+              <Field label="Repetir até (opcional)">
+                <Input type="date" min={recorrenciaForm.data_inicio} value={recorrenciaForm.data_fim} onChange={(e) => setRecorrenciaForm((atual) => ({ ...atual, data_fim: e.target.value }))} className="h-11" />
+              </Field>
+            </div>
+            <Field label="Observações padrão (opcional)">
+              <Textarea rows={2} value={recorrenciaForm.observacoes} onChange={(e) => setRecorrenciaForm((atual) => ({ ...atual, observacoes: e.target.value }))} placeholder="Instruções para as entregas" />
+            </Field>
+            <div className="rounded-lg border p-3 text-sm">
+              <p className="mb-1 flex items-center gap-2 font-medium"><CalendarClock className="size-4" /> Itens da primeira entrega</p>
+              {itens.map((item, index) => <p key={`${item.produto_id ?? item.descricao}-${index}`} className="text-muted-foreground">{parseNum(item.quantidade)}× {item.descricao} — {brl(parseNum(item.quantidade) * parseNum(item.preco_unitario))}</p>)}
+              <p className="mt-2 font-semibold">Total estimado: {brl(itens.reduce((total, item) => total + parseNum(item.quantidade) * parseNum(item.preco_unitario), 0) + parseNum(f.taxa_entrega) - parseNum(f.desconto))}</p>
+            </div>
+            <div className="flex gap-2">
+              <Button type="button" variant="outline" className="flex-1" disabled={salvandoRecorrencia} onClick={() => setRecorrenciaDialogOpen(false)}>Cancelar</Button>
+              <Button type="submit" className="flex-1" disabled={salvandoRecorrencia}>{salvandoRecorrencia ? "Criando..." : "Criar recorrência"}</Button>
+            </div>
+          </form>
+        </DialogContent>
+      </Dialog>
       <Dialog open={clienteDialogOpen} onOpenChange={setClienteDialogOpen}>
         <DialogContent className="max-w-md">
           <DialogHeader>
@@ -537,8 +645,7 @@ function PedidoForm() {
               <Input placeholder="Descrição / personalização" value={it.descricao} disabled={temProducaoRegistrada} onChange={(e) => setItem(i, { descricao: e.target.value })} className="h-11 bg-card" />
               <div className="grid grid-cols-3 gap-2">
                 <Field label="Qtd.">
-                  <Input inputMode="decimal" value={it.quantidade} disabled={temProducaoRegistrada} onFocus={() => limparZeroAoFocar(it.quantidade, (valor) => setItem(i, { quantidade: valor }))} onChange={(e) => setItem(i, { quantidade: e.target.value })} className="h-11 bg-card" />
-                </Field>
+                  <Input inputMode="decimal" value={it.quantidade} disabled={temProducaoRegistrada} onFocus={() => limparZeroAoFocar(it.quantidade, (valor) => setItem(i, { quantidade: valor }))} onChange={(e) => setItem(i, { quantidade: e.target.value })} className="h-11 bg-card" />                </Field>
                 <Field label="Preço un.">
                   <Input inputMode="decimal" value={it.preco_unitario} onFocus={() => limparZeroAoFocar(it.preco_unitario, (valor) => setItem(i, { preco_unitario: valor }))} onChange={(e) => setItem(i, { preco_unitario: e.target.value })} className="h-11 bg-card" />
                 </Field>
@@ -713,6 +820,7 @@ function PedidoForm() {
         )}
 
         <div className="flex flex-wrap gap-2">
+          {novo && <Button type="button" variant="outline" className="h-12" onClick={abrirCriacaoRecorrencia} disabled={salvando}><Repeat className="size-4" /> Criar recorrência</Button>}
           {!novo && existente && !["entregue", "finalizado", "cancelado"].includes(existente.status) && (
             <Button variant="outline" className="h-12 text-destructive" onClick={cancelarPedido}>
               Cancelar pedido
