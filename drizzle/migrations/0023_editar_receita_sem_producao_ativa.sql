@@ -1,4 +1,4 @@
--- Block recipe edits while any related order is open, even before production starts.
+-- Allow recipe edits before production starts. Once production has been recorded, keep the recipe locked while that order remains open, even if production is reversed to zero.
 -- Closed orders do not lock recipe maintenance; historical stock snapshots remain unchanged.
 
 CREATE OR REPLACE FUNCTION public.bloquear_receita_com_producao_ativa()
@@ -24,6 +24,7 @@ BEGIN
     SELECT 1 FROM public.pedido_itens pi
     JOIN public.pedidos p ON p.id = pi.pedido_id AND p.user_id = pi.user_id
     WHERE pi.user_id = OLD.user_id AND pi.produto_id = OLD.produto_id
+      AND (coalesce(pi.quantidade_produzida, 0) > 0 OR EXISTS (SELECT 1 FROM public.producao_eventos pe WHERE pe.pedido_item_id = pi.id))
       AND lower(trim(coalesce(p.status, ''))) NOT IN ('entregue','finalizado','cancelado','perdido')
   ) THEN
     RAISE EXCEPTION 'Não é possível alterar os ingredientes da receita enquanto houver pedido em aberto para este produto. Finalize ou estorne a produção antes de editar.';
@@ -33,6 +34,7 @@ BEGIN
     SELECT 1 FROM public.pedido_itens pi
     JOIN public.pedidos p ON p.id = pi.pedido_id AND p.user_id = pi.user_id
     WHERE pi.user_id = NEW.user_id AND pi.produto_id = NEW.produto_id
+      AND (coalesce(pi.quantidade_produzida, 0) > 0 OR EXISTS (SELECT 1 FROM public.producao_eventos pe WHERE pe.pedido_item_id = pi.id))
       AND lower(trim(coalesce(p.status, ''))) NOT IN ('entregue','finalizado','cancelado','perdido')
   ) THEN
     RAISE EXCEPTION 'Não é possível alterar os ingredientes da receita enquanto houver pedido em aberto para este produto. Finalize ou estorne a produção antes de editar.';
@@ -52,6 +54,7 @@ BEGIN
     SELECT 1 FROM public.pedido_itens pi
     JOIN public.pedidos p ON p.id = pi.pedido_id AND p.user_id = pi.user_id
     WHERE pi.user_id = NEW.user_id AND pi.produto_id = OLD.id
+      AND (coalesce(pi.quantidade_produzida, 0) > 0 OR EXISTS (SELECT 1 FROM public.producao_eventos pe WHERE pe.pedido_item_id = pi.id))
       AND lower(trim(coalesce(p.status, ''))) NOT IN ('entregue','finalizado','cancelado','perdido')
   ) THEN
     RAISE EXCEPTION 'Não é possível alterar o rendimento enquanto houver pedido em aberto para este produto. Finalize ou estorne a produção antes de editar.';
@@ -61,7 +64,7 @@ END;
 $function$;
 
 COMMENT ON FUNCTION public.bloquear_receita_com_producao_ativa() IS
-  'Blocks recipe edits only while any related order is open; closed orders do not lock recipe maintenance.';
+  'Blocks recipe edits only when a related open order has production history; closed orders do not lock recipe maintenance.';
 COMMENT ON FUNCTION public.bloquear_rendimento_com_producao_ativa() IS
-  'Blocks yield edits while any related order is open.';
+  'Blocks yield edits only when a related open order has production history.';
 NOTIFY pgrst, 'reload schema';
