@@ -58,3 +58,5 @@ jobs:
         run: psql "$DATABASE_URL" -v ON_ERROR_STOP=1 -f tests/db/stock-smoke.sql
       - name: Smoke-test recipe edits before production and lock after production starts
         run: psql "$DATABASE_URL" -v ON_ERROR_STOP=1 -f tests/db/recipe-edit-smoke.sql
+      - name: Smoke-test recurring orders and duplicate confirmation protection
+        run: psql "$DATABASE_URL" -v ON_ERROR_STOP=1 -f tests/db/recurring-orders-smoke.sql
