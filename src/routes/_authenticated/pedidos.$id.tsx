@@ -3,7 +3,7 @@ import type { OrderDraft } from "@/lib/order-draft";
 import * as appQueries from "@/lib/queries";
 import { createFileRoute, Link, useNavigate } from "@tanstack/react-router";
 import { useQueryClient, useSuspenseQuery } from "@tanstack/react-query";
-import { useEffect, useRef, useState } from "react";
+import { useEffect, useRef, useState, type FormEvent } from "react";
 import { toast } from "sonner";
 import { CalendarClock, MessageCircle, Plus, Repeat, Trash2 } from "lucide-react";
 import { supabase } from "@/integrations/supabase/client";
@@ -299,7 +299,7 @@ function PedidoForm() {
     setRecorrenciaDialogOpen(true);
   }
 
-  async function criarRecorrenciaDoPedido(e: React.FormEvent<HTMLFormElement>) {
+  async function criarRecorrenciaDoPedido(e: FormEvent<HTMLFormElement>) {
     e.preventDefault();
     if (salvandoRecorrencia) return;
     if (!f.cliente_id) { toast.error("Selecione um cliente."); return; }
