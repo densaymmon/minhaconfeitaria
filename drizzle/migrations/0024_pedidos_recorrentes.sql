@@ -132,7 +132,7 @@ BEGIN
     'cliente_id', recorrencia.cliente_id,
     'data_entrega', ocorrencia.data_entrega,
     'hora_entrega', recorrencia.hora_entrega,
-    'observacoes', concat_ws(E'\n', nullif(recorrencia.observacoes, ''), nullif(ocorrencia.observacoes, ''))
+    'observacoes', concat_ws(E'\n', nullif(recorrencia.observacoes, ''), nullif(ocorrencia.observacoes, '')),
     'status', 'recebido'
   );
 
