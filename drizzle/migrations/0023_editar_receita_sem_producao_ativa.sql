@@ -58,7 +58,7 @@ BEGIN
       AND pi.quantidade_produzida > 0
       AND lower(trim(coalesce(p.status, ''))) NOT IN ('entregue','finalizado','cancelado','perdido')
   ) THEN
-    RAISE EXCEPTION 'Não é possível alterar el rendimiento enquanto houver produção registrada em pedido aberto. Finalize ou estorne a produção antes de editar.';
+    RAISE EXCEPTION 'Não é possível alterar o rendimento enquanto houver produção registrada em pedido aberto. Finalize ou estorne a produção antes de editar.';
   END IF;
   RETURN NEW;
 END;
