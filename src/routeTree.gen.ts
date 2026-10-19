@@ -22,6 +22,7 @@ import { Route as AuthenticatedDespesasRouteImport } from './routes/_authenticat
 import { Route as AuthenticatedMaisRouteImport } from './routes/_authenticated/mais'
 import { Route as AuthenticatedPainelRouteImport } from './routes/_authenticated/painel'
 import { Route as AuthenticatedProducaoRouteImport } from './routes/_authenticated/producao'
+import { Route as AuthenticatedPedidosRecorrentesRouteImport } from './routes/_authenticated/pedidos-recorrentes'
 import { Route as AuthenticatedRelatoriosRouteImport } from './routes/_authenticated/relatorios'
 import { Route as DotlovableOauthConsentRouteImport } from './routes/[.]lovable.oauth.consent'
 import { Route as AuthenticatedClientesIndexRouteImport } from './routes/_authenticated/clientes.index'
@@ -98,6 +99,11 @@ const AuthenticatedProducaoRoute = AuthenticatedProducaoRouteImport.update({
   path: '/producao',
   getParentRoute: () => AuthenticatedRouteRoute,
 } as any)
+const AuthenticatedPedidosRecorrentesRoute = AuthenticatedPedidosRecorrentesRouteImport.update({
+  id: '/pedidos-recorrentes',
+  path: '/pedidos-recorrentes',
+  getParentRoute: () => AuthenticatedRouteRoute,
+} as any)
 const AuthenticatedRelatoriosRoute = AuthenticatedRelatoriosRouteImport.update({
   id: '/relatorios',
   path: '/relatorios',
@@ -155,6 +161,7 @@ export interface FileRoutesByFullPath {
   '/mais': typeof AuthenticatedMaisRoute
   '/painel': typeof AuthenticatedPainelRoute
   '/producao': typeof AuthenticatedProducaoRoute
+  '/pedidos-recorrentes': typeof AuthenticatedPedidosRecorrentesRoute
   '/relatorios': typeof AuthenticatedRelatoriosRoute
   '/.lovable/oauth/consent': typeof DotlovableOauthConsentRoute
   '/clientes/$id': typeof AuthenticatedClientesIdRoute
@@ -201,6 +208,7 @@ export interface FileRoutesById {
   '/_authenticated/mais': typeof AuthenticatedMaisRoute
   '/_authenticated/painel': typeof AuthenticatedPainelRoute
   '/_authenticated/producao': typeof AuthenticatedProducaoRoute
+  '/_authenticated/pedidos-recorrentes': typeof AuthenticatedPedidosRecorrentesRoute
   '/_authenticated/relatorios': typeof AuthenticatedRelatoriosRoute
   '/.lovable/oauth/consent': typeof DotlovableOauthConsentRoute
   '/_authenticated/clientes/$id': typeof AuthenticatedClientesIdRoute
@@ -225,6 +233,7 @@ export interface FileRouteTypes {
     | '/mais'
     | '/painel'
     | '/producao'
+    | '/pedidos-recorrentes'
     | '/relatorios'
     | '/.lovable/oauth/consent'
     | '/clientes/$id'
@@ -270,6 +279,7 @@ export interface FileRouteTypes {
     | '/_authenticated/mais'
     | '/_authenticated/painel'
     | '/_authenticated/producao'
+    | '/_authenticated/pedidos-recorrentes'
     | '/_authenticated/relatorios'
     | '/.lovable/oauth/consent'
     | '/_authenticated/clientes/$id'
@@ -383,6 +393,13 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof AuthenticatedProducaoRouteImport
       parentRoute: typeof AuthenticatedRouteRoute
     }
+    '/_authenticated/pedidos-recorrentes': {
+      id: '/_authenticated/pedidos-recorrentes'
+      path: '/pedidos-recorrentes'
+      fullPath: '/pedidos-recorrentes'
+      preLoaderRoute: typeof AuthenticatedPedidosRecorrentesRouteImport
+      parentRoute: typeof AuthenticatedRouteRoute
+    }
     '/_authenticated/relatorios': {
       id: '/_authenticated/relatorios'
       path: '/relatorios'
@@ -450,6 +467,7 @@ interface AuthenticatedRouteRouteChildren {
   AuthenticatedMaisRoute: typeof AuthenticatedMaisRoute
   AuthenticatedPainelRoute: typeof AuthenticatedPainelRoute
   AuthenticatedProducaoRoute: typeof AuthenticatedProducaoRoute
+  AuthenticatedPedidosRecorrentesRoute: typeof AuthenticatedPedidosRecorrentesRoute
   AuthenticatedRelatoriosRoute: typeof AuthenticatedRelatoriosRoute
   AuthenticatedClientesIdRoute: typeof AuthenticatedClientesIdRoute
   AuthenticatedPedidosIdRoute: typeof AuthenticatedPedidosIdRoute
@@ -467,6 +485,7 @@ const AuthenticatedRouteRouteChildren: AuthenticatedRouteRouteChildren = {
   AuthenticatedMaisRoute: AuthenticatedMaisRoute,
   AuthenticatedPainelRoute: AuthenticatedPainelRoute,
   AuthenticatedProducaoRoute: AuthenticatedProducaoRoute,
+  AuthenticatedPedidosRecorrentesRoute: AuthenticatedPedidosRecorrentesRoute,
   AuthenticatedRelatoriosRoute: AuthenticatedRelatoriosRoute,
   AuthenticatedClientesIdRoute: AuthenticatedClientesIdRoute,
   AuthenticatedPedidosIdRoute: AuthenticatedPedidosIdRoute,
