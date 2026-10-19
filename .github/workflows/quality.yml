@@ -56,3 +56,5 @@ jobs:
           done
       - name: Smoke-test purchase, cancellation, inventory, production, and history
         run: psql "$DATABASE_URL" -v ON_ERROR_STOP=1 -f tests/db/stock-smoke.sql
+      - name: Smoke-test recipe edits before production and lock after production starts
+        run: psql "$DATABASE_URL" -v ON_ERROR_STOP=1 -f tests/db/recipe-edit-smoke.sql
