@@ -68,9 +68,6 @@ BEGIN
   PERFORM public.ajustar_producao(
     'abababab-abab-4bab-8bab-ababababab02', item_id, 0
   );
-  SELECT COALESCE(SUM(sm.quantidade), 0) INTO saldo
-  FROM public.estoque_movimentos sm
-  WHERE sm.insumo_id = iid;
   -- Recipe remains locked while the order is open, because production happened.
   BEGIN
     UPDATE public.receita_itens SET quantidade_utilizada = 15
