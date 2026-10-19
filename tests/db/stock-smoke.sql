@@ -310,7 +310,17 @@ BEGIN
   SELECT s.saldo INTO saldo FROM public.saldo_estoque() s WHERE s.insumo_id = iid;
   IF saldo <> 250 THEN RAISE EXCEPTION 'Estorno total da produção incorreto: %', saldo; END IF;
 
-  -- Once production has been fully reversed, recipe changes are allowed again.
+  -- An open order still freezes recipe composition even after production is reversed.
+  BEGIN
+    UPDATE public.receita_itens SET quantidade_utilizada = 11 WHERE id = receita_id;
+    RAISE EXCEPTION 'A edição deveria ser bloqueada enquanto o pedido permanece aberto.';
+  EXCEPTION WHEN raise_exception THEN
+    IF SQLERRM = 'A edição deveria ser bloqueada enquanto o pedido permanece aberto.' THEN RAISE; END IF;
+    IF position('pedido em aberto' IN SQLERRM) = 0 THEN RAISE; END IF;
+  END;
+
+  -- Closing the order unlocks recipe maintenance without changing stock history.
+  UPDATE public.pedidos SET status = 'entregue' WHERE id = pedido;
   UPDATE public.receita_itens SET quantidade_utilizada = 12 WHERE id = receita_id;
   IF NOT EXISTS (
     SELECT 1
