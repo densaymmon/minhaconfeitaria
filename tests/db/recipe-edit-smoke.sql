@@ -35,22 +35,37 @@ BEGIN
   ) VALUES (uid, pedido, pid, 'Bolo receita teste', 1, 10, 0.1)
   RETURNING id INTO item_id;
 
-  -- An open order with zero production must not block recipe edits.
+  -- Any open order must block recipe edits, even before production starts.
+  BEGIN
+    UPDATE public.receita_itens SET quantidade_utilizada = 12
+    WHERE produto_id = pid AND user_id = uid;
+    RAISE EXCEPTION 'A edição deveria ser bloqueada com pedido em aberto.';
+  EXCEPTION WHEN raise_exception THEN
+    IF SQLERRM = 'A edição deveria ser bloqueada com pedido em aberto.' THEN RAISE; END IF;
+    IF position('pedido em aberto' IN SQLERRM) = 0 THEN RAISE; END IF;
+  END;
+
+  BEGIN
+    UPDATE public.produtos SET rendimento = 2 WHERE id = pid;
+    RAISE EXCEPTION 'O rendimento deveria ser bloqueado com pedido em aberto.';
+  EXCEPTION WHEN raise_exception THEN
+    IF SQLERRM = 'O rendimento deveria ser bloqueado com pedido em aberto.' THEN RAISE; END IF;
+    IF position('pedido em aberto' IN SQLERRM) = 0 THEN RAISE; END IF;
+  END;
+
+  UPDATE public.pedidos SET status = 'entregue' WHERE id = pedido;
   UPDATE public.receita_itens SET quantidade_utilizada = 12
   WHERE produto_id = pid AND user_id = uid;
   UPDATE public.produtos SET rendimento = 2 WHERE id = pid;
 
-  -- Once production is registered on that open order, recipe edits must be blocked.
-  PERFORM public.ajustar_producao(
-    'abababab-abab-4bab-8bab-abababababac', item_id, 1
-  );
+  -- After an order is closed, recipe edits must be allowed.
   BEGIN
     UPDATE public.receita_itens SET quantidade_utilizada = 14
     WHERE produto_id = pid AND user_id = uid;
     RAISE EXCEPTION 'A receita deveria ser bloqueada após iniciar produção.';
   EXCEPTION WHEN raise_exception THEN
     IF SQLERRM = 'A receita deveria ser bloqueada após iniciar produção.' THEN RAISE; END IF;
-    IF position('produção registrada em pedido aberto' IN SQLERRM) = 0 THEN RAISE; END IF;
+    IF position('pedido em aberto' IN SQLERRM) = 0 THEN RAISE; END IF;
   END;
 
   BEGIN
