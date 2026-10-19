@@ -11,6 +11,7 @@ DECLARE
   pid uuid;
   pedido uuid;
   item_id uuid;
+  saldo numeric;
 BEGIN
   INSERT INTO public.insumos(
     user_id, nome, unidade, preco_unidade, preco_embalagem,
@@ -35,46 +36,64 @@ BEGIN
   ) VALUES (uid, pedido, pid, 'Bolo receita teste', 1, 10, 0.1)
   RETURNING id INTO item_id;
 
-  -- Any open order must block recipe edits, even before production starts.
-  BEGIN
-    UPDATE public.receita_itens SET quantidade_utilizada = 12
-    WHERE produto_id = pid AND user_id = uid;
-    RAISE EXCEPTION 'A edição deveria ser bloqueada com pedido em aberto.';
-  EXCEPTION WHEN raise_exception THEN
-    IF SQLERRM = 'A edição deveria ser bloqueada com pedido em aberto.' THEN RAISE; END IF;
-    IF position('pedido em aberto' IN SQLERRM) = 0 THEN RAISE; END IF;
-  END;
-
-  BEGIN
-    UPDATE public.produtos SET rendimento = 2 WHERE id = pid;
-    RAISE EXCEPTION 'O rendimento deveria ser bloqueado com pedido em aberto.';
-  EXCEPTION WHEN raise_exception THEN
-    IF SQLERRM = 'O rendimento deveria ser bloqueado com pedido em aberto.' THEN RAISE; END IF;
-    IF position('pedido em aberto' IN SQLERRM) = 0 THEN RAISE; END IF;
-  END;
-
-  UPDATE public.pedidos SET status = 'entregue' WHERE id = pedido;
+  -- An open order with no production history must not lock recipe or yield.
   UPDATE public.receita_itens SET quantidade_utilizada = 12
   WHERE produto_id = pid AND user_id = uid;
   UPDATE public.produtos SET rendimento = 2 WHERE id = pid;
 
-  -- After an order is closed, recipe edits must be allowed.
+  -- Once production is recorded, both recipe and yield are locked.
+  PERFORM public.ajustar_producao(
+    'abababab-abab-4bab-8bab-ababababab01', item_id, 0.5
+  );
+
   BEGIN
     UPDATE public.receita_itens SET quantidade_utilizada = 14
     WHERE produto_id = pid AND user_id = uid;
-    RAISE EXCEPTION 'A receita deveria ser bloqueada após iniciar produção.';
+    RAISE EXCEPTION 'A edição deveria ser bloqueada após registrar produção.';
   EXCEPTION WHEN raise_exception THEN
-    IF SQLERRM = 'A receita deveria ser bloqueada após iniciar produção.' THEN RAISE; END IF;
-    IF position('pedido em aberto' IN SQLERRM) = 0 THEN RAISE; END IF;
+    IF SQLERRM = 'A edição deveria ser bloqueada após registrar produção.' THEN RAISE; END IF;
+    IF position('produção registrada em pedido aberto' IN SQLERRM) = 0
+       AND position('pedido em aberto' IN SQLERRM) = 0 THEN RAISE; END IF;
   END;
 
   BEGIN
     UPDATE public.produtos SET rendimento = 3 WHERE id = pid;
-    RAISE EXCEPTION 'O rendimento deveria ser bloqueado após iniciar produção.';
+    RAISE EXCEPTION 'O rendimento deveria ser bloqueado após registrar produção.';
   EXCEPTION WHEN raise_exception THEN
-    IF SQLERRM = 'O rendimento deveria ser bloqueado após iniciar produção.' THEN RAISE; END IF;
-    IF position('produção registrada em pedido aberto' IN SQLERRM) = 0 THEN RAISE; END IF;
+    IF SQLERRM = 'O rendimento deveria ser bloqueado após registrar produção.' THEN RAISE; END IF;
+    IF position('pedido em aberto' IN SQLERRM) = 0 THEN RAISE; END IF;
   END;
+
+  -- Reversing production to zero must not erase the production audit history.
+  PERFORM public.ajustar_producao(
+    'abababab-abab-4bab-8bab-ababababab02', item_id, 0
+  );
+  SELECT COALESCE(SUM(sm.quantidade), 0) INTO saldo
+  FROM public.estoque_movimentos sm
+  WHERE sm.insumo_id = iid;
+  -- Recipe remains locked while the order is open, because production happened.
+  BEGIN
+    UPDATE public.receita_itens SET quantidade_utilizada = 15
+    WHERE produto_id = pid AND user_id = uid;
+    RAISE EXCEPTION 'A edição deveria continuar bloqueada após estornar a produção.';
+  EXCEPTION WHEN raise_exception THEN
+    IF SQLERRM = 'A edição deveria continuar bloqueada após estornar a produção.' THEN RAISE; END IF;
+    IF position('pedido em aberto' IN SQLERRM) = 0 THEN RAISE; END IF;
+  END;
+
+  -- Closing the order unlocks maintenance; old production snapshots remain intact.
+  UPDATE public.pedidos SET status = 'entregue' WHERE id = pedido;
+  UPDATE public.receita_itens SET quantidade_utilizada = 16
+  WHERE produto_id = pid AND user_id = uid;
+  UPDATE public.produtos SET rendimento = 4 WHERE id = pid;
+
+  IF NOT EXISTS (
+    SELECT 1 FROM public.producao_eventos pe
+    WHERE pe.pedido_item_id = item_id AND pe.receita_snapshot IS NOT NULL
+      AND (pe.receita_snapshot->0->>'quantidade_utilizada')::numeric = 12
+  ) THEN
+    RAISE EXCEPTION 'O snapshot histórico da produção não foi preservado.';
+  END IF;
 END
 $test$;
 
