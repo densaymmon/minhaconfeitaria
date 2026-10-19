@@ -68,6 +68,7 @@ function PedidosRecorrentes() {
 
   const carregar = useCallback(async () => {
     setCarregando(true);
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any -- // As tabelas novas ainda não fazem parte do tipo gerado do cliente Supabase.
     const db = supabase as any;
     const [r, o] = await Promise.all([
       db.from("pedidos_recorrentes").select("*").order("data_inicio", { ascending: true }),
@@ -92,6 +93,7 @@ function PedidosRecorrentes() {
     e.preventDefault();
     if (!form.cliente_id) { toast.error("Selecione um cliente."); return; }
     setSalvando(true);
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any -- // As tabelas novas ainda não fazem parte do tipo gerado do cliente Supabase.
     const db = supabase as any;
     const { data, error } = await db.from("pedidos_recorrentes").insert({
       cliente_id: form.cliente_id, frequencia: form.frequencia, data_inicio: form.data_inicio,
@@ -117,6 +119,7 @@ function PedidosRecorrentes() {
     const data = proximaData(base, recorrenciaAtiva.frequencia, recorrenciaAtiva.data_inicio);
     if (recorrenciaAtiva.data_fim && data > recorrenciaAtiva.data_fim) { toast.error("A data final da recorrência já foi atingida."); return; }
     setSalvando(true);
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any -- // A tipagem gerada do Supabase ainda não conhece as tabelas desta migração.
     const { error } = await (supabase as any).from("pedidos_recorrentes_ocorrencias").insert({ recorrencia_id: recorrenciaAtiva.id, data_entrega: data, status: "pendente", itens: [] });
     setSalvando(false);
     if (error) toast.error(error.code === "23505" ? "Esta data já possui uma ocorrência." : error.message);
@@ -137,6 +140,7 @@ function PedidosRecorrentes() {
   }
   async function salvarItens(itens: Item[]) {
     if (!ocorrenciaPendente) return;
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any -- // A tipagem gerada do Supabase ainda não conhece as tabelas desta migração.
     const { error } = await (supabase as any).from("pedidos_recorrentes_ocorrencias").update({ itens }).eq("id", ocorrenciaPendente.id);
     if (error) toast.error(error.message);
     else { setOcorrencias((prev) => prev.map((o) => o.id === ocorrenciaPendente.id ? { ...o, itens } : o)); toast.success("Itens da entrega salvos."); }
@@ -146,6 +150,7 @@ function PedidosRecorrentes() {
   async function confirmarPedido() {
     if (!ocorrenciaPendente || itensAtuais.length === 0) { toast.error("Adicione pelo menos um item antes de confirmar."); return; }
     setSalvando(true);
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any -- // RPC adicionada pela migração 0024; os tipos serão regenerados após a implantação.
     const { data, error } = await (supabase as any).rpc("confirmar_ocorrencia_recorrente", {
       p_ocorrencia_id: ocorrenciaPendente.id,
       p_payload: { forma_pagamento: "pix", valor_entrada: 0, saldo_quitado: false, desconto: 0, taxa_entrega: 0, observacoes: ocorrenciaPendente.observacoes ?? "" },
@@ -162,6 +167,7 @@ function PedidosRecorrentes() {
 
   async function alternarAtiva() {
     if (!recorrenciaAtiva) return;
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any -- // A tipagem gerada do Supabase ainda não conhece as tabelas desta migração.
     const { error } = await (supabase as any).from("pedidos_recorrentes").update({ ativa: !recorrenciaAtiva.ativa }).eq("id", recorrenciaAtiva.id);
     if (error) toast.error(error.message);
     else { toast.success(recorrenciaAtiva.ativa ? "Recorrência pausada." : "Recorrência reativada."); await carregar(); }
