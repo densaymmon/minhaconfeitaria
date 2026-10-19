@@ -81,6 +81,36 @@ BEGIN
     RAISE EXCEPTION 'Histórico Drizzle não encontrado; interrompendo sem registrar migrações.';
   END IF;
 
+  -- Do not overwrite conflicting hashes/timestamps in a partially repaired ledger.
+  FOR item IN
+    SELECT hash, created_at FROM (VALUES
+      ('ba320dfbdad2a6c30b714f9576c345c6d16461155be1b961d45ae86418f5496b',1791939312445::bigint),
+      ('19685eac64f251f1cf4f5261c9ffa34c4fd577d25f618c8b8a2f69931c1a6454',1791942000000::bigint),
+      ('dc3b90c9876d1661a9dec625279ae3698e1db756eb0b0052acd125c70ea5273d',1791942000001::bigint),
+      ('b43c48eed337e5a2bfa2f8a22933e4ef105802dc7382bc715faa8c4fca4009457',1791942000002::bigint),
+      ('16e4ad5359628413ad1ec94d7ff4455e291e9c9a9be875c874d880d157d7a13d',1791942000003::bigint),
+      ('5f544c051d55350298fb3cf0c55709c131a6cfcbfd5bd272a408408ae0c2892c',1791942000004::bigint),
+      ('ac22321b726e6e86add4c2a5d8859386db692341fad42df325e713458dbfac0c',1791942000005::bigint),
+      ('361f5eb4fb793bace3155e33e337c731ac43ea27fa339c716cc6ffab77dacbdc',1791942000006::bigint),
+      ('d8a4578334fda3648dc36acbfd308cbfe5e1399c477d601dc42edfd27a1f444d',1791942000007::bigint),
+      ('cdde655dd56bef4ad2b110b9d0cc3d3d14cd9e99de0de786eba2ac14646896a1',1791942000008::bigint),
+      ('c336c8a8f7d469d695e498f026e8c2a0de15730f8e11470fc6adf21acde759e4',1791942000009::bigint),
+      ('8ed83c23b39f0a352bb5169e5eb1b750a52ab6bf03a0ba9582510ed4fb1b2c1d',1791942000010::bigint),
+      ('5be4aa787cb451257443e0f87862d62e12f07720aa17e151f005d21fa1646732',1791942000011::bigint),
+      ('6bb07652760f3073f781a159ce599154a7d6034e5a87f7ddec749ae2ee736cfb',1791942000012::bigint),
+      ('362aadfd4158106f4e46b99883943faa11f6aac2ea4cc81601d59bf81bf12988',1791942000013::bigint),
+      ('28a7b63ca21487de746a63eea77d41d07b73afb72ae709044b47c291de632031',1791942000014::bigint),
+      ('eb9c7319dd74aacc7963b4be6b9e9b7536fd9ead42da49360073720c6177bead',1791942000015::bigint),
+      ('1250f56244a7b8aebee2c4e06546f1bcaf58cc59f3c3a6545171c60d7ecee213',1792360800000::bigint),
+      ('126f5173336599e07aa3c1638dd0d3d7f15bf935acb082c01eb793e2773b49c9',1792364400000::bigint)
+    ) AS expected(hash, created_at)
+  LOOP
+    IF EXISTS (SELECT 1 FROM drizzle.__drizzle_migrations m WHERE m.created_at = item.created_at AND m.hash <> item.hash)
+       OR EXISTS (SELECT 1 FROM drizzle.__drizzle_migrations m WHERE m.hash = item.hash AND m.created_at <> item.created_at) THEN
+      RAISE EXCEPTION 'Conflito no histórico Drizzle para created_at %, interrompendo sem registrar novas migrações.', item.created_at;
+    END IF;
+  END LOOP;
+
   -- Verify the known applied baseline before repairing its missing history.
   IF NOT EXISTS (SELECT 1 FROM drizzle.__drizzle_migrations WHERE hash = '0a3873f4ae3dba406069cec5826256a3c7bd6f5a8513e2b102d31906f1565f2c' AND created_at = 1791649342182)
      OR NOT EXISTS (SELECT 1 FROM drizzle.__drizzle_migrations WHERE hash = 'c4fb68d48f9ef4ce8dc8c633eeeb33463390f79a51df789d03eceffc4428e37a' AND created_at = 1791651273207)
@@ -98,20 +128,16 @@ BEGIN
     RAISE EXCEPTION 'As tabelas recorrentes já existem. Este reparo é somente para o estado anterior à migração 0024.';
   END IF;
 
-  FOREACH item IN ARRAY ARRAY[
-    ROW('estoque_movimentos','table')::text,
-    ROW('estoque_eventos','table')::text,
-    ROW('producao_eventos','table')::text,
-    ROW('inventario_eventos','table')::text,
-    ROW('contas_pagar','table')::text,
-    ROW('contas_pagar_pagamentos','table')::text,
-    ROW('contas_pagar_auditoria','table')::text,
-    ROW('contas_pagar_estornos','table')::text,
-    ROW('contas_pagar_operacoes','table')::text,
-    ROW('pedido_pagamentos','table')::text
-  ] LOOP
-    IF to_regclass('public.' || split_part(item::text,',',1)) IS NULL THEN
-      missing := array_append(missing, 'tabela public.' || split_part(item::text,',',1));
+  FOR item IN
+    SELECT table_name FROM (VALUES
+      ('estoque_movimentos'),('estoque_eventos'),('producao_eventos'),
+      ('inventario_eventos'),('contas_pagar'),('contas_pagar_pagamentos'),
+      ('contas_pagar_auditoria'),('contas_pagar_estornos'),
+      ('contas_pagar_operacoes'),('pedido_pagamentos')
+    ) AS required(table_name)
+  LOOP
+    IF to_regclass(format('public.%I', item.table_name)) IS NULL THEN
+      missing := array_append(missing, 'tabela public.' || item.table_name);
     END IF;
   END LOOP;
 
