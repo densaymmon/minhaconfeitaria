@@ -12,7 +12,6 @@ AS $function$
 DECLARE
   produto_lock uuid;
 BEGIN
-  -- Serialize recipe edits with production and lock products in stable order.
   IF TG_OP = 'UPDATE' THEN
     FOR produto_lock IN
       SELECT p.id
@@ -34,8 +33,7 @@ BEGIN
     FOR UPDATE;
   END IF;
 
-  -- Only open orders lock the recipe. Historical production on closed orders
-  -- must not prevent future recipe maintenance.
+  -- Historical production on closed orders must not prevent recipe maintenance.
   IF TG_OP <> 'INSERT' AND OLD.produto_id IS NOT NULL AND EXISTS (
     SELECT 1
     FROM public.pedido_itens pi
@@ -47,7 +45,7 @@ BEGIN
           ('entregue', 'finalizado', 'cancelado', 'perdido')
   ) THEN
     RAISE EXCEPTION
-      'Não é possível alterar a receita enquanto houver produção em pedidos abertos. Finalize o pedido ou estorne a produção antes de editar.';
+      'Não é possível alterar os ingredientes da receita enquanto houver produção registrada em pedidos abertos. Finalize o pedido ou estorne a produção antes de editar.';
   END IF;
 
   IF TG_OP <> 'DELETE' AND NEW.produto_id IS NOT NULL AND EXISTS (
@@ -61,7 +59,7 @@ BEGIN
           ('entregue', 'finalizado', 'cancelado', 'perdido')
   ) THEN
     RAISE EXCEPTION
-      'Não é possível alterar a receita enquanto houver produção em pedidos abertos. Finalize o pedido ou estorne a produção antes de editar.';
+      'Não é possível alterar os ingredientes da receita enquanto houver produção registrada em pedidos abertos. Finalize o pedido ou estorne a produção antes de editar.';
   END IF;
 
   IF TG_OP = 'DELETE' THEN
@@ -89,7 +87,7 @@ BEGIN
           ('entregue', 'finalizado', 'cancelado', 'perdido')
   ) THEN
     RAISE EXCEPTION
-      'Não é possível alterar o rendimento enquanto houver produção em pedidos abertos. Finalize o pedido ou estorne a produção antes de alterar a receita.';
+      'Não é possível alterar o rendimento enquanto houver produção registrada em pedidos abertos. Finalize o pedido ou estorne a produção antes de alterar a receita.';
   END IF;
   RETURN NEW;
 END;
