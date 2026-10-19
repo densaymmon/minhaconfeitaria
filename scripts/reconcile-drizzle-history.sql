@@ -142,7 +142,6 @@ BEGIN
   FOR item IN
     SELECT * FROM (VALUES
       ('compras','estoque_integrado'),('compras','cancelada_em'),('compras','local_compra'),
-      ('compras','forma_pagamento_compra'),('compras','numero_parcelas'),('compras','primeiro_vencimento'),
       ('insumos','preco_embalagem'),('insumos','quantidade_embalagem'),('insumos','unidade_embalagem'),('insumos','ativo'),
       ('pedido_itens','custo_unitario'),('pedido_itens','quantidade_produzida'),
       ('estoque_movimentos','pedido_id'),('estoque_movimentos','pedido_numero'),('estoque_movimentos','produto_id'),('estoque_movimentos','descricao_snapshot'),
@@ -185,6 +184,18 @@ BEGIN
   IF to_regclass('public.contas_pagar_pagamentos') IS NOT NULL THEN
     -- The live project has a newer ledger/RPC accounting model that supersedes
     -- the old direct-write validation trigger from migration 0014.
+    FOR item IN
+      SELECT table_name, column_name FROM (VALUES
+        ('compras','forma_pagamento_compra'),('compras','numero_parcelas'),('compras','primeiro_vencimento')
+      ) AS required(table_name,column_name)
+    LOOP
+      IF NOT EXISTS (
+        SELECT 1 FROM information_schema.columns c
+        WHERE c.table_schema='public' AND c.table_name=item.table_name AND c.column_name=item.column_name
+      ) THEN
+        missing := array_append(missing, 'coluna public.' || item.table_name || '.' || item.column_name);
+      END IF;
+    END LOOP;
     FOR item IN
       SELECT table_name FROM (VALUES
         ('contas_pagar_auditoria'),('contas_pagar_estornos'),('contas_pagar_operacoes')
