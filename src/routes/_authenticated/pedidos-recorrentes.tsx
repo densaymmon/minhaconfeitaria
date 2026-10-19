@@ -7,6 +7,7 @@ import { ArrowLeft, CalendarPlus, Check, Plus, RefreshCw, Trash2 } from "lucide-
 import { toast } from "sonner";
 import { PageHeader, Card } from "@/components/app/ui";
 import { useCustos } from "@/lib/hooks";
+import { hojeISO } from "@/lib/format";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 
@@ -33,12 +34,12 @@ type Ocorrencia = {
 };
 type Item = { produto_id: string | null; descricao: string; quantidade: number; preco_unitario: number; custo_unitario: number };
 
-function proximaData(data: string, frequencia: Recorrencia["frequencia"]) {
+function proximaData(data: string, frequencia: Recorrencia["frequencia"], dataReferencia?: string) {
   const d = new Date(data + "T12:00:00");
   if (frequencia === "semanal") d.setDate(d.getDate() + 7);
   else if (frequencia === "quinzenal") d.setDate(d.getDate() + 14);
   else {
-    const dia = d.getDate();
+    const dia = dataReferencia ? Number(dataReferencia.slice(8, 10)) : d.getDate();
     d.setDate(1);
     d.setMonth(d.getMonth() + 1);
     const ultimoDia = new Date(d.getFullYear(), d.getMonth() + 1, 0).getDate();
@@ -62,7 +63,7 @@ function PedidosRecorrentes() {
   const [carregando, setCarregando] = useState(true);
   const [salvando, setSalvando] = useState(false);
   const [selecionada, setSelecionada] = useState("");
-  const [form, setForm] = useState({ cliente_id: "", frequencia: "semanal" as Recorrencia["frequencia"], data_inicio: new Date().toLocaleDateString("en-CA"), data_fim: "", hora_entrega: "", observacoes: "" });
+  const [form, setForm] = useState({ cliente_id: "", frequencia: "semanal" as Recorrencia["frequencia"], data_inicio: hojeISO(), data_fim: "", hora_entrega: "", observacoes: "" });
   const [itemRascunho, setItemRascunho] = useState({ produto_id: "", quantidade: "1", preco_unitario: "" });
 
   async function carregar() {
@@ -113,7 +114,7 @@ function PedidosRecorrentes() {
     if (!recorrenciaAtiva || !recorrenciaAtiva.ativa) return;
     const ultima = [...listaOcorrencias].sort((a,b) => b.data_entrega.localeCompare(a.data_entrega))[0];
     const base = ultima?.data_entrega ?? recorrenciaAtiva.data_inicio;
-    const data = proximaData(base, recorrenciaAtiva.frequencia);
+    const data = proximaData(base, recorrenciaAtiva.frequencia, recorrenciaAtiva.data_inicio);
     if (recorrenciaAtiva.data_fim && data > recorrenciaAtiva.data_fim) { toast.error("A data final da recorrência já foi atingida."); return; }
     setSalvando(true);
     const { error } = await (supabase as any).from("pedidos_recorrentes_ocorrencias").insert({ recorrencia_id: recorrenciaAtiva.id, data_entrega: data, status: "pendente", itens: [] });
