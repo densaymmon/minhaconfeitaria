@@ -48,7 +48,15 @@ BEGIN
     EXECUTE format('CREATE POLICY "dono_insert" ON public.%I FOR INSERT TO authenticated WITH CHECK (auth.uid() = user_id)', t);
     EXECUTE format('CREATE POLICY "dono_update" ON public.%I FOR UPDATE TO authenticated USING (auth.uid() = user_id) WITH CHECK (auth.uid() = user_id)', t);
   END LOOP;
-END $$;
+END $;
+
+-- A tela pode editar os itens de uma ocorrência pendente, mas não pode forjar
+-- status/pedido_id nem marcar uma ocorrência como confirmada diretamente.
+REVOKE INSERT, UPDATE ON public.pedidos_recorrentes_ocorrencias FROM authenticated;
+GRANT INSERT (recorrencia_id, data_entrega, itens, observacoes)
+  ON public.pedidos_recorrentes_ocorrencias TO authenticated;
+GRANT UPDATE (itens, observacoes)
+  ON public.pedidos_recorrentes_ocorrencias TO authenticated;
 
 CREATE OR REPLACE FUNCTION public.atualizar_pedido_recorrente_ocorrencia()
 RETURNS trigger LANGUAGE plpgsql SECURITY INVOKER SET search_path = pg_catalog, public AS $$
@@ -94,7 +102,7 @@ CREATE OR REPLACE FUNCTION public.confirmar_ocorrencia_recorrente(
   p_payload jsonb,
   p_itens jsonb
 ) RETURNS uuid
-LANGUAGE plpgsql SECURITY INVOKER SET search_path = pg_catalog, public AS $$
+LANGUAGE plpgsql SECURITY DEFINER SET search_path = pg_catalog, public AS $
 DECLARE
   ocorrencia public.pedidos_recorrentes_ocorrencias;
   recorrencia public.pedidos_recorrentes;
