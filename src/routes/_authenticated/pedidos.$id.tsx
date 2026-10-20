@@ -399,17 +399,19 @@ function PedidoForm() {
             throw new Error("O valor pago deve ser igual ou maior que zero e não pode ultrapassar o total atual do pedido.");
           }
           if (pagamentos.length === 1) {
-            const pagamento = pagamentos[0];
+            const pagamento = pagamentos[0]!;
             const { error: pagamentoError } = await supabase.rpc("editar_recebimento_pedido", {
               p_pagamento_id: pagamento.id,
               p_valor: valorPago,
               p_data_pagamento: pagamento.data_pagamento,
               p_forma_pagamento: pagamento.forma_pagamento,
-              p_observacoes: pagamento.observacoes ?? null,
+              p_observacoes: pagamento.observacoes ?? undefined,
             });
             if (pagamentoError) throw new Error(pagamentoError.message);
           } else {
-            const { error: pagamentoError } = await supabase.rpc("corrigir_valor_pago_pedido_com_producao", {
+            // eslint-disable-next-line @typescript-eslint/no-explicit-any -- RPC adicionada pela migração 0028; tipos gerados ainda não foram atualizados.
+            const db = supabase as any;
+            const { error: pagamentoError } = await db.rpc("corrigir_valor_pago_pedido_com_producao", {
               p_pedido_id: existente.id,
               p_valor_pago: valorPago,
             });
