@@ -3,7 +3,7 @@ import { supabase } from "@/integrations/supabase/client";
 import { createFileRoute, Link } from "@tanstack/react-router";
 import { useQueryClient, useSuspenseQuery } from "@tanstack/react-query";
 import { useCallback, useEffect, useMemo, useState, type FormEvent } from "react";
-import { ArrowLeft, CalendarPlus, Check, Plus, RefreshCw, Trash2, Users } from "lucide-react";
+import { ArrowLeft, CalendarPlus, Check, Pencil, Plus, RefreshCw, Trash2, Users } from "lucide-react";
 import { toast } from "sonner";
 import { PageHeader, Card } from "@/components/app/ui";
 import { useCustos } from "@/lib/hooks";
@@ -63,6 +63,7 @@ function PedidosRecorrentes() {
   const [carregando, setCarregando] = useState(true);
   const [salvando, setSalvando] = useState(false);
   const [selecionada, setSelecionada] = useState("");
+  const [editingId, setEditingId] = useState("");
   const [form, setForm] = useState({ cliente_id: "", frequencia: "semanal" as Recorrencia["frequencia"], data_inicio: hojeISO(), data_fim: "", hora_entrega: "", observacoes: "" });
   const [itemRascunho, setItemRascunho] = useState({ produto_id: "", quantidade: "1", preco_unitario: "" });
 
@@ -89,17 +90,50 @@ function PedidosRecorrentes() {
   const ocorrenciaPendente = listaOcorrencias.find((o) => o.status === "pendente");
   const itensAtuais = ocorrenciaPendente?.itens ?? [];
 
+  function iniciarEdicao(r: Recorrencia) {
+    setEditingId(r.id);
+    setSelecionada(r.id);
+    setForm({
+      cliente_id: r.cliente_id,
+      frequencia: r.frequencia,
+      data_inicio: r.data_inicio,
+      data_fim: r.data_fim ?? "",
+      hora_entrega: r.hora_entrega ?? "",
+      observacoes: r.observacoes ?? "",
+    });
+    window.scrollTo({ top: 0, behavior: "smooth" });
+  }
+
+  function cancelarEdicao() {
+    setEditingId("");
+    setForm({ cliente_id: "", frequencia: "semanal", data_inicio: hojeISO(), data_fim: "", hora_entrega: "", observacoes: "" });
+  }
+
   async function criarRecorrencia(e: FormEvent) {
     e.preventDefault();
     if (!form.cliente_id) { toast.error("Selecione um cliente."); return; }
+    if (form.data_fim && form.data_fim < form.data_inicio) { toast.error("A data final não pode ser anterior à primeira entrega."); return; }
     setSalvando(true);
-    // eslint-disable-next-line @typescript-eslint/no-explicit-any -- // As tabelas novas ainda não fazem parte do tipo gerado do cliente Supabase.
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any -- As tabelas novas ainda não fazem parte do tipo gerado do cliente Supabase.
     const db = supabase as any;
-    const { data, error } = await db.from("pedidos_recorrentes").insert({
+    const payload = {
       cliente_id: form.cliente_id, frequencia: form.frequencia, data_inicio: form.data_inicio,
       data_fim: form.data_fim || null, hora_entrega: form.hora_entrega || null,
-      observacoes: form.observacoes || null, ativa: true,
-    }).select("*").single();
+      observacoes: form.observacoes || null,
+    };
+    if (editingId) {
+      const { error } = await db.from("pedidos_recorrentes").update(payload).eq("id", editingId);
+      setSalvando(false);
+      if (error) { toast.error(`Não foi possível editar a recorrência: ${error.message}`); return; }
+      toast.success("Recorrência atualizada.");
+      const idEditado = editingId;
+      setEditingId("");
+      setForm({ cliente_id: "", frequencia: "semanal", data_inicio: hojeISO(), data_fim: "", hora_entrega: "", observacoes: "" });
+      await carregar();
+      setSelecionada(idEditado);
+      return;
+    }
+    const { data, error } = await db.from("pedidos_recorrentes").insert({ ...payload, ativa: true }).select("*").single();
     if (error) { toast.error(error.message); setSalvando(false); return; }
     const { error: erroOcorrencia } = await db.rpc("preparar_ocorrencia_recorrente", {
       p_recorrencia_id: data.id, p_data_entrega: form.data_inicio,
@@ -109,7 +143,7 @@ function PedidosRecorrentes() {
     setSalvando(false);
     if (erroOcorrencia) toast.error(`Recorrência criada, mas não foi possível preparar a primeira entrega: ${erroOcorrencia.message}`);
     else toast.success("Recorrência criada. Configure os itens da primeira entrega.");
-    setForm((f) => ({ ...f, observacoes: "" }));
+    setForm({ cliente_id: "", frequencia: "semanal", data_inicio: hojeISO(), data_fim: "", hora_entrega: "", observacoes: "" });
     await carregar();
     setSelecionada(data.id);
   }
@@ -170,26 +204,27 @@ function PedidosRecorrentes() {
     }
   }
 
-  async function excluirRecorrencia(todasDoCliente: boolean) {
-    if (!recorrenciaAtiva || salvando) return;
-    const cliente = clientes.find((c) => c.id === recorrenciaAtiva.cliente_id);
+  async function excluirRecorrencia(todasDoCliente: boolean, recorrenciaId?: string) {
+    const alvo = recorrencias.find((r) => r.id === (recorrenciaId ?? selecionada));
+    if (!alvo || salvando) return;
+    const cliente = clientes.find((c) => c.id === alvo.cliente_id);
     const mensagem = todasDoCliente
       ? `Excluir todas as recorrências de ${cliente?.nome ?? "este cliente"}? As entregas pendentes serão canceladas. Pedidos confirmados, pagamentos e histórico serão preservados.`
-      : `Excluir esta recorrência de ${cliente?.nome ?? "este cliente"}? As entregas pendentes serão canceladas. Pedidos confirmados, pagamentos e histórico serão preservados.`;
+      : `Excluir a recorrência de ${cliente?.nome ?? "este cliente"}, iniciada em ${dataBR(alvo.data_inicio)}? As entregas pendentes serão canceladas. Pedidos confirmados, pagamentos e histórico serão preservados.`;
     if (!window.confirm(mensagem)) return;
     setSalvando(true);
     // A exclusão é validada no banco para preservar pedidos confirmados e verificar o proprietário.
     // eslint-disable-next-line @typescript-eslint/no-explicit-any -- RPC nova ainda não consta nos tipos gerados.
     const { data, error } = await (supabase as any).rpc("excluir_pedidos_recorrentes", {
-      p_recorrencia_id: todasDoCliente ? null : recorrenciaAtiva.id,
-      p_cliente_id: todasDoCliente ? recorrenciaAtiva.cliente_id : null,
+      p_recorrencia_id: todasDoCliente ? null : alvo.id,
+      p_cliente_id: todasDoCliente ? alvo.cliente_id : null,
     });
     setSalvando(false);
     if (error) { toast.error(`Não foi possível excluir a recorrência: ${error.message}`); return; }
     toast.success(todasDoCliente ? `${Number(data)} recorrência(s) excluída(s).` : "Recorrência excluída.");
-    const idExcluido = recorrenciaAtiva.id;
+    if (editingId === alvo.id) cancelarEdicao();
     await carregar();
-    setSelecionada((atual) => atual === idExcluido ? "" : atual);
+    setSelecionada((atual) => atual === alvo.id ? "" : atual);
   }
 
   async function alternarAtiva() {
@@ -203,7 +238,7 @@ function PedidosRecorrentes() {
   return <>
     <PageHeader title="Pedidos recorrentes" subtitle="Prepare cada entrega e confirme antes de criar o pedido normal." action={<Button asChild variant="outline" size="sm"><Link to="/pedidos"><ArrowLeft className="size-4" /> Pedidos</Link></Button>} />
     <Card className="mb-5 p-4">
-      <h2 className="mb-3 font-semibold">Nova recorrência</h2>
+      <h2 className="mb-3 font-semibold">{editingId ? "Editar recorrência" : "Nova recorrência"}</h2>
       <form className="space-y-3" onSubmit={criarRecorrencia}>
         <label className="block text-sm">Cliente
           <select required value={form.cliente_id} onChange={(e) => setForm({...form, cliente_id:e.target.value})} className="mt-1 h-10 w-full rounded-md border bg-background px-3">
@@ -229,17 +264,23 @@ function PedidosRecorrentes() {
         <label className="block text-sm">Observações padrão (opcional)
           <Input value={form.observacoes} onChange={(e) => setForm({...form, observacoes:e.target.value})} className="mt-1" placeholder="Ex.: entregar na portaria" />
         </label>
-        <Button type="submit" disabled={salvando}><Plus className="size-4" /> Criar recorrência</Button>
+        <div className="flex flex-wrap gap-2"><Button type="submit" disabled={salvando}>{editingId ? <><Check className="size-4" /> Salvar alterações</> : <><Plus className="size-4" /> Criar recorrência</>}</Button>{editingId && <Button type="button" variant="outline" onClick={cancelarEdicao} disabled={salvando}>Cancelar edição</Button>}</div>
       </form>
     </Card>
 
     <Card className="mb-5 p-4">
       <div className="mb-3 flex items-center justify-between gap-3"><h2 className="font-semibold">Recorrências cadastradas</h2><Button variant="ghost" size="icon" onClick={() => void carregar()} aria-label="Atualizar"><RefreshCw className="size-4" /></Button></div>
       {carregando ? <p className="text-sm text-muted-foreground">Carregando...</p> : recorrencias.length === 0 ? <p className="text-sm text-muted-foreground">Nenhuma recorrência cadastrada.</p> : <div className="space-y-2">
-        {recorrencias.map((r) => { const cliente = clientes.find((c) => c.id === r.cliente_id); return <button key={r.id} type="button" onClick={() => setSelecionada(r.id)} className={`w-full rounded-lg border p-3 text-left ${selecionada === r.id ? "border-primary bg-primary/5" : ""}`}>
-          <span className="flex items-center justify-between gap-2 font-medium"><span>{cliente?.nome ?? "Cliente"}</span><span className="text-xs text-muted-foreground">{r.ativa ? "Ativa" : "Pausada"}</span></span>
-          <span className="mt-1 block text-sm text-muted-foreground">{r.frequencia === "semanal" ? "Semanal" : r.frequencia === "quinzenal" ? "Quinzenal" : "Mensal"} · desde {dataBR(r.data_inicio)}</span>
-        </button>; })}
+        {recorrencias.map((r) => { const cliente = clientes.find((c) => c.id === r.cliente_id); return <div key={r.id} className={`flex items-center gap-2 rounded-lg border p-3 ${selecionada === r.id ? "border-primary bg-primary/5" : ""}`}>
+          <button type="button" onClick={() => setSelecionada(r.id)} className="min-w-0 flex-1 text-left">
+            <span className="flex flex-wrap items-center justify-between gap-2 font-medium"><span className="truncate">{cliente?.nome ?? "Cliente"}</span><span className="text-xs text-muted-foreground">{r.ativa ? "Ativa" : "Pausada"}</span></span>
+            <span className="mt-1 block text-sm text-muted-foreground">{r.frequencia === "semanal" ? "Semanal" : r.frequencia === "quinzenal" ? "Quinzenal" : "Mensal"} · desde {dataBR(r.data_inicio)}{r.data_fim ? ` · até ${dataBR(r.data_fim)}` : ""}</span>
+          </button>
+          <div className="flex shrink-0 items-center gap-1">
+            <Button type="button" variant="ghost" size="icon" onClick={() => iniciarEdicao(r)} aria-label={`Editar recorrência de ${cliente?.nome ?? "cliente"}`} title="Editar recorrência"><Pencil className="size-4" /></Button>
+            <Button type="button" variant="ghost" size="icon" onClick={() => void excluirRecorrencia(false, r.id)} disabled={salvando} aria-label={`Excluir recorrência de ${cliente?.nome ?? "cliente"}`} title="Excluir recorrência" className="text-destructive hover:text-destructive"><Trash2 className="size-4" /></Button>
+          </div>
+        </div>; })}
       </div>}
       {recorrenciaAtiva && <div className="mt-3 flex flex-wrap gap-2 border-t pt-3">
         <Button variant="outline" size="sm" onClick={prepararProxima} disabled={salvando || !recorrenciaAtiva.ativa}><CalendarPlus className="size-4" /> Preparar próxima ocorrência</Button>
