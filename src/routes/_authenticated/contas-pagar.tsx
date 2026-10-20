@@ -49,7 +49,7 @@ type AcaoFinanceira =
   | { tipo: "cancelamento"; conta: ContaPagar }
   | null;
 
-function ContasPagar() {
+export function ContasPagar({ embedded = false }: { embedded?: boolean }) {
   const { data: contas } = useSuspenseQuery(contasPagarQ);
   const { data: compras } = useSuspenseQuery(comprasQ);
   const { data: pagamentos } = useSuspenseQuery(contasPagarPagamentosQ);
@@ -305,11 +305,11 @@ function ContasPagar() {
 
   return (
     <>
-      <PageHeader title="Contas a pagar" back="/mais" action={
+      {!embedded && <PageHeader title="Contas a pagar" back="/mais" action={
         <Button variant="outline" size="icon" aria-label="Exportar contas a pagar CSV" onClick={exportar}>
           <Download className="size-4" />
         </Button>
-      } />
+      } />}
 
       <div className="mb-6 grid grid-cols-1 gap-3 sm:grid-cols-3">
         <Stat label="Saldo em aberto" value={brl(totalAberto)} />
