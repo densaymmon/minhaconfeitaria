@@ -21,8 +21,8 @@ import { Route as AuthenticatedContasPagarRouteImport } from './routes/_authenti
 import { Route as AuthenticatedDespesasRouteImport } from './routes/_authenticated/despesas'
 import { Route as AuthenticatedMaisRouteImport } from './routes/_authenticated/mais'
 import { Route as AuthenticatedPainelRouteImport } from './routes/_authenticated/painel'
-import { Route as AuthenticatedProducaoRouteImport } from './routes/_authenticated/producao'
 import { Route as AuthenticatedPedidosRecorrentesRouteImport } from './routes/_authenticated/pedidos-recorrentes'
+import { Route as AuthenticatedProducaoRouteImport } from './routes/_authenticated/producao'
 import { Route as AuthenticatedRelatoriosRouteImport } from './routes/_authenticated/relatorios'
 import { Route as DotlovableOauthConsentRouteImport } from './routes/[.]lovable.oauth.consent'
 import { Route as AuthenticatedClientesIndexRouteImport } from './routes/_authenticated/clientes.index'
@@ -94,14 +94,15 @@ const AuthenticatedPainelRoute = AuthenticatedPainelRouteImport.update({
   path: '/painel',
   getParentRoute: () => AuthenticatedRouteRoute,
 } as any)
+const AuthenticatedPedidosRecorrentesRoute =
+  AuthenticatedPedidosRecorrentesRouteImport.update({
+    id: '/pedidos-recorrentes',
+    path: '/pedidos-recorrentes',
+    getParentRoute: () => AuthenticatedRouteRoute,
+  } as any)
 const AuthenticatedProducaoRoute = AuthenticatedProducaoRouteImport.update({
   id: '/producao',
   path: '/producao',
-  getParentRoute: () => AuthenticatedRouteRoute,
-} as any)
-const AuthenticatedPedidosRecorrentesRoute = AuthenticatedPedidosRecorrentesRouteImport.update({
-  id: '/pedidos-recorrentes',
-  path: '/pedidos-recorrentes',
   getParentRoute: () => AuthenticatedRouteRoute,
 } as any)
 const AuthenticatedRelatoriosRoute = AuthenticatedRelatoriosRouteImport.update({
@@ -160,8 +161,8 @@ export interface FileRoutesByFullPath {
   '/despesas': typeof AuthenticatedDespesasRoute
   '/mais': typeof AuthenticatedMaisRoute
   '/painel': typeof AuthenticatedPainelRoute
-  '/producao': typeof AuthenticatedProducaoRoute
   '/pedidos-recorrentes': typeof AuthenticatedPedidosRecorrentesRoute
+  '/producao': typeof AuthenticatedProducaoRoute
   '/relatorios': typeof AuthenticatedRelatoriosRoute
   '/.lovable/oauth/consent': typeof DotlovableOauthConsentRoute
   '/clientes/$id': typeof AuthenticatedClientesIdRoute
@@ -183,8 +184,8 @@ export interface FileRoutesByTo {
   '/despesas': typeof AuthenticatedDespesasRoute
   '/mais': typeof AuthenticatedMaisRoute
   '/painel': typeof AuthenticatedPainelRoute
-  '/producao': typeof AuthenticatedProducaoRoute
   '/pedidos-recorrentes': typeof AuthenticatedPedidosRecorrentesRoute
+  '/producao': typeof AuthenticatedProducaoRoute
   '/relatorios': typeof AuthenticatedRelatoriosRoute
   '/.lovable/oauth/consent': typeof DotlovableOauthConsentRoute
   '/clientes/$id': typeof AuthenticatedClientesIdRoute
@@ -208,8 +209,8 @@ export interface FileRoutesById {
   '/_authenticated/despesas': typeof AuthenticatedDespesasRoute
   '/_authenticated/mais': typeof AuthenticatedMaisRoute
   '/_authenticated/painel': typeof AuthenticatedPainelRoute
-  '/_authenticated/producao': typeof AuthenticatedProducaoRoute
   '/_authenticated/pedidos-recorrentes': typeof AuthenticatedPedidosRecorrentesRoute
+  '/_authenticated/producao': typeof AuthenticatedProducaoRoute
   '/_authenticated/relatorios': typeof AuthenticatedRelatoriosRoute
   '/.lovable/oauth/consent': typeof DotlovableOauthConsentRoute
   '/_authenticated/clientes/$id': typeof AuthenticatedClientesIdRoute
@@ -233,8 +234,8 @@ export interface FileRouteTypes {
     | '/despesas'
     | '/mais'
     | '/painel'
-    | '/producao'
     | '/pedidos-recorrentes'
+    | '/producao'
     | '/relatorios'
     | '/.lovable/oauth/consent'
     | '/clientes/$id'
@@ -256,8 +257,8 @@ export interface FileRouteTypes {
     | '/despesas'
     | '/mais'
     | '/painel'
-    | '/producao'
     | '/pedidos-recorrentes'
+    | '/producao'
     | '/relatorios'
     | '/.lovable/oauth/consent'
     | '/clientes/$id'
@@ -280,8 +281,8 @@ export interface FileRouteTypes {
     | '/_authenticated/despesas'
     | '/_authenticated/mais'
     | '/_authenticated/painel'
-    | '/_authenticated/producao'
     | '/_authenticated/pedidos-recorrentes'
+    | '/_authenticated/producao'
     | '/_authenticated/relatorios'
     | '/.lovable/oauth/consent'
     | '/_authenticated/clientes/$id'
@@ -388,18 +389,18 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof AuthenticatedPainelRouteImport
       parentRoute: typeof AuthenticatedRouteRoute
     }
-    '/_authenticated/producao': {
-      id: '/_authenticated/producao'
-      path: '/producao'
-      fullPath: '/producao'
-      preLoaderRoute: typeof AuthenticatedProducaoRouteImport
-      parentRoute: typeof AuthenticatedRouteRoute
-    }
     '/_authenticated/pedidos-recorrentes': {
       id: '/_authenticated/pedidos-recorrentes'
       path: '/pedidos-recorrentes'
       fullPath: '/pedidos-recorrentes'
       preLoaderRoute: typeof AuthenticatedPedidosRecorrentesRouteImport
+      parentRoute: typeof AuthenticatedRouteRoute
+    }
+    '/_authenticated/producao': {
+      id: '/_authenticated/producao'
+      path: '/producao'
+      fullPath: '/producao'
+      preLoaderRoute: typeof AuthenticatedProducaoRouteImport
       parentRoute: typeof AuthenticatedRouteRoute
     }
     '/_authenticated/relatorios': {
@@ -468,8 +469,8 @@ interface AuthenticatedRouteRouteChildren {
   AuthenticatedDespesasRoute: typeof AuthenticatedDespesasRoute
   AuthenticatedMaisRoute: typeof AuthenticatedMaisRoute
   AuthenticatedPainelRoute: typeof AuthenticatedPainelRoute
-  AuthenticatedProducaoRoute: typeof AuthenticatedProducaoRoute
   AuthenticatedPedidosRecorrentesRoute: typeof AuthenticatedPedidosRecorrentesRoute
+  AuthenticatedProducaoRoute: typeof AuthenticatedProducaoRoute
   AuthenticatedRelatoriosRoute: typeof AuthenticatedRelatoriosRoute
   AuthenticatedClientesIdRoute: typeof AuthenticatedClientesIdRoute
   AuthenticatedPedidosIdRoute: typeof AuthenticatedPedidosIdRoute
@@ -486,8 +487,8 @@ const AuthenticatedRouteRouteChildren: AuthenticatedRouteRouteChildren = {
   AuthenticatedDespesasRoute: AuthenticatedDespesasRoute,
   AuthenticatedMaisRoute: AuthenticatedMaisRoute,
   AuthenticatedPainelRoute: AuthenticatedPainelRoute,
-  AuthenticatedProducaoRoute: AuthenticatedProducaoRoute,
   AuthenticatedPedidosRecorrentesRoute: AuthenticatedPedidosRecorrentesRoute,
+  AuthenticatedProducaoRoute: AuthenticatedProducaoRoute,
   AuthenticatedRelatoriosRoute: AuthenticatedRelatoriosRoute,
   AuthenticatedClientesIdRoute: AuthenticatedClientesIdRoute,
   AuthenticatedPedidosIdRoute: AuthenticatedPedidosIdRoute,

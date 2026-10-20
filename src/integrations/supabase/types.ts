@@ -140,32 +140,32 @@ export type Database = {
       configuracoes: {
         Row: {
           imposto_pct: number
+          pix_chave: string
           taxa_credito: number
           taxa_debito: number
           taxa_dinheiro: number
           taxa_outros: number
           taxa_pix: number
-          pix_chave: string
           user_id: string
         }
         Insert: {
           imposto_pct?: number
+          pix_chave?: string
           taxa_credito?: number
           taxa_debito?: number
           taxa_dinheiro?: number
           taxa_outros?: number
           taxa_pix?: number
-          pix_chave?: string
           user_id?: string
         }
         Update: {
           imposto_pct?: number
+          pix_chave?: string
           taxa_credito?: number
           taxa_debito?: number
           taxa_dinheiro?: number
           taxa_outros?: number
           taxa_pix?: number
-          pix_chave?: string
           user_id?: string
         }
         Relationships: []
@@ -469,12 +469,16 @@ export type Database = {
       estoque_movimentos: {
         Row: {
           created_at: string
+          descricao_snapshot: string | null
           evento_id: string
           id: string
           insumo_id: string
           observacao: string | null
           origem_id: string | null
           origem_tipo: string
+          pedido_id: string | null
+          pedido_numero: number | null
+          produto_id: string | null
           quantidade_delta_base: number
           reverte_movimento_id: string | null
           tipo_movimento: string
@@ -483,12 +487,16 @@ export type Database = {
         }
         Insert: {
           created_at?: string
+          descricao_snapshot?: string | null
           evento_id: string
           id?: string
           insumo_id: string
           observacao?: string | null
           origem_id?: string | null
           origem_tipo: string
+          pedido_id?: string | null
+          pedido_numero?: number | null
+          produto_id?: string | null
           quantidade_delta_base: number
           reverte_movimento_id?: string | null
           tipo_movimento: string
@@ -497,12 +505,16 @@ export type Database = {
         }
         Update: {
           created_at?: string
+          descricao_snapshot?: string | null
           evento_id?: string
           id?: string
           insumo_id?: string
           observacao?: string | null
           origem_id?: string | null
           origem_tipo?: string
+          pedido_id?: string | null
+          pedido_numero?: number | null
+          produto_id?: string | null
           quantidade_delta_base?: number
           reverte_movimento_id?: string | null
           tipo_movimento?: string
@@ -567,6 +579,30 @@ export type Database = {
           unidade?: string
           unidade_embalagem?: string | null
           updated_at?: string
+          user_id?: string
+        }
+        Relationships: []
+      }
+      inventario_eventos: {
+        Row: {
+          created_at: string
+          evento_id: string
+          id: string
+          payload: Json
+          user_id: string
+        }
+        Insert: {
+          created_at?: string
+          evento_id: string
+          id?: string
+          payload: Json
+          user_id: string
+        }
+        Update: {
+          created_at?: string
+          evento_id?: string
+          id?: string
+          payload?: Json
           user_id?: string
         }
         Relationships: []
@@ -737,32 +773,154 @@ export type Database = {
           },
         ]
       }
-      producao_eventos: {
+      pedidos_recorrentes: {
+        Row: {
+          ativa: boolean
+          cliente_id: string
+          created_at: string
+          data_fim: string | null
+          data_inicio: string
+          frequencia: string
+          hora_entrega: string | null
+          id: string
+          observacoes: string | null
+          updated_at: string
+          user_id: string
+        }
+        Insert: {
+          ativa?: boolean
+          cliente_id: string
+          created_at?: string
+          data_fim?: string | null
+          data_inicio: string
+          frequencia: string
+          hora_entrega?: string | null
+          id?: string
+          observacoes?: string | null
+          updated_at?: string
+          user_id?: string
+        }
+        Update: {
+          ativa?: boolean
+          cliente_id?: string
+          created_at?: string
+          data_fim?: string | null
+          data_inicio?: string
+          frequencia?: string
+          hora_entrega?: string | null
+          id?: string
+          observacoes?: string | null
+          updated_at?: string
+          user_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "pedidos_recorrentes_cliente_id_fkey"
+            columns: ["cliente_id"]
+            isOneToOne: false
+            referencedRelation: "clientes"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      pedidos_recorrentes_ocorrencias: {
         Row: {
           created_at: string
-          evento_id: string
+          data_entrega: string
           id: string
-          pedido_item_id: string
-          quantidade_resultado: number
-          quantidade_resultante: number
+          itens: Json
+          observacoes: string | null
+          pedido_id: string | null
+          recorrencia_id: string
+          status: string
+          updated_at: string
           user_id: string
         }
         Insert: {
           created_at?: string
-          evento_id: string
+          data_entrega: string
           id?: string
+          itens?: Json
+          observacoes?: string | null
+          pedido_id?: string | null
+          recorrencia_id: string
+          status?: string
+          updated_at?: string
+          user_id?: string
+        }
+        Update: {
+          created_at?: string
+          data_entrega?: string
+          id?: string
+          itens?: Json
+          observacoes?: string | null
+          pedido_id?: string | null
+          recorrencia_id?: string
+          status?: string
+          updated_at?: string
+          user_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "pedidos_recorrentes_ocorrencias_pedido_id_fkey"
+            columns: ["pedido_id"]
+            isOneToOne: true
+            referencedRelation: "pedidos"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "pedidos_recorrentes_ocorrencias_recorrencia_id_fkey"
+            columns: ["recorrencia_id"]
+            isOneToOne: false
+            referencedRelation: "pedidos_recorrentes"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      producao_eventos: {
+        Row: {
+          created_at: string
+          descricao_snapshot: string | null
+          evento_id: string
+          id: string
+          pedido_id: string | null
           pedido_item_id: string
+          pedido_numero: number | null
+          produto_id: string | null
+          quantidade_pedida_snapshot: number | null
           quantidade_resultado: number
           quantidade_resultante: number
+          receita_snapshot: Json | null
+          user_id: string
+        }
+        Insert: {
+          created_at?: string
+          descricao_snapshot?: string | null
+          evento_id: string
+          id?: string
+          pedido_id?: string | null
+          pedido_item_id: string
+          pedido_numero?: number | null
+          produto_id?: string | null
+          quantidade_pedida_snapshot?: number | null
+          quantidade_resultado: number
+          quantidade_resultante: number
+          receita_snapshot?: Json | null
           user_id: string
         }
         Update: {
           created_at?: string
+          descricao_snapshot?: string | null
           evento_id?: string
           id?: string
+          pedido_id?: string | null
           pedido_item_id?: string
+          pedido_numero?: number | null
+          produto_id?: string | null
+          quantidade_pedida_snapshot?: number | null
           quantidade_resultado?: number
           quantidade_resultante?: number
+          receita_snapshot?: Json | null
           user_id?: string
         }
         Relationships: []
@@ -868,10 +1026,6 @@ export type Database = {
       [_ in never]: never
     }
     Functions: {
-      excluir_insumo_se_sem_receita: {
-        Args: { p_insumo_id: string }
-        Returns: undefined
-      }
       _conta_pagar_operacao_existente: {
         Args: {
           p_hash: string
@@ -901,6 +1055,29 @@ export type Database = {
         Args: { p_conta_id: string; p_motivo: string; p_operacao_id: string }
         Returns: string
       }
+      confirmar_ocorrencia_recorrente: {
+        Args: { p_itens: Json; p_ocorrencia_id: string; p_payload: Json }
+        Returns: string
+      }
+      editar_recebimento_pedido: {
+        Args: {
+          p_data_pagamento: string
+          p_forma_pagamento: string
+          p_observacoes?: string
+          p_pagamento_id: string
+          p_valor: number
+        }
+        Returns: string
+      }
+      editar_valores_pedido_com_producao: {
+        Args: {
+          p_desconto: number
+          p_itens: Json
+          p_pedido_id: string
+          p_taxa_entrega: number
+        }
+        Returns: Json
+      }
       estornar_pagamento_conta_pagar: {
         Args: {
           p_motivo: string
@@ -914,13 +1091,14 @@ export type Database = {
         Args: { evento_id: string; registro_id: string }
         Returns: boolean
       }
-      medida_base: { Args: { u: string }; Returns: string }
-      medida_fator: { Args: { u: string }; Returns: number }
-      registrar_local_compra: {
-        Args: { local_compra: string; registro_id: string }
+      excluir_insumo_se_sem_receita: {
+        Args: { p_insumo_id: string }
         Returns: undefined
       }
-      registrar_pagamento_compra: {
+      medida_base: { Args: { u: string }; Returns: string }
+      medida_fator: { Args: { u: string }; Returns: number }
+      recalcular_custos_historicos: { Args: never; Returns: number }
+      reconciliar_compra_com_pagamentos: {
         Args: {
           p_compra_id: string
           p_forma_pagamento: string
@@ -929,7 +1107,15 @@ export type Database = {
         }
         Returns: boolean
       }
-      reconciliar_compra_com_pagamentos: {
+      registrar_inventario_fisico: {
+        Args: { evento_id: string; itens: Json }
+        Returns: boolean
+      }
+      registrar_local_compra: {
+        Args: { local_compra: string; registro_id: string }
+        Returns: undefined
+      }
+      registrar_pagamento_compra: {
         Args: {
           p_compra_id: string
           p_forma_pagamento: string
@@ -958,25 +1144,6 @@ export type Database = {
           p_valor: number
         }
         Returns: string
-      }
-      editar_recebimento_pedido: {
-        Args: {
-          p_data_pagamento: string
-          p_forma_pagamento: string
-          p_observacoes?: string
-          p_pagamento_id: string
-          p_valor: number
-        }
-        Returns: string
-      }
-      editar_valores_pedido_com_producao: {
-        Args: {
-          p_desconto: number
-          p_itens: Json
-          p_pedido_id: string
-          p_taxa_entrega: number
-        }
-        Returns: Json
       }
       saldo_estoque: {
         Args: never
