@@ -22,7 +22,7 @@ export const Route = createFileRoute("/_authenticated/pedidos/")({
    dataFinal: typeof search["dataFinal"] === "string" ? search["dataFinal"] : undefined,
    dataReferencia: search["dataReferencia"] === "recebimento" ? ("recebimento" as const) : undefined,
  }),
- loader: async ({ context }) => { await Promise.all([context.queryClient.ensureQueryData(appQueries.pedidosQ),context.queryClient.ensureQueryData(appQueries.configQ),context.queryClient.ensureQueryData(appQueries.pedidoPagamentosQ)]); },
+ loader: async ({ context }) => { await Promise.all([context.queryClient.ensureQueryData(appQueries.pedidosQ),context.queryClient.ensureQueryData(appQueries.configQ),context.queryClient.ensureQueryData(appQueries.pedidoPagamentosQ),context.queryClient.ensureQueryData(appQueries.clientesQ)]); },
  errorComponent: ({error}) => <p role="alert" className="py-8 text-destructive">{error instanceof Error ? error.message : "Não foi possível carregar os registros."}</p>,
  notFoundComponent: () => <p>Registro não encontrado.</p>,
 
@@ -49,6 +49,8 @@ function normalizarTelefoneWhatsApp(telefone: string | null | undefined): string
 function Pedidos() {
   const pedidos = usePedidosCalc();
   const { data: config } = useSuspenseQuery(appQueries.configQ);
+  const { data: clientes } = useSuspenseQuery(appQueries.clientesQ);
+  const [ocorrenciasPendentes, setOcorrenciasPendentes] = useState<Array<{ id: string; recorrencia_id: string; cliente_id: string; cliente_nome: string; frequencia: "semanal" | "quinzenal" | "mensal"; data_entrega: string; hora_entrega: string | null; itens: Array<{ descricao: string; quantidade: number; preco_unitario: number }>; observacoes: string | null }>>([]);
   const [recorrenciasPorPedido, setRecorrenciasPorPedido] = useState<Record<string, { frequencia: "semanal" | "quinzenal" | "mensal"; proximaEntrega: string | null }>>({});
   useEffect(() => {
     let ativo = true;
@@ -57,16 +59,19 @@ function Pedidos() {
     const db = supabase as any;
     void Promise.all([
       db.from("pedidos_recorrentes_ocorrencias").select("pedido_id,recorrencia_id,data_entrega,status").order("data_entrega", { ascending: true }),
-      db.from("pedidos_recorrentes").select("id,frequencia"),
-    ]).then(([ocorrenciasResult, recorrenciasResult]: [
+      db.from("pedidos_recorrentes").select("id,frequencia,cliente_id,hora_entrega"),
+      db.from("pedidos_recorrentes_ocorrencias").select("id,recorrencia_id,data_entrega,status,itens,observacoes,pedido_id").eq("status", "pendente").is("pedido_id", null).order("data_entrega", { ascending: true }),
+    ]).then(([ocorrenciasResult, recorrenciasResult, pendentesResult]: [
       { data: { pedido_id: string | null; recorrencia_id: string; data_entrega: string; status: string }[] | null; error: { message: string } | null },
-      { data: { id: string; frequencia: "semanal" | "quinzenal" | "mensal" }[] | null; error: { message: string } | null }
+      { data: { id: string; frequencia: "semanal" | "quinzenal" | "mensal"; cliente_id: string; hora_entrega: string | null }[] | null; error: { message: string } | null },
+      { data: { id: string; recorrencia_id: string; data_entrega: string; status: string; itens: Array<{ descricao: string; quantidade: number; preco_unitario: number }> | null; observacoes: string | null; pedido_id: string | null }[] | null; error: { message: string } | null }
     ]) => {
       if (!ativo) return;
-      if (ocorrenciasResult.error || recorrenciasResult.error) {
-        console.warn("Não foi possível carregar os vínculos de pedidos recorrentes:", ocorrenciasResult.error?.message ?? recorrenciasResult.error?.message);
+      if (ocorrenciasResult.error || recorrenciasResult.error || pendentesResult.error) {
+        console.warn("Não foi possível carregar os vínculos de pedidos recorrentes:", ocorrenciasResult.error?.message ?? recorrenciasResult.error?.message ?? pendentesResult.error?.message);
         return;
       }
+      const recorrencias = new Map((recorrenciasResult.data ?? []).map((r) => [r.id, r]));
       const frequencias = new Map((recorrenciasResult.data ?? []).map((r) => [r.id, r.frequencia]));
       const ocorrencias = ocorrenciasResult.data ?? [];
       const porPedido: Record<string, { frequencia: "semanal" | "quinzenal" | "mensal"; proximaEntrega: string | null }> = {};
@@ -78,6 +83,12 @@ function Pedidos() {
         porPedido[ocorrencia.pedido_id] = { frequencia, proximaEntrega: proxima?.data_entrega ?? null };
       }
       setRecorrenciasPorPedido(porPedido);
+      setOcorrenciasPendentes((pendentesResult.data ?? []).flatMap((o) => {
+        const recorrencia = recorrencias.get(o.recorrencia_id);
+        const cliente = clientes.find((item) => item.id === recorrencia?.cliente_id);
+        if (!recorrencia || !cliente) return [];
+        return [{ id: o.id, recorrencia_id: o.recorrencia_id, cliente_id: recorrencia.cliente_id, cliente_nome: cliente.nome, frequencia: recorrencia.frequencia, data_entrega: o.data_entrega, hora_entrega: recorrencia.hora_entrega, itens: o.itens ?? [], observacoes: o.observacoes }];
+      }));
     });
     return () => { ativo = false; };
   }, []);
@@ -247,6 +258,39 @@ function Pedidos() {
           </button>
         ))}
       </div>
+
+
+      {filtroRecorrencia !== "nao_recorrentes" && ocorrenciasPendentes.filter((o) => {
+        if (clienteFiltro && o.cliente_id !== clienteFiltro) return false;
+        const q = busca.trim().toLowerCase();
+        return !q || o.cliente_nome.toLowerCase().includes(q) || o.itens.some((i) => i.descricao.toLowerCase().includes(q));
+      }).length > 0 && (
+        <section className="mb-4 space-y-2" aria-label="Entregas recorrentes aguardando confirmação">
+          <h2 className="font-semibold">Recorrentes · Aguardando confirmação</h2>
+          {ocorrenciasPendentes.filter((o) => {
+            if (clienteFiltro && o.cliente_id !== clienteFiltro) return false;
+            const q = busca.trim().toLowerCase();
+            return !q || o.cliente_nome.toLowerCase().includes(q) || o.itens.some((i) => i.descricao.toLowerCase().includes(q));
+          }).map((o) => (
+            <Card key={o.id} className="border-dashed border-primary/40 p-3.5">
+              <div className="flex items-center justify-between gap-2">
+                <div className="min-w-0 font-semibold">{o.cliente_nome}</div>
+                <span className="inline-flex shrink-0 items-center gap-1 rounded-full border border-warning/50 bg-warning/10 px-2 py-1 text-xs font-bold"><Repeat className="size-3" /> Aguardando confirmação</span>
+              </div>
+              <div className="mt-1 text-xs font-medium text-primary">
+                {(o.frequencia === "semanal" ? "Semanal" : o.frequencia === "quinzenal" ? "Quinzenal" : "Mensal") + " · Entrega: " + dataBR(o.data_entrega) + " " + (o.hora_entrega ?? "")}
+              </div>
+              <div className="mt-1 text-xs text-muted-foreground">
+                {o.itens.length ? o.itens.map((i) => Number(i.quantidade) + "× " + i.descricao).join(", ") : "Itens ainda não configurados"}
+              </div>
+              {o.observacoes && <div className="mt-1 text-xs text-muted-foreground">{o.observacoes}</div>}
+              <div className="mt-3 border-t pt-3">
+                <Button asChild size="sm" variant="outline"><Link to="/pedidos-recorrentes">Configurar e confirmar entrega</Link></Button>
+              </div>
+            </Card>
+          ))}
+        </section>
+      )}
 
       <div className="mb-3 flex flex-wrap items-center gap-2">
         {[
