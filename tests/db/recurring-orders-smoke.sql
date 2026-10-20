@@ -20,8 +20,16 @@ BEGIN
 
   INSERT INTO public.pedidos_recorrentes(user_id, cliente_id, frequencia, data_inicio)
   VALUES (uid, cliente, 'semanal', current_date + 7) RETURNING id INTO recorrencia;
-  INSERT INTO public.pedidos_recorrentes_ocorrencias(user_id, recorrencia_id, data_entrega)
-  VALUES (uid, recorrencia, current_date + 7) RETURNING id INTO ocorrencia;
+  ocorrencia := public.preparar_ocorrencia_recorrente(
+    recorrencia, current_date + 7, '10:30', '[]'::jsonb, 'teste primeira entrega'
+  );
+  IF NOT EXISTS (
+    SELECT 1 FROM public.pedidos_recorrentes_ocorrencias o
+    WHERE o.id = ocorrencia AND o.status = 'pendente'
+      AND o.hora_entrega = '10:30' AND o.itens = '[]'::jsonb
+  ) THEN
+    RAISE EXCEPTION 'A primeira ocorrência não foi preparada corretamente pela RPC.';
+  END IF;
 
   itens := jsonb_build_array(jsonb_build_object(
     'produto_id', produto, 'descricao', 'Produto recorrência teste',
