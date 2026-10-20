@@ -198,6 +198,7 @@ function PedidoForm() {
   // A rota pode ser reutilizada quando o parâmetro $id muda. Recarrega o formulário
   // somente quando muda o pedido selecionado, sem apagar edições durante refetches.
   useEffect(() => {
+    setValorPagoAlterado(false);
     setF({
       cliente_id: existente?.cliente_id ?? "",
       data_entrega: existente?.data_entrega ?? hojeISO(),
