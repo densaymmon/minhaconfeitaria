@@ -102,7 +102,7 @@ function PedidosRecorrentes() {
     }).select("*").single();
     if (error) { toast.error(error.message); setSalvando(false); return; }
     const { error: erroOcorrencia } = await db.from("pedidos_recorrentes_ocorrencias").insert({
-      recorrencia_id: data.id, data_entrega: form.data_inicio, status: "pendente", itens: [],
+      recorrencia_id: data.id, data_entrega: form.data_inicio, itens: [],
     });
     setSalvando(false);
     if (erroOcorrencia) toast.error(`Recorrência criada, mas não foi possível preparar a primeira entrega: ${erroOcorrencia.message}`);
