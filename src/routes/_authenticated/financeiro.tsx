@@ -1,7 +1,7 @@
 import * as appQueries from "@/lib/queries";
 import { createFileRoute, Link } from "@tanstack/react-router";
 import { useSuspenseQuery } from "@tanstack/react-query";
-import { CalendarClock, CircleAlert, Receipt, Wallet } from "lucide-react";
+import { CalendarClock, CircleAlert, Receipt } from "lucide-react";
 import { contasPagarQ, despesasQ } from "@/lib/queries";
 import { brl, dataBR, hojeISO, mesISO } from "@/lib/format";
 import { PageHeader, Stat, Empty } from "@/components/app/ui";
