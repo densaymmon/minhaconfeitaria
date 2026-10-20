@@ -405,7 +405,7 @@ function PedidoForm() {
               p_valor: valorPago,
               p_data_pagamento: pagamento.data_pagamento,
               p_forma_pagamento: pagamento.forma_pagamento,
-              p_observacoes: pagamento.observacoes ?? undefined,
+              p_observacoes: pagamento.observacoes ?? "",
             });
             if (pagamentoError) throw new Error(pagamentoError.message);
           } else {
