@@ -96,7 +96,7 @@ jobs:
           RECONCILE_DATABASE_URL: postgresql://postgres:postgres@localhost:5432/confeitaria_reconcile_test
         run: |
           set -euo pipefail
-          for migration in drizzle/migrations/0021_*.sql drizzle/migrations/0022_*.sql drizzle/migrations/0023_*.sql drizzle/migrations/0024_*.sql; do
+          for migration in drizzle/migrations/0021_*.sql drizzle/migrations/0022_*.sql drizzle/migrations/0023_*.sql drizzle/migrations/0024_*.sql drizzle/migrations/0025_*.sql drizzle/migrations/0026_*.sql; do
             echo "Applying pending migration: $migration"
             psql "$RECONCILE_DATABASE_URL" -v ON_ERROR_STOP=1 -f "$migration"
           done
