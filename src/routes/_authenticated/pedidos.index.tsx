@@ -51,6 +51,18 @@ function Pedidos() {
   const search = Route.useSearch();
   const navigate = useNavigate();
   const [busca, setBusca] = useState("");
+  const [clienteFiltro, setClienteFiltro] = useState("");
+  const clientesDisponiveis = useMemo(() => {
+    const porId = new Map<string, string>();
+    pedidos.forEach((p) => {
+      const id = p.cliente_id == null ? "" : String(p.cliente_id);
+      const nome = p.clientes?.nome?.trim();
+      if (id && nome) porId.set(id, nome);
+    });
+    return [...porId.entries()]
+      .map(([id, nome]) => ({ id, nome }))
+      .sort((a, b) => a.nome.localeCompare(b.nome, "pt-BR", { sensitivity: "base" }));
+  }, [pedidos]);
   const [status, setStatus] = useState<string>(() => {
     const filtro = search.filtro;
     if (!filtro) return "abertos";
@@ -75,6 +87,7 @@ function Pedidos() {
   const lista = useMemo(() => {
     const q = busca.trim().toLowerCase();
     return pedidos.filter((p) => {
+      if (clienteFiltro && String(p.cliente_id ?? "") !== clienteFiltro) return false;
       if (status === "abertos" && ["pronto", "finalizado", "entregue", "cancelado"].includes(p.status)) return false;
       if (status === "prontos" && p.status !== "pronto") return false;
       if (status === "em_andamento" && !["recebido", "confirmado", "em_producao"].includes(p.status)) return false;
@@ -102,7 +115,7 @@ function Pedidos() {
       if (ordem === "entrega") return (a.hora_entrega ?? "23:59").localeCompare(b.hora_entrega ?? "23:59");
       return (a.created_at ?? "").localeCompare(b.created_at ?? "");
     });
-  }, [pedidos, busca, status, ordem, hoje]);
+  }, [pedidos, busca, clienteFiltro, status, ordem, hoje]);
 
   function exportar() {
     baixarCSV(
@@ -211,6 +224,13 @@ function Pedidos() {
       {mostrarFiltros && (
         <Card className="mb-4 space-y-3 p-3">
           <label className="block space-y-1 text-sm font-medium">
+            <span>Cliente</span>
+            <select aria-label="Filtrar pedidos por cliente" value={clienteFiltro} onChange={(e) => setClienteFiltro(e.target.value)} className="h-10 w-full rounded-md border border-input bg-background px-3 text-sm font-normal">
+              <option value="">Todos os clientes</option>
+              {clientesDisponiveis.map((cliente) => <option key={cliente.id} value={cliente.id}>{cliente.nome}</option>)}
+            </select>
+          </label>
+          <label className="block space-y-1 text-sm font-medium">
             <span>Status do pedido</span>
             <select aria-label="Status do pedido" value={status} onChange={(e) => setStatus(e.target.value)} className="h-10 w-full rounded-md border border-input bg-background px-3 text-sm font-normal">
               <option value="abertos">Em aberto</option>
@@ -221,7 +241,7 @@ function Pedidos() {
           </label>
           <div className="flex flex-wrap items-center justify-between gap-2 border-t pt-3">
             <span className="text-xs text-muted-foreground">{lista.length} pedido(s) encontrado(s)</span>
-            <Button type="button" variant="ghost" size="sm" onClick={() => { setStatus("abertos"); setBusca(""); }}>
+            <Button type="button" variant="ghost" size="sm" onClick={() => { setStatus("abertos"); setBusca(""); setClienteFiltro(""); }}>
               Limpar filtros
             </Button>
           </div>
