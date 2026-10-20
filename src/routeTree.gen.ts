@@ -265,6 +265,7 @@ export interface FileRouteTypes {
     | '/configuracoes'
     | '/contas-pagar'
     | '/despesas'
+    | '/financeiro'
     | '/mais'
     | '/painel'
     | '/pedidos-recorrentes'
