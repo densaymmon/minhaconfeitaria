@@ -330,12 +330,12 @@ function PedidoForm() {
         preco_unitario: parseNum(item.preco_unitario),
         custo_unitario: Number.isFinite(item.custo_unitario) ? item.custo_unitario : 0,
       }));
-      const { error: erroOcorrencia } = await db.from("pedidos_recorrentes_ocorrencias").insert({
-        recorrencia_id: recorrencia.id,
-        data_entrega: recorrenciaForm.data_inicio,
-        hora_entrega: recorrenciaForm.hora_entrega || null,
-        itens: itensOcorrencia,
-        observacoes: recorrenciaForm.observacoes.trim() || null,
+      const { error: erroOcorrencia } = await db.rpc("preparar_ocorrencia_recorrente", {
+        p_recorrencia_id: recorrencia.id,
+        p_data_entrega: recorrenciaForm.data_inicio,
+        p_hora_entrega: recorrenciaForm.hora_entrega || null,
+        p_itens: itensOcorrencia,
+        p_observacoes: recorrenciaForm.observacoes.trim() || null,
       });
       if (erroOcorrencia) {
         throw new Error("A recorrência foi criada, mas a primeira entrega não foi preparada: " + erroOcorrencia.message);
@@ -488,7 +488,7 @@ function PedidoForm() {
       <PageHeader title={novo ? "Novo pedido" : `Pedido #${existente?.numero}`} back="/pedidos" />
       {novo && <OrderMessage onApply={aplicarRascunho} />}
       <Dialog open={recorrenciaDialogOpen} onOpenChange={(open) => { if (!salvandoRecorrencia) setRecorrenciaDialogOpen(open); }}>
-        <DialogContent className="max-w-md">
+        <DialogContent className="w-[calc(100%-1.5rem)] max-w-lg max-h-[90dvh] overflow-y-auto p-4 sm:p-6">
           <DialogHeader>
             <DialogTitle className="flex items-center gap-2"><Repeat className="size-5" /> Criar recorrência</DialogTitle>
           </DialogHeader>
