@@ -236,6 +236,18 @@ function Pedidos() {
         </button>
       </div>
 
+      <div className="mb-3 flex flex-wrap items-center gap-2" aria-label="Filtrar por recorrência">
+        {[
+          { value: "todos", label: "Todos os pedidos" },
+          { value: "recorrentes", label: "↻ Recorrentes" },
+          { value: "nao_recorrentes", label: "Não recorrentes" },
+        ].map((f) => (
+          <button key={f.value} type="button" onClick={() => setFiltroRecorrencia(f.value as typeof filtroRecorrencia)} aria-pressed={filtroRecorrencia === f.value} className={cn("rounded-full border px-3 py-2 text-sm font-medium transition-colors", filtroRecorrencia === f.value ? "border-primary bg-primary text-primary-foreground" : "bg-card hover:bg-muted")}>
+            {f.label}
+          </button>
+        ))}
+      </div>
+
       <div className="mb-3 flex flex-wrap items-center gap-2">
         {[
           { value: "abertos", label: "Em aberto" },
