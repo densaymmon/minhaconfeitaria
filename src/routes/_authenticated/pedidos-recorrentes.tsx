@@ -3,7 +3,7 @@ import { supabase } from "@/integrations/supabase/client";
 import { createFileRoute, Link } from "@tanstack/react-router";
 import { useQueryClient, useSuspenseQuery } from "@tanstack/react-query";
 import { useCallback, useEffect, useMemo, useState, type FormEvent } from "react";
-import { ArrowLeft, CalendarPlus, Check, Plus, RefreshCw, Trash2 } from "lucide-react";
+import { ArrowLeft, CalendarPlus, Check, Plus, RefreshCw, Trash2, Users } from "lucide-react";
 import { toast } from "sonner";
 import { PageHeader, Card } from "@/components/app/ui";
 import { useCustos } from "@/lib/hooks";
@@ -23,7 +23,7 @@ export const Route = createFileRoute("/_authenticated/pedidos-recorrentes")({
 });
 
 type Recorrencia = {
-  id: string; cliente_id: string; frequencia: "semanal" | "quinzenal" | "mensal";
+  id: string; cliente_id: string; excluida?: boolean; frequencia: "semanal" | "quinzenal" | "mensal";
   data_inicio: string; data_fim: string | null; hora_entrega: string | null;
   observacoes: string | null; ativa: boolean;
 };
@@ -71,7 +71,7 @@ function PedidosRecorrentes() {
     // eslint-disable-next-line @typescript-eslint/no-explicit-any -- // As tabelas novas ainda não fazem parte do tipo gerado do cliente Supabase.
     const db = supabase as any;
     const [r, o] = await Promise.all([
-      db.from("pedidos_recorrentes").select("*").order("data_inicio", { ascending: true }),
+      db.from("pedidos_recorrentes").select("*").eq("excluida", false).order("data_inicio", { ascending: true }),
       db.from("pedidos_recorrentes_ocorrencias").select("*").order("data_entrega", { ascending: true }),
     ]);
     if (r.error || o.error) toast.error(r.error?.message ?? o.error?.message ?? "Não foi possível carregar recorrências.");
@@ -170,6 +170,28 @@ function PedidosRecorrentes() {
     }
   }
 
+  async function excluirRecorrencia(todasDoCliente: boolean) {
+    if (!recorrenciaAtiva || salvando) return;
+    const cliente = clientes.find((c) => c.id === recorrenciaAtiva.cliente_id);
+    const mensagem = todasDoCliente
+      ? `Excluir todas as recorrências de ${cliente?.nome ?? "este cliente"}? As entregas pendentes serão canceladas. Pedidos confirmados, pagamentos e histórico serão preservados.`
+      : `Excluir esta recorrência de ${cliente?.nome ?? "este cliente"}? As entregas pendentes serão canceladas. Pedidos confirmados, pagamentos e histórico serão preservados.`;
+    if (!window.confirm(mensagem)) return;
+    setSalvando(true);
+    // A exclusão é validada no banco para preservar pedidos confirmados e verificar o proprietário.
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any -- RPC nova ainda não consta nos tipos gerados.
+    const { data, error } = await (supabase as any).rpc("excluir_pedidos_recorrentes", {
+      p_recorrencia_id: todasDoCliente ? null : recorrenciaAtiva.id,
+      p_cliente_id: todasDoCliente ? recorrenciaAtiva.cliente_id : null,
+    });
+    setSalvando(false);
+    if (error) { toast.error(`Não foi possível excluir a recorrência: ${error.message}`); return; }
+    toast.success(todasDoCliente ? `${Number(data)} recorrência(s) excluída(s).` : "Recorrência excluída.");
+    const idExcluido = recorrenciaAtiva.id;
+    await carregar();
+    setSelecionada((atual) => atual === idExcluido ? "" : atual);
+  }
+
   async function alternarAtiva() {
     if (!recorrenciaAtiva) return;
     // eslint-disable-next-line @typescript-eslint/no-explicit-any -- // A tipagem gerada do Supabase ainda não conhece as tabelas desta migração.
@@ -222,6 +244,8 @@ function PedidosRecorrentes() {
       {recorrenciaAtiva && <div className="mt-3 flex flex-wrap gap-2 border-t pt-3">
         <Button variant="outline" size="sm" onClick={prepararProxima} disabled={salvando || !recorrenciaAtiva.ativa}><CalendarPlus className="size-4" /> Preparar próxima ocorrência</Button>
         <Button variant="outline" size="sm" onClick={alternarAtiva}>{recorrenciaAtiva.ativa ? "Pausar recorrência" : "Reativar recorrência"}</Button>
+        <Button variant="destructive" size="sm" onClick={() => void excluirRecorrencia(false)} disabled={salvando}><Trash2 className="size-4" /> Excluir esta</Button>
+        <Button variant="destructive" size="sm" onClick={() => void excluirRecorrencia(true)} disabled={salvando}><Users className="size-4" /> Excluir todas deste cliente</Button>
       </div>}
     </Card>
 
