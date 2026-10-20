@@ -2,12 +2,11 @@ import * as appQueries from "@/lib/queries";
 import { createFileRoute, Link } from "@tanstack/react-router";
 import { useSuspenseQuery } from "@tanstack/react-query";
 import { useMemo, useState } from "react";
-import { CalendarClock, CircleAlert, Receipt, Wallet, Search } from "lucide-react";
+import { CalendarClock, CircleAlert, Receipt } from "lucide-react";
 import { contasPagarQ, despesasQ } from "@/lib/queries";
 import { brl, dataBR, hojeISO, mesISO } from "@/lib/format";
-import { PageHeader, Stat, Empty, Field } from "@/components/app/ui";
+import { PageHeader, Stat, Empty } from "@/components/app/ui";
 import { Button } from "@/components/ui/button";
-import { Input } from "@/components/ui/input";
 import { Despesas } from "./despesas";
 import { ContasPagar } from "./contas-pagar";
 
@@ -35,7 +34,6 @@ function Financeiro() {
   const { data: contas } = useSuspenseQuery(contasPagarQ);
   const { data: despesas } = useSuspenseQuery(despesasQ);
   const [aba, setAba] = useState<AbaFinanceiro>("resumo");
-  const [busca, setBusca] = useState("");
   const hoje = hojeISO();
   const inicioMes = mesISO() + "-01";
   const contasAtivas = contas.filter((conta) => !conta.cancelada_em && conta.status !== "cancelado");
@@ -51,25 +49,6 @@ function Financeiro() {
   const despesasMes = despesas.filter((despesa) => despesa.data >= inicioMes && despesa.data <= hoje);
   const totalDespesasMes = despesasMes.reduce((total, despesa) => total + Math.max(0, Number(despesa.valor) || 0), 0);
   const despesasOrdenadas = useMemo(() => [...despesas].sort((a, b) => b.data.localeCompare(a.data)), [despesas]);
-  const contasOrdenadas = useMemo(
-    () => [...contas].sort((a, b) => a.data_vencimento.localeCompare(b.data_vencimento)),
-    [contas],
-  );
-  const termo = busca.trim().toLocaleLowerCase("pt-BR");
-  const despesasFiltradas = despesasOrdenadas.filter((d) =>
-    !termo || [d.descricao, d.categoria, d.data].some((v) => String(v ?? "").toLocaleLowerCase("pt-BR").includes(termo)),
-  );
-  const contasFiltradas = contasOrdenadas.filter((c) => {
-    const statusLegivel = c.cancelada_em || c.status === "cancelado"
-      ? "cancelada cancelado"
-      : c.status === "pago"
-        ? "paga pago quitada quitado"
-        : c.status === "parcial"
-          ? "parcial parcialmente paga"
-          : "pendente em aberto";
-    return !termo || [c.descricao, c.fornecedor, c.status, statusLegivel, c.data_vencimento]
-      .some((v) => String(v ?? "").toLocaleLowerCase("pt-BR").includes(termo));
-  });
   const proximasContas = [...contasAbertas]
     .sort((a, b) => a.data_vencimento.localeCompare(b.data_vencimento))
     .slice(0, 5);
@@ -90,7 +69,7 @@ function Financeiro() {
       </div>
 
       <div className="mb-5 grid grid-cols-2 gap-2 sm:grid-cols-4" role="tablist" aria-label="Seções do financeiro">
-        <Button type="button" size="sm" variant={aba === "resumo" ? "default" : "outline"} onClick={() => { setAba("resumo"); setBusca(""); }}>Resumo</Button>
+        <Button type="button" size="sm" variant={aba === "resumo" ? "default" : "outline"} onClick={() => { setAba("resumo"); }}>Resumo</Button>
         <Button type="button" size="sm" variant={aba === "despesas" ? "default" : "outline"} onClick={() => { setAba("despesas"); setBusca(""); }}>Despesas</Button>
         <Button type="button" size="sm" variant={aba === "contas" ? "default" : "outline"} onClick={() => { setAba("contas"); setBusca(""); }}>Contas a pagar</Button>
         <Button type="button" size="sm" variant={aba === "relatorio" ? "default" : "outline"} onClick={() => { setAba("relatorio"); setBusca(""); }}>Relatório financeiro</Button>
