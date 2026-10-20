@@ -189,6 +189,7 @@ export interface FileRoutesByTo {
   '/configuracoes': typeof AuthenticatedConfiguracoesRoute
   '/contas-pagar': typeof AuthenticatedContasPagarRoute
   '/despesas': typeof AuthenticatedDespesasRoute
+  '/financeiro': typeof AuthenticatedFinanceiroRoute
   '/mais': typeof AuthenticatedMaisRoute
   '/painel': typeof AuthenticatedPainelRoute
   '/pedidos-recorrentes': typeof AuthenticatedPedidosRecorrentesRoute
@@ -376,6 +377,13 @@ declare module '@tanstack/react-router' {
       path: '/contas-pagar'
       fullPath: '/contas-pagar'
       preLoaderRoute: typeof AuthenticatedContasPagarRouteImport
+      parentRoute: typeof AuthenticatedRouteRoute
+    }
+    '/_authenticated/financeiro': {
+      id: '/_authenticated/financeiro'
+      path: '/financeiro'
+      fullPath: '/financeiro'
+      preLoaderRoute: typeof AuthenticatedFinanceiroRouteImport
       parentRoute: typeof AuthenticatedRouteRoute
     }
     '/_authenticated/despesas': {
