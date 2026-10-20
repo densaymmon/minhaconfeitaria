@@ -49,26 +49,43 @@ function normalizarTelefoneWhatsApp(telefone: string | null | undefined): string
 function Pedidos() {
   const pedidos = usePedidosCalc();
   const { data: config } = useSuspenseQuery(appQueries.configQ);
-  const [pedidosRecorrentesIds, setPedidosRecorrentesIds] = useState<Set<string>>(() => new Set());
+  const [recorrenciasPorPedido, setRecorrenciasPorPedido] = useState<Record<string, { frequencia: "semanal" | "quinzenal" | "mensal"; proximaEntrega: string | null }>>({});
   useEffect(() => {
     let ativo = true;
-    // O vínculo é salvo na ocorrência confirmada; falha de leitura não deve impedir a lista normal de pedidos.
-    // eslint-disable-next-line @typescript-eslint/no-explicit-any -- tabela de recorrências ainda não consta nos tipos gerados.
-    void (supabase as any)
-      .from("pedidos_recorrentes_ocorrencias")
-      .select("pedido_id")
-      .not("pedido_id", "is", null)
-      .then(({ data, error }: { data: { pedido_id: string | null }[] | null; error: { message: string } | null }) => {
-        if (!ativo) return;
-        if (error) { console.warn("Não foi possível carregar os vínculos de pedidos recorrentes:", error.message); return; }
-        setPedidosRecorrentesIds(new Set((data ?? []).map((item) => item.pedido_id).filter((id): id is string => Boolean(id))));
-      });
+    // Os vínculos são carregados separadamente para que uma falha nas tabelas novas nunca derrube a lista normal.
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any -- tabelas novas ainda não constam nos tipos gerados.
+    const db = supabase as any;
+    void Promise.all([
+      db.from("pedidos_recorrentes_ocorrencias").select("pedido_id,recorrencia_id,data_entrega,status").order("data_entrega", { ascending: true }),
+      db.from("pedidos_recorrentes").select("id,frequencia"),
+    ]).then(([ocorrenciasResult, recorrenciasResult]: [
+      { data: { pedido_id: string | null; recorrencia_id: string; data_entrega: string; status: string }[] | null; error: { message: string } | null },
+      { data: { id: string; frequencia: "semanal" | "quinzenal" | "mensal" }[] | null; error: { message: string } | null }
+    ]) => {
+      if (!ativo) return;
+      if (ocorrenciasResult.error || recorrenciasResult.error) {
+        console.warn("Não foi possível carregar os vínculos de pedidos recorrentes:", ocorrenciasResult.error?.message ?? recorrenciasResult.error?.message);
+        return;
+      }
+      const frequencias = new Map((recorrenciasResult.data ?? []).map((r) => [r.id, r.frequencia]));
+      const ocorrencias = ocorrenciasResult.data ?? [];
+      const porPedido: Record<string, { frequencia: "semanal" | "quinzenal" | "mensal"; proximaEntrega: string | null }> = {};
+      for (const ocorrencia of ocorrencias) {
+        if (!ocorrencia.pedido_id) continue;
+        const frequencia = frequencias.get(ocorrencia.recorrencia_id);
+        if (!frequencia) continue;
+        const proxima = ocorrencias.find((outra) => outra.recorrencia_id === ocorrencia.recorrencia_id && outra.status !== "cancelada" && outra.data_entrega > ocorrencia.data_entrega);
+        porPedido[ocorrencia.pedido_id] = { frequencia, proximaEntrega: proxima?.data_entrega ?? null };
+      }
+      setRecorrenciasPorPedido(porPedido);
+    });
     return () => { ativo = false; };
   }, []);
   const search = Route.useSearch();
   const navigate = useNavigate();
   const [busca, setBusca] = useState("");
   const [clienteFiltro, setClienteFiltro] = useState("");
+  const [filtroRecorrencia, setFiltroRecorrencia] = useState<"todos" | "recorrentes" | "nao_recorrentes">("todos");
   const clientesDisponiveis = useMemo(() => {
     const porId = new Map<string, string>();
     pedidos.forEach((p) => {
@@ -105,6 +122,9 @@ function Pedidos() {
     const q = busca.trim().toLowerCase();
     return pedidos.filter((p) => {
       if (clienteFiltro && String(p.cliente_id ?? "") !== clienteFiltro) return false;
+      const ehRecorrente = Boolean(recorrenciasPorPedido[p.id]);
+      if (filtroRecorrencia === "recorrentes" && !ehRecorrente) return false;
+      if (filtroRecorrencia === "nao_recorrentes" && ehRecorrente) return false;
       if (status === "abertos" && ["pronto", "finalizado", "entregue", "cancelado"].includes(p.status)) return false;
       if (status === "prontos" && p.status !== "pronto") return false;
       if (status === "em_andamento" && !["recebido", "confirmado", "em_producao"].includes(p.status)) return false;
@@ -132,7 +152,7 @@ function Pedidos() {
       if (ordem === "entrega") return (a.hora_entrega ?? "23:59").localeCompare(b.hora_entrega ?? "23:59");
       return (a.created_at ?? "").localeCompare(b.created_at ?? "");
     });
-  }, [pedidos, busca, clienteFiltro, status, ordem, hoje]);
+  }, [pedidos, busca, clienteFiltro, filtroRecorrencia, recorrenciasPorPedido, status, ordem, hoje]);
 
   function exportar() {
     baixarCSV(
@@ -216,6 +236,18 @@ function Pedidos() {
         </button>
       </div>
 
+      <div className="mb-3 flex flex-wrap items-center gap-2" aria-label="Filtrar por recorrência">
+        {[
+          { value: "todos", label: "Todos os pedidos" },
+          { value: "recorrentes", label: "↻ Recorrentes" },
+          { value: "nao_recorrentes", label: "Não recorrentes" },
+        ].map((f) => (
+          <button key={f.value} type="button" onClick={() => setFiltroRecorrencia(f.value as typeof filtroRecorrencia)} aria-pressed={filtroRecorrencia === f.value} className={cn("rounded-full border px-3 py-2 text-sm font-medium transition-colors", filtroRecorrencia === f.value ? "border-primary bg-primary text-primary-foreground" : "bg-card hover:bg-muted")}>
+            {f.label}
+          </button>
+        ))}
+      </div>
+
       <div className="mb-3 flex flex-wrap items-center gap-2">
         {[
           { value: "abertos", label: "Em aberto" },
@@ -259,7 +291,7 @@ function Pedidos() {
           </label>
           <div className="flex flex-wrap items-center justify-between gap-2 border-t pt-3">
             <span className="text-xs text-muted-foreground">{lista.length} pedido(s) encontrado(s)</span>
-            <Button type="button" variant="ghost" size="sm" onClick={() => { setStatus("abertos"); setBusca(""); setClienteFiltro(""); }}>
+            <Button type="button" variant="ghost" size="sm" onClick={() => { setStatus("abertos"); setBusca(""); setClienteFiltro(""); setFiltroRecorrencia("todos"); }}>
               Limpar filtros
             </Button>
           </div>
@@ -272,6 +304,7 @@ function Pedidos() {
           {lista.map((p) => {
             const atrasado = p.data_entrega < hoje && !["finalizado", "entregue", "cancelado"].includes(p.status);
             const telefoneWhatsApp = normalizarTelefoneWhatsApp(p.clientes?.telefone);
+            const infoRecorrencia = recorrenciasPorPedido[p.id];
             const itensRecibo = p.pedido_itens.map((item) =>
               `• ${Number(item.quantidade)} × ${item.descricao} — ${brl(Number(item.quantidade) * Number(item.preco_unitario))}`
             );
@@ -314,11 +347,15 @@ function Pedidos() {
                   <div className="flex items-center justify-between gap-2">
                     <div className="min-w-0 font-semibold">#{p.numero} · {p.clientes?.nome ?? "Sem cliente"}</div>
                     <div className="flex shrink-0 items-center gap-1.5">
-                      {pedidosRecorrentesIds.has(p.id) && <span className="rounded-full border border-primary/30 bg-primary/10 px-2 py-0.5 text-xs font-semibold text-primary">Recorrente</span>}
+                      {infoRecorrencia && <span className="inline-flex items-center gap-1 rounded-full border border-primary/40 bg-primary/10 px-2 py-1 text-xs font-bold text-primary"><Repeat className="size-3" /> Recorrente</span>}
                       {p.t.venda > 0 && p.t.saldo <= 0 && <span className="rounded-full bg-success/15 px-2 py-0.5 text-xs font-semibold text-success">Pago</span>}
                       <StatusBadge status={p.status} />
                     </div>
                   </div>
+                  {infoRecorrencia && <div className="mt-1 flex flex-wrap items-center gap-x-2 gap-y-1 text-xs font-medium text-primary">
+                    <span>{infoRecorrencia.frequencia === "semanal" ? "Semanal" : infoRecorrencia.frequencia === "quinzenal" ? "Quinzenal" : "Mensal"}</span>
+                    {infoRecorrencia.proximaEntrega && <span>· Próxima entrega: {dataBR(infoRecorrencia.proximaEntrega)}</span>}
+                  </div>}
                   <div className="mt-1 line-clamp-2 text-xs text-muted-foreground">
                     {p.pedido_itens.map((i) => `${Number(i.quantidade)}× ${i.descricao}`).join(", ") || "Sem itens"}
                   </div>
