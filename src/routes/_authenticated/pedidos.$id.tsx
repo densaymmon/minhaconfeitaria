@@ -333,7 +333,7 @@ function PedidoForm() {
       const { error: erroOcorrencia } = await db.from("pedidos_recorrentes_ocorrencias").insert({
         recorrencia_id: recorrencia.id,
         data_entrega: recorrenciaForm.data_inicio,
-        status: "pendente",
+        hora_entrega: recorrenciaForm.hora_entrega || null,
         itens: itensOcorrencia,
         observacoes: recorrenciaForm.observacoes.trim() || null,
       });
