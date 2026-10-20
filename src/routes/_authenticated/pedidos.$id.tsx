@@ -330,12 +330,12 @@ function PedidoForm() {
         preco_unitario: parseNum(item.preco_unitario),
         custo_unitario: Number.isFinite(item.custo_unitario) ? item.custo_unitario : 0,
       }));
-      const { error: erroOcorrencia } = await db.from("pedidos_recorrentes_ocorrencias").insert({
-        recorrencia_id: recorrencia.id,
-        data_entrega: recorrenciaForm.data_inicio,
-        status: "pendente",
-        itens: itensOcorrencia,
-        observacoes: recorrenciaForm.observacoes.trim() || null,
+      const { error: erroOcorrencia } = await db.rpc("preparar_ocorrencia_recorrente", {
+        p_recorrencia_id: recorrencia.id,
+        p_data_entrega: recorrenciaForm.data_inicio,
+        p_hora_entrega: recorrenciaForm.hora_entrega || null,
+        p_itens: itensOcorrencia,
+        p_observacoes: recorrenciaForm.observacoes.trim() || null,
       });
       if (erroOcorrencia) {
         throw new Error("A recorrência foi criada, mas a primeira entrega não foi preparada: " + erroOcorrencia.message);
