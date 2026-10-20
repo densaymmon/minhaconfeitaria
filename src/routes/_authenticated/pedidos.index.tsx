@@ -141,7 +141,7 @@ function Pedidos() {
       if (status === "em_andamento" && !["recebido", "confirmado", "em_producao"].includes(p.status)) return false;
       if (status === "atrasados" && (p.data_entrega >= hoje || ["finalizado", "entregue", "cancelado"].includes(p.status))) return false;
       if (status === "entregas_hoje" && (p.data_entrega !== hoje || !STATUS_ATIVOS.includes(p.status))) return false;
-      if (status === "a_receber" && (!STATUS_ATIVOS.includes(p.status) || Number(p.t.saldo) <= 0)) return false;
+      if (status === "a_receber" && (p.status === "cancelado" || Number(p.t.saldo) <= 0)) return false;
       if (!["abertos", "prontos", "todos", "em_andamento", "atrasados", "entregas_hoje", "a_receber"].includes(status)) {
         const statusCompativel = status === "entregue"
           ? ["entregue", "finalizado"].includes(p.status)
@@ -243,7 +243,7 @@ function Pedidos() {
         <button type="button" onClick={() => setStatus("a_receber")} aria-pressed={status === "a_receber"} className={cn("rounded-xl border bg-card p-3 text-left transition-colors hover:border-primary/50", status === "a_receber" && "border-primary ring-1 ring-primary/20")}>
           <span className="flex items-center gap-1 text-xs font-medium text-muted-foreground"><Wallet className="size-3.5" /> A receber</span>
           <span className="mt-1 block text-xl font-bold tabular-nums">{brl(contagens.aReceber)}</span>
-          <span className="mt-0.5 block text-xs text-muted-foreground">Saldo dos pedidos ativos</span>
+          <span className="mt-0.5 block text-xs text-muted-foreground">Saldo pendente de todos os pedidos</span>
         </button>
       </div>
 
