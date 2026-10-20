@@ -83,6 +83,7 @@ function PedidoForm() {
   );
   const [salvando, setSalvando] = useState(false);
   const [pagamentos, setPagamentos] = useState<PedidoPagamento[]>([]);
+  const [valorPagoAlterado, setValorPagoAlterado] = useState(false);
   const [dataPagamento, setDataPagamento] = useState(hojeISO());
   const [salvandoRecebimento, setSalvandoRecebimento] = useState(false);
   const [pagamentoEmEdicao, setPagamentoEmEdicao] = useState<string | null>(null);
@@ -235,7 +236,10 @@ function PedidoForm() {
   const set = <K extends keyof typeof f>(k: K, v: (typeof f)[K]) => setF((s) => ({ ...s, [k]: v }));
   const setItem = (i: number, patch: Partial<Item>) => setItens((s) => s.map((it, j) => (j === i ? { ...it, ...patch } : it)));
   // Alterar manualmente o valor recebido invalida a marcação anterior de saldo quitado.
-  const setValorPago = (valor: string) => setF((s) => ({ ...s, valor_entrada: valor, saldo_quitado: false }));
+  const setValorPago = (valor: string) => {
+    setValorPagoAlterado(true);
+    setF((s) => ({ ...s, valor_entrada: valor, saldo_quitado: false }));
+  };
   const limparZeroAoFocar = (valor: string, atualizar: (valor: string) => void) => {
     if (/^0([,.]0+)?$/.test(valor.trim())) atualizar("");
   };
@@ -384,7 +388,33 @@ function PedidoForm() {
     setSalvando(true);
     try {
       if (existente && temProducaoRegistrada) {
-        if (itens.some((item) => !item.id)) throw new Error("Não é possível adicionar itens a um pedido com produção registrada. Edite somente os preços, o frete e o desconto.");
+        if (itens.some((item) => !item.id)) throw new Error("Não é possível adicionar itens a um pedido com produção registrada. Edite somente os preços, o frete, o desconto e o valor pago.");
+        if (pagamentos.length > 1 && valorPagoAlterado) {
+          throw new Error("Este pedido tem vários recebimentos. Para manter o histórico correto, altere o valor de cada recebimento na seção Histórico de pagamentos.");
+        }
+        const valorPago = Math.round(parseNum(f.valor_entrada) * 100) / 100;
+        if (valorPagoAlterado) {
+          if (!Number.isFinite(valorPago) || valorPago < 0 || valorPago > t.venda + 0.009) {
+            throw new Error("O valor pago deve ser igual ou maior que zero e não pode ultrapassar o total atual do pedido.");
+          }
+          if (pagamentos.length === 1) {
+            const pagamento = pagamentos[0];
+            const { error: pagamentoError } = await supabase.rpc("editar_recebimento_pedido", {
+              p_pagamento_id: pagamento.id,
+              p_valor: valorPago,
+              p_data_pagamento: pagamento.data_pagamento,
+              p_forma_pagamento: pagamento.forma_pagamento,
+              p_observacoes: pagamento.observacoes ?? null,
+            });
+            if (pagamentoError) throw new Error(pagamentoError.message);
+          } else {
+            const { error: pagamentoError } = await supabase.rpc("corrigir_valor_pago_pedido_com_producao", {
+              p_pedido_id: existente.id,
+              p_valor_pago: valorPago,
+            });
+            if (pagamentoError) throw new Error(pagamentoError.message);
+          }
+        }
         const { error: valoresError } = await supabase.rpc("editar_valores_pedido_com_producao", {
           p_pedido_id: existente.id,
           p_itens: itens.map((item) => ({ id: item.id, preco_unitario: Math.round(parseNum(item.preco_unitario) * 100) / 100 })),
@@ -392,8 +422,11 @@ function PedidoForm() {
           p_taxa_entrega: Math.round(parseNum(f.taxa_entrega) * 100) / 100,
         });
         if (valoresError) throw new Error(valoresError.message);
-        await qc.invalidateQueries({ queryKey: ["pedidos"] });
-        toast.success("Valores atualizados sem alterar a produção ou o estoque.");
+        await Promise.all([
+          qc.invalidateQueries({ queryKey: ["pedidos"] }),
+          qc.invalidateQueries({ queryKey: ["pedido-pagamentos"] }),
+        ]);
+        toast.success("Valores e pagamento atualizados sem alterar a produção ou o estoque.");
         navigate({ to: "/pedidos", search: { filtro: undefined, dataInicial: undefined, dataFinal: undefined } });
         return;
       }
@@ -720,7 +753,8 @@ function PedidoForm() {
                   </NativeSelect>
                 </Field>
                 <Field label="Valor já pago (R$)">
-                  <Input inputMode="decimal" value={f.valor_entrada} disabled={temProducaoRegistrada} onFocus={() => limparZeroAoFocar(f.valor_entrada, setValorPago)} onChange={(e) => setValorPago(e.target.value)} className="h-11" />
+                  <Input inputMode="decimal" value={f.valor_entrada} disabled={pagamentos.length > 1} onFocus={() => limparZeroAoFocar(f.valor_entrada, setValorPago)} onChange={(e) => setValorPago(e.target.value)} className="h-11" />
+                  {pagamentos.length > 1 && <p className="text-xs text-muted-foreground">Edite cada recebimento individualmente no histórico abaixo.</p>}
                 </Field>
                 <Field label="Frete (R$)">
                   <Input inputMode="decimal" value={f.taxa_entrega} onFocus={() => limparZeroAoFocar(f.taxa_entrega, (valor) => set("taxa_entrega", valor))} onChange={(e) => set("taxa_entrega", e.target.value)} className="h-11" />
