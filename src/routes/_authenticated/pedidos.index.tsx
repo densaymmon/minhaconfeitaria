@@ -352,9 +352,9 @@ function Pedidos() {
                       <StatusBadge status={p.status} />
                     </div>
                   </div>
-                  {recorrenciasPorPedido[p.id] && <div className="mt-1 flex flex-wrap items-center gap-x-2 gap-y-1 text-xs font-medium text-primary">
-                    <span>{recorrenciasPorPedido[p.id].frequencia === "semanal" ? "Semanal" : recorrenciasPorPedido[p.id].frequencia === "quinzenal" ? "Quinzenal" : "Mensal"}</span>
-                    {recorrenciasPorPedido[p.id].proximaEntrega && <span>· Próxima entrega: {dataBR(recorrenciasPorPedido[p.id].proximaEntrega!)}</span>}
+                  {infoRecorrencia && <div className="mt-1 flex flex-wrap items-center gap-x-2 gap-y-1 text-xs font-medium text-primary">
+                    <span>{infoRecorrencia.frequencia === "semanal" ? "Semanal" : infoRecorrencia.frequencia === "quinzenal" ? "Quinzenal" : "Mensal"}</span>
+                    {infoRecorrencia.proximaEntrega && <span>· Próxima entrega: {dataBR(infoRecorrencia.proximaEntrega)}</span>}
                   </div>}
                   <div className="mt-1 line-clamp-2 text-xs text-muted-foreground">
                     {p.pedido_itens.map((i) => `${Number(i.quantidade)}× ${i.descricao}`).join(", ") || "Sem itens"}
