@@ -24,7 +24,7 @@ export const Route = createFileRoute("/_authenticated/financeiro")({
   component: Financeiro,
 });
 
-type AbaFinanceiro = "resumo" | "despesas" | "contas";
+type AbaFinanceiro = "resumo" | "despesas" | "contas" | "relatorio";
 
 function Financeiro() {
   const { data: contas } = useSuspenseQuery(contasPagarQ);
@@ -84,13 +84,20 @@ function Financeiro() {
         <Stat label="Despesas deste mês" value={brl(totalDespesasMes)} />
       </div>
 
-      <div className="mb-5 grid grid-cols-3 gap-2" role="tablist" aria-label="Seções do financeiro">
+      <div className="mb-5 grid grid-cols-2 gap-2 sm:grid-cols-4" role="tablist" aria-label="Seções do financeiro">
         <Button type="button" size="sm" variant={aba === "resumo" ? "default" : "outline"} onClick={() => { setAba("resumo"); setBusca(""); }}>Resumo</Button>
         <Button type="button" size="sm" variant={aba === "despesas" ? "default" : "outline"} onClick={() => { setAba("despesas"); setBusca(""); }}>Despesas</Button>
         <Button type="button" size="sm" variant={aba === "contas" ? "default" : "outline"} onClick={() => { setAba("contas"); setBusca(""); }}>Contas a pagar</Button>
+        <Button type="button" size="sm" variant={aba === "relatorio" ? "default" : "outline"} onClick={() => { setAba("relatorio"); setBusca(""); }}>Relatório financeiro</Button>
       </div>
 
-      {aba === "resumo" ? (
+      {aba === "relatorio" ? (
+        <section className="space-y-3 rounded-xl border p-4">
+          <h2 className="text-lg font-semibold">Relatório financeiro</h2>
+          <p className="text-sm text-muted-foreground">Acesse vendas, custos de insumos, despesas, contas a pagar, fluxo de caixa e valores a receber, mantendo os cálculos e filtros completos do relatório existente.</p>
+          <Button asChild className="h-11 w-full"><Link to="/relatorios">Abrir relatório financeiro completo</Link></Button>
+        </section>
+      ) : aba === "resumo" ? (
         <>
           <div className="mb-7 grid grid-cols-1 gap-3 sm:grid-cols-2">
             <Button asChild className="h-12">
