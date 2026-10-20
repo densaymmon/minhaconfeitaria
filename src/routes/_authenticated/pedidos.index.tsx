@@ -1,10 +1,11 @@
 import * as appQueries from "@/lib/queries";
 import { createFileRoute, Link, useNavigate } from "@tanstack/react-router";
-import { useMemo, useState } from "react";
+import { useEffect, useMemo, useState } from "react";
 import { useSuspenseQuery } from "@tanstack/react-query";
 import { toast } from "sonner";
-import { CalendarClock, ChevronDown, Download, MessageCircle, Plus, ReceiptText, Search, SlidersHorizontal, Wallet } from "lucide-react";
+import { CalendarClock, ChevronDown, Download, MessageCircle, Plus, ReceiptText, Repeat, Search, SlidersHorizontal, Wallet } from "lucide-react";
 import { usePedidosCalc } from "@/lib/hooks";
+import { supabase } from "@/integrations/supabase/client";
 import { STATUS, brl, dataBR, formaLabel, hojeISO, statusLabel } from "@/lib/format";
 import { baixarCSV } from "@/lib/csv";
 import { Card, Empty, PageHeader, StatusBadge } from "@/components/app/ui";
@@ -48,6 +49,22 @@ function normalizarTelefoneWhatsApp(telefone: string | null | undefined): string
 function Pedidos() {
   const pedidos = usePedidosCalc();
   const { data: config } = useSuspenseQuery(appQueries.configQ);
+  const [pedidosRecorrentesIds, setPedidosRecorrentesIds] = useState<Set<string>>(() => new Set());
+  useEffect(() => {
+    let ativo = true;
+    // O vínculo é salvo na ocorrência confirmada; falha de leitura não deve impedir a lista normal de pedidos.
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any -- tabela de recorrências ainda não consta nos tipos gerados.
+    void (supabase as any)
+      .from("pedidos_recorrentes_ocorrencias")
+      .select("pedido_id")
+      .not("pedido_id", "is", null)
+      .then(({ data, error }: { data: { pedido_id: string | null }[] | null; error: { message: string } | null }) => {
+        if (!ativo) return;
+        if (error) { console.warn("Não foi possível carregar os vínculos de pedidos recorrentes:", error.message); return; }
+        setPedidosRecorrentesIds(new Set((data ?? []).map((item) => item.pedido_id).filter((id): id is string => Boolean(id))));
+      });
+    return () => { ativo = false; };
+  }, []);
   const search = Route.useSearch();
   const navigate = useNavigate();
   const [busca, setBusca] = useState("");
@@ -159,6 +176,7 @@ function Pedidos() {
         subtitle={`${lista.length} encontrado(s)`}
         action={
           <div className="mt-1 flex gap-2">
+            <Button asChild size="sm" variant="outline" className="h-9"><Link to="/pedidos-recorrentes"><Repeat className="size-4" /> Recorrências</Link></Button>
             <Button size="icon" variant="outline" onClick={exportar} aria-label="Exportar CSV">
               <Download className="size-4" />
             </Button>
@@ -296,6 +314,7 @@ function Pedidos() {
                   <div className="flex items-center justify-between gap-2">
                     <div className="min-w-0 font-semibold">#{p.numero} · {p.clientes?.nome ?? "Sem cliente"}</div>
                     <div className="flex shrink-0 items-center gap-1.5">
+                      {pedidosRecorrentesIds.has(p.id) && <span className="rounded-full border border-primary/30 bg-primary/10 px-2 py-0.5 text-xs font-semibold text-primary">Recorrente</span>}
                       {p.t.venda > 0 && p.t.saldo <= 0 && <span className="rounded-full bg-success/15 px-2 py-0.5 text-xs font-semibold text-success">Pago</span>}
                       <StatusBadge status={p.status} />
                     </div>
