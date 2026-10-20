@@ -95,7 +95,7 @@ function Financeiro() {
         <section className="space-y-3 rounded-xl border p-4">
           <h2 className="text-lg font-semibold">Relatório financeiro</h2>
           <p className="text-sm text-muted-foreground">Acesse vendas, custos de insumos, despesas, contas a pagar, fluxo de caixa e valores a receber, mantendo os cálculos e filtros completos do relatório existente.</p>
-          <Button asChild className="h-11 w-full"><Link to="/relatorios">Abrir relatório financeiro completo</Link></Button>
+          <Button asChild className="h-11 w-full"><Link to="/relatorios" search={{ inicio: `${mesISO()}-01`, fim: hojeISO(), secao: "visao-geral", dataBase: "entrega" }}>Abrir relatório financeiro completo</Link></Button>
         </section>
       ) : aba === "resumo" ? (
         <>
