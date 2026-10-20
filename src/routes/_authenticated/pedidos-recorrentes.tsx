@@ -120,7 +120,7 @@ function PedidosRecorrentes() {
     if (recorrenciaAtiva.data_fim && data > recorrenciaAtiva.data_fim) { toast.error("A data final da recorrência já foi atingida."); return; }
     setSalvando(true);
     // eslint-disable-next-line @typescript-eslint/no-explicit-any -- // A tipagem gerada do Supabase ainda não conhece as tabelas desta migração.
-    const { error } = await (supabase as any).from("pedidos_recorrentes_ocorrencias").insert({ recorrencia_id: recorrenciaAtiva.id, data_entrega: data, status: "pendente", itens: [] });
+    const { error } = await (supabase as any).from("pedidos_recorrentes_ocorrencias").insert({ recorrencia_id: recorrenciaAtiva.id, data_entrega: data, hora_entrega: recorrenciaAtiva.hora_entrega, itens: [] });
     setSalvando(false);
     if (error) toast.error(error.code === "23505" ? "Esta data já possui uma ocorrência." : error.message);
     else { toast.success(`Ocorrência de ${dataBR(data)} preparada.`); await carregar(); }
