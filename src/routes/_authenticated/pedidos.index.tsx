@@ -3,7 +3,7 @@ import { createFileRoute, Link, useNavigate } from "@tanstack/react-router";
 import { useMemo, useState } from "react";
 import { useSuspenseQuery } from "@tanstack/react-query";
 import { toast } from "sonner";
-import { CalendarClock, ChevronDown, Download, MessageCircle, Plus, ReceiptText, Search, SlidersHorizontal, Wallet, Repeat } from "lucide-react";
+import { CalendarClock, ChevronDown, Download, MessageCircle, Plus, ReceiptText, Search, SlidersHorizontal, Wallet } from "lucide-react";
 import { usePedidosCalc } from "@/lib/hooks";
 import { STATUS, brl, dataBR, formaLabel, hojeISO, statusLabel } from "@/lib/format";
 import { baixarCSV } from "@/lib/csv";
@@ -146,7 +146,6 @@ function Pedidos() {
         subtitle={`${lista.length} encontrado(s)`}
         action={
           <div className="mt-1 flex gap-2">
-            <Button asChild size="icon" variant="outline" aria-label="Pedidos recorrentes"><Link to="/pedidos-recorrentes"><Repeat className="size-4" /></Link></Button>
             <Button size="icon" variant="outline" onClick={exportar} aria-label="Exportar CSV">
               <Download className="size-4" />
             </Button>

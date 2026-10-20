@@ -197,6 +197,13 @@
       "when": 1792400000001,
       "tag": "0025_corrigir_primeira_ocorrencia_recorrente",
       "breakpoints": true
+    },
+    {
+      "idx": 28,
+      "version": "7",
+      "when": 1792400000002,
+      "tag": "0026_preparar_ocorrencia_recorrente_rpc",
+      "breakpoints": true
     }
   ]
 }

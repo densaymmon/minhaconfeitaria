@@ -101,8 +101,10 @@ function PedidosRecorrentes() {
       observacoes: form.observacoes || null, ativa: true,
     }).select("*").single();
     if (error) { toast.error(error.message); setSalvando(false); return; }
-    const { error: erroOcorrencia } = await db.from("pedidos_recorrentes_ocorrencias").insert({
-      recorrencia_id: data.id, data_entrega: form.data_inicio, itens: [],
+    const { error: erroOcorrencia } = await db.rpc("preparar_ocorrencia_recorrente", {
+      p_recorrencia_id: data.id, p_data_entrega: form.data_inicio,
+      p_hora_entrega: form.hora_entrega || null, p_itens: [],
+      p_observacoes: form.observacoes || null,
     });
     setSalvando(false);
     if (erroOcorrencia) toast.error(`Recorrência criada, mas não foi possível preparar a primeira entrega: ${erroOcorrencia.message}`);
@@ -120,7 +122,10 @@ function PedidosRecorrentes() {
     if (recorrenciaAtiva.data_fim && data > recorrenciaAtiva.data_fim) { toast.error("A data final da recorrência já foi atingida."); return; }
     setSalvando(true);
     // eslint-disable-next-line @typescript-eslint/no-explicit-any -- // A tipagem gerada do Supabase ainda não conhece as tabelas desta migração.
-    const { error } = await (supabase as any).from("pedidos_recorrentes_ocorrencias").insert({ recorrencia_id: recorrenciaAtiva.id, data_entrega: data, hora_entrega: recorrenciaAtiva.hora_entrega, itens: [] });
+    const { error } = await (supabase as any).rpc("preparar_ocorrencia_recorrente", {
+      p_recorrencia_id: recorrenciaAtiva.id, p_data_entrega: data,
+      p_hora_entrega: recorrenciaAtiva.hora_entrega, p_itens: [], p_observacoes: null,
+    });
     setSalvando(false);
     if (error) toast.error(error.code === "23505" ? "Esta data já possui uma ocorrência." : error.message);
     else { toast.success(`Ocorrência de ${dataBR(data)} preparada.`); await carregar(); }
