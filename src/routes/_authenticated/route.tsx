@@ -1,6 +1,6 @@
 import { createFileRoute, Link, Outlet, redirect, useNavigate } from "@tanstack/react-router";
 import { Suspense, useEffect, useState } from "react";
-import { BookOpen, CakeSlice, CalendarClock, ChartNoAxesCombined, ChefHat, ChevronRight, ClipboardList, LayoutDashboard, LogOut, Menu, Package, Receipt, Repeat, Settings, ShoppingCart, Users, X } from "lucide-react";
+import { BookOpen, CakeSlice, ChartNoAxesCombined, ChefHat, ChevronRight, ClipboardList, LayoutDashboard, LogOut, Menu, Package, Repeat, Settings, ShoppingCart, Users, X, Wallet } from "lucide-react";
 import { useQueryClient } from "@tanstack/react-query";
 import { supabase } from "@/integrations/supabase/client";
 
@@ -26,8 +26,7 @@ const maisLinks = [
   { to: "/pedidos-recorrentes", label: "Pedidos recorrentes", icon: Repeat },
   { to: "/produtos", label: "Produtos e receitas", icon: BookOpen },
   { to: "/relatorios", label: "Relatórios financeiros", icon: ChartNoAxesCombined },
-  { to: "/despesas", label: "Despesas", icon: Receipt },
-  { to: "/contas-pagar", label: "Contas a pagar", icon: CalendarClock },
+  { to: "/financeiro", label: "Financeiro — despesas e contas", icon: Wallet },
   { to: "/configuracoes", label: "Taxas e configurações", icon: Settings },
 ] as const;
 

@@ -19,6 +19,7 @@ import { Route as AuthenticatedComprasRouteImport } from './routes/_authenticate
 import { Route as AuthenticatedConfiguracoesRouteImport } from './routes/_authenticated/configuracoes'
 import { Route as AuthenticatedContasPagarRouteImport } from './routes/_authenticated/contas-pagar'
 import { Route as AuthenticatedDespesasRouteImport } from './routes/_authenticated/despesas'
+import { Route as AuthenticatedFinanceiroRouteImport } from './routes/_authenticated/financeiro'
 import { Route as AuthenticatedMaisRouteImport } from './routes/_authenticated/mais'
 import { Route as AuthenticatedPainelRouteImport } from './routes/_authenticated/painel'
 import { Route as AuthenticatedPedidosRecorrentesRouteImport } from './routes/_authenticated/pedidos-recorrentes'
@@ -82,6 +83,11 @@ const AuthenticatedContasPagarRoute =
 const AuthenticatedDespesasRoute = AuthenticatedDespesasRouteImport.update({
   id: '/despesas',
   path: '/despesas',
+  getParentRoute: () => AuthenticatedRouteRoute,
+} as any)
+const AuthenticatedFinanceiroRoute = AuthenticatedFinanceiroRouteImport.update({
+  id: '/financeiro',
+  path: '/financeiro',
   getParentRoute: () => AuthenticatedRouteRoute,
 } as any)
 const AuthenticatedMaisRoute = AuthenticatedMaisRouteImport.update({
@@ -159,6 +165,7 @@ export interface FileRoutesByFullPath {
   '/configuracoes': typeof AuthenticatedConfiguracoesRoute
   '/contas-pagar': typeof AuthenticatedContasPagarRoute
   '/despesas': typeof AuthenticatedDespesasRoute
+  '/financeiro': typeof AuthenticatedFinanceiroRoute
   '/mais': typeof AuthenticatedMaisRoute
   '/painel': typeof AuthenticatedPainelRoute
   '/pedidos-recorrentes': typeof AuthenticatedPedidosRecorrentesRoute
@@ -182,6 +189,7 @@ export interface FileRoutesByTo {
   '/configuracoes': typeof AuthenticatedConfiguracoesRoute
   '/contas-pagar': typeof AuthenticatedContasPagarRoute
   '/despesas': typeof AuthenticatedDespesasRoute
+  '/financeiro': typeof AuthenticatedFinanceiroRoute
   '/mais': typeof AuthenticatedMaisRoute
   '/painel': typeof AuthenticatedPainelRoute
   '/pedidos-recorrentes': typeof AuthenticatedPedidosRecorrentesRoute
@@ -207,6 +215,7 @@ export interface FileRoutesById {
   '/_authenticated/configuracoes': typeof AuthenticatedConfiguracoesRoute
   '/_authenticated/contas-pagar': typeof AuthenticatedContasPagarRoute
   '/_authenticated/despesas': typeof AuthenticatedDespesasRoute
+  '/_authenticated/financeiro': typeof AuthenticatedFinanceiroRoute
   '/_authenticated/mais': typeof AuthenticatedMaisRoute
   '/_authenticated/painel': typeof AuthenticatedPainelRoute
   '/_authenticated/pedidos-recorrentes': typeof AuthenticatedPedidosRecorrentesRoute
@@ -232,6 +241,7 @@ export interface FileRouteTypes {
     | '/configuracoes'
     | '/contas-pagar'
     | '/despesas'
+    | '/financeiro'
     | '/mais'
     | '/painel'
     | '/pedidos-recorrentes'
@@ -255,6 +265,7 @@ export interface FileRouteTypes {
     | '/configuracoes'
     | '/contas-pagar'
     | '/despesas'
+    | '/financeiro'
     | '/mais'
     | '/painel'
     | '/pedidos-recorrentes'
@@ -279,6 +290,7 @@ export interface FileRouteTypes {
     | '/_authenticated/configuracoes'
     | '/_authenticated/contas-pagar'
     | '/_authenticated/despesas'
+    | '/_authenticated/financeiro'
     | '/_authenticated/mais'
     | '/_authenticated/painel'
     | '/_authenticated/pedidos-recorrentes'
@@ -375,6 +387,13 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof AuthenticatedDespesasRouteImport
       parentRoute: typeof AuthenticatedRouteRoute
     }
+    '/_authenticated/financeiro': {
+      id: '/_authenticated/financeiro'
+      path: '/financeiro'
+      fullPath: '/financeiro'
+      preLoaderRoute: typeof AuthenticatedFinanceiroRouteImport
+      parentRoute: typeof AuthenticatedRouteRoute
+    }
     '/_authenticated/mais': {
       id: '/_authenticated/mais'
       path: '/mais'
@@ -467,6 +486,7 @@ interface AuthenticatedRouteRouteChildren {
   AuthenticatedConfiguracoesRoute: typeof AuthenticatedConfiguracoesRoute
   AuthenticatedContasPagarRoute: typeof AuthenticatedContasPagarRoute
   AuthenticatedDespesasRoute: typeof AuthenticatedDespesasRoute
+  AuthenticatedFinanceiroRoute: typeof AuthenticatedFinanceiroRoute
   AuthenticatedMaisRoute: typeof AuthenticatedMaisRoute
   AuthenticatedPainelRoute: typeof AuthenticatedPainelRoute
   AuthenticatedPedidosRecorrentesRoute: typeof AuthenticatedPedidosRecorrentesRoute
@@ -485,6 +505,7 @@ const AuthenticatedRouteRouteChildren: AuthenticatedRouteRouteChildren = {
   AuthenticatedConfiguracoesRoute: AuthenticatedConfiguracoesRoute,
   AuthenticatedContasPagarRoute: AuthenticatedContasPagarRoute,
   AuthenticatedDespesasRoute: AuthenticatedDespesasRoute,
+  AuthenticatedFinanceiroRoute: AuthenticatedFinanceiroRoute,
   AuthenticatedMaisRoute: AuthenticatedMaisRoute,
   AuthenticatedPainelRoute: AuthenticatedPainelRoute,
   AuthenticatedPedidosRecorrentesRoute: AuthenticatedPedidosRecorrentesRoute,
