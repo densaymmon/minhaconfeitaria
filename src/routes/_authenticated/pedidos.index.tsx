@@ -304,6 +304,7 @@ function Pedidos() {
           {lista.map((p) => {
             const atrasado = p.data_entrega < hoje && !["finalizado", "entregue", "cancelado"].includes(p.status);
             const telefoneWhatsApp = normalizarTelefoneWhatsApp(p.clientes?.telefone);
+            const infoRecorrencia = recorrenciasPorPedido[p.id];
             const itensRecibo = p.pedido_itens.map((item) =>
               `• ${Number(item.quantidade)} × ${item.descricao} — ${brl(Number(item.quantidade) * Number(item.preco_unitario))}`
             );
@@ -346,7 +347,7 @@ function Pedidos() {
                   <div className="flex items-center justify-between gap-2">
                     <div className="min-w-0 font-semibold">#{p.numero} · {p.clientes?.nome ?? "Sem cliente"}</div>
                     <div className="flex shrink-0 items-center gap-1.5">
-                      {recorrenciasPorPedido[p.id] && <span className="inline-flex items-center gap-1 rounded-full border border-primary/40 bg-primary/10 px-2 py-1 text-xs font-bold text-primary"><Repeat className="size-3" /> Recorrente</span>}
+                      {infoRecorrencia && <span className="inline-flex items-center gap-1 rounded-full border border-primary/40 bg-primary/10 px-2 py-1 text-xs font-bold text-primary"><Repeat className="size-3" /> Recorrente</span>}
                       {p.t.venda > 0 && p.t.saldo <= 0 && <span className="rounded-full bg-success/15 px-2 py-0.5 text-xs font-semibold text-success">Pago</span>}
                       <StatusBadge status={p.status} />
                     </div>
