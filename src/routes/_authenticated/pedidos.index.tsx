@@ -53,6 +53,7 @@ function Pedidos() {
   useEffect(() => {
     let ativo = true;
     // O vínculo é salvo na ocorrência confirmada; falha de leitura não deve impedir a lista normal de pedidos.
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any -- tabela de recorrências ainda não consta nos tipos gerados.
     void (supabase as any)
       .from("pedidos_recorrentes_ocorrencias")
       .select("pedido_id")
