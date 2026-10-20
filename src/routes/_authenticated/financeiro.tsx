@@ -47,16 +47,24 @@ function Financeiro() {
   const totalDespesasMes = despesasMes.reduce((total, despesa) => total + Math.max(0, Number(despesa.valor) || 0), 0);
   const despesasOrdenadas = useMemo(() => [...despesas].sort((a, b) => b.data.localeCompare(a.data)), [despesas]);
   const contasOrdenadas = useMemo(
-    () => [...contas].sort((a, b) => b.data_vencimento.localeCompare(a.data_vencimento)),
+    () => [...contas].sort((a, b) => a.data_vencimento.localeCompare(b.data_vencimento)),
     [contas],
   );
   const termo = busca.trim().toLocaleLowerCase("pt-BR");
   const despesasFiltradas = despesasOrdenadas.filter((d) =>
     !termo || [d.descricao, d.categoria, d.data].some((v) => String(v ?? "").toLocaleLowerCase("pt-BR").includes(termo)),
   );
-  const contasFiltradas = contasOrdenadas.filter((c) =>
-    !termo || [c.descricao, c.fornecedor, c.status, c.data_vencimento].some((v) => String(v ?? "").toLocaleLowerCase("pt-BR").includes(termo)),
-  );
+  const contasFiltradas = contasOrdenadas.filter((c) => {
+    const statusLegivel = c.cancelada_em || c.status === "cancelado"
+      ? "cancelada cancelado"
+      : c.status === "pago"
+        ? "paga pago quitada quitado"
+        : c.status === "parcial"
+          ? "parcial parcialmente paga"
+          : "pendente em aberto";
+    return !termo || [c.descricao, c.fornecedor, c.status, statusLegivel, c.data_vencimento]
+      .some((v) => String(v ?? "").toLocaleLowerCase("pt-BR").includes(termo));
+  });
   const proximasContas = [...contasAbertas]
     .sort((a, b) => a.data_vencimento.localeCompare(b.data_vencimento))
     .slice(0, 5);
