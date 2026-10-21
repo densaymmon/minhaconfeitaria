@@ -46,7 +46,7 @@ BEGIN
   PERFORM public.editar_recebimento_pedido(pagamento1, 25, current_date, 'pix', 'Valor reduzido');
   SELECT COALESCE(SUM(valor), 0) INTO total_pago
   FROM public.pedido_pagamentos WHERE pedido_id = pedido AND user_id = uid;
-  SELECT valor_entrada INTO valor_entrada FROM public.pedidos WHERE id = pedido;
+  SELECT p.valor_entrada INTO valor_entrada FROM public.pedidos p WHERE p.id = pedido;
   IF total_pago <> 45 OR valor_entrada <> 45
      OR (SELECT count(*) FROM public.pedido_pagamentos WHERE pedido_id = pedido AND user_id = uid) <> 2 THEN
     RAISE EXCEPTION 'Redução de parcela duplicou ou não conciliou valores: histórico %, legado %', total_pago, valor_entrada;
@@ -55,7 +55,7 @@ BEGIN
   PERFORM public.editar_recebimento_pedido(pagamento1, 35, current_date, 'pix', 'Valor aumentado');
   SELECT COALESCE(SUM(valor), 0) INTO total_pago
   FROM public.pedido_pagamentos WHERE pedido_id = pedido AND user_id = uid;
-  SELECT valor_entrada, saldo_quitado INTO valor_entrada, quitado FROM public.pedidos WHERE id = pedido;
+  SELECT p.valor_entrada, p.saldo_quitado INTO valor_entrada, quitado FROM public.pedidos p WHERE p.id = pedido;
   IF total_pago <> 55 OR valor_entrada <> 55 OR quitado THEN
     RAISE EXCEPTION 'Aumento de parcela não conciliou valores: histórico %, legado %, quitado %',
       total_pago, valor_entrada, quitado;
