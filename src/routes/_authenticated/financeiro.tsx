@@ -69,11 +69,11 @@ function Financeiro() {
         <Stat label="Despesas deste mês" value={brl(totalDespesasMes)} />
       </div>
 
-      <div className="mb-5 grid grid-cols-2 gap-2 sm:grid-cols-4" role="tablist" aria-label="Seções do financeiro">
-        <Button type="button" size="sm" variant={aba === "resumo" ? "default" : "outline"} onClick={() => { setAba("resumo"); }}>Resumo</Button>
-        <Button type="button" size="sm" variant={aba === "despesas" ? "default" : "outline"} onClick={() => { setAba("despesas"); }}>Despesas</Button>
-        <Button type="button" size="sm" variant={aba === "contas" ? "default" : "outline"} onClick={() => { setAba("contas"); }}>Contas a pagar</Button>
-        <Button type="button" size="sm" variant={aba === "relatorio" ? "default" : "outline"} onClick={() => { setAba("relatorio"); }}>Relatório financeiro</Button>
+      <div className="mb-5 grid grid-cols-2 gap-2 sm:grid-cols-4" role="group" aria-label="Navegação do financeiro">
+        <Button type="button" size="sm" variant={aba === "resumo" ? "default" : "outline"} onClick={() => { setAba("resumo"); }} aria-pressed={aba === "resumo"}>Resumo</Button>
+        <Button type="button" size="sm" variant={aba === "despesas" ? "default" : "outline"} onClick={() => { setAba("despesas"); }} aria-pressed={aba === "despesas"}>Despesas</Button>
+        <Button type="button" size="sm" variant={aba === "contas" ? "default" : "outline"} onClick={() => { setAba("contas"); }} aria-pressed={aba === "contas"}>Contas a pagar</Button>
+        <Button type="button" size="sm" variant={aba === "relatorio" ? "default" : "outline"} onClick={() => { setAba("relatorio"); }} aria-pressed={aba === "relatorio"}>Relatório financeiro</Button>
       </div>
 
       {aba === "relatorio" ? (
