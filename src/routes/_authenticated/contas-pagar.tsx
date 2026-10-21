@@ -66,6 +66,8 @@ export function ContasPagar({ embedded = false }: { embedded?: boolean }) {
     observacoes: "",
   };
   const [f, setF] = useState(blank);
+  const [buscaContas, setBuscaContas] = useState("");
+  const [filtroStatus, setFiltroStatus] = useState("todas");
   const [id, setId] = useState<string | null>(null);
   const [busy, setBusy] = useState(false);
   const [acao, setAcao] = useState<AcaoFinanceira>(null);
@@ -85,10 +87,19 @@ export function ContasPagar({ embedded = false }: { embedded?: boolean }) {
     .reduce((s, c) => s + Math.max(0, Number(c.valor) - Number(c.valor_pago)), 0);
   const totalPago = contas.filter((c) => ["pago", "parcial"].includes(c.status))
     .reduce((s, c) => s + Number(c.valor_pago), 0);
-  const ordenadas = useMemo(
-    () => [...contas].sort((a, b) => a.data_vencimento.localeCompare(b.data_vencimento)),
-    [contas],
-  );
+  const ordenadas = useMemo(() => {
+    const termo = buscaContas.trim().toLocaleLowerCase("pt-BR");
+    return [...contas]
+      .filter((c) => {
+        const correspondeTexto =
+          !termo ||
+          c.descricao.toLocaleLowerCase("pt-BR").includes(termo) ||
+          (c.fornecedor ?? "").toLocaleLowerCase("pt-BR").includes(termo);
+        const correspondeStatus = filtroStatus === "todas" || c.status === filtroStatus;
+        return correspondeTexto && correspondeStatus;
+      })
+      .sort((a, b) => a.data_vencimento.localeCompare(b.data_vencimento));
+  }, [contas, buscaContas, filtroStatus]);
   const pagamentosPorConta = useMemo(() => {
     const mapa = new Map<string, ContaPagarPagamento[]>();
     for (const pagamento of pagamentos) {
@@ -360,7 +371,36 @@ export function ContasPagar({ embedded = false }: { embedded?: boolean }) {
 
       <section>
         <h2 className="mb-3 text-lg font-semibold">Histórico e vencimentos</h2>
-        {!ordenadas.length ? <Empty>Nenhuma conta a pagar registrada.</Empty> : (
+        {contas.length > 0 && (
+          <div className="mb-3 grid grid-cols-1 gap-2 sm:grid-cols-[minmax(0,1fr)_12rem]">
+            <Input
+              aria-label="Buscar contas a pagar por descrição ou fornecedor"
+              placeholder="Buscar por descrição ou fornecedor"
+              value={buscaContas}
+              onChange={(e) => setBuscaContas(e.target.value)}
+              className="h-11"
+            />
+            <select
+              aria-label="Filtrar contas a pagar por status"
+              className="h-11 w-full rounded-md border border-input bg-background px-3 text-sm"
+              value={filtroStatus}
+              onChange={(e) => setFiltroStatus(e.target.value)}
+            >
+              <option value="todas">Todos os status</option>
+              <option value="pendente">Pendente</option>
+              <option value="parcial">Parcial</option>
+              <option value="pago">Pago</option>
+              <option value="cancelado">Cancelado</option>
+            </select>
+          </div>
+        )}
+        {!ordenadas.length ? (
+          <Empty>
+            {contas.length
+              ? "Nenhuma conta corresponde à busca ou ao filtro."
+              : "Nenhuma conta a pagar registrada."}
+          </Empty>
+        ) : (
           <div className="divide-y">
             {ordenadas.map((c) => {
               const saldo = Math.max(0, Number(c.valor) - Number(c.valor_pago));
