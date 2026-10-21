@@ -346,7 +346,27 @@ function Pedidos() {
         </Card>
       )}
       {lista.length === 0 ? (
-        <Empty>Nenhum pedido encontrado.</Empty>
+        <Card className="border-dashed p-6 text-center sm:p-8">
+          <div className="mx-auto mb-3 grid size-12 place-items-center rounded-full bg-muted text-muted-foreground">
+            <Search className="size-5" />
+          </div>
+          <h2 className="font-semibold">Nenhum pedido encontrado</h2>
+          <p className="mx-auto mt-1 max-w-md text-sm text-muted-foreground">
+            {busca.trim() || clienteFiltro || status !== "abertos" || filtroRecorrencia !== "todos"
+              ? "Tente ajustar a busca ou limpar os filtros para ver outros pedidos."
+              : "Cadastre seu primeiro pedido para começar a organizar as entregas e os recebimentos."}
+          </p>
+          <div className="mt-4 flex flex-wrap justify-center gap-2">
+            {(busca.trim() || clienteFiltro || status !== "abertos" || filtroRecorrencia !== "todos") && (
+              <Button type="button" variant="outline" onClick={() => { setStatus("abertos"); setBusca(""); setClienteFiltro(""); setFiltroRecorrencia("todos"); }}>
+                Limpar filtros
+              </Button>
+            )}
+            <Button asChild size="sm">
+              <Link to="/pedidos/$id" params={{ id: "novo" }}><Plus className="size-4" /> Novo pedido</Link>
+            </Button>
+          </div>
+        </Card>
       ) : (
         <div className="space-y-2">
           {lista.map((p) => {
