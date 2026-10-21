@@ -52,8 +52,7 @@ function Produtos() {
             </Button>
             <Button
               variant="outline"
-              size="icon"
-              className="h-11 w-11"
+              className="h-11"
               aria-label="Exportar CSV"
               onClick={() =>
                 baixarCSV(
@@ -67,10 +66,19 @@ function Produtos() {
               }
             >
               <Download className="size-4" />
+              <span>Exportar CSV</span>
             </Button>
           </div>
           {produtos.length === 0 ? (
-            <Empty>Cadastre primeiro os insumos e depois seus produtos com a receita.</Empty>
+            <Empty>
+              <div className="mx-auto max-w-sm space-y-3">
+                <p className="font-medium text-foreground">Seu catálogo começa aqui</p>
+                <p>Cadastre os insumos e depois crie seu primeiro produto com receita, rendimento, custo e preço de venda.</p>
+                <Button asChild className="h-11">
+                  <Link to="/produtos/$id" params={{ id: "novo" }} search={{ duplicar: false }}><Plus className="size-4" /> Cadastrar primeiro produto</Link>
+                </Button>
+              </div>
+            </Empty>
           ) : (
             <div className="space-y-2">
               {produtos.map((p) => {
