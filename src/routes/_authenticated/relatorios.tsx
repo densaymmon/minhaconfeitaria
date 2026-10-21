@@ -5,7 +5,7 @@ import { useEffect, useMemo, useState } from "react";
 import { endOfMonth, format } from "date-fns";
 import { Download } from "lucide-react";
 import { configQ, despesasQ, pedidosQ } from "@/lib/queries";
-import { calcularRecebimentoPedido, custoUnitario, ratearVendaETaxas, totaisPedido } from "@/lib/calc";
+import { calcularRecebimentoPedido, ratearVendaETaxas, totaisPedido } from "@/lib/calc";
 import { medida } from "@/lib/ingredient-cost";
 import { brl, dataBR, hojeISO, mesISO, num } from "@/lib/format";
 import { baixarCSV } from "@/lib/csv";
@@ -125,36 +125,11 @@ function RelatoriosConteudo({ initialSearch, embedded = false }: { initialSearch
     () => new Map(insumos.map((i) => [i.id, { ...i, preco_unidade: Number(i.preco_unidade) }])),
     [insumos],
   );
-  // Calcula produto a produto. Se alguma receita tiver unidades incompatíveis,
-  // preserva o custo salvo para esse produto sem derrubar o relatório inteiro.
-  const custoAtual = useMemo(() => {
-    const custos = new Map<string, number>();
-    for (const produto of produtos) {
-      try {
-        const custo = custoUnitario(produto, produto.receita_itens, insumosPorId);
-        if (Number.isFinite(custo) && custo >= 0) custos.set(produto.id, custo);
-      } catch {
-        // Unidade inválida: o item do pedido mantém o custo salvo como fallback.
-      }
-    }
-    return custos;
-  }, [produtos, insumosPorId]);
-  const produtosPorId = useMemo(() => new Map(produtos.map((p) => [p.id, p])), [produtos]);
+  // O relatório usa o custo gravado no item do pedido no momento da venda.
+  // Alterações posteriores na receita ou nos preços dos insumos não reescrevem
+  // o resultado histórico; o custo atual fica restrito às telas de cadastro/custeio.
   const pedidosCalculados = useMemo(() => pedidos.map((pedido) => {
-    const itens = pedido.pedido_itens.map((item) => {
-      const produto = item.produto_id ? produtosPorId.get(item.produto_id) : undefined;
-      const temCustoCadastrado = !!produto && (
-        produto.receita_itens.length > 0 ||
-        Number(produto.custo_gas) > 0 ||
-        Number(produto.custo_energia) > 0 ||
-        Number(produto.custo_mao_obra) > 0
-      );
-      const custoUnitarioAtual = item.produto_id && temCustoCadastrado
-        ? (custoAtual.get(item.produto_id) ?? Number(item.custo_unitario))
-        : Number(item.custo_unitario);
-      return { ...item, custo_unitario: custoUnitarioAtual };
-    });
-    const totais = totaisPedido({ ...pedido, pedido_itens: itens }, config);
+    const totais = totaisPedido(pedido, config);
     const pagamentosDetalhados = pagamentosPedidos
       .filter((pagamento) => pagamento.pedido_id === pedido.id)
       .reduce((soma, pagamento) => soma + Math.max(0, Number(pagamento.valor) || 0), 0);
@@ -165,8 +140,8 @@ function RelatoriosConteudo({ initialSearch, embedded = false }: { initialSearch
       valor_entrada: totais.recebido,
       pagamentosDetalhados,
     });
-    return { ...pedido, pedido_itens: itens, t: { ...totais, ...recebimento } };
-  }), [pedidos, produtosPorId, custoAtual, config, pagamentosPedidos]);
+    return { ...pedido, t: { ...totais, ...recebimento } };
+  }), [pedidos, config, pagamentosPedidos]);
 
   const listaPeriodo = intervaloValido
     ? pedidosCalculados.filter((p) => {
