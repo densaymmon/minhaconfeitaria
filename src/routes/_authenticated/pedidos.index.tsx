@@ -210,10 +210,10 @@ function Pedidos() {
         title="Pedidos"
         subtitle={`${lista.length} encontrado(s)`}
         action={
-          <div className="mt-1 flex gap-2">
+          <div className="mt-1 flex flex-wrap gap-2">
             <Button asChild size="sm" variant="outline" className="h-9"><Link to="/pedidos-recorrentes"><Repeat className="size-4" /> Recorrências</Link></Button>
-            <Button size="icon" variant="outline" onClick={exportar} aria-label="Exportar CSV">
-              <Download className="size-4" />
+            <Button size="sm" variant="outline" onClick={exportar} aria-label="Exportar pedidos em CSV" className="h-9">
+              <Download className="size-4" /> <span>Exportar CSV</span>
             </Button>
             <Button asChild size="sm" className="h-9">
               <Link to="/pedidos/$id" params={{ id: "novo" }}>

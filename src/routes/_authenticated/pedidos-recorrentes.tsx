@@ -269,7 +269,7 @@ function PedidosRecorrentes() {
     </Card>
 
     <Card className="mb-5 p-4">
-      <div className="mb-3 flex items-center justify-between gap-3"><h2 className="font-semibold">Recorrências cadastradas</h2><Button variant="ghost" size="icon" onClick={() => void carregar()} aria-label="Atualizar"><RefreshCw className="size-4" /></Button></div>
+      <div className="mb-3 flex items-center justify-between gap-3"><h2 className="font-semibold">Recorrências cadastradas</h2><Button variant="outline" size="sm" onClick={() => void carregar()} aria-label="Atualizar lista de recorrências" className="h-9"><RefreshCw className="size-4" /> Atualizar</Button></div>
       {carregando ? <p className="text-sm text-muted-foreground">Carregando...</p> : recorrencias.length === 0 ? <p className="text-sm text-muted-foreground">Nenhuma recorrência cadastrada.</p> : <div className="space-y-2">
         {recorrencias.map((r) => { const cliente = clientes.find((c) => c.id === r.cliente_id); return <div key={r.id} className={`flex items-center gap-2 rounded-lg border p-3 ${selecionada === r.id ? "border-primary bg-primary/5" : ""}`}>
           <button type="button" onClick={() => setSelecionada(r.id)} className="min-w-0 flex-1 text-left">
