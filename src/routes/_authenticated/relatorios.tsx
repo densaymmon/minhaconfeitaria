@@ -555,8 +555,8 @@ function RelatoriosConteudo({ initialSearch, embedded = false }: { initialSearch
           </Button>
         </div>
       ) : <PageHeader title="Relatórios" back="/mais" action={
-        <Button size="icon" variant="outline" aria-label="Exportar relatório CSV" onClick={exportar}>
-          <Download className="size-4" />
+        <Button size="sm" variant="outline" className="h-11" aria-label="Exportar relatório financeiro em CSV" onClick={exportar}>
+          <Download className="size-4" /> <span>Exportar CSV</span>
         </Button>
       } />}
       <div className="mb-5 grid grid-cols-2 gap-3">
