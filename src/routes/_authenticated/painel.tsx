@@ -202,7 +202,7 @@ function Painel() {
           </div>
         </div>
         {proximas.length === 0 ? (
-          <Empty>Nenhuma entrega agendada.</Empty>
+          <div className="rounded-xl border border-dashed p-5 text-center"><p className="text-sm text-muted-foreground">Nenhuma entrega agendada.</p><p className="mt-1 text-xs text-muted-foreground">Cadastre um pedido para organizar a próxima entrega.</p><Button asChild size="sm" className="mt-3"><Link to="/pedidos/$id" params={{ id: "novo" }}><Plus className="size-4" /> Novo pedido</Link></Button></div>
         ) : (
           <div className="space-y-2">
             {proximas.map((p) => (
