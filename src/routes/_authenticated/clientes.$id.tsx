@@ -62,8 +62,8 @@ function ClienteDetalhe() {
         subtitle={c.telefone ?? undefined}
         back="/clientes"
         action={
-          <Button size="icon" variant="outline" onClick={() => setEditar(true)} aria-label="Editar">
-            <Pencil className="size-4" />
+          <Button size="sm" variant="outline" onClick={() => setEditar(true)} aria-label="Editar cadastro do cliente" className="h-11">
+            <Pencil className="size-4" /> Editar
           </Button>
         }
       />
