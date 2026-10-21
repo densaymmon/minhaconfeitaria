@@ -13,6 +13,7 @@ import { IngredientForm } from "@/components/app/ingredient-form";
 import { baixarCSV } from "@/lib/csv";
 import { Card, Empty, PageHeader } from "@/components/app/ui";
 import { Button } from "@/components/ui/button";
+import { Input } from "@/components/ui/input";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import type { Insumo } from "@/lib/queries";
 
@@ -37,6 +38,13 @@ export const Route = createFileRoute("/_authenticated/produtos/")({
 function Produtos() {
   const { produtos, insumos, custo } = useCustos();
   const navigate = useNavigate();
+  const [buscaProduto, setBuscaProduto] = useState("");
+  const termoProduto = buscaProduto.trim().toLocaleLowerCase("pt-BR");
+  const produtosFiltrados = produtos.filter((p) =>
+    !termoProduto ||
+    p.nome.toLocaleLowerCase("pt-BR").includes(termoProduto) ||
+    (p.categoria ?? "").toLocaleLowerCase("pt-BR").includes(termoProduto)
+  );
   return (
     <>
       <PageHeader title="Produtos e receitas" back="/mais" />
@@ -69,6 +77,16 @@ function Produtos() {
               <span>Exportar CSV</span>
             </Button>
           </div>
+          {produtos.length > 0 && (
+            <div className="mb-3">
+              <Input
+                value={buscaProduto}
+                onChange={(event) => setBuscaProduto(event.target.value)}
+                placeholder="Buscar produto por nome ou categoria"
+                aria-label="Buscar produto por nome ou categoria"
+              />
+            </div>
+          )}
           {produtos.length === 0 ? (
             <Empty>
               <div className="mx-auto max-w-sm space-y-3">
@@ -80,8 +98,17 @@ function Produtos() {
               </div>
             </Empty>
           ) : (
+            produtosFiltrados.length === 0 ? (
+              <Empty>
+                <div className="space-y-2">
+                  <p className="font-medium text-foreground">Nenhum produto encontrado</p>
+                  <p>Tente outro nome ou categoria.</p>
+                  <Button type="button" variant="outline" onClick={() => setBuscaProduto("")}>Limpar busca</Button>
+                </div>
+              </Empty>
+            ) : (
             <div className="space-y-2">
-              {produtos.map((p) => {
+              {produtosFiltrados.map((p) => {
                 const c = custo.get(p.id) ?? 0;
                 const preco = Number(p.preco_venda);
                 const lucro = preco - c;
@@ -119,6 +146,7 @@ function Produtos() {
                 );
               })}
             </div>
+            )
           )}
         </TabsContent>
         <TabsContent value="insumos">
