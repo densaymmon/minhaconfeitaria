@@ -104,6 +104,11 @@ export type PedidoLite = {
   pedido_itens: { quantidade: number; preco_unitario: number; custo_unitario: number }[];
 };
 
+/** Calcula apenas a parte recebida que ainda não está representada no histórico detalhado. */
+export function recebimentoLegadoPendente(recebidoConsolidado: number, pagamentosDetalhados: number) {
+  return Math.max(0, n(recebidoConsolidado) - Math.max(0, n(pagamentosDetalhados)));
+}
+
 /** Consolida recebimentos legados e detalhados sem somá-los em duplicidade. */
 export function calcularRecebimentoPedido(input: {
   venda: number;

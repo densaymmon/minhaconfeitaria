@@ -1,5 +1,5 @@
 import { describe, expect, it } from "vitest";
-import { custoReceita, custoUnitario, margemReal, precoSugerido, ratearVendaETaxas, totaisPedido, calcularRecebimentoPedido, CONFIG_PADRAO } from "./calc";
+import { custoReceita, custoUnitario, margemReal, precoSugerido, ratearVendaETaxas, totaisPedido, calcularRecebimentoPedido, recebimentoLegadoPendente, CONFIG_PADRAO } from "./calc";
 import { toCSV } from "./csv";
 import { parseNum, STATUS, statusLabel } from "./format";
 
@@ -25,6 +25,14 @@ describe("custos", () => {
     expect(margemReal(10, 25)).toBe(150);
     expect(ratearVendaETaxas(25, 100, 90, 4)).toEqual({ venda: 22.5, taxas: 1 });
     expect(ratearVendaETaxas(25, 0, 90, 4)).toEqual({ venda: 0, taxas: 0 });
+  });
+});
+
+describe("recebimentos legados no fluxo de caixa", () => {
+  it("considera apenas a diferença que não está no histórico detalhado", () => {
+    expect(recebimentoLegadoPendente(77, 50)).toBe(27);
+    expect(recebimentoLegadoPendente(50, 77)).toBe(0);
+    expect(recebimentoLegadoPendente(0, 0)).toBe(0);
   });
 });
 

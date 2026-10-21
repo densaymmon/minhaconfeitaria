@@ -5,7 +5,7 @@ import { useEffect, useMemo, useState } from "react";
 import { endOfMonth, format } from "date-fns";
 import { Download } from "lucide-react";
 import { configQ, despesasQ, pedidosQ } from "@/lib/queries";
-import { calcularRecebimentoPedido, ratearVendaETaxas, totaisPedido } from "@/lib/calc";
+import { calcularRecebimentoPedido, recebimentoLegadoPendente, ratearVendaETaxas, totaisPedido } from "@/lib/calc";
 import { medida } from "@/lib/ingredient-cost";
 import { brl, dataBR, hojeISO, mesISO, num } from "@/lib/format";
 import { baixarCSV } from "@/lib/csv";
@@ -347,6 +347,13 @@ function RelatoriosConteudo({ initialSearch, embedded = false }: { initialSearch
     ? pagamentosPedidos.filter((p) => p.data_pagamento >= inicioRecebimentos && p.data_pagamento <= fimRecebimentos)
     : [];
   const totalRecebidoDetalhadoNoPeriodo = recebimentosNoPeriodo.reduce((s, p) => s + Math.max(0, Number(p.valor) || 0), 0);
+  const totalDetalhadoPorPedido = new Map<string, number>();
+  for (const pagamento of pagamentosPedidos) {
+    totalDetalhadoPorPedido.set(
+      pagamento.pedido_id,
+      (totalDetalhadoPorPedido.get(pagamento.pedido_id) ?? 0) + Math.max(0, Number(pagamento.valor) || 0),
+    );
+  }
   // Pedidos antigos podem ter valor pago consolidado, mas nenhum lançamento em pedido_pagamentos.
   // Como não há data individual de recebimento, usa-se uma data já registrada no pedido:
   // prioriza a entrega quando estiver no período; caso contrário, considera a data de cadastro.
@@ -359,10 +366,8 @@ function RelatoriosConteudo({ initialSearch, embedded = false }: { initialSearch
       const cadastroNoPeriodo = dataCadastro >= inicioRecebimentos && dataCadastro <= fimRecebimentos;
       if (!entregaNoPeriodo && !cadastroNoPeriodo) return [];
       const dataReferencia = entregaNoPeriodo ? pedido.data_entrega : dataCadastro;
-      const detalhado = pagamentosPedidos
-        .filter((pagamento) => pagamento.pedido_id === pedido.id)
-        .reduce((soma, pagamento) => soma + Math.max(0, Number(pagamento.valor) || 0), 0);
-      const faltante = Math.max(0, Number(pedido.t.recebido) - detalhado);
+      const detalhado = totalDetalhadoPorPedido.get(pedido.id) ?? 0;
+      const faltante = recebimentoLegadoPendente(Number(pedido.t.recebido), detalhado);
       return faltante > 0.009
         ? [{ id: pedido.id, numero: pedido.numero, data_pagamento: dataReferencia, valor: Math.round(faltante * 100) / 100 }]
         : [];
