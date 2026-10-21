@@ -206,23 +206,23 @@ function Pedidos() {
 
   return (
     <>
-      <PageHeader
-        title="Pedidos"
-        subtitle={`${lista.length} encontrado(s)`}
-        action={
-          <div className="mt-1 flex flex-wrap gap-2">
-            <Button asChild size="sm" variant="outline" className="h-9"><Link to="/pedidos-recorrentes"><Repeat className="size-4" /> Recorrências</Link></Button>
-            <Button size="sm" variant="outline" onClick={exportar} aria-label="Exportar pedidos em CSV" className="h-9">
-              <Download className="size-4" /> <span>Exportar CSV</span>
-            </Button>
-            <Button asChild size="sm" className="h-9">
-              <Link to="/pedidos/$id" params={{ id: "novo" }}>
-                <Plus className="size-4" /> Novo
-              </Link>
-            </Button>
-          </div>
-        }
-      />
+      <div className="mb-4 flex flex-col items-start gap-3">
+        <div className="min-w-0">
+          <h1 className="text-2xl font-semibold">Pedidos</h1>
+          <p className="text-sm text-muted-foreground">{lista.length} encontrado(s)</p>
+        </div>
+        <div className="flex w-full flex-wrap items-center gap-2">
+          <Button asChild size="sm" variant="outline" className="h-10"><Link to="/pedidos-recorrentes"><Repeat className="size-4" /> Recorrências</Link></Button>
+          <Button size="sm" variant="outline" onClick={exportar} aria-label="Exportar pedidos em CSV" className="h-10">
+            <Download className="size-4" /> <span>Exportar CSV</span>
+          </Button>
+          <Button asChild size="sm" className="h-10">
+            <Link to="/pedidos/$id" params={{ id: "novo" }}>
+              <Plus className="size-4" /> Novo
+            </Link>
+          </Button>
+        </div>
+      </div>
       <div className="relative mb-4">
         <Search className="absolute top-3.5 left-3 size-4 text-muted-foreground" />
         <Input placeholder="Buscar por nº, cliente ou produto" aria-label="Buscar por número, cliente ou produto" value={busca} onChange={(e) => setBusca(e.target.value)} className="h-11 bg-card pl-9" />
