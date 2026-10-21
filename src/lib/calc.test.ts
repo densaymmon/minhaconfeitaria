@@ -80,6 +80,24 @@ describe("pedido", () => {
     expect(t.recebido).toBe(120);
     expect(t.saldo).toBe(0);
   });
+  it("mantém o saldo zerado quando o pedido é cancelado, sem apagar o histórico recebido", () => {
+    expect(calcularRecebimentoPedido({
+      venda: 120,
+      status: "cancelado",
+      saldo_quitado: false,
+      valor_entrada: 50,
+      pagamentosDetalhados: 30,
+    })).toEqual({ recebido: 50, saldo: 0 });
+  });
+  it("limita o recebido ao valor da venda quando há pagamentos excedentes", () => {
+    expect(calcularRecebimentoPedido({
+      venda: 120,
+      status: "entregue",
+      saldo_quitado: false,
+      valor_entrada: 50,
+      pagamentosDetalhados: 135,
+    })).toEqual({ recebido: 120, saldo: 0 });
+  });
 });
 
 describe("utilitários", () => {
