@@ -1,7 +1,7 @@
 import * as appQueries from "@/lib/queries";
 import { createFileRoute, Link } from "@tanstack/react-router";
 import { useQueryClient, useSuspenseQuery } from "@tanstack/react-query";
-import { useMemo, useState } from "react";
+import { useEffect, useMemo, useState } from "react";
 import { toast } from "sonner";
 import { Download, Plus, Search, ChevronRight } from "lucide-react";
 import { supabase } from "@/integrations/supabase/client";
@@ -42,6 +42,17 @@ export function ClienteDialog({ cliente, open, onOpenChange }: { cliente?: Clien
     observacoes: cliente?.observacoes ?? "",
   });
   const [loading, setLoading] = useState(false);
+
+  useEffect(() => {
+    if (!open) return;
+    setF({
+      nome: cliente?.nome ?? "",
+      telefone: cliente?.telefone ?? "",
+      endereco: cliente?.endereco ?? "",
+      observacoes: cliente?.observacoes ?? "",
+    });
+  }, [cliente, open]);
+
   async function salvar(e: React.FormEvent) {
     e.preventDefault();
     if (!f.nome.trim()) return void toast.error("Informe o nome.");
@@ -52,16 +63,23 @@ export function ClienteDialog({ cliente, open, onOpenChange }: { cliente?: Clien
       endereco: f.endereco.trim().slice(0, 300) || null,
       observacoes: f.observacoes.trim().slice(0, 1000) || null,
     };
-    const { error } = cliente
-      ? await supabase.from("clientes").update(payload).eq("id", cliente.id)
-      : await supabase.from("clientes").insert(payload);
-    setLoading(false);
-    if (error) return void toast.error(error.message);
-    await qc.invalidateQueries({ queryKey: ["clientes"] });
-    qc.invalidateQueries({ queryKey: ["pedidos"] });
-    toast.success("Cliente salvo!");
-    onOpenChange(false);
-    if (!cliente) setF({ nome: "", telefone: "", endereco: "", observacoes: "" });
+    try {
+      const { error } = cliente
+        ? await supabase.from("clientes").update(payload).eq("id", cliente.id)
+        : await supabase.from("clientes").insert(payload);
+      if (error) {
+        toast.error(`Não foi possível salvar o cliente: ${error.message}`);
+        return;
+      }
+      await qc.invalidateQueries({ queryKey: ["clientes"] });
+      await qc.invalidateQueries({ queryKey: ["pedidos"] });
+      toast.success("Cliente salvo!");
+      onOpenChange(false);
+    } catch (error) {
+      toast.error(`Falha inesperada ao salvar o cliente: ${error instanceof Error ? error.message : "tente novamente."}`);
+    } finally {
+      setLoading(false);
+    }
   }
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
