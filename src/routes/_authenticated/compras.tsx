@@ -1,5 +1,5 @@
 import * as appQueries from "@/lib/queries";
-import { createFileRoute } from "@tanstack/react-router";
+import { createFileRoute, Link } from "@tanstack/react-router";
 import { useQuery, useQueryClient, useSuspenseQuery } from "@tanstack/react-query";
 import { useEffect, useMemo, useRef, useState } from "react";
 import { toast } from "sonner";
@@ -693,7 +693,7 @@ function Compras() {
         ) : erroEstoque ? (
           <p role="alert" className="rounded-lg border p-3 text-sm text-destructive">Não foi possível carregar o estoque: {erroEstoque instanceof Error ? erroEstoque.message : "tente novamente."}</p>
         ) : estoque.length === 0 ? (
-          <Empty>Nenhum insumo cadastrado.</Empty>
+          <Empty>Nenhum insumo cadastrado. <Link to="/produtos" className="font-medium text-primary underline underline-offset-4">Cadastrar insumos</Link></Empty>
         ) : (
           <div className="divide-y rounded-xl border px-3">
             {estoque.map((item) => {
