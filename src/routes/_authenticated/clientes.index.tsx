@@ -118,9 +118,10 @@ function Clientes() {
         action={
           <div className="mt-1 flex gap-2">
             <Button
-              size="icon"
+              size="sm"
+              className="h-9"
               variant="outline"
-              aria-label="Exportar CSV"
+              aria-label="Exportar clientes em CSV"
               onClick={() =>
                 baixarCSV(
                   `clientes-${hojeISO()}`,
@@ -130,6 +131,7 @@ function Clientes() {
               }
             >
               <Download className="size-4" />
+              <span>Exportar</span>
             </Button>
             <Button size="sm" className="h-9" onClick={() => setAberto(true)}>
               <Plus className="size-4" /> Novo
