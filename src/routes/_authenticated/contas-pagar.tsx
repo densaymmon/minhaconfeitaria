@@ -306,8 +306,9 @@ export function ContasPagar({ embedded = false }: { embedded?: boolean }) {
   return (
     <>
       {!embedded && <PageHeader title="Contas a pagar" back="/mais" action={
-        <Button variant="outline" size="icon" aria-label="Exportar contas a pagar CSV" onClick={exportar}>
+        <Button variant="outline" className="h-11" aria-label="Exportar contas a pagar em CSV" onClick={exportar}>
           <Download className="size-4" />
+          <span>Exportar CSV</span>
         </Button>
       } />}
 
