@@ -179,7 +179,7 @@ function Clientes() {
               : "Salve nome e telefone para localizar clientes rapidamente ao criar pedidos."}
           </p>
           <div className="mt-4 flex flex-wrap justify-center gap-2">
-            {busca.trim() && <Button type="button" variant="outline" onClick={() => setBusca("")}>Limpar busca</Button>}
+            
             {!busca.trim() && <Button size="sm" onClick={() => setAberto(true)}><Plus className="size-4" /> Novo cliente</Button>}
           </div>
         </Card>
