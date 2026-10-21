@@ -128,20 +128,29 @@ function RelatoriosConteudo({ initialSearch, embedded = false }: { initialSearch
   // O relatório usa o custo gravado no item do pedido no momento da venda.
   // Alterações posteriores na receita ou nos preços dos insumos não reescrevem
   // o resultado histórico; o custo atual fica restrito às telas de cadastro/custeio.
-  const pedidosCalculados = useMemo(() => pedidos.map((pedido) => {
-    const totais = totaisPedido(pedido, config);
-    const pagamentosDetalhados = pagamentosPedidos
-      .filter((pagamento) => pagamento.pedido_id === pedido.id)
-      .reduce((soma, pagamento) => soma + Math.max(0, Number(pagamento.valor) || 0), 0);
-    const recebimento = calcularRecebimentoPedido({
-      venda: totais.venda,
-      status: pedido.status,
-      saldo_quitado: pedido.saldo_quitado,
-      valor_entrada: totais.recebido,
-      pagamentosDetalhados,
+  const pedidosCalculados = useMemo(() => {
+    // Indexa o histórico uma vez, evitando percorrer todos os pagamentos para
+    // cada pedido quando o relatório reúne muitos pedidos e recebimentos.
+    const pagamentosPorPedido = new Map<string, number>();
+    for (const pagamento of pagamentosPedidos) {
+      pagamentosPorPedido.set(
+        pagamento.pedido_id,
+        (pagamentosPorPedido.get(pagamento.pedido_id) ?? 0) + Math.max(0, Number(pagamento.valor) || 0),
+      );
+    }
+
+    return pedidos.map((pedido) => {
+      const totais = totaisPedido(pedido, config);
+      const recebimento = calcularRecebimentoPedido({
+        venda: totais.venda,
+        status: pedido.status,
+        saldo_quitado: pedido.saldo_quitado,
+        valor_entrada: totais.recebido,
+        pagamentosDetalhados: pagamentosPorPedido.get(pedido.id) ?? 0,
+      });
+      return { ...pedido, t: { ...totais, ...recebimento } };
     });
-    return { ...pedido, t: { ...totais, ...recebimento } };
-  }), [pedidos, config, pagamentosPedidos]);
+  }, [pedidos, config, pagamentosPedidos]);
 
   const listaPeriodo = intervaloValido
     ? pedidosCalculados.filter((p) => {
