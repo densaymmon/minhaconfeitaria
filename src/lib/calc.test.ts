@@ -57,6 +57,24 @@ describe("pedido", () => {
       pagamentosDetalhados: 77,
     })).toEqual({ recebido: 77, saldo: 35 });
   });
+  it("prioriza o histórico detalhado quando ele supera o cadastro legado desatualizado", () => {
+    expect(calcularRecebimentoPedido({
+      venda: 120,
+      status: "em_producao",
+      saldo_quitado: false,
+      valor_entrada: 40,
+      pagamentosDetalhados: 75,
+    })).toEqual({ recebido: 75, saldo: 45 });
+  });
+  it("consolida duas parcelas sem somar novamente o valor legado", () => {
+    expect(calcularRecebimentoPedido({
+      venda: 120,
+      status: "em_producao",
+      saldo_quitado: false,
+      valor_entrada: 80,
+      pagamentosDetalhados: 80,
+    })).toEqual({ recebido: 80, saldo: 40 });
+  });
   it("usa o histórico quando o cadastro legado está zerado", () => {
     expect(calcularRecebimentoPedido({
       venda: 112,
