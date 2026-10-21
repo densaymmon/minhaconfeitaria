@@ -16,7 +16,7 @@ export function PageHeader({
   action?: ReactNode;
 }) {
   return (
-    <div className="mb-4 flex items-start gap-3">
+    <div className="mb-4 flex flex-wrap items-start gap-3">
       {back && (
         <Link
           to={back}
@@ -30,7 +30,7 @@ export function PageHeader({
         <h1 className="truncate text-2xl font-semibold">{title}</h1>
         {subtitle && <p className="text-sm text-muted-foreground">{subtitle}</p>}
       </div>
-      {action}
+      {action && <div className="ml-auto max-w-full">{action}</div>}
     </div>
   );
 }
