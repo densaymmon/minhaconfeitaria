@@ -11,6 +11,8 @@ import { baixarCSV } from "@/lib/csv";
 import { Card, Empty, PageHeader, StatusBadge } from "@/components/app/ui";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
+import { ClienteDialog } from "./clientes.index";
+import type { Cliente } from "@/lib/queries";
 import { cn } from "@/lib/utils";
 
 const STATUS_ATIVOS = ["recebido", "confirmado", "em_producao", "pronto"];
@@ -95,6 +97,8 @@ function Pedidos() {
   const search = Route.useSearch();
   const navigate = useNavigate();
   const [busca, setBusca] = useState("");
+  const [clienteEmEdicao, setClienteEmEdicao] = useState<Cliente | undefined>(undefined);
+  const [dialogClienteAberto, setDialogClienteAberto] = useState(false);
   const [clienteFiltro, setClienteFiltro] = useState("");
   const [filtroRecorrencia, setFiltroRecorrencia] = useState<"todos" | "recorrentes" | "nao_recorrentes">("todos");
   const clientesDisponiveis = useMemo(() => {
@@ -389,7 +393,7 @@ function Pedidos() {
                 className="cursor-pointer p-3.5 transition-shadow hover:shadow-md focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring"
               >
                   <div className="flex items-center justify-between gap-2">
-                    <div className="min-w-0 font-semibold">#{p.numero} · {p.clientes?.nome ?? "Sem cliente"}</div>
+                    <div className="min-w-0 font-semibold">#{p.numero} · {p.clientes?.nome ? <button type="button" className="rounded-sm text-left underline-offset-2 hover:underline focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring" onClick={(e) => { e.stopPropagation(); const cliente = clientes.find((c) => c.id === p.cliente_id); if (cliente) { setClienteEmEdicao(cliente); setDialogClienteAberto(true); } else { toast.error("Não foi possível localizar o cadastro deste cliente."); } }}>{p.clientes.nome}</button> : "Sem cliente"}</div>
                     <div className="flex shrink-0 items-center gap-1.5">
                       {infoRecorrencia && <span className="inline-flex items-center gap-1 rounded-full border border-primary/40 bg-primary/10 px-2 py-1 text-xs font-bold text-primary"><Repeat className="size-3" /> Recorrente</span>}
                       {p.t.venda > 0 && p.t.saldo <= 0 && <span className="rounded-full bg-success/15 px-2 py-0.5 text-xs font-semibold text-success">Pago</span>}
@@ -434,7 +438,13 @@ function Pedidos() {
                     <Button type="button" size="sm" variant="outline" onClick={(e) => {
                       e.stopPropagation();
                       if (!telefoneWhatsApp) {
-                        toast.error(p.clientes?.telefone ? "O telefone cadastrado não parece válido para o WhatsApp." : "Cadastre o telefone do cliente para abrir o WhatsApp.");
+                        const cliente = clientes.find((c) => c.id === p.cliente_id);
+                        if (cliente) {
+                          setClienteEmEdicao(cliente);
+                          setDialogClienteAberto(true);
+                        } else {
+                          toast.error("Este pedido não tem um cliente cadastrado para editar.");
+                        }
                         return;
                       }
                       const mensagem = podeEmitirRecibo
@@ -449,6 +459,17 @@ function Pedidos() {
             );
           })}
         </div>
+      )}
+      {clienteEmEdicao && (
+        <ClienteDialog
+          key={clienteEmEdicao.id}
+          cliente={clienteEmEdicao}
+          open={dialogClienteAberto}
+          onOpenChange={(aberto) => {
+            setDialogClienteAberto(aberto);
+            if (!aberto) setClienteEmEdicao(undefined);
+          }}
+        />
       )}
     </>
   );
