@@ -452,7 +452,7 @@ function Pedidos() {
                         : `Olá ${p.clientes?.nome ?? ""}! Estou entrando em contato sobre o pedido #${p.numero} da O Casal do Bolo.`;
                       window.open(`https://wa.me/${telefoneWhatsApp}?text=${encodeURIComponent(mensagem)}`, "_blank", "noopener,noreferrer");
                     }}>
-                      <MessageCircle className="size-4" /> {podeEmitirRecibo ? "Enviar recibo no WhatsApp" : "WhatsApp do cliente"}
+                      <MessageCircle className="size-4" /> Enviar recibo
                     </Button>
                   </div>
               </Card>
