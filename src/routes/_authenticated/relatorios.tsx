@@ -1,5 +1,5 @@
 import * as appQueries from "@/lib/queries";
-import { createFileRoute, Link } from "@tanstack/react-router";
+import { createFileRoute, Link, useNavigate } from "@tanstack/react-router";
 import { useSuspenseQuery } from "@tanstack/react-query";
 import { useEffect, useMemo, useState } from "react";
 import { endOfMonth, format } from "date-fns";
@@ -64,10 +64,28 @@ export const Route = createFileRoute("/_authenticated/relatorios")({
 });
 
 function Relatorios() {
-  const { inicio, fim, secao, dataBase } = Route.useSearch();
+  const initialSearch = Route.useSearch();
+  return <RelatoriosConteudo initialSearch={initialSearch} />;
+}
+
+type RelatorioSearch = {
+  inicio: string;
+  fim: string;
+  secao: string;
+  dataBase: string;
+};
+
+export function RelatoriosEmbedded() {
+  return <RelatoriosConteudo initialSearch={{ inicio: mesISO() + "-01", fim: hojeISO(), secao: "visao-geral", dataBase: "entrega" as const }} embedded />;
+}
+
+function RelatoriosConteudo({ initialSearch, embedded = false }: { initialSearch: RelatorioSearch; embedded?: boolean }) {
+  const [search, setSearch] = useState<RelatorioSearch>(initialSearch);
+  const { inicio, fim, secao, dataBase } = search;
+  const navigate = useNavigate();
+  const atualizarBusca = (patch: Partial<RelatorioSearch>) => setSearch((atual) => ({ ...atual, ...patch }));
   const [inicioRecebimentos, setInicioRecebimentos] = useState(inicio);
   const [fimRecebimentos, setFimRecebimentos] = useState(fim);
-  const navigate = Route.useNavigate();
   const categoriaRelatorio = secao;
   useEffect(() => {
     setInicioRecebimentos(inicio);
@@ -529,17 +547,24 @@ function Relatorios() {
 
   return (
     <>
-      <PageHeader title="Relatórios" back="/mais" action={
+      {embedded ? (
+        <div className="mb-5 flex items-center justify-between gap-3">
+          <h2 className="text-lg font-semibold">Relatório financeiro</h2>
+          <Button size="icon" variant="outline" aria-label="Exportar relatório CSV" onClick={exportar}>
+            <Download className="size-4" />
+          </Button>
+        </div>
+      ) : <PageHeader title="Relatórios" back="/mais" action={
         <Button size="icon" variant="outline" aria-label="Exportar relatório CSV" onClick={exportar}>
           <Download className="size-4" />
         </Button>
-      } />
+      } />}
       <div className="mb-5 grid grid-cols-2 gap-3">
         <Field label="Data inicial">
-          <Input type="date" value={inicio} max={fim} onChange={(e) => navigate({ search: (s) => ({ ...s, inicio: e.target.value }) })} className="h-11 bg-card" />
+          <Input type="date" value={inicio} max={fim} onChange={(e) => atualizarBusca({ inicio: e.target.value })} className="h-11 bg-card" />
         </Field>
         <Field label="Data final">
-          <Input type="date" value={fim} min={inicio} max={hojeISO()} onChange={(e) => navigate({ search: (s) => ({ ...s, fim: e.target.value }) })} className="h-11 bg-card" />
+          <Input type="date" value={fim} min={inicio} max={hojeISO()} onChange={(e) => atualizarBusca({ fim: e.target.value })} className="h-11 bg-card" />
         </Field>
       </div>
       {!intervaloValido && <p className="mb-4 text-destructive">A data final deve ser igual ou posterior à data inicial.</p>}
@@ -553,7 +578,7 @@ function Relatorios() {
           ["caixa", "Fluxo de caixa"],
           ["despesas", "Despesas e custos"],
         ].map(([valor, rotulo]) => (
-          <Button key={valor} type="button" size="sm" variant={categoriaRelatorio === valor ? "default" : "outline"} aria-pressed={categoriaRelatorio === valor} onClick={() => navigate({ search: (s) => ({ ...s, secao: valor ?? "visao-geral" }) })}>
+          <Button key={valor} type="button" size="sm" variant={categoriaRelatorio === valor ? "default" : "outline"} aria-pressed={categoriaRelatorio === valor} onClick={() => atualizarBusca({ secao: valor ?? "visao-geral" })}>
             {rotulo}
           </Button>
         ))}
@@ -662,7 +687,7 @@ function Relatorios() {
               setResumoAtivo(null);
               if (destino === "compras") navigate({ to: "/compras", search: { secao: "compras" } });
               else if (destino === "contas") navigate({ to: "/contas-pagar" });
-              else if (destino === "vendas" || destino === "lucro") navigate({ search: (s) => ({ ...s, secao: "vendas" }) });
+              else if (destino === "vendas" || destino === "lucro") atualizarBusca({ secao: "vendas" });
               else navigate({ to: "/pedidos", search: { filtro: "a_receber", dataInicial: undefined, dataFinal: undefined } });
             }}>Ver mais detalhes</Button>
           </DialogFooter>
