@@ -9,7 +9,7 @@ import { clientesQ, type Cliente } from "@/lib/queries";
 import { usePedidosCalc } from "@/lib/hooks";
 import { brl, hojeISO } from "@/lib/format";
 import { baixarCSV } from "@/lib/csv";
-import { Card, Empty, Field, PageHeader } from "@/components/app/ui";
+import { Card, Field, PageHeader } from "@/components/app/ui";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Textarea } from "@/components/ui/textarea";
@@ -144,7 +144,21 @@ function Clientes() {
         <Input placeholder="Buscar por nome ou telefone" value={busca} onChange={(e) => setBusca(e.target.value)} className="h-11 bg-card pl-9" />
       </div>
       {lista.length === 0 ? (
-        <Empty>Nenhum cliente ainda.</Empty>
+        <Card className="border-dashed p-6 text-center sm:p-8">
+          <div className="mx-auto mb-3 grid size-12 place-items-center rounded-full bg-muted text-muted-foreground">
+            <Search className="size-5" />
+          </div>
+          <h2 className="font-semibold">{busca.trim() ? "Nenhum cliente encontrado" : "Cadastre seu primeiro cliente"}</h2>
+          <p className="mx-auto mt-1 max-w-md text-sm text-muted-foreground">
+            {busca.trim()
+              ? "Confira se o nome ou telefone está correto, ou limpe a busca para ver todos os clientes."
+              : "Salve nome e telefone para localizar clientes rapidamente ao criar pedidos."}
+          </p>
+          <div className="mt-4 flex flex-wrap justify-center gap-2">
+            {busca.trim() && <Button type="button" variant="outline" onClick={() => setBusca("")}>Limpar busca</Button>}
+            {!busca.trim() && <Button size="sm" onClick={() => setAberto(true)}><Plus className="size-4" /> Novo cliente</Button>}
+          </div>
+        </Card>
       ) : (
         <div className="space-y-2">
           {lista.map((c) => (
