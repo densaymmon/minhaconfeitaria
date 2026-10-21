@@ -13,6 +13,7 @@ import { Input } from "@/components/ui/input";
 import { Textarea } from "@/components/ui/textarea";
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/ui/dialog";
 import { cn } from "@/lib/utils";
+import { baixarCSV } from "@/lib/csv";
 
 export const Route = createFileRoute("/_authenticated/producao")({
   loader: async ({ context }) => {
@@ -255,6 +256,38 @@ function Producao() {
     }
   }
 
+  function exportarDemanda() {
+    const consulta = busca.trim().toLocaleLowerCase("pt-BR");
+    const produtosFiltrados = resumoProdutos
+      .filter(([nome]) => !consulta || nome.toLocaleLowerCase("pt-BR").includes(consulta))
+      .map(([nome, resumo]) => ({
+        nome,
+        pedidos: resumo.pedidos.size,
+        quantidade: Number(resumo.quantidade) || 0,
+        produzida: Number(resumo.produzida) || 0,
+      }))
+      .map((produto) => ({ ...produto, pendente: Math.max(0, produto.quantidade - produto.produzida) }))
+      .sort((a, b) => b.pendente - a.pendente || a.nome.localeCompare(b.nome, "pt-BR"));
+
+    if (produtosFiltrados.length === 0) {
+      toast.error("Não há demanda de produção para exportar com os filtros atuais.");
+      return;
+    }
+
+    baixarCSV(
+      `demanda-producao-${hoje}`,
+      ["Produto", "Pedidos ativos", "Quantidade total", "Quantidade produzida", "Quantidade pendente"],
+      produtosFiltrados.map((produto) => [
+        produto.nome,
+        produto.pedidos,
+        num(produto.quantidade),
+        num(produto.produzida),
+        num(produto.pendente),
+      ]),
+    );
+    toast.success("Demanda de produção exportada em CSV.");
+  }
+
   const filtros: { value: Filtro; label: string; count: number }[] = [
     { value: "fila", label: "Fila ativa", count: contagens.fila },
     { value: "a_produzir", label: "A produzir", count: contagens.aProduzir },
@@ -409,9 +442,14 @@ function Producao() {
 
       {visualizacao === "produtos" ? (
         <div className="space-y-2">
-          <div className="mb-3 flex items-center justify-between gap-2">
-            <h2 className="font-semibold">Demanda por produto</h2>
-            <span className="text-xs text-muted-foreground">Pedidos ativos no período</span>
+          <div className="mb-3 flex flex-wrap items-center justify-between gap-2">
+            <div>
+              <h2 className="font-semibold">Demanda por produto</h2>
+              <span className="text-xs text-muted-foreground">Pedidos ativos no período</span>
+            </div>
+            <Button type="button" variant="outline" size="sm" onClick={exportarDemanda} aria-label="Exportar demanda de produção em CSV">
+              <Download className="size-4" /> Exportar lista
+            </Button>
           </div>
           {resumoProdutos.filter(([nome]) => !busca.trim() || nome.toLocaleLowerCase("pt-BR").includes(busca.trim().toLocaleLowerCase("pt-BR"))).length === 0 ? (
             <Card className="border-dashed text-center">
