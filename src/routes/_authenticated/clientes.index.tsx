@@ -125,8 +125,14 @@ function Clientes() {
     return m;
   }, [pedidos]);
 
-  const q = busca.toLowerCase();
-  const lista = clientes.filter((c) => !q || c.nome.toLowerCase().includes(q) || (c.telefone ?? "").includes(q));
+  const q = busca.trim().toLocaleLowerCase("pt-BR");
+  const qTelefone = q.replace(/\D/g, "");
+  const lista = clientes.filter((c) =>
+    !q ||
+    c.nome.toLocaleLowerCase("pt-BR").includes(q) ||
+    (c.telefone ?? "").toLowerCase().includes(q) ||
+    (qTelefone.length > 0 && (c.telefone ?? "").replace(/\D/g, "").includes(qTelefone))
+  );
 
   return (
     <>
