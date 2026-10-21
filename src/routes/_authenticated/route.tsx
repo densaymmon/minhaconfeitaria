@@ -1,6 +1,6 @@
 import { createFileRoute, Link, Outlet, redirect, useNavigate } from "@tanstack/react-router";
 import { Suspense, useEffect, useState } from "react";
-import { BookOpen, CakeSlice, ChartNoAxesCombined, ChefHat, ChevronRight, ClipboardList, LayoutDashboard, LogOut, Menu, Package, Settings, ShoppingCart, Users, X, Wallet } from "lucide-react";
+import { BookOpen, CakeSlice, ChartNoAxesCombined, ChefHat, ChevronRight, ClipboardList, LayoutDashboard, LogOut, Menu, Package, Settings, ShoppingCart, Users, Wallet, X } from "lucide-react";
 import { useQueryClient } from "@tanstack/react-query";
 import { supabase } from "@/integrations/supabase/client";
 
@@ -19,7 +19,6 @@ const nav = [
   { to: "/pedidos", label: "Pedidos", icon: ClipboardList },
   { to: "/producao", label: "Produção", icon: ChefHat },
   { to: "/clientes", label: "Clientes", icon: Users },
-  { to: "/mais", label: "Mais", icon: Menu },
 ] as const;
 
 const maisLinks = [
@@ -58,104 +57,124 @@ function Layout() {
     await navigate({ to: "/auth", replace: true });
   }
 
+  function linkClass(active: boolean) {
+    return `flex items-center gap-3 rounded-xl px-3 py-2.5 text-sm font-medium transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring ${active ? "bg-primary/10 text-primary" : "text-muted-foreground hover:bg-muted hover:text-foreground"}`;
+  }
+
+  function MenuLinks({ close }: { close?: () => void }) {
+    return (
+      <>
+        <div className="space-y-1">
+          {nav.map(({ to, label, icon: Icon }) => (
+            <Link key={to} to={to} onClick={close} className={linkClass(false)} activeProps={{ className: linkClass(true) }}>
+              <Icon className="size-5 shrink-0" />
+              <span>{label}</span>
+            </Link>
+          ))}
+        </div>
+        <div className="mt-6">
+          <p className="mb-2 px-3 text-xs font-semibold uppercase tracking-wider text-muted-foreground">Gestão</p>
+          <div className="space-y-1">
+            {maisLinks.map(({ to, label, icon: Icon }) => (
+              <Link key={to} to={to} onClick={close} className={linkClass(false)} activeProps={{ className: linkClass(true) }}>
+                <Icon className="size-5 shrink-0" />
+                <span>{label}</span>
+              </Link>
+            ))}
+          </div>
+        </div>
+        <div className="mt-6">
+          <p className="mb-2 px-3 text-xs font-semibold uppercase tracking-wider text-muted-foreground">Compras e estoque</p>
+          <div className="space-y-1">
+            {comprasLinks.map(({ secao, label, icon: Icon }) => (
+              <Link key={secao} to="/compras" search={{ secao }} onClick={close} className={linkClass(false)}>
+                <Icon className="size-5 shrink-0" />
+                <span>{label}</span>
+              </Link>
+            ))}
+          </div>
+        </div>
+      </>
+    );
+  }
+
   return (
     <div className="min-h-screen">
-      <main className="mx-auto max-w-2xl px-4 pt-5 pb-safe">
-        <Suspense fallback={<div className="py-20 text-center text-sm text-muted-foreground">Carregando...</div>}>
-          <Outlet />
-        </Suspense>
-      </main>
-      <nav className="fixed inset-x-0 bottom-0 z-40 border-t bg-card/95 backdrop-blur" style={{ paddingBottom: "env(safe-area-inset-bottom)" }}>
-        <div className="mx-auto grid max-w-2xl grid-cols-5">
-          {nav.map(({ to, label, icon: Icon }) => (
-            to === "/mais" ? (
-              <button
-                key={to}
-                type="button"
-                onClick={() => setMaisAberto(true)}
-                aria-label="Abrir menu Mais"
-                aria-expanded={maisAberto}
-                className={`flex flex-col items-center gap-0.5 py-2.5 text-[11px] font-medium ${maisAberto ? "text-primary" : "text-muted-foreground"}`}
-              >
-                <Icon className="size-5" />
-                {label}
-              </button>
-            ) : (
-              <Link
-                key={to}
-                to={to}
-                className="flex flex-col items-center gap-0.5 py-2.5 text-[11px] font-medium text-muted-foreground"
-                activeProps={{ className: "text-primary" }}
-              >
+      <aside className="fixed inset-y-0 left-0 z-40 hidden w-64 flex-col border-r bg-card/95 px-4 py-5 backdrop-blur lg:flex">
+        <Link to="/painel" className="mb-8 flex items-center gap-3 rounded-xl px-2 py-2 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring">
+          <span className="grid size-10 shrink-0 place-items-center rounded-xl bg-primary text-primary-foreground shadow-soft">
+            <CakeSlice className="size-5" />
+          </span>
+          <span className="min-w-0">
+            <span className="block font-display text-lg font-semibold leading-tight text-foreground">Doce Gestão</span>
+            <span className="block text-xs text-muted-foreground">Gestão da confeitaria</span>
+          </span>
+        </Link>
+        <nav aria-label="Navegação principal" className="min-h-0 flex-1 overflow-y-auto">
+          <MenuLinks />
+        </nav>
+        <div className="mt-4 border-t pt-4">
+          <p className="mb-3 truncate px-3 text-xs text-muted-foreground" title={user.email ?? undefined}>{user.email}</p>
+          <button type="button" onClick={sair} className="flex min-h-11 w-full items-center gap-3 rounded-xl px-3 text-sm font-medium text-muted-foreground transition-colors hover:bg-muted hover:text-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring">
+            <LogOut className="size-5" />
+            Sair da conta
+          </button>
+        </div>
+      </aside>
+
+      <div className="min-h-screen lg:pl-64">
+        <header className="sticky top-0 z-30 flex items-center justify-between border-b bg-background/90 px-4 py-3 backdrop-blur lg:hidden">
+          <Link to="/painel" className="flex items-center gap-2 rounded-lg focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring">
+            <span className="grid size-9 place-items-center rounded-lg bg-primary text-primary-foreground">
+              <CakeSlice className="size-5" />
+            </span>
+            <span className="font-display text-lg font-semibold">Doce Gestão</span>
+          </Link>
+          <button type="button" onClick={() => setMaisAberto(true)} aria-label="Abrir menu Mais" aria-expanded={maisAberto} className="grid size-10 place-items-center rounded-xl border bg-card text-muted-foreground transition-colors hover:bg-muted focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring">
+            <Menu className="size-5" />
+          </button>
+        </header>
+
+        <main className="mx-auto w-full max-w-7xl px-4 pb-safe pt-4 sm:px-6 sm:pt-6 lg:px-8 lg:pb-8 lg:pt-8">
+          <Suspense fallback={<div className="py-20 text-center text-sm text-muted-foreground" role="status">Carregando...</div>}>
+            <Outlet />
+          </Suspense>
+        </main>
+
+        <nav aria-label="Navegação inferior" className="fixed inset-x-0 bottom-0 z-40 border-t bg-card/95 backdrop-blur lg:hidden" style={{ paddingBottom: "env(safe-area-inset-bottom)" }}>
+          <div className="mx-auto grid max-w-2xl grid-cols-5">
+            {nav.map(({ to, label, icon: Icon }) => (
+              <Link key={to} to={to} className="flex min-h-14 flex-col items-center justify-center gap-0.5 px-1 py-2 text-[11px] font-medium text-muted-foreground transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring" activeProps={{ className: "flex min-h-14 flex-col items-center justify-center gap-0.5 px-1 py-2 text-[11px] font-semibold text-primary focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring" }}>
                 <Icon className="size-5" />
                 {label}
               </Link>
-            )
-          ))}
-        </div>
-      </nav>
+            ))}
+            <button type="button" onClick={() => setMaisAberto(true)} aria-label="Abrir menu Mais" aria-expanded={maisAberto} className={`flex min-h-14 flex-col items-center justify-center gap-0.5 px-1 py-2 text-[11px] font-medium focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring ${maisAberto ? "text-primary" : "text-muted-foreground"}`}>
+              <Menu className="size-5" />
+              Mais
+            </button>
+          </div>
+        </nav>
+      </div>
 
       {maisAberto && (
-        <div className="fixed inset-0 z-50">
-          <button
-            type="button"
-            aria-label="Fechar menu Mais"
-            onClick={() => setMaisAberto(false)}
-            className="absolute inset-0 h-full w-full bg-black/40"
-          />
-          <aside
-            role="dialog"
-            aria-modal="true"
-            aria-label="Menu Mais"
-            className="absolute inset-y-0 left-0 flex w-[min(88vw,360px)] flex-col overflow-y-auto bg-background px-5 pb-safe shadow-2xl animate-in slide-in-from-left duration-200"
-          >
+        <div className="fixed inset-0 z-50 lg:hidden">
+          <button type="button" aria-label="Fechar menu Mais" onClick={() => setMaisAberto(false)} className="absolute inset-0 h-full w-full bg-black/40" />
+          <aside role="dialog" aria-modal="true" aria-label="Menu Mais" className="absolute inset-y-0 right-0 flex w-[min(88vw,360px)] flex-col overflow-y-auto bg-background px-5 pb-safe shadow-2xl animate-in slide-in-from-right duration-200">
             <div className="flex items-center justify-between border-b py-5">
-              <h2 className="text-xl font-semibold">Mais</h2>
-              <button
-                type="button"
-                onClick={() => setMaisAberto(false)}
-                aria-label="Fechar menu"
-                className="rounded-md p-2 text-muted-foreground hover:bg-muted"
-              >
+              <div className="flex items-center gap-2">
+                <CakeSlice className="size-6 text-primary" />
+                <h2 className="font-display text-xl font-semibold">Mais opções</h2>
+              </div>
+              <button type="button" onClick={() => setMaisAberto(false)} aria-label="Fechar menu" className="grid size-10 place-items-center rounded-xl text-muted-foreground hover:bg-muted focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring">
                 <X className="size-5" />
               </button>
             </div>
-
-            <div className="flex items-center gap-3 border-b py-5">
-              <CakeSlice className="size-8 shrink-0 text-primary" />
-              <div className="min-w-0">
-                <h3 className="font-semibold">Doce Gestão</h3>
-                <p className="break-all text-sm text-muted-foreground">{user.email}</p>
-              </div>
-            </div>
-
-            <div className="divide-y">
-              {maisLinks.map(({ to, label, icon: Icon }) => (
-                <Link key={to} to={to} onClick={() => setMaisAberto(false)} className="flex items-center gap-3 py-4 font-medium">
-                  <Icon className="size-5 shrink-0 text-primary" />
-                  <span className="flex-1">{label}</span>
-                  <ChevronRight className="size-4 text-muted-foreground" />
-                </Link>
-              ))}
-            </div>
-
-            <div className="mt-3 border-t pt-3">
-              <h3 className="mb-1 text-sm font-semibold text-muted-foreground">Compras e estoque</h3>
-              <div className="divide-y">
-                {comprasLinks.map(({ secao, label, icon: Icon, description }) => (
-                  <Link key={secao} to="/compras" search={{ secao }} onClick={() => setMaisAberto(false)} className="flex items-center gap-3 py-3">
-                    <Icon className="size-5 shrink-0 text-primary" />
-                    <span className="flex-1">
-                      <span className="block font-medium">{label}</span>
-                      <span className="mt-0.5 block text-sm text-muted-foreground">{description}</span>
-                    </span>
-                    <ChevronRight className="size-4 shrink-0 text-muted-foreground" />
-                  </Link>
-                ))}
-              </div>
-            </div>
-
-            <button type="button" onClick={sair} className="mt-6 mb-5 flex h-11 w-full items-center justify-center gap-2 rounded-md border text-sm font-medium hover:bg-muted">
+            <p className="break-all border-b py-4 text-sm text-muted-foreground">{user.email}</p>
+            <nav aria-label="Mais opções" className="flex-1 py-3">
+              <MenuLinks close={() => setMaisAberto(false)} />
+            </nav>
+            <button type="button" onClick={sair} className="mb-5 flex min-h-11 w-full items-center justify-center gap-2 rounded-xl border text-sm font-medium hover:bg-muted focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring">
               <LogOut className="size-4" />
               Sair da conta
             </button>
