@@ -138,7 +138,7 @@ function Compras() {
   const { data: compras } = useSuspenseQuery(appQueries.comprasQ);
   const { data: itens } = useSuspenseQuery(appQueries.compraItensQ);
   const { data: contasPagar } = useSuspenseQuery(appQueries.contasPagarQ);
-  const { data: estoque = [], isLoading: carregandoEstoque, error: erroEstoque } = useQuery({
+  const { data: estoque = [], isLoading: carregandoEstoque, error: erroEstoque, refetch: recarregarEstoque } = useQuery({
     queryKey: ["estoque"],
     queryFn: async () => {
       const { data, error } = await supabase.rpc("saldo_estoque");
@@ -691,7 +691,7 @@ function Compras() {
         {carregandoEstoque ? (
           <p className="py-3 text-sm text-muted-foreground">Carregando saldo...</p>
         ) : erroEstoque ? (
-          <p role="alert" className="rounded-lg border p-3 text-sm text-destructive">Não foi possível carregar o estoque: {erroEstoque instanceof Error ? erroEstoque.message : "tente novamente."}</p>
+          <div role="alert" className="rounded-lg border p-3 text-sm text-destructive"><p>Não foi possível carregar o estoque: {erroEstoque instanceof Error ? erroEstoque.message : "tente novamente."}</p><Button type="button" variant="outline" size="sm" className="mt-3" onClick={() => void recarregarEstoque()}>Tentar novamente</Button></div>
         ) : estoque.length === 0 ? (
           <Empty>Nenhum insumo cadastrado. <Link to="/produtos" className="font-medium text-primary underline underline-offset-4">Cadastrar insumos</Link></Empty>
         ) : (
