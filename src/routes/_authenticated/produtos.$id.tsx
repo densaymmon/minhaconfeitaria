@@ -160,7 +160,7 @@ function ProdutoForm() {
                     const id = e.target.value;
                     setItens((s) => s.map((x, j) => j === i ? { ...x, insumo_id: id, unidade_receita: mapIns.get(id)?.unidade_embalagem ?? mapIns.get(id)?.unidade ?? "un" } : x));
                   }}>{insumos.filter((x) => x.ativo !== false || x.id === it.insumo_id).map((x) => <option key={x.id} value={x.id}>{x.nome}{x.ativo === false ? " (inativo — histórico)" : ""}</option>)}</NativeSelect>
-                  <Button size="icon" variant="ghost" className="h-11 w-11 shrink-0" onClick={() => setItens((s) => s.filter((_, j) => j !== i))} aria-label="Remover"><Trash2 className="size-4 text-destructive" /></Button>
+                  <Button size="icon" variant="ghost" className="h-11 w-11 shrink-0" onClick={() => setItens((s) => s.filter((_, j) => j !== i))} aria-label={`Remover ingrediente ${ins?.nome ?? ""}`}><Trash2 className="size-4 text-destructive" /></Button>
                 </div>
                 <Field label="Quantidade utilizada na receita">
                   <Input inputMode="decimal" value={it.quantidade} onChange={(e) => setItens((s) => s.map((x,j) => j === i ? { ...x, quantidade: e.target.value } : x))} className="h-11" />
