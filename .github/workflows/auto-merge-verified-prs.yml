@@ -1,0 +1,59 @@
+name: Auto-merge verified pull requests
+
+on:
+  workflow_run:
+    workflows:
+      - Quality checks
+      - Teste isolado de contas a pagar
+    types: [completed]
+
+permissions:
+  contents: write
+  pull-requests: write
+  checks: read
+
+concurrency:
+  group: auto-merge-${{ github.event.workflow_run.head_branch }}
+  cancel-in-progress: false
+
+jobs:
+  merge-when-green:
+    if: >-
+      github.event.workflow_run.conclusion == 'success' &&
+      github.event.workflow_run.head_repository.full_name == github.repository &&
+      github.event.workflow_run.head_branch != 'main'
+    runs-on: ubuntu-latest
+    steps:
+      - name: Locate the open, non-draft PR for this branch
+        id: pr
+        env:
+          GH_TOKEN: ${{ github.token }}
+          HEAD_BRANCH: ${{ github.event.workflow_run.head_branch }}
+        run: |
+          set -euo pipefail
+          prs="$(gh pr list --repo "$GITHUB_REPOSITORY" --state open --base main --head "$HEAD_BRANCH" --json number,isDraft,headRefName,baseRefName)"
+          number="$(jq -r --arg branch "$HEAD_BRANCH" '[.[] | select(.isDraft == false and .baseRefName == "main" and .headRefName == $branch)] | if length == 1 then .[0].number else empty end' <<< "$prs")"
+          if [ -z "$number" ]; then
+            echo "No unique eligible non-draft PR found; leaving everything unchanged."
+            exit 0
+          fi
+          echo "number=$number" >> "$GITHUB_OUTPUT"
+
+      - name: Wait for every PR check and stop on failures
+        if: steps.pr.outputs.number != ''
+        env:
+          GH_TOKEN: ${{ github.token }}
+          PR_NUMBER: ${{ steps.pr.outputs.number }}
+        run: gh pr checks "$PR_NUMBER" --repo "$GITHUB_REPOSITORY" --watch --fail-fast
+
+      - name: Recheck PR state and merge only when it is still eligible
+        if: steps.pr.outputs.number != ''
+        env:
+          GH_TOKEN: ${{ github.token }}
+          PR_NUMBER: ${{ steps.pr.outputs.number }}
+          HEAD_BRANCH: ${{ github.event.workflow_run.head_branch }}
+        run: |
+          set -euo pipefail
+          pr="$(gh pr view "$PR_NUMBER" --repo "$GITHUB_REPOSITORY" --json state,isDraft,baseRefName,headRefName,mergeable)"
+          jq -e --arg branch "$HEAD_BRANCH" '.state == "OPEN" and .isDraft == false and .baseRefName == "main" and .headRefName == $branch and .mergeable != "CONFLICTING"' <<< "$pr" >/dev/null
+          gh pr merge "$PR_NUMBER" --repo "$GITHUB_REPOSITORY" --squash
