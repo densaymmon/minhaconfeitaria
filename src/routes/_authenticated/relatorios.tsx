@@ -76,7 +76,7 @@ type RelatorioSearch = {
 };
 
 export function RelatoriosEmbedded() {
-  return <RelatoriosConteudo initialSearch={{ inicio: mesISO() + "-01", fim: hojeISO(), secao: "visao-geral", dataBase: "entrega" }} embedded />;
+  return <RelatoriosConteudo initialSearch={{ inicio: mesISO() + "-01", fim: hojeISO(), secao: "visao-geral", dataBase: "entrega" as const }} embedded />;
 }
 
 function RelatoriosConteudo({ initialSearch, embedded = false }: { initialSearch: RelatorioSearch; embedded?: boolean }) {
