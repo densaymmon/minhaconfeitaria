@@ -9,6 +9,7 @@ import { PageHeader, Stat, Empty } from "@/components/app/ui";
 import { Button } from "@/components/ui/button";
 import { Despesas } from "./despesas";
 import { ContasPagar } from "./contas-pagar";
+import { RelatoriosEmbedded } from "./relatorios";
 
 export const Route = createFileRoute("/_authenticated/financeiro")({
   loader: async ({ context }) => {
@@ -76,11 +77,7 @@ function Financeiro() {
       </div>
 
       {aba === "relatorio" ? (
-        <section className="space-y-3 rounded-xl border p-4">
-          <h2 className="text-lg font-semibold">Relatório financeiro</h2>
-          <p className="text-sm text-muted-foreground">Acesse vendas, custos de insumos, despesas, contas a pagar, fluxo de caixa e valores a receber, mantendo os cálculos e filtros completos do relatório existente.</p>
-          <Button asChild className="h-11 w-full"><Link to="/relatorios" search={{ inicio: `${mesISO()}-01`, fim: hojeISO(), secao: "visao-geral", dataBase: "entrega" }}>Abrir relatório financeiro completo</Link></Button>
-        </section>
+        <RelatoriosEmbedded />
       ) : aba === "resumo" ? (
         <>
           <div className="mb-7 grid grid-cols-1 gap-3 sm:grid-cols-2">
