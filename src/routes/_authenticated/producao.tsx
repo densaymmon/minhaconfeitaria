@@ -267,7 +267,7 @@ function Producao() {
 
   return (
     <>
-      <PageHeader title="Produção" subtitle={`${contagens.fila} pedido(s) na fila ativa${contagens.atrasados ? ` · ${contagens.atrasados} atrasado(s)` : ""}`} />
+      <PageHeader title="Produção" subtitle={`${contagens.fila} pedido(s) na fila ativa${contagens.atrasados ? ` · ${contagens.atrasados} atrasado(s)` : ""}`} action={<Button asChild size="sm"><Link to="/pedidos"><Plus className="size-4" /> Novo pedido</Link></Button>} />
 
       <Dialog open={!!pedidoAberto} onOpenChange={(open) => {
         if (!open && editandoPedido && !confirm("Descartar as alterações não salvas?")) return;
@@ -414,7 +414,16 @@ function Producao() {
             <span className="text-xs text-muted-foreground">Pedidos ativos no período</span>
           </div>
           {resumoProdutos.filter(([nome]) => !busca.trim() || nome.toLocaleLowerCase("pt-BR").includes(busca.trim().toLocaleLowerCase("pt-BR"))).length === 0 ? (
-            <Empty>Nenhum produto pendente encontrado.</Empty>
+            <Card className="border-dashed text-center">
+              <div className="mx-auto mb-2 grid size-11 place-items-center rounded-full bg-muted"><Layers className="size-5 text-muted-foreground" /></div>
+              <h3 className="font-semibold">Nenhuma demanda de produção encontrada</h3>
+              <p className="mt-1 text-sm text-muted-foreground">{busca.trim() ? "Tente outra busca ou limpe o texto digitado." : "Não há itens pendentes nos pedidos ativos deste período."}</p>
+              {busca.trim() ? (
+                <Button className="mt-3" variant="outline" onClick={() => setBusca("")}>Limpar busca</Button>
+              ) : (
+                <Button asChild className="mt-3" variant="outline"><Link to="/pedidos">Consultar pedidos</Link></Button>
+              )}
+            </Card>
           ) : resumoProdutos.filter(([nome]) => !busca.trim() || nome.toLocaleLowerCase("pt-BR").includes(busca.trim().toLocaleLowerCase("pt-BR"))).map(([nome, r]) => {
             const pendente = Math.max(0, r.quantidade - r.produzida);
             const percentual = r.quantidade > 0 ? Math.min(100, (r.produzida / r.quantidade) * 100) : 0;
@@ -438,7 +447,16 @@ function Producao() {
           })}
         </div>
       ) : pedidosFiltrados.length === 0 ? (
-        <Empty>Nenhum pedido encontrado. Tente mudar o filtro ou a pesquisa.</Empty>
+        <Card className="border-dashed text-center">
+          <div className="mx-auto mb-2 grid size-11 place-items-center rounded-full bg-muted"><Search className="size-5 text-muted-foreground" /></div>
+          <h3 className="font-semibold">{busca.trim() || filtro !== "fila" || dataInicial || dataFinal ? "Nenhum pedido corresponde aos filtros" : "Sua fila de produção está vazia"}</h3>
+          <p className="mt-1 text-sm text-muted-foreground">{busca.trim() || filtro !== "fila" || dataInicial || dataFinal ? "Ajuste a pesquisa, o status ou o período para encontrar pedidos." : "Quando houver pedidos ativos, eles aparecerão aqui organizados pela data de entrega."}</p>
+          {busca.trim() || filtro !== "fila" || dataInicial || dataFinal ? (
+            <Button className="mt-3" variant="outline" onClick={() => { setBusca(""); setFiltro("fila"); setDataInicial(""); setDataFinal(""); }}>Limpar filtros</Button>
+          ) : (
+            <Button asChild className="mt-3"><Link to="/pedidos"><Plus className="size-4" /> Criar pedido</Link></Button>
+          )}
+        </Card>
       ) : (
         <div className="space-y-5">
           {porData.map(([data, lista]) => (
