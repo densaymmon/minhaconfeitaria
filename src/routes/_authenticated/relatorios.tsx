@@ -72,7 +72,7 @@ type RelatorioSearch = {
   inicio: string;
   fim: string;
   secao: string;
-  dataBase: "criacao" | "entrega";
+  dataBase: string;
 };
 
 export function RelatoriosEmbedded() {
