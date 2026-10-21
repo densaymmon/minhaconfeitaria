@@ -460,15 +460,17 @@ function Pedidos() {
           })}
         </div>
       )}
-      <ClienteDialog
-        key={clienteEmEdicao?.id ?? "sem-cliente"}
-        cliente={clienteEmEdicao}
-        open={dialogClienteAberto}
-        onOpenChange={(aberto) => {
-          setDialogClienteAberto(aberto);
-          if (!aberto) setClienteEmEdicao(undefined);
-        }}
-      />
+      {clienteEmEdicao && (
+        <ClienteDialog
+          key={clienteEmEdicao.id}
+          cliente={clienteEmEdicao}
+          open={dialogClienteAberto}
+          onOpenChange={(aberto) => {
+            setDialogClienteAberto(aberto);
+            if (!aberto) setClienteEmEdicao(undefined);
+          }}
+        />
+      )}
     </>
   );
 }
