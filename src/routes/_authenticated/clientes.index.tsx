@@ -116,10 +116,10 @@ function Clientes() {
         title="Clientes"
         subtitle={`${clientes.length} cadastrado(s)`}
         action={
-          <div className="mt-1 flex gap-2">
+          <div className="mt-1 flex flex-wrap gap-2">
             <Button
               size="sm"
-              className="h-9"
+              className="h-11"
               variant="outline"
               aria-label="Exportar clientes em CSV"
               onClick={() =>
@@ -131,9 +131,9 @@ function Clientes() {
               }
             >
               <Download className="size-4" />
-              <span>Exportar</span>
+              <span>Exportar CSV</span>
             </Button>
-            <Button size="sm" className="h-9" onClick={() => setAberto(true)}>
+            <Button size="sm" className="h-11" onClick={() => setAberto(true)}>
               <Plus className="size-4" /> Novo
             </Button>
           </div>
