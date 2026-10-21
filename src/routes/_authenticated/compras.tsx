@@ -184,6 +184,7 @@ function Compras() {
   const [acknowledgedReview, setAcknowledgedReview] = useState(false);
   const [de, setDe] = useState("");
   const [ate, setAte] = useState("");
+  const [buscaHistorico, setBuscaHistorico] = useState("");
 
   // Only the four measures the owner asked for, and only those that match the insumo's package.
   const unidadesPara = (insumoId: string) => {
@@ -249,6 +250,13 @@ function Compras() {
   }, [insumos, compras, itens, pedidos, produtos]);
 
   const comprasPeriodo = compras.filter((c) => noPeriodo(c.data_compra));
+  const termoHistorico = buscaHistorico.trim().toLocaleLowerCase("pt-BR");
+  const comprasHistoricoFiltradas = comprasPeriodo.filter((compra) => {
+    if (!termoHistorico) return true;
+    const itensCompra = itens.filter((item) => item.compra_id === compra.id);
+    const texto = [compra.local_compra, compra.data_compra, ...itensCompra.map((item) => insumos.find((insumo) => insumo.id === item.insumo_id)?.nome ?? "insumo removido")].filter(Boolean).join(" ").toLocaleLowerCase("pt-BR");
+    return texto.includes(termoHistorico) || compra.data_compra.split("-").reverse().join("/").includes(termoHistorico);
+  });
   const comprasNoPeriodo = comprasPeriodo.filter((c) => !c.cancelada_em);
   const idsNoPeriodo = new Set(comprasNoPeriodo.map((c) => c.id));
   const itensNoPeriodo = itens.filter((i) => idsNoPeriodo.has(i.compra_id));
@@ -998,10 +1006,10 @@ function Compras() {
       <section>
         <h2 className="mb-3 text-lg font-semibold">Histórico de compras</h2>
         {comprasPeriodo.length === 0 ? (
-          <Empty>Nenhuma compra registrada.</Empty>
+          <Empty>{buscaHistorico ? "Nenhuma compra corresponde à busca." : "Nenhuma compra registrada."}</Empty>
         ) : (
           <div className="divide-y">
-            {comprasPeriodo.map((c) => {
+            {comprasHistoricoFiltradas.map((c) => {
               const doDia = itens.filter((i) => i.compra_id === c.id);
               return (
                 <div key={c.id} className="py-3">
