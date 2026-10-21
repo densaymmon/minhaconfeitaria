@@ -160,6 +160,11 @@ function Produtos() {
 function Insumos({ insumos }: { insumos: Insumo[] }) {
   const qc = useQueryClient();
   const [editando, setEditando] = useState<string | null>(null);
+  const [buscaInsumo, setBuscaInsumo] = useState("");
+  const termoInsumo = buscaInsumo.trim().toLocaleLowerCase("pt-BR");
+  const insumosFiltrados = insumos.filter((insumo) =>
+    insumo.nome.toLocaleLowerCase("pt-BR").includes(termoInsumo)
+  );
 
   async function alternarAtivo(i: Insumo) {
     const ativo = i.ativo !== false;
@@ -197,8 +202,26 @@ function Insumos({ insumos }: { insumos: Insumo[] }) {
       {insumos.length === 0 ? (
         <Empty>Nenhum insumo cadastrado.</Empty>
       ) : (
-        <div className="space-y-2">
-          {insumos.map((i) => {
+        <>
+          <div className="mb-3">
+            <Input
+              value={buscaInsumo}
+              onChange={(event) => setBuscaInsumo(event.target.value)}
+              placeholder="Buscar insumo por nome"
+              aria-label="Buscar insumo por nome"
+            />
+          </div>
+          {insumosFiltrados.length === 0 ? (
+            <Empty>
+              <div className="space-y-2">
+                <p className="font-medium text-foreground">Nenhum insumo encontrado</p>
+                <p>Tente outro nome de insumo.</p>
+                <Button type="button" variant="outline" onClick={() => setBuscaInsumo("")}>Limpar busca</Button>
+              </div>
+            </Empty>
+          ) : (
+            <div className="space-y-2">
+              {insumosFiltrados.map((i) => {
             const u = custoPorMedida(i);
             return <Card key={i.id} className="p-3">
               <div className="flex items-center gap-2">
@@ -213,8 +236,10 @@ function Insumos({ insumos }: { insumos: Insumo[] }) {
               </div>
               {editando === i.id && <div className="mt-3 border-t pt-3"><IngredientForm insumo={i} onDone={() => setEditando(null)} /></div>}
             </Card>;
-          })}
-        </div>
+              })}
+            </div>
+          )}
+        </>
       )}
     </>
   );
