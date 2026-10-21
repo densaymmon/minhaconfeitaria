@@ -58,7 +58,7 @@ function PedidosRecorrentes() {
   const { data: clientes } = useSuspenseQuery(appQueries.clientesQ);
   const { data: produtos } = useSuspenseQuery(appQueries.produtosQ);
   const { custo } = useCustos();
-  const [recorrencias, setRecorrencias] = useState<Recorrencia[]>([]);
+  const [recorrencias, setRecorrencias] = useState<Recorrencia[]>([]);\n  const [buscaRecorrencias, setBuscaRecorrencias] = useState("");\n  const [filtroRecorrencias, setFiltroRecorrencias] = useState("todas");
   const [ocorrencias, setOcorrencias] = useState<Ocorrencia[]>([]);
   const [carregando, setCarregando] = useState(true);
   const [salvando, setSalvando] = useState(false);
@@ -85,7 +85,7 @@ function PedidosRecorrentes() {
   }, []);
   useEffect(() => { void carregar(); }, [carregar]);
 
-  const recorrenciaAtiva = recorrencias.find((r) => r.id === selecionada);
+  const termoRecorrencias = buscaRecorrencias.trim().toLocaleLowerCase("pt-BR");\n  const recorrenciasFiltradas = recorrencias.filter((r) => {\n    const nomeCliente = clientes.find((c) => c.id === r.cliente_id)?.nome ?? "";\n    const correspondeTexto = !termoRecorrencias || nomeCliente.toLocaleLowerCase("pt-BR").includes(termoRecorrencias);\n    const correspondeStatus = filtroRecorrencias === "todas" || (filtroRecorrencias === "ativas" ? r.ativa : !r.ativa);\n    return correspondeTexto && correspondeStatus;\n  });\n  const recorrenciaAtiva = recorrencias.find((r) => r.id === selecionada);
   const listaOcorrencias = useMemo(() => ocorrencias.filter((o) => o.recorrencia_id === selecionada), [ocorrencias, selecionada]);
   const ocorrenciaPendente = listaOcorrencias.find((o) => o.status === "pendente");
   const itensAtuais = ocorrenciaPendente?.itens ?? [];
