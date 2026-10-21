@@ -59,6 +59,8 @@ function PedidosRecorrentes() {
   const { data: produtos } = useSuspenseQuery(appQueries.produtosQ);
   const { custo } = useCustos();
   const [recorrencias, setRecorrencias] = useState<Recorrencia[]>([]);
+  const [buscaRecorrencias, setBuscaRecorrencias] = useState("");
+  const [filtroRecorrencias, setFiltroRecorrencias] = useState("todas");
   const [ocorrencias, setOcorrencias] = useState<Ocorrencia[]>([]);
   const [carregando, setCarregando] = useState(true);
   const [salvando, setSalvando] = useState(false);
@@ -85,6 +87,13 @@ function PedidosRecorrentes() {
   }, []);
   useEffect(() => { void carregar(); }, [carregar]);
 
+  const termoRecorrencias = buscaRecorrencias.trim().toLocaleLowerCase("pt-BR");
+  const recorrenciasFiltradas = recorrencias.filter((r) => {
+    const nomeCliente = clientes.find((c) => c.id === r.cliente_id)?.nome ?? "";
+    const correspondeTexto = !termoRecorrencias || nomeCliente.toLocaleLowerCase("pt-BR").includes(termoRecorrencias);
+    const correspondeStatus = filtroRecorrencias === "todas" || (filtroRecorrencias === "ativas" ? r.ativa : !r.ativa);
+    return correspondeTexto && correspondeStatus;
+  });
   const recorrenciaAtiva = recorrencias.find((r) => r.id === selecionada);
   const listaOcorrencias = useMemo(() => ocorrencias.filter((o) => o.recorrencia_id === selecionada), [ocorrencias, selecionada]);
   const ocorrenciaPendente = listaOcorrencias.find((o) => o.status === "pendente");
