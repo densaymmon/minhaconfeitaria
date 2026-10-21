@@ -125,7 +125,7 @@ function ProdutoForm() {
           <Field label="Nome do produto">
             <Input value={f.nome} onChange={(e) => set("nome", e.target.value)} className="h-11" placeholder="Ex.: Bolo de cenoura com chocolate" />
           </Field>
-          <div className="grid grid-cols-2 gap-3">
+          <div className="grid grid-cols-1 gap-3 sm:grid-cols-2">
             <Field label="Categoria">
               <NativeSelect value={f.categoria} onChange={(e) => set("categoria", e.target.value)}>
                 {CATEGORIAS.map((c) => <option key={c}>{c}</option>)}
@@ -183,7 +183,7 @@ function ProdutoForm() {
 
         <Card className="space-y-3">
           <h2 className="text-lg font-semibold">Custos da receita (lote)</h2>
-          <div className="grid grid-cols-3 gap-2">
+          <div className="grid grid-cols-1 gap-3 sm:grid-cols-3">
             <Field label="Gás R$"><Input inputMode="decimal" value={f.custo_gas} onChange={(e) => set("custo_gas", e.target.value)} className="h-11" /></Field>
             <Field label="Energia R$"><Input inputMode="decimal" value={f.custo_energia} onChange={(e) => set("custo_energia", e.target.value)} className="h-11" /></Field>
             <Field label="Mão de obra R$"><Input inputMode="decimal" value={f.custo_mao_obra} onChange={(e) => set("custo_mao_obra", e.target.value)} className="h-11" /></Field>
