@@ -9,7 +9,7 @@ import { clientesQ, type Cliente } from "@/lib/queries";
 import { usePedidosCalc } from "@/lib/hooks";
 import { brl, hojeISO } from "@/lib/format";
 import { baixarCSV } from "@/lib/csv";
-import { Card, Empty, Field, PageHeader } from "@/components/app/ui";
+import { Card, Field, PageHeader } from "@/components/app/ui";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Textarea } from "@/components/ui/textarea";

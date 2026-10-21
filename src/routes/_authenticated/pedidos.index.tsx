@@ -8,7 +8,7 @@ import { usePedidosCalc } from "@/lib/hooks";
 import { supabase } from "@/integrations/supabase/client";
 import { STATUS, brl, dataBR, formaLabel, hojeISO, statusLabel } from "@/lib/format";
 import { baixarCSV } from "@/lib/csv";
-import { Card, Empty, PageHeader, StatusBadge } from "@/components/app/ui";
+import { Card, PageHeader, StatusBadge } from "@/components/app/ui";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { ClienteDialog } from "./clientes.index";
