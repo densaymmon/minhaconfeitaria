@@ -65,7 +65,7 @@ export function ContasPagar({ embedded = false }: { embedded?: boolean }) {
     compra_id: "",
     observacoes: "",
   };
-  const [f, setF] = useState(blank);
+  const [f, setF] = useState(blank);\n  const [buscaContas, setBuscaContas] = useState("");\n  const [filtroStatus, setFiltroStatus] = useState("todas");
   const [id, setId] = useState<string | null>(null);
   const [busy, setBusy] = useState(false);
   const [acao, setAcao] = useState<AcaoFinanceira>(null);
