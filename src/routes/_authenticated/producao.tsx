@@ -114,7 +114,11 @@ function Producao() {
         custo_unitario: Number(item.custo_unitario) || 0,
       }))
       .sort((a, b) => JSON.stringify(a).localeCompare(JSON.stringify(b)));
-    const itensOriginais = normalizarItens(pedidoAberto.pedido_itens);
+    const itensOriginais = normalizarItens(pedidoAberto.pedido_itens.map((item) => ({
+      ...item,
+      quantidade: String(item.quantidade),
+      preco_unitario: String(item.preco_unitario),
+    })));
     const itensEditados = normalizarItens(rascunho.itens);
     if (temProducao && JSON.stringify(itensOriginais) !== JSON.stringify(itensEditados)) {
       return void toast.error("Este pedido já tem produção registrada. A data, o horário e as observações podem ser alterados, mas os itens, quantidades, preços e custos não podem ser substituídos por esta tela.");
