@@ -100,6 +100,30 @@ function Producao() {
     if (rascunho.itens.length === 0 || rascunho.itens.some((i) => !i.descricao.trim() || parseNum(i.quantidade) <= 0)) {
       return void toast.error("Confira os itens: descrição e quantidade maior que zero são obrigatórias.");
     }
+
+    // Depois que qualquer quantidade foi produzida, não permita substituir/remover
+    // linhas do pedido pela tela de edição: isso pode quebrar o vínculo do histórico
+    // de produção. Os campos gerais do pedido continuam editáveis.
+    const temProducao = pedidoAberto.pedido_itens.some((item) => Number(item.quantidade_produzida) > 0);
+    const normalizarItens = (itens: typeof rascunho.itens) => itens
+      .map((item) => ({
+        produto_id: item.produto_id,
+        descricao: item.descricao.trim(),
+        quantidade: parseNum(item.quantidade),
+        preco_unitario: parseNum(item.preco_unitario),
+        custo_unitario: Number(item.custo_unitario) || 0,
+      }))
+      .sort((a, b) => JSON.stringify(a).localeCompare(JSON.stringify(b)));
+    const itensOriginais = normalizarItens(pedidoAberto.pedido_itens.map((item) => ({
+      ...item,
+      quantidade: String(item.quantidade),
+      preco_unitario: String(item.preco_unitario),
+    })));
+    const itensEditados = normalizarItens(rascunho.itens);
+    if (temProducao && JSON.stringify(itensOriginais) !== JSON.stringify(itensEditados)) {
+      return void toast.error("Este pedido já tem produção registrada. A data, o horário e as observações podem ser alterados, mas os itens, quantidades, preços e custos não podem ser substituídos por esta tela.");
+    }
+
     setSalvandoEdicao(true);
     try {
       const { error } = await supabase.rpc("salvar_pedido", {
