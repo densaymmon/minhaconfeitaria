@@ -94,12 +94,8 @@ BEGIN
   VALUES (v_user, p_conta_id, p_operacao_id, v_snapshot)
   RETURNING id INTO v_exclusao;
 
-  DELETE FROM public.contas_pagar_auditoria
-    WHERE conta_id = p_conta_id AND user_id = v_user;
-  DELETE FROM public.contas_pagar_operacoes
-    WHERE conta_id = p_conta_id AND user_id = v_user;
-  DELETE FROM public.contas_pagar
-    WHERE id = p_conta_id AND user_id = v_user;
+  -- O registro original e sua auditoria são mantidos; a tabela de exclusões
+  -- faz com que a conta deixe de aparecer na listagem operacional.
 
   RETURN v_exclusao;
 END
