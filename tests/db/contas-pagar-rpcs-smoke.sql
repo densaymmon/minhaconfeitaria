@@ -8,6 +8,8 @@ DO $test$
 DECLARE
   v_conta uuid;
   v_conta_retry uuid;
+  v_conta_sem_movimento uuid;
+  v_exclusao uuid;
   v_pagamento1 uuid;
   v_pagamento2 uuid;
   v_estorno uuid;
@@ -149,6 +151,41 @@ BEGIN
   PERFORM public.cancelar_conta_pagar(v_conta,'Obrigação cancelada','dddddddd-dddd-4ddd-8ddd-ddddddddddd2');
   SELECT status INTO v_status FROM public.contas_pagar WHERE id=v_conta;
   IF v_status <> 'cancelado' THEN RAISE EXCEPTION 'Falha: cancelamento permitido não foi registrado.'; END IF;
+
+  -- Mesmo cancelada, uma conta com histórico de pagamentos/estornos não pode ser apagada.
+  v_falhou := false;
+  BEGIN
+    PERFORM public.excluir_conta_pagar_cancelada(v_conta,'ffffffff-ffff-4fff-8fff-fffffffffff1');
+  EXCEPTION WHEN OTHERS THEN
+    IF SQLERRM LIKE 'A conta possui movimentação financeira%' THEN v_falhou := true; ELSE RAISE; END IF;
+  END;
+  IF NOT v_falhou THEN RAISE EXCEPTION 'Falha: conta com movimentações foi excluída.'; END IF;
+
+  -- Conta cancelada sem nenhum pagamento pode ser excluída com snapshot de auditoria.
+  v_payload := jsonb_build_object(
+    'descricao','Conta cancelada sem movimentação',
+    'fornecedor','Fornecedor de teste',
+    'data_emissao','2026-10-15',
+    'data_vencimento','2026-10-20',
+    'valor',20.00,
+    'compra_id',NULL,
+    'observacoes','Teste de exclusão segura'
+  );
+  v_conta_sem_movimento := public.salvar_conta_pagar(v_payload,NULL,'aaaaaaaa-aaaa-4aaa-8aaa-aaaaaaaaaaa3');
+  PERFORM public.cancelar_conta_pagar(v_conta_sem_movimento,'Lançamento cancelado sem movimentação','dddddddd-dddd-4ddd-8ddd-ddddddddddd3');
+  v_exclusao := public.excluir_conta_pagar_cancelada(v_conta_sem_movimento,'ffffffff-ffff-4fff-8fff-fffffffffff2');
+  IF NOT EXISTS (SELECT 1 FROM public.contas_pagar WHERE id=v_conta_sem_movimento AND status='cancelado') THEN
+    RAISE EXCEPTION 'Falha: o registro original não foi preservado.';
+  END IF;
+  IF NOT EXISTS (
+    SELECT 1 FROM public.contas_pagar_exclusoes
+    WHERE id=v_exclusao AND conta_id=v_conta_sem_movimento
+      AND snapshot->'conta'->>'status'='cancelado'
+      AND (snapshot->'conta'->>'valor')::numeric=20.00
+  ) THEN RAISE EXCEPTION 'Falha: snapshot de exclusão não foi preservado.'; END IF;
+  IF public.excluir_conta_pagar_cancelada(v_conta_sem_movimento,'ffffffff-ffff-4fff-8fff-fffffffffff2') <> v_exclusao THEN
+    RAISE EXCEPTION 'Falha: retry de exclusão não foi idempotente.';
+  END IF;
 
   v_falhou := false;
   BEGIN

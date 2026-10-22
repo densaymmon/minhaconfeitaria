@@ -3,7 +3,7 @@ import { createFileRoute } from "@tanstack/react-router";
 import { useQueryClient, useSuspenseQuery } from "@tanstack/react-query";
 import { useMemo, useRef, useState } from "react";
 import { toast } from "sonner";
-import { Download, Pencil, XCircle, CreditCard, RotateCcw, History } from "lucide-react";
+import { Download, Pencil, XCircle, CreditCard, RotateCcw, History, Trash2 } from "lucide-react";
 import { supabase } from "@/integrations/supabase/client";
 import {
   contasPagarQ,
@@ -80,6 +80,7 @@ export function ContasPagar({ embedded = false }: { embedded?: boolean }) {
   const [valorEstorno, setValorEstorno] = useState("");
   const [motivoEstorno, setMotivoEstorno] = useState("");
   const [motivoCancelamento, setMotivoCancelamento] = useState("");
+  const exclusoesRef = useRef<Record<string, string>>({});
   const operacoesRef = useRef<Record<string, { assinatura: string; id: string }>>({});
 
   const hoje = hojeISO();
@@ -320,6 +321,38 @@ export function ContasPagar({ embedded = false }: { embedded?: boolean }) {
     }
   }
 
+  async function excluirContaCancelada(conta: ContaPagar) {
+    const pagamentosConta = pagamentosPorConta.get(conta.id) ?? [];
+    if (conta.status !== "cancelado" || Number(conta.valor_pago) !== 0 || pagamentosConta.length > 0) {
+      toast.error("Só é possível excluir contas canceladas sem nenhum pagamento ou estorno registrado.");
+      return;
+    }
+    if (!confirm(`Excluir definitivamente a conta cancelada "${conta.descricao}" de ${brl(conta.valor)}? Esta ação remove a conta da lista operacional, mas mantém o registro original e guarda um comprovante de auditoria.`)) return;
+    const operacaoIdExclusao = exclusoesRef.current[conta.id] ?? crypto.randomUUID();
+    exclusoesRef.current[conta.id] = operacaoIdExclusao;
+    setBusy(true);
+    try {
+      const { error } = await supabase.rpc("excluir_conta_pagar_cancelada", {
+        p_conta_id: conta.id,
+        p_operacao_id: operacaoIdExclusao,
+      });
+      if (error) throw error;
+      delete exclusoesRef.current[conta.id];
+      await atualizarFinanceiro();
+      if (id === conta.id) limpar();
+      toast.success("Conta removida da lista. O registro original e o comprovante de exclusão foram preservados na auditoria.");
+    } catch (erro) {
+      const mensagem = erro instanceof Error
+        ? erro.message
+        : typeof erro === "object" && erro !== null && "message" in erro && typeof erro.message === "string"
+          ? erro.message
+          : "Não foi possível excluir a conta cancelada.";
+      toast.error(mensagem);
+    } finally {
+      setBusy(false);
+    }
+  }
+
   function exportar() {
     baixarCSV(
       "contas-a-pagar-" + hoje,
@@ -478,6 +511,7 @@ export function ContasPagar({ embedded = false }: { embedded?: boolean }) {
                       {c.status !== "cancelado" && <Button type="button" size="sm" variant="outline" onClick={() => editar(c)}><Pencil className="size-3" /> Editar</Button>}
                       {c.status !== "cancelado" && saldo > 0 && <Button type="button" size="sm" onClick={() => abrirPagamento(c)}><CreditCard className="size-3" /> Pagar</Button>}
                       {c.status !== "cancelado" && <Button type="button" size="sm" variant="ghost" onClick={() => { setAcao({ tipo: "cancelamento", conta: c }); setMotivoCancelamento(""); }}><XCircle className="size-3" /> Cancelar</Button>}
+                      {c.status === "cancelado" && !temPagamento && Number(c.valor_pago) === 0 && <Button type="button" size="sm" variant="destructive" disabled={busy} onClick={() => void excluirContaCancelada(c)}><Trash2 className="size-3" /> Excluir cancelada</Button>}
                     </div>
                   </div>
                   <details className="mt-3 rounded-lg bg-muted/40 p-3">

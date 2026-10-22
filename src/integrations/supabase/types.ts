@@ -285,6 +285,36 @@ export type Database = {
           },
         ]
       }
+      contas_pagar_exclusoes: {
+        Row: {
+          conta_id: string
+          created_at: string
+          id: string
+          motivo: string
+          operacao_id: string
+          snapshot: Json
+          user_id: string
+        }
+        Insert: {
+          conta_id: string
+          created_at?: string
+          id?: string
+          motivo?: string
+          operacao_id: string
+          snapshot: Json
+          user_id: string
+        }
+        Update: {
+          conta_id?: string
+          created_at?: string
+          id?: string
+          motivo?: string
+          operacao_id?: string
+          snapshot?: Json
+          user_id?: string
+        }
+        Relationships: []
+      }
       contas_pagar_estornos: {
         Row: {
           conta_id: string
@@ -1090,6 +1120,10 @@ export type Database = {
       excluir_compra: {
         Args: { evento_id: string; registro_id: string }
         Returns: boolean
+      }
+      excluir_conta_pagar_cancelada: {
+        Args: { p_conta_id: string; p_operacao_id: string }
+        Returns: string
       }
       excluir_insumo_se_sem_receita: {
         Args: { p_insumo_id: string }

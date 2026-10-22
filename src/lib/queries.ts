@@ -96,9 +96,19 @@ export const compraItensQ = queryOptions({
 
 export const contasPagarQ = queryOptions({
   queryKey: ["contas-pagar"],
-  queryFn: () => must<ContaPagar[]>(
-    supabase.from("contas_pagar").select("*").order("data_vencimento", { ascending: true }),
-  ),
+  queryFn: async () => {
+    const contas = await must<ContaPagar[]>(
+      supabase.from("contas_pagar").select("*").order("data_vencimento", { ascending: true }),
+    );
+    const { data: exclusoes, error } = await supabase.from("contas_pagar_exclusoes").select("conta_id");
+    // Compatibilidade durante a implantação: antes da SQL incremental, mantém a tela funcionando.
+    if (error) {
+      if (error.code === "PGRST205" || error.message.includes("contas_pagar_exclusoes")) return contas;
+      throw new Error(error.message);
+    }
+    const ocultas = new Set((exclusoes ?? []).map((item) => item.conta_id));
+    return contas.filter((conta) => !ocultas.has(conta.id));
+  },
 });
 
 export const contasPagarPagamentosQ = queryOptions({
