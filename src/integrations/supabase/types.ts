@@ -1091,6 +1091,10 @@ export type Database = {
         Args: { evento_id: string; registro_id: string }
         Returns: boolean
       }
+      excluir_conta_pagar_cancelada: {
+        Args: { p_conta_id: string; p_operacao_id: string }
+        Returns: string
+      }
       excluir_insumo_se_sem_receita: {
         Args: { p_insumo_id: string }
         Returns: undefined
