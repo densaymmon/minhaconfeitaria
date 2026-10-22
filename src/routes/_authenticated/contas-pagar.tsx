@@ -68,6 +68,8 @@ export function ContasPagar({ embedded = false }: { embedded?: boolean }) {
   const [f, setF] = useState(blank);
   const [buscaContas, setBuscaContas] = useState("");
   const [filtroStatus, setFiltroStatus] = useState("todas");
+  const [periodoInicio, setPeriodoInicio] = useState("");
+  const [periodoFim, setPeriodoFim] = useState("");
   const [id, setId] = useState<string | null>(null);
   const [busy, setBusy] = useState(false);
   const [acao, setAcao] = useState<AcaoFinanceira>(null);
@@ -95,11 +97,30 @@ export function ContasPagar({ embedded = false }: { embedded?: boolean }) {
           !termo ||
           c.descricao.toLocaleLowerCase("pt-BR").includes(termo) ||
           (c.fornecedor ?? "").toLocaleLowerCase("pt-BR").includes(termo);
-        const correspondeStatus = filtroStatus === "todas" || c.status === filtroStatus;
-        return correspondeTexto && correspondeStatus;
+        const vencida = ["pendente", "parcial"].includes(c.status) && c.data_vencimento < hoje;
+        const correspondeStatus = filtroStatus === "todas" || (filtroStatus === "vencidas" ? vencida : c.status === filtroStatus);
+        const correspondeInicio = !periodoInicio || c.data_vencimento >= periodoInicio;
+        const correspondeFim = !periodoFim || c.data_vencimento <= periodoFim;
+        return correspondeTexto && correspondeStatus && correspondeInicio && correspondeFim;
       })
-      .sort((a, b) => a.data_vencimento.localeCompare(b.data_vencimento));
-  }, [contas, buscaContas, filtroStatus]);
+      .sort((a, b) => a.data_vencimento.localeCompare(b.data_vencimento) || a.descricao.localeCompare(b.descricao, "pt-BR"));
+  }, [contas, buscaContas, filtroStatus, periodoInicio, periodoFim, hoje]);
+  const gruposMensais = useMemo(() => {
+    const grupos = new Map<string, ContaPagar[]>();
+    for (const conta of ordenadas) {
+      const mes = conta.data_vencimento.slice(0, 7) || "sem-data";
+      grupos.set(mes, [...(grupos.get(mes) ?? []), conta]);
+    }
+    return [...grupos.entries()].sort(([a], [b]) => a.localeCompare(b)).map(([mes, itens]) => ({
+      mes,
+      titulo: mes === "sem-data" ? "Sem data de vencimento" : new Date(`${mes}-01T12:00:00`).toLocaleDateString("pt-BR", { month: "long", year: "numeric" }),
+      itens,
+      total: itens.reduce((s, c) => s + Math.max(0, Number(c.valor) || 0), 0),
+      pago: itens.reduce((s, c) => s + Math.max(0, Number(c.valor_pago) || 0), 0),
+      saldo: itens.filter((c) => c.status !== "cancelado").reduce((s, c) => s + Math.max(0, Number(c.valor) - Number(c.valor_pago)), 0),
+      vencido: itens.filter((c) => ["pendente", "parcial"].includes(c.status) && c.data_vencimento < hoje).reduce((s, c) => s + Math.max(0, Number(c.valor) - Number(c.valor_pago)), 0),
+    }));
+  }, [ordenadas, hoje]);
   const pagamentosPorConta = useMemo(() => {
     const mapa = new Map<string, ContaPagarPagamento[]>();
     for (const pagamento of pagamentos) {
@@ -387,11 +408,23 @@ export function ContasPagar({ embedded = false }: { embedded?: boolean }) {
               onChange={(e) => setFiltroStatus(e.target.value)}
             >
               <option value="todas">Todos os status</option>
+              <option value="vencidas">Vencidas</option>
               <option value="pendente">Pendente</option>
               <option value="parcial">Parcial</option>
               <option value="pago">Pago</option>
               <option value="cancelado">Cancelado</option>
             </select>
+          </div>
+        )}
+        {contas.length > 0 && (
+          <div className="mb-4 grid grid-cols-1 gap-2 sm:grid-cols-2">
+            <Field label="Vencimento a partir de">
+              <Input aria-label="Filtrar vencimento a partir de" type="date" className="h-11" value={periodoInicio} max={periodoFim || undefined} onChange={(e) => setPeriodoInicio(e.target.value)} />
+            </Field>
+            <Field label="Vencimento até">
+              <Input aria-label="Filtrar vencimento até" type="date" className="h-11" value={periodoFim} min={periodoInicio || undefined} onChange={(e) => setPeriodoFim(e.target.value)} />
+            </Field>
+            {(periodoInicio || periodoFim) && <div className="sm:col-span-2"><Button type="button" variant="ghost" size="sm" onClick={() => { setPeriodoInicio(""); setPeriodoFim(""); }}>Limpar período</Button></div>}
           </div>
         )}
         {!ordenadas.length ? (
@@ -401,8 +434,23 @@ export function ContasPagar({ embedded = false }: { embedded?: boolean }) {
               : "Nenhuma conta a pagar registrada."}
           </Empty>
         ) : (
-          <div className="divide-y">
-            {ordenadas.map((c) => {
+          <div className="space-y-4">
+            {gruposMensais.map((grupo) => (
+              <section key={grupo.mes} className="overflow-hidden rounded-xl border">
+                <div className="bg-muted/50 p-3 sm:p-4">
+                  <div className="flex flex-wrap items-start justify-between gap-2">
+                    <h3 className="font-semibold capitalize">{grupo.titulo}</h3>
+                    <span className="text-sm text-muted-foreground">{grupo.itens.length} {grupo.itens.length === 1 ? "conta" : "contas"}</span>
+                  </div>
+                  <div className="mt-2 grid grid-cols-2 gap-2 text-sm sm:grid-cols-4">
+                    <div><p className="text-xs text-muted-foreground">Total das contas</p><p className="font-medium">{brl(grupo.total)}</p></div>
+                    <div><p className="text-xs text-muted-foreground">Já pago</p><p className="font-medium">{brl(grupo.pago)}</p></div>
+                    <div><p className="text-xs text-muted-foreground">Saldo a pagar</p><p className="font-medium">{brl(grupo.saldo)}</p></div>
+                    <div><p className="text-xs text-muted-foreground">Saldo vencido</p><p className={grupo.vencido > 0 ? "font-medium text-destructive" : "font-medium"}>{brl(grupo.vencido)}</p></div>
+                  </div>
+                </div>
+                <div className="divide-y px-3 sm:px-4">
+            {grupo.itens.map((c) => {
               const saldo = Math.max(0, Number(c.valor) - Number(c.valor_pago));
               const vencida = ["pendente", "parcial"].includes(c.status) && c.data_vencimento < hoje;
               const pagamentosConta = pagamentosPorConta.get(c.id) ?? [];
@@ -415,6 +463,7 @@ export function ContasPagar({ embedded = false }: { embedded?: boolean }) {
                       <p className="text-xs text-muted-foreground">
                         {c.fornecedor ? c.fornecedor + " · " : ""}Vence {dataBR(c.data_vencimento)}{vencida ? " · VENCIDA" : ""}
                       </p>
+                      {c.compra_id && (() => { const compra = compras.find((item) => item.id === c.compra_id); return compra ? <p className="mt-1 text-xs text-muted-foreground">Compra vinculada · {dataBR(compra.data_compra)} · {brl(compra.total)}</p> : <p className="mt-1 text-xs text-muted-foreground">Compra vinculada</p>; })()}
                     </div>
                     <div className="text-right">
                       <b>{brl(saldo)}</b>
@@ -472,6 +521,9 @@ export function ContasPagar({ embedded = false }: { embedded?: boolean }) {
                 </div>
               );
             })}
+                </div>
+              </section>
+            ))}
           </div>
         )}
       </section>
