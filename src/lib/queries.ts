@@ -96,9 +96,14 @@ export const compraItensQ = queryOptions({
 
 export const contasPagarQ = queryOptions({
   queryKey: ["contas-pagar"],
-  queryFn: () => must<ContaPagar[]>(
-    supabase.from("contas_pagar").select("*").order("data_vencimento", { ascending: true }),
-  ),
+  queryFn: async () => {
+    const [contas, exclusoes] = await Promise.all([
+      must<ContaPagar[]>(supabase.from("contas_pagar").select("*").order("data_vencimento", { ascending: true })),
+      must<Array<{ conta_id: string }>>(supabase.from("contas_pagar_exclusoes").select("conta_id")),
+    ]);
+    const ocultas = new Set(exclusoes.map((item) => item.conta_id));
+    return contas.filter((conta) => !ocultas.has(conta.id));
+  },
 });
 
 export const contasPagarPagamentosQ = queryOptions({
