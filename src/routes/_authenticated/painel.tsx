@@ -81,7 +81,7 @@ function Painel() {
     {
       titulo: "Recebido dos pedidos",
       valor: brl(recebidoDosPedidosNoMes),
-      detalhe: "Valores consolidados nos pedidos do mês",
+      detalhe: "Recebimentos consolidados dos pedidos com entrega neste mês",
       icone: CircleDollarSign,
       secao: "vendas" as const,
       aria: `Ver relatório do valor recebido nos pedidos do mês: ${brl(recebidoDosPedidosNoMes)}`,
@@ -89,7 +89,7 @@ function Painel() {
     {
       titulo: "A receber",
       valor: brl(pedidosAReceberNoMes),
-      detalhe: "Saldo pendente dos pedidos do mês",
+      detalhe: "Saldo dos pedidos com entrega neste mês",
       icone: Wallet,
       secao: "contas" as const,
       aria: `Ver relatório dos valores a receber dos pedidos do mês: ${brl(pedidosAReceberNoMes)}`,
@@ -127,7 +127,7 @@ function Painel() {
               <Link
                 key={item.titulo}
                 to="/relatorios"
-                search={{ inicio: primeiroDiaMes, fim: ultimoDiaMes, secao: item.secao, dataBase: item.secao === "contas" ? "criacao" : "entrega" }}
+                search={{ inicio: primeiroDiaMes, fim: ultimoDiaMes, secao: item.secao, dataBase: "entrega" }}
                 className="group block rounded-2xl focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring"
                 aria-label={item.aria}
               >
