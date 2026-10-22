@@ -327,7 +327,7 @@ export function ContasPagar({ embedded = false }: { embedded?: boolean }) {
       toast.error("Só é possível excluir contas canceladas sem nenhum pagamento ou estorno registrado.");
       return;
     }
-    if (!confirm(`Excluir definitivamente a conta cancelada "${conta.descricao}" de ${brl(conta.valor)}? Esta ação remove o registro da lista, mas guarda um comprovante de auditoria da exclusão.`)) return;
+    if (!confirm(`Excluir definitivamente a conta cancelada "${conta.descricao}" de ${brl(conta.valor)}? Esta ação remove a conta da lista operacional, mas mantém o registro original e guarda um comprovante de auditoria.`)) return;
     const operacaoIdExclusao = exclusoesRef.current[conta.id] ?? crypto.randomUUID();
     exclusoesRef.current[conta.id] = operacaoIdExclusao;
     setBusy(true);
@@ -340,7 +340,7 @@ export function ContasPagar({ embedded = false }: { embedded?: boolean }) {
       delete exclusoesRef.current[conta.id];
       await atualizarFinanceiro();
       if (id === conta.id) limpar();
-      toast.success("Conta cancelada excluída. O comprovante da exclusão foi preservado na auditoria.");
+      toast.success("Conta removida da lista. O registro original e o comprovante de exclusão foram preservados na auditoria.");
     } catch (erro) {
       const mensagem = erro instanceof Error
         ? erro.message
