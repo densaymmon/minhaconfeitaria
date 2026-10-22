@@ -174,8 +174,8 @@ BEGIN
   v_conta_sem_movimento := public.salvar_conta_pagar(v_payload,NULL,'aaaaaaaa-aaaa-4aaa-8aaa-aaaaaaaaaaa3');
   PERFORM public.cancelar_conta_pagar(v_conta_sem_movimento,'Lançamento cancelado sem movimentação','dddddddd-dddd-4ddd-8ddd-ddddddddddd3');
   v_exclusao := public.excluir_conta_pagar_cancelada(v_conta_sem_movimento,'ffffffff-ffff-4fff-8fff-fffffffffff2');
-  IF EXISTS (SELECT 1 FROM public.contas_pagar WHERE id=v_conta_sem_movimento) THEN
-    RAISE EXCEPTION 'Falha: conta cancelada sem movimentação continua ativa.';
+  IF NOT EXISTS (SELECT 1 FROM public.contas_pagar WHERE id=v_conta_sem_movimento AND status='cancelado') THEN
+    RAISE EXCEPTION 'Falha: o registro original não foi preservado.';
   END IF;
   IF NOT EXISTS (
     SELECT 1 FROM public.contas_pagar_exclusoes
