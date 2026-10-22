@@ -454,9 +454,7 @@ BEGIN
   ) INTO v_snapshot;
   INSERT INTO public.contas_pagar_exclusoes(user_id,conta_id,operacao_id,snapshot)
   VALUES(v_user,p_conta_id,p_operacao_id,v_snapshot) RETURNING id INTO v_exclusao;
-  DELETE FROM public.contas_pagar_auditoria WHERE conta_id=p_conta_id AND user_id=v_user;
-  DELETE FROM public.contas_pagar_operacoes WHERE conta_id=p_conta_id AND user_id=v_user;
-  DELETE FROM public.contas_pagar WHERE id=p_conta_id AND user_id=v_user;
+  -- Preserva a conta original e sua auditoria; a exclusão é uma ocultação operacional auditada.
   RETURN v_exclusao;
 END
 $fn$;
