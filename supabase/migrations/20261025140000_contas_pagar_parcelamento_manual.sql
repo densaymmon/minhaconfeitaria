@@ -56,6 +56,9 @@ begin
   conta_emissao := nullif(p_dados->>'data_emissao', '')::date;
   conta_compra := nullif(p_dados->>'compra_id', '')::uuid;
   conta_observacoes := nullif(trim(p_dados->>'observacoes'), '');
+  if p_dados->>'valor' is null or p_dados->>'valor' in ('NaN', 'Infinity', '-Infinity') then
+    raise exception 'Informe um valor total válido.';
+  end if;
   total_centavos := round((p_dados->>'valor')::numeric * 100)::bigint;
 
   if conta_descricao is null then raise exception 'Informe a descrição da conta.'; end if;
@@ -93,5 +96,6 @@ $function$;
 
 revoke all on function public.registrar_conta_pagar_parcelada(jsonb,integer,date,uuid) from public, anon;
 grant execute on function public.registrar_conta_pagar_parcelada(jsonb,integer,date,uuid) to authenticated, service_role;
+notify pgrst, 'reload schema';
 
 commit;
