@@ -87,7 +87,7 @@ function Financeiro() {
             </p>
             <div className="grid grid-cols-1 gap-3 sm:grid-cols-3">
               <Button asChild className="h-12">
-                <Link to="/compras"><ShoppingCart className="mr-2 size-4" /> Compra de insumos</Link>
+                <Link to="/compras" search={{ secao: "compras" }}><ShoppingCart className="mr-2 size-4" /> Compra de insumos</Link>
               </Button>
               <Button type="button" variant="outline" className="h-12" onClick={() => setAba("despesas")}>
                 <Receipt className="mr-2 size-4" /> Despesa operacional
