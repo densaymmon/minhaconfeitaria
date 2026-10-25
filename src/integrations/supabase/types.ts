@@ -187,6 +187,9 @@ export type Database = {
           id: string
           motivo_cancelamento: string | null
           observacoes: string | null
+          parcelamento_id: string | null
+          parcelamento_numero: number | null
+          parcelamento_total: number | null
           status: string
           updated_at: string
           user_id: string
@@ -209,6 +212,9 @@ export type Database = {
           id?: string
           motivo_cancelamento?: string | null
           observacoes?: string | null
+          parcelamento_id?: string | null
+          parcelamento_numero?: number | null
+          parcelamento_total?: number | null
           status?: string
           updated_at?: string
           user_id?: string
@@ -231,6 +237,9 @@ export type Database = {
           id?: string
           motivo_cancelamento?: string | null
           observacoes?: string | null
+          parcelamento_id?: string | null
+          parcelamento_numero?: number | null
+          parcelamento_total?: number | null
           status?: string
           updated_at?: string
           user_id?: string
@@ -1168,6 +1177,15 @@ export type Database = {
           p_valor: number
         }
         Returns: string
+      }
+      registrar_conta_pagar_parcelada: {
+        Args: {
+          p_dados: Json
+          p_numero_parcelas: number
+          p_primeiro_vencimento: string
+          p_operacao_id: string
+        }
+        Returns: boolean
       }
       registrar_recebimento_pedido: {
         Args: {
