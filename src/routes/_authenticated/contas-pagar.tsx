@@ -66,6 +66,7 @@ export function ContasPagar({ embedded = false }: { embedded?: boolean }) {
     observacoes: "",
   };
   const [f, setF] = useState(blank);
+  const [numeroParcelas, setNumeroParcelas] = useState("2");
   const [buscaContas, setBuscaContas] = useState("");
   const [filtroStatus, setFiltroStatus] = useState("todas");
   const [periodoInicio, setPeriodoInicio] = useState("");
@@ -185,18 +186,29 @@ export function ContasPagar({ embedded = false }: { embedded?: boolean }) {
       valor,
       compra_id: f.compra_id || null,
       observacoes: f.observacoes.trim() || null,
+      forma_pagamento: f.forma_pagamento || null,
     };
     const chave = "salvar:" + (id ?? "nova");
     const assinatura = JSON.stringify({ id, payload });
     const p_operacao_id = operacaoId(chave, assinatura);
     setBusy(true);
     try {
-      const { error } = await supabase.rpc("salvar_conta_pagar", {
-        p_dados: payload,
-        ...(id ? { p_conta_id: id } : {}),
-        p_operacao_id,
-      });
-      if (error) throw error;
+      if (!id && f.forma_pagamento === "credito" && Number(numeroParcelas) > 1) {
+        const { error } = await supabase.rpc("registrar_conta_pagar_parcelada" as never, {
+          p_dados: payload,
+          p_numero_parcelas: Number(numeroParcelas),
+          p_primeiro_vencimento: f.data_vencimento,
+          p_operacao_id,
+        } as never);
+        if (error) throw error;
+      } else {
+        const { error } = await supabase.rpc("salvar_conta_pagar", {
+          p_dados: payload,
+          ...(id ? { p_conta_id: id } : {}),
+          p_operacao_id,
+        });
+        if (error) throw error;
+      }
       delete operacoesRef.current[chave];
       await atualizarFinanceiro();
       limpar();
@@ -391,17 +403,38 @@ export function ContasPagar({ embedded = false }: { embedded?: boolean }) {
         <Field label="Fornecedor (opcional)">
           <Input className="h-11" value={f.fornecedor} onChange={(e) => setF({ ...f, fornecedor: e.target.value })} />
         </Field>
-        <div className="grid grid-cols-2 gap-3">
+        <div className="grid grid-cols-1 gap-3 sm:grid-cols-2">
           <Field label="Data de emissão">
             <Input required type="date" disabled={temPagamentosEditada} className="h-11" value={f.data_emissao} onChange={(e) => setF({ ...f, data_emissao: e.target.value })} />
           </Field>
-          <Field label="Vencimento">
+          <Field label={f.forma_pagamento === "credito" && Number(numeroParcelas) > 1 ? "Vencimento da 1ª parcela" : "Vencimento"}>
             <Input required type="date" className="h-11" value={f.data_vencimento} onChange={(e) => setF({ ...f, data_vencimento: e.target.value })} />
           </Field>
-          <Field label="Valor total (R$)" hint={temPagamentosEditada ? "Protegido após o primeiro pagamento" : "Pode ser alterado enquanto não houver pagamentos."}>
+          <Field label="Valor total (R$)" hint={temPagamentosEditada ? "Protegido após o primeiro pagamento" : "Valor total da compra ou obrigação."}>
             <Input required inputMode="decimal" disabled={temPagamentosEditada} className="h-11" value={f.valor} onChange={(e) => setF({ ...f, valor: e.target.value })} />
           </Field>
+          <Field label="Forma de pagamento">
+            <select disabled={temPagamentosEditada} className="h-11 w-full rounded-md border border-input bg-background px-3 text-sm" value={f.forma_pagamento} onChange={(e) => setF({ ...f, forma_pagamento: e.target.value })}>
+              <option value="">A definir / outro</option>
+              <option value="credito">Cartão de crédito</option>
+              <option value="debito">Cartão de débito</option>
+              <option value="pix">Pix</option>
+              <option value="dinheiro">Dinheiro</option>
+            </select>
+          </Field>
+          {f.forma_pagamento === "credito" && !id && (
+            <Field label="Quantidade de parcelas">
+              <select className="h-11 w-full rounded-md border border-input bg-background px-3 text-sm" value={numeroParcelas} onChange={(e) => setNumeroParcelas(e.target.value)}>
+                {Array.from({ length: 24 }, (_, i) => i + 1).map((n) => <option key={n} value={String(n)}>{n}x {n === 1 ? "à vista" : "no crédito"}</option>)}
+              </select>
+            </Field>
+          )}
         </div>
+        {f.forma_pagamento === "credito" && !id && Number(numeroParcelas) > 1 && (
+          <p className="rounded-md bg-muted/50 p-3 text-xs text-muted-foreground">
+            Serão criadas {numeroParcelas} contas, uma por mês, com o total dividido em centavos. O valor das parcelas será ajustado para que a soma seja exatamente {brl(parseNum(f.valor) || 0)}.
+          </p>
+        )}
         <Field label="Compra relacionada (opcional)" hint={temPagamentosEditada ? "Protegida após o primeiro pagamento" : "Apenas referência; não cria outra despesa automaticamente."}>
           <select disabled={temPagamentosEditada} className="h-11 w-full rounded-md border border-input bg-background px-3 text-sm" value={f.compra_id} onChange={(e) => setF({ ...f, compra_id: e.target.value })}>
             <option value="">Sem vínculo com compra</option>
