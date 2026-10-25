@@ -536,6 +536,41 @@ function Compras() {
       return;
     }
     if (total <= 0) { toast.error("O total da compra precisa ser maior que zero."); return; }
+
+    // Alerta de possível duplicidade antes de registrar uma nova compra. A comparação
+    // usa data, local, total e itens para reduzir falsos positivos; nunca bloqueia à força.
+    if (!editandoCompraId) {
+      const assinaturaItensNovos = calculadas
+        .map((linha) => {
+          const conversao = medida(linha.unidade);
+          const quantidadeBase = linha.quantidadeNumerica * (conversao?.fator ?? 1);
+          return `${linha.insumo_id}:${Math.round(quantidadeBase * 1_000_000)}:${Math.round(linha.total * 100)}`;
+        })
+        .sort()
+        .join("|");
+      const localNormalizado = localCompra.trim().toLocaleLowerCase("pt-BR");
+      const compraPossivelmenteDuplicada = compras.find((compra) => {
+        if (compra.cancelada_em || compra.data_compra !== data) return false;
+        if ((compra.local_compra ?? "").trim().toLocaleLowerCase("pt-BR") !== localNormalizado) return false;
+        if (Math.round((Number(compra.total) || 0) * 100) !== Math.round(total * 100)) return false;
+        const itensExistentes = itens.filter((item) => item.compra_id === compra.id);
+        if (itensExistentes.length !== calculadas.length) return false;
+        const assinaturaItensExistentes = itensExistentes
+          .map((item) => {
+            const conversao = medida(item.unidade ?? "");
+            const quantidadeBase = Number(item.quantidade) * (conversao?.fator ?? 1);
+            return `${item.insumo_id}:${Math.round(quantidadeBase * 1_000_000)}:${Math.round((Number(item.total) || 0) * 100)}`;
+          })
+          .sort()
+          .join("|");
+        return assinaturaItensExistentes === assinaturaItensNovos;
+      });
+
+      if (compraPossivelmenteDuplicada && !window.confirm(
+        `Atenção: já existe uma compra com a mesma data, local, total e itens (registro de ${dataBR(compraPossivelmenteDuplicada.data_compra)}). Deseja registrar outra compra mesmo assim?`,
+      )) return;
+    }
+
     setBusy(true);
     let preservarFinanceiroExistente = false;
     try {
