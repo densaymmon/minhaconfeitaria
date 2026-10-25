@@ -178,6 +178,26 @@ export function ContasPagar({ embedded = false }: { embedded?: boolean }) {
     if (!f.descricao.trim()) return void toast.error("Informe a descrição da conta.");
     if (!f.data_emissao || !f.data_vencimento) return void toast.error("Informe as datas de emissão e vencimento.");
     if (!Number.isFinite(valor) || valor <= 0) return void toast.error("O valor total precisa ser maior que zero.");
+    // Confirma possíveis duplicidades apenas para uma nova conta única. Parcelamentos
+    // têm vencimentos/valores próprios e não devem ser confundidos com lançamentos repetidos.
+    if (!id && !(f.forma_pagamento === "credito" && Number(numeroParcelas) > 1)) {
+      const normalizar = (valor: string | null | undefined) => (valor ?? "").trim().replace(/\\s+/g, " ").toLocaleLowerCase("pt-BR");
+      const descricaoNormalizada = normalizar(f.descricao);
+      const fornecedorNormalizado = normalizar(f.fornecedor);
+      const valorCentavos = Math.round(valor * 100);
+      const duplicada = contas.find((conta) =>
+        conta.status !== "cancelado" &&
+        !conta.cancelada_em &&
+        conta.data_emissao === f.data_emissao &&
+        conta.data_vencimento === f.data_vencimento &&
+        normalizar(conta.descricao) === descricaoNormalizada &&
+        normalizar(conta.fornecedor) === fornecedorNormalizado &&
+        Math.round(Number(conta.valor) * 100) === valorCentavos &&
+        (conta.compra_id ?? null) === (f.compra_id || null)
+      );
+      if (duplicada && !window.confirm(`Atenção: já existe uma conta com a mesma descrição, fornecedor, datas e valor (${brl(Number(duplicada.valor))}, vencimento ${dataBR(duplicada.data_vencimento)}). Deseja registrar outra mesmo assim?`)) return;
+    }
+
     const payload = {
       descricao: f.descricao.trim(),
       fornecedor: f.fornecedor.trim() || null,
