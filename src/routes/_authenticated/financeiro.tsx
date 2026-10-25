@@ -80,14 +80,20 @@ function Financeiro() {
         <RelatoriosEmbedded />
       ) : aba === "resumo" ? (
         <>
-          <div className="mb-7 grid grid-cols-1 gap-3 sm:grid-cols-2">
-            <Button asChild className="h-12">
-              <Link to="/despesas"><Receipt className="mr-2 size-4" /> Registrar despesa</Link>
-            </Button>
-            <Button asChild variant="outline" className="h-12">
-              <Link to="/contas-pagar"><CalendarClock className="mr-2 size-4" /> Gerenciar contas a pagar</Link>
-            </Button>
-          </div>
+          <section className="mb-7 rounded-xl border p-4">
+            <h2 className="mb-1 font-semibold">Cadastrar lançamento</h2>
+            <p className="mb-3 text-sm text-muted-foreground">
+              Registre um gasto ou uma obrigação futura sem sair desta área do financeiro.
+            </p>
+            <div className="grid grid-cols-1 gap-3 sm:grid-cols-2">
+              <Button type="button" className="h-12" onClick={() => setAba("despesas")}>
+                <Receipt className="mr-2 size-4" /> Registrar despesa
+              </Button>
+              <Button type="button" variant="outline" className="h-12" onClick={() => setAba("contas")}>
+                <CalendarClock className="mr-2 size-4" /> Registrar conta a pagar
+              </Button>
+            </div>
+          </section>
 
           <section className="mb-7">
             <div className="mb-3 flex items-center justify-between gap-3">
