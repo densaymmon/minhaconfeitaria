@@ -194,12 +194,12 @@ export function ContasPagar({ embedded = false }: { embedded?: boolean }) {
     setBusy(true);
     try {
       if (!id && f.forma_pagamento === "credito" && Number(numeroParcelas) > 1) {
-        const { error } = await supabase.rpc("registrar_conta_pagar_parcelada" as never, {
+        const { error } = await supabase.rpc("registrar_conta_pagar_parcelada", {
           p_dados: payload,
           p_numero_parcelas: Number(numeroParcelas),
           p_primeiro_vencimento: f.data_vencimento,
           p_operacao_id,
-        } as never);
+        });
         if (error) throw error;
       } else {
         const { error } = await supabase.rpc("salvar_conta_pagar", {
