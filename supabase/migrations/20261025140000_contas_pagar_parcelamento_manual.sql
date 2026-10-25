@@ -60,7 +60,7 @@ begin
 
   if conta_descricao is null then raise exception 'Informe a descrição da conta.'; end if;
   if conta_emissao is null then raise exception 'Informe a data de emissão.'; end if;
-  if total_centavos <= 0 then raise exception 'O valor total precisa ser maior que zero.'; end if;
+  if total_centavos is null or total_centavos <= 0 then raise exception 'O valor total precisa ser maior que zero.'; end if;
   if conta_compra is not null and not exists (
     select 1 from public.compras c where c.id = conta_compra and c.user_id = uid
   ) then
