@@ -2,7 +2,7 @@ import * as appQueries from "@/lib/queries";
 import { createFileRoute, Link } from "@tanstack/react-router";
 import { useSuspenseQuery } from "@tanstack/react-query";
 import { useMemo, useState } from "react";
-import { CalendarClock, CircleAlert, Receipt } from "lucide-react";
+import { CalendarClock, CircleAlert, Receipt, ShoppingCart } from "lucide-react";
 import { contasPagarQ, despesasQ } from "@/lib/queries";
 import { brl, dataBR, hojeISO, mesISO } from "@/lib/format";
 import { PageHeader, Stat, Empty } from "@/components/app/ui";
@@ -59,7 +59,7 @@ function Financeiro() {
     <>
       <PageHeader title="Financeiro" back="/mais" />
       <p className="mb-5 text-sm text-muted-foreground">
-        Consulte despesas e contas a pagar no mesmo lugar. Os históricos, pagamentos e estornos continuam separados para preservar a rastreabilidade e evitar duplicidade nos relatórios.
+        Cadastre e acompanhe os gastos da confeitaria em um só lugar. Escolha o tipo de lançamento abaixo: compra de insumos movimenta o estoque; despesa registra um gasto operacional; conta a pagar controla uma obrigação futura ou parcelas do cartão.
       </p>
 
       <div className="mb-5 grid grid-cols-2 gap-3">
@@ -83,14 +83,17 @@ function Financeiro() {
           <section className="mb-7 rounded-xl border p-4">
             <h2 className="mb-1 font-semibold">Cadastrar lançamento</h2>
             <p className="mb-3 text-sm text-muted-foreground">
-              Registre um gasto ou uma obrigação futura sem sair desta área do financeiro.
+              Use o caminho adequado para evitar registrar o mesmo gasto duas vezes.
             </p>
-            <div className="grid grid-cols-1 gap-3 sm:grid-cols-2">
-              <Button type="button" className="h-12" onClick={() => setAba("despesas")}>
-                <Receipt className="mr-2 size-4" /> Registrar despesa
+            <div className="grid grid-cols-1 gap-3 sm:grid-cols-3">
+              <Button asChild className="h-12">
+                <Link to="/compras"><ShoppingCart className="mr-2 size-4" /> Compra de insumos</Link>
+              </Button>
+              <Button type="button" variant="outline" className="h-12" onClick={() => setAba("despesas")}>
+                <Receipt className="mr-2 size-4" /> Despesa operacional
               </Button>
               <Button type="button" variant="outline" className="h-12" onClick={() => setAba("contas")}>
-                <CalendarClock className="mr-2 size-4" /> Registrar conta a pagar
+                <CalendarClock className="mr-2 size-4" /> Conta a pagar / crédito
               </Button>
             </div>
           </section>
