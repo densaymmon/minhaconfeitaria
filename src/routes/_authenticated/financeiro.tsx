@@ -32,7 +32,8 @@ export const Route = createFileRoute("/_authenticated/financeiro")({
   component: Financeiro,
 });
 
-type AbaFinanceiro = "resumo" | "lancar" | "despesas" | "contas" | "relatorio";
+type AbaFinanceiro = "resumo" | "lancar" | "movimentacoes" | "relatorio";
+type TipoMovimentacao = "despesas" | "contas";
 type TipoLancamento = "compra" | "despesa" | "conta";
 
 function Financeiro() {
@@ -40,6 +41,7 @@ function Financeiro() {
   const { data: despesas } = useSuspenseQuery(despesasQ);
   const [aba, setAba] = useState<AbaFinanceiro>("resumo");
   const [tipoLancamento, setTipoLancamento] = useState<TipoLancamento>("compra");
+  const [tipoMovimentacao, setTipoMovimentacao] = useState<TipoMovimentacao>("despesas");
   const hoje = hojeISO();
   const inicioMes = mesISO() + "-01";
   const contasAtivas = contas.filter((conta) => !conta.cancelada_em && conta.status !== "cancelado");
@@ -70,16 +72,15 @@ function Financeiro() {
       <div className="mb-5 grid grid-cols-2 gap-3">
         <Stat label="Saldo a pagar" value={brl(saldoAberto)} />
         <Stat label="Contas vencidas" value={brl(saldoVencido)} tone={saldoVencido > 0 ? "danger" : "default"} />
-        <Stat label="Pago registrado" value={brl(totalPago)} tone="primary" />
+        <Stat label="Total pago em contas" value={brl(totalPago)} tone="primary" />
         <Stat label="Despesas deste mês" value={brl(totalDespesasMes)} />
       </div>
 
-      <div className="mb-5 grid grid-cols-2 gap-2 sm:grid-cols-3 lg:grid-cols-5" role="group" aria-label="Navegação do financeiro">
-        <Button type="button" size="sm" variant={aba === "resumo" ? "default" : "outline"} onClick={() => { setAba("resumo"); }} aria-pressed={aba === "resumo"}>Resumo</Button>
-        <Button type="button" size="sm" variant={aba === "lancar" ? "default" : "outline"} onClick={() => { setAba("lancar"); }} aria-pressed={aba === "lancar"}>Lançar gasto</Button>
-        <Button type="button" size="sm" variant={aba === "despesas" ? "default" : "outline"} onClick={() => { setAba("despesas"); }} aria-pressed={aba === "despesas"}>Despesas</Button>
-        <Button type="button" size="sm" variant={aba === "contas" ? "default" : "outline"} onClick={() => { setAba("contas"); }} aria-pressed={aba === "contas"}>Contas a pagar</Button>
-        <Button type="button" size="sm" variant={aba === "relatorio" ? "default" : "outline"} onClick={() => { setAba("relatorio"); }} aria-pressed={aba === "relatorio"}>Relatório financeiro</Button>
+      <div className="mb-5 grid grid-cols-2 gap-2 sm:grid-cols-4" role="group" aria-label="Navegação do financeiro">
+        <Button type="button" size="sm" variant={aba === "resumo" ? "default" : "outline"} onClick={() => setAba("resumo")} aria-pressed={aba === "resumo"}>Visão geral</Button>
+        <Button type="button" size="sm" variant={aba === "lancar" ? "default" : "outline"} onClick={() => setAba("lancar")} aria-pressed={aba === "lancar"}>Lançar</Button>
+        <Button type="button" size="sm" variant={aba === "movimentacoes" ? "default" : "outline"} onClick={() => setAba("movimentacoes")} aria-pressed={aba === "movimentacoes"}>Movimentações</Button>
+        <Button type="button" size="sm" variant={aba === "relatorio" ? "default" : "outline"} onClick={() => setAba("relatorio")} aria-pressed={aba === "relatorio"}>Relatórios</Button>
       </div>
 
       {aba === "relatorio" ? (
@@ -103,27 +104,19 @@ function Financeiro() {
       ) : aba === "resumo" ? (
         <>
           <section className="mb-7 rounded-xl border p-4">
-            <h2 className="mb-1 font-semibold">Cadastrar lançamento</h2>
+            <h2 className="mb-1 font-semibold">O que você precisa fazer?</h2>
             <p className="mb-3 text-sm text-muted-foreground">
-              Use o caminho adequado para evitar registrar o mesmo gasto duas vezes.
+              Registre uma compra, despesa ou conta a pagar em um único caminho.
             </p>
-            <div className="grid grid-cols-1 gap-3 sm:grid-cols-3">
-              <Button className="h-12" onClick={() => { setTipoLancamento("compra"); setAba("lancar"); }}>
-                <ShoppingCart className="mr-2 size-4" /> Compra de insumos
-              </Button>
-              <Button type="button" variant="outline" className="h-12" onClick={() => { setTipoLancamento("despesa"); setAba("lancar"); }}>
-                <Receipt className="mr-2 size-4" /> Material ou despesa
-              </Button>
-              <Button type="button" variant="outline" className="h-12" onClick={() => { setTipoLancamento("conta"); setAba("lancar"); }}>
-                <CalendarClock className="mr-2 size-4" /> Conta a pagar / cartão
-              </Button>
-            </div>
+            <Button className="h-11 w-full sm:w-auto" onClick={() => setAba("lancar")}>
+              <Receipt className="mr-2 size-4" /> Lançar movimentação
+            </Button>
           </section>
 
           <section className="mb-7">
             <div className="mb-3 flex items-center justify-between gap-3">
               <h2 className="text-lg font-semibold">Próximas contas a pagar</h2>
-              <Button type="button" variant="link" className="h-auto p-0" onClick={() => setAba("contas")}>Ver todas</Button>
+              <Button type="button" variant="link" className="h-auto p-0" onClick={() => { setTipoMovimentacao("contas"); setAba("movimentacoes"); }}>Ver todas</Button>
             </div>
             {!proximasContas.length ? <Empty>Nenhuma conta em aberto.</Empty> : (
               <div className="divide-y rounded-xl border px-3">
@@ -150,7 +143,7 @@ function Financeiro() {
           <section>
             <div className="mb-3 flex items-center justify-between gap-3">
               <h2 className="text-lg font-semibold">Despesas recentes</h2>
-              <Button type="button" variant="link" className="h-auto p-0" onClick={() => setAba("despesas")}>Ver todas</Button>
+              <Button type="button" variant="link" className="h-auto p-0" onClick={() => { setTipoMovimentacao("despesas"); setAba("movimentacoes"); }}>Ver todas</Button>
             </div>
             {!despesasRecentes.length ? <Empty>Nenhuma despesa registrada.</Empty> : (
               <div className="divide-y rounded-xl border px-3">
@@ -168,10 +161,18 @@ function Financeiro() {
             )}
           </section>
         </>
-      ) : aba === "despesas" ? (
-        <Despesas embedded />
       ) : (
-        <ContasPagar embedded />
+        <section className="space-y-4">
+          <div>
+            <h2 className="text-lg font-semibold">Movimentações</h2>
+            <p className="text-sm text-muted-foreground">Consulte e administre os registros existentes.</p>
+          </div>
+          <div className="grid grid-cols-2 gap-2" role="group" aria-label="Tipo de movimentação">
+            <Button type="button" size="sm" variant={tipoMovimentacao === "despesas" ? "default" : "outline"} onClick={() => setTipoMovimentacao("despesas")} aria-pressed={tipoMovimentacao === "despesas"}>Despesas</Button>
+            <Button type="button" size="sm" variant={tipoMovimentacao === "contas" ? "default" : "outline"} onClick={() => setTipoMovimentacao("contas")} aria-pressed={tipoMovimentacao === "contas"}>Contas a pagar</Button>
+          </div>
+          {tipoMovimentacao === "despesas" ? <Despesas embedded /> : <ContasPagar embedded />}
+        </section>
       )}
 
       <div className="mt-6 rounded-lg bg-muted/50 p-3 text-xs text-muted-foreground">
