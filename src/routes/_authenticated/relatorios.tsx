@@ -558,20 +558,23 @@ function RelatoriosConteudo({ initialSearch, embedded = false }: { initialSearch
       </div>
       {!intervaloValido && <p className="mb-4 text-destructive">A data final deve ser igual ou posterior à data inicial.</p>}
 
-      <nav aria-label="Categorias do relatório financeiro" className="mb-6 grid grid-cols-2 gap-2 sm:grid-cols-3">
-        {[
-          ["visao-geral", "Visão geral"],
-          ["vendas", "Vendas e lucro"],
-          ["compras", "Compras e insumos"],
-          ["contas", "Contas a pagar"],
-          ["caixa", "Fluxo de caixa"],
-          ["despesas", "Despesas e custos"],
-        ].map(([valor, rotulo]) => (
-          <Button key={valor} type="button" size="sm" variant={categoriaRelatorio === valor ? "default" : "outline"} aria-pressed={categoriaRelatorio === valor} onClick={() => atualizarBusca({ secao: valor ?? "visao-geral" })}>
-            {rotulo}
-          </Button>
-        ))}
-      </nav>
+      <div className="mb-6">
+        <Field label="Tipo de relatório">
+          <select
+            aria-label="Tipo de relatório financeiro"
+            className="h-11 w-full rounded-md border bg-card px-3 text-sm"
+            value={categoriaRelatorio}
+            onChange={(e) => atualizarBusca({ secao: e.target.value })}
+          >
+            <option value="visao-geral">Visão geral</option>
+            <option value="vendas">Vendas e lucro</option>
+            <option value="compras">Compras e insumos</option>
+            <option value="contas">Contas a pagar</option>
+            <option value="caixa">Fluxo de caixa</option>
+            <option value="despesas">Despesas e custos</option>
+          </select>
+        </Field>
+      </div>
 
       {categoriaRelatorio === "vendas" && <div className="mb-5">
         <Field label="Filtrar cliente">
