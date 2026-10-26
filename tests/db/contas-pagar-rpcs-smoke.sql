@@ -9,6 +9,8 @@ DECLARE
   v_conta uuid;
   v_conta_retry uuid;
   v_conta_sem_movimento uuid;
+  v_parcela uuid;
+  v_total_parcelamento numeric;
   v_exclusao uuid;
   v_pagamento1 uuid;
   v_pagamento2 uuid;
@@ -208,6 +210,72 @@ BEGIN
   EXCEPTION WHEN insufficient_privilege THEN v_falhou := true;
   END;
   IF NOT v_falhou THEN RAISE EXCEPTION 'Falha: escrita direta na auditoria não foi bloqueada.'; END IF;
+
+  -- Correcting a manually registered card parcelment updates the group total, not just one row.
+  PERFORM public.registrar_conta_pagar_parcelada(
+    jsonb_build_object(
+      'descricao','Compra parcelada para corrigir total',
+      'fornecedor','Fornecedor parcelado',
+      'data_emissao','2026-10-15',
+      'data_vencimento','2026-10-20',
+      'valor',100.00,
+      'compra_id',NULL,
+      'observacoes','Teste de edição do total'
+    ),
+    3,
+    '2026-10-20',
+    'abababab-abab-4bab-8bab-abababababab'
+  );
+  PERFORM public.editar_conta_pagar_parcelada(
+    'abababab-abab-4bab-8bab-abababababab',120.00,'acacacac-acac-4cac-8cac-acacacacaca1'
+  );
+  SELECT round(sum(valor) * 100)::numeric / 100 INTO v_total_parcelamento
+  FROM public.contas_pagar
+  WHERE parcelamento_id='abababab-abab-4bab-8bab-abababababab'
+    AND user_id='11111111-1111-4111-8111-111111111111';
+  IF v_total_parcelamento <> 120.00 THEN
+    RAISE EXCEPTION 'Falha: edição do total não atualizou a soma das parcelas para R$ 120,00.';
+  END IF;
+  IF EXISTS (
+    SELECT 1 FROM public.contas_pagar
+    WHERE parcelamento_id='abababab-abab-4bab-8bab-abababababab'
+      AND user_id='11111111-1111-4111-8111-111111111111' AND valor <> 40.00
+  ) THEN RAISE EXCEPTION 'Falha: divisão inicial do total corrigido está incorreta.'; END IF;
+
+  SELECT id INTO v_parcela FROM public.contas_pagar
+  WHERE parcelamento_id='abababab-abab-4bab-8bab-abababababab'
+    AND user_id='11111111-1111-4111-8111-111111111111' AND parcelamento_numero=1;
+  PERFORM public.registrar_pagamento_conta_pagar(
+    v_parcela,40,'2026-10-20','pix','Parcela 1 paga','adadadad-adad-4dad-8dad-adadadadada1'
+  );
+  PERFORM public.editar_conta_pagar_parcelada(
+    'abababab-abab-4bab-8bab-abababababab',150.00,'acacacac-acac-4cac-8cac-acacacacaca2'
+  );
+  SELECT round(sum(valor) * 100)::numeric / 100 INTO v_total_parcelamento
+  FROM public.contas_pagar
+  WHERE parcelamento_id='abababab-abab-4bab-8bab-abababababab'
+    AND user_id='11111111-1111-4111-8111-111111111111';
+  IF v_total_parcelamento <> 150.00 THEN
+    RAISE EXCEPTION 'Falha: total corrigido com parcela paga não soma R$ 150,00.';
+  END IF;
+  IF NOT EXISTS (
+    SELECT 1 FROM public.contas_pagar
+    WHERE id=v_parcela AND valor=40.00 AND valor_pago=40.00 AND status='pago'
+  ) THEN RAISE EXCEPTION 'Falha: edição alterou uma parcela já paga.'; END IF;
+  IF (SELECT count(*) FROM public.contas_pagar
+      WHERE parcelamento_id='abababab-abab-4bab-8bab-abababababab'
+        AND user_id='11111111-1111-4111-8111-111111111111' AND valor=55.00) <> 2 THEN
+    RAISE EXCEPTION 'Falha: parcelas abertas não foram recalculadas após o pagamento.';
+  END IF;
+  v_falhou := false;
+  BEGIN
+    PERFORM public.editar_conta_pagar_parcelada(
+      'abababab-abab-4bab-8bab-abababababab',30.00,'acacacac-acac-4cac-8cac-acacacacaca3'
+    );
+  EXCEPTION WHEN OTHERS THEN
+    IF SQLERRM LIKE 'O novo total não pode ser menor%' THEN v_falhou := true; ELSE RAISE; END IF;
+  END;
+  IF NOT v_falhou THEN RAISE EXCEPTION 'Falha: redução abaixo do valor de parcelas com movimentação foi permitida.'; END IF;
 
   PERFORM set_config('request.jwt.claim.sub','22222222-2222-4222-8222-222222222222',true);
   IF EXISTS (SELECT 1 FROM public.contas_pagar WHERE id=v_conta) THEN

@@ -72,6 +72,7 @@ export function ContasPagar({ embedded = false }: { embedded?: boolean }) {
   const [periodoInicio, setPeriodoInicio] = useState("");
   const [periodoFim, setPeriodoFim] = useState("");
   const [id, setId] = useState<string | null>(null);
+  const [editandoParcelamentoId, setEditandoParcelamentoId] = useState<string | null>(null);
   const [busy, setBusy] = useState(false);
   const [acao, setAcao] = useState<AcaoFinanceira>(null);
   const [valorPagamento, setValorPagamento] = useState("");
@@ -154,12 +155,18 @@ export function ContasPagar({ embedded = false }: { embedded?: boolean }) {
 
   function editar(c: ContaPagar) {
     setId(c.id);
+    const parcelamentoId = c.parcelamento_id ?? null;
+    setEditandoParcelamentoId(parcelamentoId);
+    const totalParcelamento = parcelamentoId
+      ? contas.filter((conta) => conta.parcelamento_id === parcelamentoId && conta.status !== "cancelado")
+        .reduce((soma, conta) => soma + Math.round(Number(conta.valor || 0) * 100), 0) / 100
+      : Number(c.valor);
     setF({
       descricao: c.descricao,
       fornecedor: c.fornecedor ?? "",
       data_emissao: c.data_emissao,
       data_vencimento: c.data_vencimento,
-      valor: String(c.valor),
+      valor: String(totalParcelamento),
       forma_pagamento: c.forma_pagamento ?? "",
       compra_id: c.compra_id ?? "",
       observacoes: c.observacoes ?? "",
@@ -169,6 +176,7 @@ export function ContasPagar({ embedded = false }: { embedded?: boolean }) {
 
   function limpar() {
     setId(null);
+    setEditandoParcelamentoId(null);
     setF({ ...blank });
   }
 
@@ -213,7 +221,14 @@ export function ContasPagar({ embedded = false }: { embedded?: boolean }) {
     const p_operacao_id = operacaoId(chave, assinatura);
     setBusy(true);
     try {
-      if (!id && f.forma_pagamento === "credito" && Number(numeroParcelas) > 1) {
+      if (id && editandoParcelamentoId) {
+        const { error } = await supabase.rpc("editar_conta_pagar_parcelada" as never, {
+          p_parcelamento_id: editandoParcelamentoId,
+          p_valor_total: valor,
+          p_operacao_id,
+        } as never);
+        if (error) throw error;
+      } else if (!id && f.forma_pagamento === "credito" && Number(numeroParcelas) > 1) {
         const { error } = await supabase.rpc("registrar_conta_pagar_parcelada", {
           p_dados: payload,
           p_numero_parcelas: Number(numeroParcelas),
@@ -427,23 +442,23 @@ export function ContasPagar({ embedded = false }: { embedded?: boolean }) {
       <form onSubmit={salvar} className="mb-8 space-y-3 rounded-xl border p-4">
         <h2 className="text-lg font-semibold">{id ? "Editar conta" : "Nova conta a pagar"}</h2>
         <Field label="Descrição">
-          <Input required maxLength={200} className="h-11" value={f.descricao} onChange={(e) => setF({ ...f, descricao: e.target.value })} placeholder="Ex.: compra de chocolate, aluguel..." />
+          <Input required maxLength={200} disabled={Boolean(editandoParcelamentoId)} className="h-11" value={f.descricao} onChange={(e) => setF({ ...f, descricao: e.target.value })} placeholder="Ex.: compra de chocolate, aluguel..." />
         </Field>
         <Field label="Fornecedor (opcional)">
-          <Input className="h-11" value={f.fornecedor} onChange={(e) => setF({ ...f, fornecedor: e.target.value })} />
+          <Input disabled={Boolean(editandoParcelamentoId)} className="h-11" value={f.fornecedor} onChange={(e) => setF({ ...f, fornecedor: e.target.value })} />
         </Field>
         <div className="grid grid-cols-1 gap-3 sm:grid-cols-2">
           <Field label="Data de emissão">
-            <Input required type="date" disabled={temPagamentosEditada} className="h-11" value={f.data_emissao} onChange={(e) => setF({ ...f, data_emissao: e.target.value })} />
+            <Input required type="date" disabled={temPagamentosEditada || Boolean(editandoParcelamentoId)} className="h-11" value={f.data_emissao} onChange={(e) => setF({ ...f, data_emissao: e.target.value })} />
           </Field>
           <Field label={f.forma_pagamento === "credito" && Number(numeroParcelas) > 1 ? "Vencimento da 1ª parcela" : "Vencimento"}>
-            <Input required type="date" className="h-11" value={f.data_vencimento} onChange={(e) => setF({ ...f, data_vencimento: e.target.value })} />
+            <Input required type="date" disabled={Boolean(editandoParcelamentoId)} className="h-11" value={f.data_vencimento} onChange={(e) => setF({ ...f, data_vencimento: e.target.value })} />
           </Field>
-          <Field label="Valor total (R$)" hint={temPagamentosEditada ? "Protegido após o primeiro pagamento" : "Valor total da compra ou obrigação."}>
-            <Input required inputMode="decimal" disabled={temPagamentosEditada} className="h-11" value={f.valor} onChange={(e) => setF({ ...f, valor: e.target.value })} />
+          <Field label={editandoParcelamentoId ? "Valor total do parcelamento (R$)" : "Valor total (R$)"} hint={editandoParcelamentoId ? "Corrige o total da compra; as parcelas sem pagamentos serão recalculadas." : temPagamentosEditada ? "Protegido após o primeiro pagamento" : "Valor total da compra ou obrigação."}>
+            <Input required inputMode="decimal" disabled={temPagamentosEditada && !editandoParcelamentoId} className="h-11" value={f.valor} onChange={(e) => setF({ ...f, valor: e.target.value })} />
           </Field>
           <Field label="Forma de pagamento">
-            <select disabled={temPagamentosEditada} className="h-11 w-full rounded-md border border-input bg-background px-3 text-sm" value={f.forma_pagamento} onChange={(e) => setF({ ...f, forma_pagamento: e.target.value })}>
+            <select disabled={temPagamentosEditada || Boolean(editandoParcelamentoId)} className="h-11 w-full rounded-md border border-input bg-background px-3 text-sm" value={f.forma_pagamento} onChange={(e) => setF({ ...f, forma_pagamento: e.target.value })}>
               <option value="">A definir / outro</option>
               <option value="credito">Cartão de crédito</option>
               <option value="debito">Cartão de débito</option>
@@ -459,13 +474,14 @@ export function ContasPagar({ embedded = false }: { embedded?: boolean }) {
             </Field>
           )}
         </div>
+        {editandoParcelamentoId && <p className="rounded-md bg-muted/50 p-3 text-xs text-muted-foreground">Você está editando o total de todas as parcelas deste parcelamento, não apenas a parcela selecionada. As parcelas com movimentação financeira serão preservadas; somente as parcelas sem pagamentos serão recalculadas.</p>}
         {f.forma_pagamento === "credito" && !id && Number(numeroParcelas) > 1 && (
           <p className="rounded-md bg-muted/50 p-3 text-xs text-muted-foreground">
             Serão criadas {numeroParcelas} contas, uma por mês, com o total dividido em centavos. O valor das parcelas será ajustado para que a soma seja exatamente {brl(parseNum(f.valor) || 0)}.
           </p>
         )}
-        <Field label="Compra relacionada (opcional)" hint={temPagamentosEditada ? "Protegida após o primeiro pagamento" : "Apenas referência; não cria outra despesa automaticamente."}>
-          <select disabled={temPagamentosEditada} className="h-11 w-full rounded-md border border-input bg-background px-3 text-sm" value={f.compra_id} onChange={(e) => setF({ ...f, compra_id: e.target.value })}>
+        <Field label="Compra relacionada (opcional)" hint={editandoParcelamentoId ? "Protegida durante a correção do total" : temPagamentosEditada ? "Protegida após o primeiro pagamento" : "Apenas referência; não cria outra despesa automaticamente."}>
+          <select disabled={temPagamentosEditada || Boolean(editandoParcelamentoId)} className="h-11 w-full rounded-md border border-input bg-background px-3 text-sm" value={f.compra_id} onChange={(e) => setF({ ...f, compra_id: e.target.value })}>
             <option value="">Sem vínculo com compra</option>
             {compras.filter((c) => !c.cancelada_em).map((c) => (
               <option key={c.id} value={c.id}>{dataBR(c.data_compra)} · {brl(c.total)}</option>
@@ -473,7 +489,7 @@ export function ContasPagar({ embedded = false }: { embedded?: boolean }) {
           </select>
         </Field>
         <Field label="Observações (opcional)">
-          <Textarea rows={2} value={f.observacoes} onChange={(e) => setF({ ...f, observacoes: e.target.value })} />
+          <Textarea disabled={Boolean(editandoParcelamentoId)} rows={2} value={f.observacoes} onChange={(e) => setF({ ...f, observacoes: e.target.value })} />
         </Field>
         <div className="flex gap-2">
           {id && <Button type="button" variant="outline" onClick={limpar}>Cancelar edição</Button>}
