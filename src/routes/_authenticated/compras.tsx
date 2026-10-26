@@ -46,7 +46,8 @@ export const Route = createFileRoute("/_authenticated/compras")({
 
 function ComprasPage() {
   const { secao } = Route.useSearch();
-  return <Compras key={secao} initialSection={secao} />;
+  const initialSection = secao === "gastos" || secao === "integracao" || secao === "estoque" ? secao : "compras";
+  return <Compras key={initialSection} initialSection={initialSection} />;
 }
 
 const MEDIDAS_COMPRA = ["g", "kg", "L", "ml", "un"] as const;
