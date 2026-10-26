@@ -91,10 +91,18 @@ function Financeiro() {
             <h2 className="text-lg font-semibold">Cadastrar lançamento</h2>
             <p className="text-sm text-muted-foreground">Escolha o tipo de gasto. Você permanece no Financeiro e o sistema mantém o estoque e os registros financeiros vinculados conforme o tipo escolhido.</p>
           </div>
-          <div className="grid grid-cols-1 gap-2 sm:grid-cols-3" role="group" aria-label="Tipo de lançamento">
-            <Button type="button" variant={tipoLancamento === "compra" ? "default" : "outline"} className="h-auto min-h-11 whitespace-normal" onClick={() => setTipoLancamento("compra")}><ShoppingCart className="mr-2 size-4 shrink-0" /> Compra de insumos</Button>
-            <Button type="button" variant={tipoLancamento === "despesa" ? "default" : "outline"} className="h-auto min-h-11 whitespace-normal" onClick={() => setTipoLancamento("despesa")}><Receipt className="mr-2 size-4 shrink-0" /> Material ou despesa</Button>
-            <Button type="button" variant={tipoLancamento === "conta" ? "default" : "outline"} className="h-auto min-h-11 whitespace-normal" onClick={() => setTipoLancamento("conta")}><CalendarClock className="mr-2 size-4 shrink-0" /> Conta a pagar / cartão</Button>
+          <div>
+            <label htmlFor="tipo-lancamento-financeiro" className="mb-1.5 block text-sm font-medium">Tipo de lançamento</label>
+            <select
+              id="tipo-lancamento-financeiro"
+              className="h-11 w-full rounded-md border bg-card px-3 text-sm"
+              value={tipoLancamento}
+              onChange={(e) => setTipoLancamento(e.target.value as TipoLancamento)}
+            >
+              <option value="compra">Compra de insumos</option>
+              <option value="despesa">Material ou despesa</option>
+              <option value="conta">Conta a pagar / cartão</option>
+            </select>
           </div>
           <div className="rounded-xl border p-3 sm:p-4">
             {tipoLancamento === "compra" ? <Compras embedded initialSection="compras" /> : tipoLancamento === "despesa" ? <Despesas embedded /> : <ContasPagar embedded />}
