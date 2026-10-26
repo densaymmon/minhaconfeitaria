@@ -234,7 +234,16 @@ export function ContasPagar({ embedded = false }: { embedded?: boolean }) {
       limpar();
       toast.success(id ? "Conta atualizada." : "Conta registrada.");
     } catch (erro) {
-      toast.error(erro instanceof Error ? erro.message : "Não foi possível salvar a conta.");
+      // Supabase/PostgREST retorna erros como objetos simples; não assuma que são instâncias de Error.
+      // Exiba a mensagem real para distinguir RPC ausente, validação SQL e falhas de permissão.
+      const detalhe = typeof erro === "object" && erro !== null
+        ? [
+            "message" in erro && typeof erro.message === "string" ? erro.message : "",
+            "details" in erro && typeof erro.details === "string" ? erro.details : "",
+            "hint" in erro && typeof erro.hint === "string" ? erro.hint : "",
+          ].filter(Boolean).join(" — ")
+        : erro instanceof Error ? erro.message : typeof erro === "string" ? erro : "";
+      toast.error(detalhe || "Não foi possível salvar a conta. Verifique a conexão e tente novamente.");
     } finally {
       setBusy(false);
     }
