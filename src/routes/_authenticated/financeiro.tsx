@@ -33,7 +33,7 @@ export const Route = createFileRoute("/_authenticated/financeiro")({
 });
 
 type AbaFinanceiro = "resumo" | "lancar" | "movimentacoes" | "relatorio";
-type TipoMovimentacao = "despesas" | "contas";
+type TipoMovimentacao = "compras" | "despesas" | "contas";
 type TipoLancamento = "compra" | "despesa" | "conta";
 
 function Financeiro() {
@@ -167,11 +167,12 @@ function Financeiro() {
             <h2 className="text-lg font-semibold">Movimentações</h2>
             <p className="text-sm text-muted-foreground">Consulte e administre os registros existentes.</p>
           </div>
-          <div className="grid grid-cols-2 gap-2" role="group" aria-label="Tipo de movimentação">
+          <div className="grid grid-cols-1 gap-2 sm:grid-cols-3" role="group" aria-label="Tipo de movimentação">
+            <Button type="button" size="sm" variant={tipoMovimentacao === "compras" ? "default" : "outline"} onClick={() => setTipoMovimentacao("compras")} aria-pressed={tipoMovimentacao === "compras"}>Compras</Button>
             <Button type="button" size="sm" variant={tipoMovimentacao === "despesas" ? "default" : "outline"} onClick={() => setTipoMovimentacao("despesas")} aria-pressed={tipoMovimentacao === "despesas"}>Despesas</Button>
             <Button type="button" size="sm" variant={tipoMovimentacao === "contas" ? "default" : "outline"} onClick={() => setTipoMovimentacao("contas")} aria-pressed={tipoMovimentacao === "contas"}>Contas a pagar</Button>
           </div>
-          {tipoMovimentacao === "despesas" ? <Despesas embedded /> : <ContasPagar embedded />}
+          {tipoMovimentacao === "compras" ? <Compras embedded initialSection="gastos" /> : tipoMovimentacao === "despesas" ? <Despesas embedded /> : <ContasPagar embedded />}
         </section>
       )}
 
