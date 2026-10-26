@@ -72,6 +72,7 @@ export function ContasPagar({ embedded = false }: { embedded?: boolean }) {
   const [periodoInicio, setPeriodoInicio] = useState("");
   const [periodoFim, setPeriodoFim] = useState("");
   const [id, setId] = useState<string | null>(null);
+  const [editandoParcelamentoId, setEditandoParcelamentoId] = useState<string | null>(null);
   const [busy, setBusy] = useState(false);
   const [acao, setAcao] = useState<AcaoFinanceira>(null);
   const [valorPagamento, setValorPagamento] = useState("");
@@ -154,12 +155,18 @@ export function ContasPagar({ embedded = false }: { embedded?: boolean }) {
 
   function editar(c: ContaPagar) {
     setId(c.id);
+    const parcelamentoId = c.parcelamento_id ?? null;
+    setEditandoParcelamentoId(parcelamentoId);
+    const totalParcelamento = parcelamentoId
+      ? contas.filter((conta) => conta.parcelamento_id === parcelamentoId && conta.status !== "cancelado")
+        .reduce((soma, conta) => soma + Math.round(Number(conta.valor || 0) * 100), 0) / 100
+      : Number(c.valor);
     setF({
       descricao: c.descricao,
       fornecedor: c.fornecedor ?? "",
       data_emissao: c.data_emissao,
       data_vencimento: c.data_vencimento,
-      valor: String(c.valor),
+      valor: String(totalParcelamento),
       forma_pagamento: c.forma_pagamento ?? "",
       compra_id: c.compra_id ?? "",
       observacoes: c.observacoes ?? "",
@@ -169,6 +176,7 @@ export function ContasPagar({ embedded = false }: { embedded?: boolean }) {
 
   function limpar() {
     setId(null);
+    setEditandoParcelamentoId(null);
     setF({ ...blank });
   }
 
@@ -213,7 +221,14 @@ export function ContasPagar({ embedded = false }: { embedded?: boolean }) {
     const p_operacao_id = operacaoId(chave, assinatura);
     setBusy(true);
     try {
-      if (!id && f.forma_pagamento === "credito" && Number(numeroParcelas) > 1) {
+      if (id && editandoParcelamentoId) {
+        const { error } = await supabase.rpc("editar_conta_pagar_parcelada" as never, {
+          p_parcelamento_id: editandoParcelamentoId,
+          p_valor_total: valor,
+          p_operacao_id,
+        } as never);
+        if (error) throw error;
+      } else if (!id && f.forma_pagamento === "credito" && Number(numeroParcelas) > 1) {
         const { error } = await supabase.rpc("registrar_conta_pagar_parcelada", {
           p_dados: payload,
           p_numero_parcelas: Number(numeroParcelas),
@@ -439,7 +454,7 @@ export function ContasPagar({ embedded = false }: { embedded?: boolean }) {
           <Field label={f.forma_pagamento === "credito" && Number(numeroParcelas) > 1 ? "Vencimento da 1ª parcela" : "Vencimento"}>
             <Input required type="date" className="h-11" value={f.data_vencimento} onChange={(e) => setF({ ...f, data_vencimento: e.target.value })} />
           </Field>
-          <Field label="Valor total (R$)" hint={temPagamentosEditada ? "Protegido após o primeiro pagamento" : "Valor total da compra ou obrigação."}>
+          <Field label={editandoParcelamentoId ? "Valor total do parcelamento (R$)" : "Valor total (R$)"} hint={editandoParcelamentoId ? "Corrige o total da compra; as parcelas sem pagamentos serão recalculadas." : temPagamentosEditada ? "Protegido após o primeiro pagamento" : "Valor total da compra ou obrigação."}>
             <Input required inputMode="decimal" disabled={temPagamentosEditada} className="h-11" value={f.valor} onChange={(e) => setF({ ...f, valor: e.target.value })} />
           </Field>
           <Field label="Forma de pagamento">
@@ -459,6 +474,7 @@ export function ContasPagar({ embedded = false }: { embedded?: boolean }) {
             </Field>
           )}
         </div>
+        {editandoParcelamentoId && <p className="rounded-md bg-muted/50 p-3 text-xs text-muted-foreground">Você está editando o total de todas as parcelas deste parcelamento, não apenas a parcela selecionada. As parcelas com movimentação financeira serão preservadas; somente as parcelas sem pagamentos serão recalculadas.</p>}
         {f.forma_pagamento === "credito" && !id && Number(numeroParcelas) > 1 && (
           <p className="rounded-md bg-muted/50 p-3 text-xs text-muted-foreground">
             Serão criadas {numeroParcelas} contas, uma por mês, com o total dividido em centavos. O valor das parcelas será ajustado para que a soma seja exatamente {brl(parseNum(f.valor) || 0)}.
