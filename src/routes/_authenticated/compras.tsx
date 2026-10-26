@@ -41,8 +41,13 @@ export const Route = createFileRoute("/_authenticated/compras")({
       { name: "twitter:card", content: "summary_large_image" },
     ],
   }),
-  component: Compras,
+  component: ComprasPage,
 });
+
+function ComprasPage() {
+  const { secao } = Route.useSearch();
+  return <Compras key={secao} initialSection={secao} />;
+}
 
 const MEDIDAS_COMPRA = ["g", "kg", "L", "ml", "un"] as const;
 type Linha = { compraItemId?: string; insumo_id: string; quantidade: string; unidade: string; preco: string };
@@ -131,9 +136,8 @@ function valorExistenteEmCentavos(valor: string): string {
 }
 
 
-function Compras() {
-  const { secao } = Route.useSearch();
-  const navigate = Route.useNavigate();
+export function Compras({ embedded = false, initialSection = "compras" }: { embedded?: boolean; initialSection?: "compras" | "gastos" | "integracao" | "estoque" }) {
+  const [secao, setSecao] = useState<"compras" | "gastos" | "integracao" | "estoque">(initialSection);
   const { data: insumos } = useSuspenseQuery(appQueries.insumosQ);
   const { data: compras } = useSuspenseQuery(appQueries.comprasQ);
   const { data: itens } = useSuspenseQuery(appQueries.compraItensQ);
@@ -666,7 +670,7 @@ function Compras() {
 
   return (
     <>
-      <PageHeader title={secao === "integracao" ? "Conferência de integração" : secao === "estoque" ? "Controle de estoque" : "Compras de insumos"} back="/mais" />
+      {!embedded && <PageHeader title={secao === "integracao" ? "Conferência de integração" : secao === "estoque" ? "Controle de estoque" : "Compras de insumos"} back="/mais" />}
 
       {secao === "integracao" && <section className="mb-8 rounded-xl border p-4">
         <div className="mb-2 flex items-center justify-between gap-3">
@@ -1070,7 +1074,7 @@ function Compras() {
                             setEditandoCompraId(c.id);
                             // A edição precisa mudar para a seção que contém o formulário;
                             // caso contrário, o estado muda mas o formulário continua oculto.
-                            void navigate({ search: (prev) => ({ ...prev, secao: "compras" }) });
+                            setSecao("compras");
                           }}>Editar</Button>
                           <Button type="button" variant="outline" size="sm" disabled={busy} onClick={() => void cancelarCompra(c)}>Cancelar</Button>
                         </>

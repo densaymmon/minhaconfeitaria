@@ -1,5 +1,5 @@
 import * as appQueries from "@/lib/queries";
-import { createFileRoute, Link } from "@tanstack/react-router";
+import { createFileRoute } from "@tanstack/react-router";
 import { useSuspenseQuery } from "@tanstack/react-query";
 import { useMemo, useState } from "react";
 import { CalendarClock, CircleAlert, Receipt, ShoppingCart } from "lucide-react";
@@ -9,6 +9,7 @@ import { PageHeader, Stat, Empty } from "@/components/app/ui";
 import { Button } from "@/components/ui/button";
 import { Despesas } from "./despesas";
 import { ContasPagar } from "./contas-pagar";
+import { Compras } from "./compras";
 import { RelatoriosEmbedded } from "./relatorios";
 
 export const Route = createFileRoute("/_authenticated/financeiro")({
@@ -19,6 +20,8 @@ export const Route = createFileRoute("/_authenticated/financeiro")({
       context.queryClient.ensureQueryData(appQueries.contasPagarPagamentosQ),
       context.queryClient.ensureQueryData(appQueries.contasPagarEstornosQ),
       context.queryClient.ensureQueryData(appQueries.comprasQ),
+      context.queryClient.ensureQueryData(appQueries.insumosQ),
+      context.queryClient.ensureQueryData(appQueries.compraItensQ),
     ]);
   },
   errorComponent: ({ error }) => (
@@ -29,12 +32,14 @@ export const Route = createFileRoute("/_authenticated/financeiro")({
   component: Financeiro,
 });
 
-type AbaFinanceiro = "resumo" | "despesas" | "contas" | "relatorio";
+type AbaFinanceiro = "resumo" | "lancar" | "despesas" | "contas" | "relatorio";
+type TipoLancamento = "compra" | "despesa" | "conta";
 
 function Financeiro() {
   const { data: contas } = useSuspenseQuery(contasPagarQ);
   const { data: despesas } = useSuspenseQuery(despesasQ);
   const [aba, setAba] = useState<AbaFinanceiro>("resumo");
+  const [tipoLancamento, setTipoLancamento] = useState<TipoLancamento>("compra");
   const hoje = hojeISO();
   const inicioMes = mesISO() + "-01";
   const contasAtivas = contas.filter((conta) => !conta.cancelada_em && conta.status !== "cancelado");
@@ -69,8 +74,9 @@ function Financeiro() {
         <Stat label="Despesas deste mês" value={brl(totalDespesasMes)} />
       </div>
 
-      <div className="mb-5 grid grid-cols-2 gap-2 sm:grid-cols-4" role="group" aria-label="Navegação do financeiro">
+      <div className="mb-5 grid grid-cols-2 gap-2 sm:grid-cols-3 lg:grid-cols-5" role="group" aria-label="Navegação do financeiro">
         <Button type="button" size="sm" variant={aba === "resumo" ? "default" : "outline"} onClick={() => { setAba("resumo"); }} aria-pressed={aba === "resumo"}>Resumo</Button>
+        <Button type="button" size="sm" variant={aba === "lancar" ? "default" : "outline"} onClick={() => { setAba("lancar"); }} aria-pressed={aba === "lancar"}>Lançar gasto</Button>
         <Button type="button" size="sm" variant={aba === "despesas" ? "default" : "outline"} onClick={() => { setAba("despesas"); }} aria-pressed={aba === "despesas"}>Despesas</Button>
         <Button type="button" size="sm" variant={aba === "contas" ? "default" : "outline"} onClick={() => { setAba("contas"); }} aria-pressed={aba === "contas"}>Contas a pagar</Button>
         <Button type="button" size="sm" variant={aba === "relatorio" ? "default" : "outline"} onClick={() => { setAba("relatorio"); }} aria-pressed={aba === "relatorio"}>Relatório financeiro</Button>
@@ -78,6 +84,22 @@ function Financeiro() {
 
       {aba === "relatorio" ? (
         <RelatoriosEmbedded />
+      ) : aba === "lancar" ? (
+        <section className="space-y-4">
+          <div>
+            <h2 className="text-lg font-semibold">Cadastrar lançamento</h2>
+            <p className="text-sm text-muted-foreground">Escolha o tipo de gasto. Você permanece no Financeiro e o sistema mantém o estoque e os registros financeiros vinculados conforme o tipo escolhido.</p>
+          </div>
+          <div className="grid grid-cols-1 gap-2 sm:grid-cols-3" role="group" aria-label="Tipo de lançamento">
+            <Button type="button" variant={tipoLancamento === "compra" ? "default" : "outline"} className="h-auto min-h-11 whitespace-normal" onClick={() => setTipoLancamento("compra")}><ShoppingCart className="mr-2 size-4 shrink-0" /> Compra de insumos</Button>
+            <Button type="button" variant={tipoLancamento === "despesa" ? "default" : "outline"} className="h-auto min-h-11 whitespace-normal" onClick={() => setTipoLancamento("despesa")}><Receipt className="mr-2 size-4 shrink-0" /> Material ou despesa</Button>
+            <Button type="button" variant={tipoLancamento === "conta" ? "default" : "outline"} className="h-auto min-h-11 whitespace-normal" onClick={() => setTipoLancamento("conta")}><CalendarClock className="mr-2 size-4 shrink-0" /> Conta a pagar / cartão</Button>
+          </div>
+          <div className="rounded-xl border p-3 sm:p-4">
+            {tipoLancamento === "compra" ? <Compras embedded initialSection="compras" /> : tipoLancamento === "despesa" ? <Despesas embedded /> : <ContasPagar embedded />}
+          </div>
+          <p className="text-xs text-muted-foreground">Use “Compra de insumos” quando precisar dar entrada no estoque. Para materiais e gastos gerais, use “Material ou despesa”. Para compras no cartão parceladas ou obrigações futuras, use “Conta a pagar / cartão”. Não registre o mesmo gasto em mais de um tipo.</p>
+        </section>
       ) : aba === "resumo" ? (
         <>
           <section className="mb-7 rounded-xl border p-4">
@@ -86,14 +108,14 @@ function Financeiro() {
               Use o caminho adequado para evitar registrar o mesmo gasto duas vezes.
             </p>
             <div className="grid grid-cols-1 gap-3 sm:grid-cols-3">
-              <Button asChild className="h-12">
-                <Link to="/compras" search={{ secao: "compras" }}><ShoppingCart className="mr-2 size-4" /> Compra de insumos</Link>
+              <Button className="h-12" onClick={() => { setTipoLancamento("compra"); setAba("lancar"); }}>
+                <ShoppingCart className="mr-2 size-4" /> Compra de insumos
               </Button>
-              <Button type="button" variant="outline" className="h-12" onClick={() => setAba("despesas")}>
-                <Receipt className="mr-2 size-4" /> Despesa operacional
+              <Button type="button" variant="outline" className="h-12" onClick={() => { setTipoLancamento("despesa"); setAba("lancar"); }}>
+                <Receipt className="mr-2 size-4" /> Material ou despesa
               </Button>
-              <Button type="button" variant="outline" className="h-12" onClick={() => setAba("contas")}>
-                <CalendarClock className="mr-2 size-4" /> Conta a pagar / crédito
+              <Button type="button" variant="outline" className="h-12" onClick={() => { setTipoLancamento("conta"); setAba("lancar"); }}>
+                <CalendarClock className="mr-2 size-4" /> Conta a pagar / cartão
               </Button>
             </div>
           </section>
