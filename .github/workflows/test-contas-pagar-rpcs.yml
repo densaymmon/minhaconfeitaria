@@ -4,6 +4,7 @@ on:
   pull_request:
     paths:
       - "docs/deploy/contas-pagar-rpcs.sql"
+      - "supabase/migrations/**"
       - "tests/db/**"
       - ".github/workflows/test-contas-pagar-rpcs.yml"
   workflow_dispatch:
@@ -58,6 +59,10 @@ jobs:
           SQL
       - name: Aplicar a migração somente no banco descartável
         run: psql -v ON_ERROR_STOP=1 -f docs/deploy/contas-pagar-rpcs.sql
+      - name: Aplicar suporte a parcelamento manual e correção do total
+        run: |
+          psql -v ON_ERROR_STOP=1 -f supabase/migrations/20261025140000_contas_pagar_parcelamento_manual.sql
+          psql -v ON_ERROR_STOP=1 -f supabase/migrations/20261025153000_editar_total_parcelamento_manual.sql
       - name: Executar testes funcionais, idempotência, RLS e histórico
         run: psql -v ON_ERROR_STOP=1 -f tests/db/contas-pagar-rpcs-smoke.sql
       - name: Executar teste de concorrência de pagamentos
