@@ -455,7 +455,7 @@ export function ContasPagar({ embedded = false }: { embedded?: boolean }) {
             <Input required type="date" className="h-11" value={f.data_vencimento} onChange={(e) => setF({ ...f, data_vencimento: e.target.value })} />
           </Field>
           <Field label={editandoParcelamentoId ? "Valor total do parcelamento (R$)" : "Valor total (R$)"} hint={editandoParcelamentoId ? "Corrige o total da compra; as parcelas sem pagamentos serão recalculadas." : temPagamentosEditada ? "Protegido após o primeiro pagamento" : "Valor total da compra ou obrigação."}>
-            <Input required inputMode="decimal" disabled={temPagamentosEditada} className="h-11" value={f.valor} onChange={(e) => setF({ ...f, valor: e.target.value })} />
+            <Input required inputMode="decimal" disabled={temPagamentosEditada && !editandoParcelamentoId} className="h-11" value={f.valor} onChange={(e) => setF({ ...f, valor: e.target.value })} />
           </Field>
           <Field label="Forma de pagamento">
             <select disabled={temPagamentosEditada} className="h-11 w-full rounded-md border border-input bg-background px-3 text-sm" value={f.forma_pagamento} onChange={(e) => setF({ ...f, forma_pagamento: e.target.value })}>
