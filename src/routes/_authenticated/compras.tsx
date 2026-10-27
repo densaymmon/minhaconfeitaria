@@ -189,7 +189,18 @@ export function Compras({ embedded = false, initialSection = "compras" }: { embe
   const [acknowledgedReview, setAcknowledgedReview] = useState(false);
   const [de, setDe] = useState("");
   const [ate, setAte] = useState("");
+  const [mesGastos, setMesGastos] = useState("");
   const [buscaHistorico, setBuscaHistorico] = useState("");
+
+  useEffect(() => {
+    if (mesGastos || !compras.length) return;
+    const meses = [...new Set(compras.map((compra) => compra.data_compra.slice(0, 7)).filter(Boolean))].sort();
+    const mesMaisRecente = meses.at(-1) ?? hojeISO().slice(0, 7);
+    setMesGastos(mesMaisRecente);
+    setDe(`${mesMaisRecente}-01`);
+    const [ano, mes] = mesMaisRecente.split("-").map(Number);
+    setAte(new Date(ano, mes, 0).toISOString().slice(0, 10));
+  }, [compras, mesGastos]);
 
   // Only the four measures the owner asked for, and only those that match the insumo's package.
   const unidadesPara = (insumoId: string) => {
@@ -1014,12 +1025,40 @@ export function Compras({ embedded = false, initialSection = "compras" }: { embe
       {secao === "gastos" && <>
       <section className="mb-8">
         <h2 className="mb-3 flex items-center gap-2 text-lg font-semibold"><ShoppingCart className="size-5" /> Gastos por período</h2>
-        <div className="mb-3 grid grid-cols-2 gap-3">
-          <Field label="De"><Input type="date" className="h-10" value={de} max={ate || undefined} onChange={(e) => setDe(e.target.value)} /></Field>
-          <Field label="Até"><Input type="date" className="h-10" value={ate} min={de || undefined} onChange={(e) => setAte(e.target.value)} /></Field>
+        <div className="mb-3 grid grid-cols-1 gap-3 sm:grid-cols-3">
+          <Field label="Mês dos gastos">
+            <select
+              aria-label="Selecionar mês dos gastos por período"
+              className="h-10 w-full rounded-md border border-input bg-background px-3 text-sm"
+              value={mesGastos}
+              onChange={(e) => {
+                const mesSelecionado = e.target.value;
+                setMesGastos(mesSelecionado);
+                if (mesSelecionado === "todos") {
+                  setDe("");
+                  setAte("");
+                } else if (mesSelecionado) {
+                  setDe(`${mesSelecionado}-01`);
+                  const [ano, mes] = mesSelecionado.split("-").map(Number);
+                  setAte(new Date(ano, mes, 0).toISOString().slice(0, 10));
+                }
+              }}
+            >
+              <option value="todos">Todos os meses</option>
+              {[...new Set(compras.map((compra) => compra.data_compra.slice(0, 7)).filter(Boolean))]
+                .sort((a, b) => b.localeCompare(a))
+                .map((mes) => (
+                  <option key={mes} value={mes}>
+                    {new Date(`${mes}-01T12:00:00`).toLocaleDateString("pt-BR", { month: "long", year: "numeric" })}
+                  </option>
+                ))}
+            </select>
+          </Field>
+          <Field label="De"><Input type="date" className="h-10" value={de} max={ate || undefined} onChange={(e) => { setDe(e.target.value); setMesGastos(""); }} /></Field>
+          <Field label="Até"><Input type="date" className="h-10" value={ate} min={de || undefined} onChange={(e) => { setAte(e.target.value); setMesGastos(""); }} /></Field>
         </div>
         {(de || ate) && (
-          <button type="button" className="mb-3 text-sm text-primary" onClick={() => { setDe(""); setAte(""); }}>Limpar período</button>
+          <button type="button" className="mb-3 text-sm text-primary" onClick={() => { setDe(""); setAte(""); setMesGastos("todos"); }}>Limpar período</button>
         )}
         <Card className="mb-3 p-3">
           <div className="text-sm text-muted-foreground">Total comprado no período</div>
