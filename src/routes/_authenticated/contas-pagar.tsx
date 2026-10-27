@@ -49,7 +49,7 @@ type AcaoFinanceira =
   | { tipo: "cancelamento"; conta: ContaPagar }
   | null;
 
-export function ContasPagar({ embedded = false }: { embedded?: boolean }) {
+export function ContasPagar({ embedded = false, viewOnly = false }: { embedded?: boolean; viewOnly?: boolean }) {
   const { data: contas } = useSuspenseQuery(contasPagarQ);
   const { data: compras } = useSuspenseQuery(comprasQ);
   const { data: pagamentos } = useSuspenseQuery(contasPagarPagamentosQ);
@@ -444,6 +444,7 @@ export function ContasPagar({ embedded = false }: { embedded?: boolean }) {
         <Stat label="Total já pago" value={brl(totalPago)} tone="primary" />
       </div>
 
+      {!viewOnly && (
       <form onSubmit={salvar} className="mb-8 space-y-3 rounded-xl border p-4">
         <h2 className="text-lg font-semibold">{id ? "Editar conta" : "Nova conta a pagar"}</h2>
         <Field label="Descrição">
@@ -505,6 +506,7 @@ export function ContasPagar({ embedded = false }: { embedded?: boolean }) {
           Registrar uma conta não altera automaticamente as despesas nem o resultado do relatório. Evite lançar a mesma obrigação duas vezes como despesa.
         </p>
       </form>
+      )}
 
       <section>
         <h2 className="mb-3 text-lg font-semibold">Histórico e vencimentos</h2>
@@ -606,10 +608,10 @@ export function ContasPagar({ embedded = false }: { embedded?: boolean }) {
                       Total {brl(c.valor)} · Pago {brl(c.valor_pago)} · {c.status === "cancelado" ? "Cancelada" : c.status === "pago" ? "Paga" : c.status === "parcial" ? "Parcial" : "Pendente"}
                     </p>
                     <div className="flex flex-wrap gap-2">
-                      {c.status !== "cancelado" && <Button type="button" size="sm" variant="outline" onClick={() => editar(c)}><Pencil className="size-3" /> Editar</Button>}
-                      {c.status !== "cancelado" && saldo > 0 && <Button type="button" size="sm" onClick={() => abrirPagamento(c)}><CreditCard className="size-3" /> Pagar</Button>}
-                      {c.status !== "cancelado" && <Button type="button" size="sm" variant="ghost" onClick={() => { setAcao({ tipo: "cancelamento", conta: c }); setMotivoCancelamento(""); }}><XCircle className="size-3" /> Cancelar</Button>}
-                      {c.status === "cancelado" && !temPagamento && Number(c.valor_pago) === 0 && <Button type="button" size="sm" variant="destructive" disabled={busy} onClick={() => void excluirContaCancelada(c)}><Trash2 className="size-3" /> Excluir cancelada</Button>}
+                      {!viewOnly && {c.status !== "cancelado" && <Button type="button" size="sm" variant="outline" onClick={() => editar(c)}><Pencil className="size-3" /> Editar</Button>}}
+                      {!viewOnly && {c.status !== "cancelado" && saldo > 0 && <Button type="button" size="sm" onClick={() => abrirPagamento(c)}><CreditCard className="size-3" /> Pagar</Button>}}
+                      {!viewOnly && {c.status !== "cancelado" && <Button type="button" size="sm" variant="ghost" onClick={() => { setAcao({ tipo: "cancelamento", conta: c }); setMotivoCancelamento(""); }}><XCircle className="size-3" /> Cancelar</Button>}}
+                      {!viewOnly && {c.status === "cancelado" && !temPagamento && Number(c.valor_pago) === 0 && <Button type="button" size="sm" variant="destructive" disabled={busy} onClick={() => void excluirContaCancelada(c)}><Trash2 className="size-3" /> Excluir cancelada</Button>}}
                     </div>
                   </div>
                   <details className="mt-3 rounded-lg bg-muted/40 p-3">
@@ -640,9 +642,9 @@ export function ContasPagar({ embedded = false }: { embedded?: boolean }) {
                                 </p>
                               ))}
                               {c.status !== "cancelado" && disponivel > 0 && (
-                                <Button type="button" size="sm" variant="outline" className="mt-2" onClick={() => abrirEstorno(c, p, disponivel)}>
+                                {!viewOnly && <Button type="button" size="sm" variant="outline" className="mt-2" onClick={() => abrirEstorno(c, p, disponivel)}>
                                   <RotateCcw className="size-3" /> Estornar pagamento
-                                </Button>
+                                </Button>}
                               )}
                             </div>
                           );
