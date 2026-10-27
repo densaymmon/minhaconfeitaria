@@ -198,7 +198,8 @@ export function Compras({ embedded = false, initialSection = "compras" }: { embe
     const mesMaisRecente = meses.at(-1) ?? hojeISO().slice(0, 7);
     setMesGastos(mesMaisRecente);
     setDe(`${mesMaisRecente}-01`);
-    const [ano, mes] = mesMaisRecente.split("-").map(Number);
+    const ano = Number(mesMaisRecente.slice(0, 4));
+    const mes = Number(mesMaisRecente.slice(5, 7));
     setAte(new Date(ano, mes, 0).toISOString().slice(0, 10));
   }, [compras, mesGastos]);
 
@@ -1039,7 +1040,8 @@ export function Compras({ embedded = false, initialSection = "compras" }: { embe
                   setAte("");
                 } else if (mesSelecionado) {
                   setDe(`${mesSelecionado}-01`);
-                  const [ano, mes] = mesSelecionado.split("-").map(Number);
+                  const ano = Number(mesSelecionado.slice(0, 4));
+                  const mes = Number(mesSelecionado.slice(5, 7));
                   setAte(new Date(ano, mes, 0).toISOString().slice(0, 10));
                 }
               }}
