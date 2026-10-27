@@ -8,7 +8,7 @@ DECLARE
   uid uuid := 'acacacac-acac-4cac-8cac-acacacacacac';
   sem_historico uuid;
   com_historico uuid;
-  compra_id uuid;
+  v_compra_id uuid;
 BEGIN
   -- A truly unused ingredient can be removed permanently.
   INSERT INTO public.insumos(user_id, nome, unidade, preco_unidade)
@@ -26,7 +26,7 @@ BEGIN
   VALUES (uid, 'Insumo com histórico - teste', 'g', 0.01)
   RETURNING id INTO com_historico;
 
-  compra_id := public.salvar_compra(
+  v_compra_id := public.salvar_compra(
     '{"data_compra":"2026-10-27"}'::jsonb,
     jsonb_build_array(jsonb_build_object(
       'insumo_id', com_historico,
@@ -45,10 +45,10 @@ BEGIN
   ) THEN
     RAISE EXCEPTION 'Insumo com histórico deveria ser inativado, não removido.';
   END IF;
-  IF NOT EXISTS (SELECT 1 FROM public.compras WHERE id = compra_id)
+  IF NOT EXISTS (SELECT 1 FROM public.compras WHERE id = v_compra_id)
      OR NOT EXISTS (
-       SELECT 1 FROM public.compra_itens
-       WHERE compra_id = compra_id AND insumo_id = com_historico
+       SELECT 1 FROM public.compra_itens ci
+       WHERE ci.compra_id = v_compra_id AND ci.insumo_id = com_historico
      ) THEN
     RAISE EXCEPTION 'A exclusão do insumo apagou ou perdeu o histórico da compra.';
   END IF;
