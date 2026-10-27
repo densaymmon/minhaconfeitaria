@@ -69,6 +69,10 @@ export function ContasPagar({ embedded = false }: { embedded?: boolean }) {
   const [numeroParcelas, setNumeroParcelas] = useState("2");
   const [buscaContas, setBuscaContas] = useState("");
   const [filtroStatus, setFiltroStatus] = useState("todas");
+  const [mesSelecionado, setMesSelecionado] = useState(() => {
+    const meses = [...new Set(contas.map((conta) => conta.data_vencimento.slice(0, 7)).filter(Boolean))].sort();
+    return meses.at(-1) ?? hojeISO().slice(0, 7);
+  });
   const [periodoInicio, setPeriodoInicio] = useState("");
   const [periodoFim, setPeriodoFim] = useState("");
   const [id, setId] = useState<string | null>(null);
@@ -104,10 +108,11 @@ export function ContasPagar({ embedded = false }: { embedded?: boolean }) {
         const correspondeStatus = filtroStatus === "todas" || (filtroStatus === "vencidas" ? vencida : c.status === filtroStatus);
         const correspondeInicio = !periodoInicio || c.data_vencimento >= periodoInicio;
         const correspondeFim = !periodoFim || c.data_vencimento <= periodoFim;
-        return correspondeTexto && correspondeStatus && correspondeInicio && correspondeFim;
+        const correspondeMes = mesSelecionado === "todos" || c.data_vencimento.slice(0, 7) === mesSelecionado;
+        return correspondeTexto && correspondeStatus && correspondeInicio && correspondeFim && correspondeMes;
       })
       .sort((a, b) => a.data_vencimento.localeCompare(b.data_vencimento) || a.descricao.localeCompare(b.descricao, "pt-BR"));
-  }, [contas, buscaContas, filtroStatus, periodoInicio, periodoFim, hoje]);
+  }, [contas, buscaContas, filtroStatus, mesSelecionado, periodoInicio, periodoFim, hoje]);
   const gruposMensais = useMemo(() => {
     const grupos = new Map<string, ContaPagar[]>();
     for (const conta of ordenadas) {
@@ -504,7 +509,7 @@ export function ContasPagar({ embedded = false }: { embedded?: boolean }) {
       <section>
         <h2 className="mb-3 text-lg font-semibold">Histórico e vencimentos</h2>
         {contas.length > 0 && (
-          <div className="mb-3 grid grid-cols-1 gap-2 sm:grid-cols-[minmax(0,1fr)_12rem]">
+          <div className="mb-3 grid grid-cols-1 gap-2 sm:grid-cols-[minmax(0,1fr)_12rem_12rem]">
             <Input
               aria-label="Buscar contas a pagar por descrição ou fornecedor"
               placeholder="Buscar por descrição ou fornecedor"
@@ -524,6 +529,21 @@ export function ContasPagar({ embedded = false }: { embedded?: boolean }) {
               <option value="parcial">Parcial</option>
               <option value="pago">Pago</option>
               <option value="cancelado">Cancelado</option>
+            </select>
+            <select
+              aria-label="Selecionar mês do histórico de contas a pagar"
+              className="h-11 w-full rounded-md border border-input bg-background px-3 text-sm"
+              value={mesSelecionado}
+              onChange={(e) => setMesSelecionado(e.target.value)}
+            >
+              <option value="todos">Todos os meses</option>
+              {[...new Set(contas.map((conta) => conta.data_vencimento.slice(0, 7)).filter(Boolean))]
+                .sort((a, b) => b.localeCompare(a))
+                .map((mes) => (
+                  <option key={mes} value={mes}>
+                    {new Date(`${mes}-01T12:00:00`).toLocaleDateString("pt-BR", { month: "long", year: "numeric" })}
+                  </option>
+                ))}
             </select>
           </div>
         )}
