@@ -15,10 +15,10 @@ jobs:
       - uses: oven-sh/setup-bun@v2
         with:
           bun-version: latest
-      - run: bun install --frozen-lockfile
       # The repository-wide lint currently reports pre-existing formatting violations
       # across unrelated files. Lint the touched application files for code rules,
       # while deferring the repository-wide Prettier cleanup.
+      - run: bun install --frozen-lockfile
       - name: Lint changed application files
         run: >-
           bunx eslint src/routes/_authenticated/compras.tsx src/routes/_authenticated/producao.tsx src/routes/_authenticated/relatorios.tsx src/routes/_authenticated/painel.tsx src/routes/_authenticated/pedidos.index.tsx src/routes/_authenticated/pedidos-recorrentes.tsx 'src/routes/_authenticated/pedidos.$id.tsx' src/lib/queries.ts src/lib/calc.ts src/lib/calc.test.ts src/lib/hooks.ts src/integrations/supabase/types.ts --rule "prettier/prettier: off"
@@ -93,13 +93,17 @@ jobs:
           SQL
           psql "$RECONCILE_DATABASE_URL" -v ON_ERROR_STOP=1 -f scripts/reconcile-drizzle-history.sql
           psql "$RECONCILE_DATABASE_URL" -v ON_ERROR_STOP=1 -c "DO \$\$ BEGIN IF (SELECT count(*) FROM drizzle.__drizzle_migrations) <> 23 OR (SELECT max(created_at) FROM drizzle.__drizzle_migrations) <> 1792364400000 THEN RAISE EXCEPTION 'Drizzle history repair did not stop at migration 0020'; END IF; END \$\$;"
-      - name: Apply only the remaining migrations after reconciliation
+      - name: Apply every migration after the repaired baseline
         env:
           RECONCILE_DATABASE_URL: postgresql://postgres:postgres@localhost:5432/confeitaria_reconcile_test
         run: |
           set -euo pipefail
-          for migration in drizzle/migrations/0021_*.sql drizzle/migrations/0022_*.sql drizzle/migrations/0023_*.sql drizzle/migrations/0024_*.sql drizzle/migrations/0025_*.sql drizzle/migrations/0026_*.sql; do
-            echo "Applying pending migration: $migration"
+          for migration in drizzle/migrations/[0-9][0-9][0-9][0-9]_*.sql; do
+            case "$migration" in
+              drizzle/migrations/000[0-9]_*|drizzle/migrations/001[0-9]_*|drizzle/migrations/0020_*) continue ;;
+            esac
+            echo "Applying pending migration after reconciliation: $migration"
             psql "$RECONCILE_DATABASE_URL" -v ON_ERROR_STOP=1 -f "$migration"
           done
           psql "$RECONCILE_DATABASE_URL" -v ON_ERROR_STOP=1 -f tests/db/recurring-orders-smoke.sql
+          psql "$RECONCILE_DATABASE_URL" -v ON_ERROR_STOP=1 -f tests/db/payment-receipts-smoke.sql
