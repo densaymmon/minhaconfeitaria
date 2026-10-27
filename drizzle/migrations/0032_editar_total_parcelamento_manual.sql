@@ -55,16 +55,10 @@ BEGIN
 
   SELECT
     COALESCE(sum(round(cp.valor * 100)::bigint) FILTER (
-      WHERE cp.valor_pago > 0 OR EXISTS (
-        SELECT 1 FROM public.contas_pagar_pagamentos cpp
-        WHERE cpp.user_id = uid AND cpp.conta_id = cp.id
-      )
+      WHERE cp.valor_pago > 0
     ), 0),
     count(*) FILTER (
-      WHERE cp.valor_pago = 0 AND NOT EXISTS (
-        SELECT 1 FROM public.contas_pagar_pagamentos cpp
-        WHERE cpp.user_id = uid AND cpp.conta_id = cp.id
-      )
+      WHERE cp.valor_pago = 0
     )::integer
   INTO bloqueado_centavos, ajustaveis
   FROM public.contas_pagar cp
@@ -90,10 +84,7 @@ BEGIN
     SELECT cp.id FROM public.contas_pagar cp
     WHERE cp.user_id = uid AND cp.parcelamento_id = p_parcelamento_id
       AND cp.valor_pago = 0
-      AND NOT EXISTS (
-        SELECT 1 FROM public.contas_pagar_pagamentos cpp
-        WHERE cpp.user_id = uid AND cpp.conta_id = cp.id
-      )
+      AND cp.valor_pago = 0
     ORDER BY cp.parcelamento_numero, cp.data_vencimento, cp.id
   LOOP
     i := i + 1;
