@@ -45,6 +45,72 @@ BEGIN
   SELECT status INTO status_conta FROM public.contas_pagar WHERE id = conta_id;
   IF status_conta <> 'pago' THEN RAISE EXCEPTION 'Conta totalmente paga não mudou para paga: %', status_conta; END IF;
 
+  -- Editing a credit-card installment plan must preserve installments with
+  -- financial activity and redistribute only the unpaid installments.
+  INSERT INTO public.contas_pagar(
+    user_id, descricao, data_emissao, data_vencimento, valor, valor_pago,
+    forma_pagamento, parcelamento_id, parcelamento_numero, parcelamento_total
+  ) VALUES
+    (uid, 'Parcelamento teste - parcela 1/3', current_date, current_date, 30, 0,
+     'Cartão de crédito', 'cccccccc-cccc-4ccc-8ccc-ccccccccccc1', 1, 3),
+    (uid, 'Parcelamento teste - parcela 2/3', current_date, current_date + 30, 30, 0,
+     'Cartão de crédito', 'cccccccc-cccc-4ccc-8ccc-ccccccccccc1', 2, 3),
+    (uid, 'Parcelamento teste - parcela 3/3', current_date, current_date + 60, 40, 0,
+     'Cartão de crédito', 'cccccccc-cccc-4ccc-8ccc-ccccccccccc1', 3, 3);
+
+  UPDATE public.contas_pagar
+  SET valor_pago = 10
+  WHERE user_id = uid
+    AND parcelamento_id = 'cccccccc-cccc-4ccc-8ccc-ccccccccccc1'
+    AND parcelamento_numero = 1;
+
+  PERFORM public.editar_conta_pagar_parcelada(
+    'cccccccc-cccc-4ccc-8ccc-ccccccccccc1', 120,
+    'dddddddd-dddd-4ddd-8ddd-ddddddddddd1'
+  );
+
+  SELECT sum(valor) INTO saldo
+  FROM public.contas_pagar
+  WHERE user_id = uid AND parcelamento_id = 'cccccccc-cccc-4ccc-8ccc-ccccccccccc1';
+  IF saldo <> 120 THEN
+    RAISE EXCEPTION 'Edição do parcelamento não preservou o total de R$ 120,00: %', saldo;
+  END IF;
+
+  SELECT valor INTO custo_corrigido
+  FROM public.contas_pagar
+  WHERE user_id = uid AND parcelamento_id = 'cccccccc-cccc-4ccc-8ccc-ccccccccccc1'
+    AND parcelamento_numero = 1;
+  IF custo_corrigido <> 30 THEN
+    RAISE EXCEPTION 'A parcela com pagamento deveria ser preservada em R$ 30,00, recebeu: %', custo_corrigido;
+  END IF;
+
+  SELECT sum(valor) INTO saldo
+  FROM public.contas_pagar
+  WHERE user_id = uid AND parcelamento_id = 'cccccccc-cccc-4ccc-8ccc-ccccccccccc1'
+    AND parcelamento_numero IN (2, 3);
+  IF saldo <> 90 THEN
+    RAISE EXCEPTION 'As parcelas sem pagamento deveriam somar R$ 90,00: %', saldo;
+  END IF;
+
+  BEGIN
+    PERFORM public.editar_conta_pagar_parcelada(
+      'cccccccc-cccc-4ccc-8ccc-ccccccccccc1', 20,
+      'dddddddd-dddd-4ddd-8ddd-ddddddddddd2'
+    );
+    RAISE EXCEPTION 'O sistema deveria bloquear um total abaixo do valor da parcela com movimentação.';
+  EXCEPTION WHEN raise_exception THEN
+    IF SQLERRM NOT LIKE 'O novo total não pode ser menor que o valor das parcelas com movimentação financeira%' THEN
+      RAISE;
+    END IF;
+  END;
+
+  SELECT sum(valor) INTO saldo
+  FROM public.contas_pagar
+  WHERE user_id = uid AND parcelamento_id = 'cccccccc-cccc-4ccc-8ccc-ccccccccccc1';
+  IF saldo <> 120 THEN
+    RAISE EXCEPTION 'Tentativa inválida alterou o total do parcelamento: %', saldo;
+  END IF;
+
   INSERT INTO public.contas_pagar(
     user_id, descricao, data_emissao, data_vencimento, valor, valor_pago
   ) VALUES (uid, 'Conta cancelada teste', current_date, current_date, 50, 0)
