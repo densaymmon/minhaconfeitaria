@@ -48,7 +48,7 @@ BEGIN
   IF EXISTS (
     SELECT 1 FROM public.contas_pagar cp
     WHERE cp.user_id = uid AND cp.parcelamento_id = p_parcelamento_id
-      AND (cp.status = 'cancelado' OR cp.cancelada_em IS NOT NULL)
+      AND cp.status = 'cancelado'
   ) THEN
     RAISE EXCEPTION 'Este parcelamento possui parcela cancelada. Regularize o parcelamento antes de corrigir o total.';
   END IF;
