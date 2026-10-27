@@ -107,3 +107,4 @@ jobs:
           done
           psql "$RECONCILE_DATABASE_URL" -v ON_ERROR_STOP=1 -f tests/db/recurring-orders-smoke.sql
           psql "$RECONCILE_DATABASE_URL" -v ON_ERROR_STOP=1 -f tests/db/payment-receipts-smoke.sql
+          psql "$RECONCILE_DATABASE_URL" -v ON_ERROR_STOP=1 -f tests/db/receipt-divergence-smoke.sql
