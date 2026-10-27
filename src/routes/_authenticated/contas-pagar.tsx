@@ -252,7 +252,7 @@ export function ContasPagar({ embedded = false, viewOnly = false }: { embedded?:
       delete operacoesRef.current[chave];
       await atualizarFinanceiro();
       limpar();
-      toast.success(id ? "Conta atualizada." : "Conta registrada.");
+      toast.success(editandoParcelamentoId ? "Parcelamento atualizado. As parcelas sem pagamentos foram recalculadas." : id ? "Conta atualizada." : "Conta registrada.");
     } catch (erro) {
       // Supabase/PostgREST retorna erros como objetos simples; não assuma que são instâncias de Error.
       // Exiba a mensagem real para distinguir RPC ausente, validação SQL e falhas de permissão.
