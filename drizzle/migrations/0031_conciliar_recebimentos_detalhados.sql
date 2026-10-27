@@ -51,8 +51,9 @@ BEGIN
   FROM public.pedido_itens pi
   WHERE pi.pedido_id = pedido.id AND pi.user_id = uid;
 
-  -- valor_entrada pode estar desatualizado. Considera o maior entre o legado
-  -- e a soma detalhada para não permitir receber duas vezes o mesmo saldo.
+  -- Legacy value and detailed receipts may diverge after historical/manual edits.
+  -- Use the greater value so neither source can cause the same balance to be
+  -- collected twice. The locked pedido row serializes concurrent receipt attempts.
   SELECT GREATEST(
     GREATEST(0, COALESCE(pedido.valor_entrada, 0)),
     COALESCE(SUM(pp.valor), 0)
@@ -87,4 +88,6 @@ $function$;
 
 REVOKE ALL ON FUNCTION public.registrar_recebimento_pedido(uuid, numeric, date, text, text) FROM PUBLIC, anon;
 GRANT EXECUTE ON FUNCTION public.registrar_recebimento_pedido(uuid, numeric, date, text, text) TO authenticated, service_role;
+COMMENT ON FUNCTION public.registrar_recebimento_pedido(uuid, numeric, date, text, text) IS
+  'Registra recebimentos sem exceder o saldo, conciliando valor_entrada legado com o histórico detalhado de pagamentos.';
 NOTIFY pgrst, 'reload schema';

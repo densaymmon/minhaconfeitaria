@@ -32,6 +32,8 @@ BEGIN
     RAISE EXCEPTION 'INSUMO_USADO_EM_RECEITA: remova o insumo de todas as receitas antes de excluí-lo.';
   END IF;
 
+  -- Only count purchase rows belonging to this user's purchase. A dangling or
+  -- cross-user compra_itens reference must not preserve an unrelated ingredient.
   SELECT
     EXISTS (
       SELECT 1 FROM public.estoque_movimentos em
@@ -58,7 +60,7 @@ END;
 $function$;
 
 REVOKE ALL ON FUNCTION public.excluir_insumo_se_sem_receita(uuid) FROM PUBLIC, anon;
-GRANT EXECUTE ON FUNCTION public.excluir_insumo_se_sem_receita(uuid) TO authenticated;
+GRANT EXECUTE ON FUNCTION public.excluir_insumo_se_sem_receita(uuid) TO authenticated, service_role;
 COMMENT ON FUNCTION public.excluir_insumo_se_sem_receita(uuid) IS
   'Remove insumos sem receita; quando há compras ou movimentações, inativa o cadastro para preservar a rastreabilidade histórica.';
 NOTIFY pgrst, 'reload schema';
