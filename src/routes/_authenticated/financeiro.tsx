@@ -78,7 +78,7 @@ function Financeiro() {
 
       <div className="mb-5 grid grid-cols-2 gap-2 sm:grid-cols-4" role="group" aria-label="Navegação do financeiro">
         <Button type="button" size="sm" variant={aba === "resumo" ? "default" : "outline"} onClick={() => setAba("resumo")} aria-pressed={aba === "resumo"}>Visão geral</Button>
-        <Button type="button" size="sm" variant={aba === "lancar" ? "default" : "outline"} onClick={() => setAba("lancar")} aria-pressed={aba === "lancar"}>Lançar</Button>
+        <Button type="button" size="sm" variant={aba === "lancar" ? "default" : "outline"} onClick={() => setAba("lancar")} aria-pressed={aba === "lancar"}>Lançar despesas</Button>
         <Button type="button" size="sm" variant={aba === "movimentacoes" ? "default" : "outline"} onClick={() => setAba("movimentacoes")} aria-pressed={aba === "movimentacoes"}>Movimentações</Button>
         <Button type="button" size="sm" variant={aba === "relatorio" ? "default" : "outline"} onClick={() => setAba("relatorio")} aria-pressed={aba === "relatorio"}>Relatórios</Button>
       </div>
@@ -117,7 +117,7 @@ function Financeiro() {
               Registre uma compra, despesa ou conta a pagar em um único caminho.
             </p>
             <Button className="h-11 w-full sm:w-auto" onClick={() => setAba("lancar")}>
-              <Receipt className="mr-2 size-4" /> Lançar movimentação
+              <Receipt className="mr-2 size-4" /> Lançar despesas
             </Button>
           </section>
 
@@ -180,7 +180,7 @@ function Financeiro() {
             <Button type="button" size="sm" variant={tipoMovimentacao === "despesas" ? "default" : "outline"} onClick={() => setTipoMovimentacao("despesas")} aria-pressed={tipoMovimentacao === "despesas"}>Despesas</Button>
             <Button type="button" size="sm" variant={tipoMovimentacao === "contas" ? "default" : "outline"} onClick={() => setTipoMovimentacao("contas")} aria-pressed={tipoMovimentacao === "contas"}>Contas a pagar</Button>
           </div>
-          {tipoMovimentacao === "compras" ? <Compras embedded initialSection="gastos" /> : tipoMovimentacao === "despesas" ? <Despesas embedded /> : <ContasPagar embedded />}
+          {tipoMovimentacao === "compras" ? <Compras embedded initialSection="gastos" /> : tipoMovimentacao === "despesas" ? <Despesas embedded viewOnly /> : <ContasPagar embedded viewOnly />}
         </section>
       )}
 
