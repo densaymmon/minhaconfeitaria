@@ -1045,6 +1045,7 @@ export function Compras({ embedded = false, initialSection = "compras" }: { embe
               }}
             >
               <option value="todos">Todos os meses</option>
+              <option value="personalizado">Período personalizado</option>
               {[...new Set(compras.map((compra) => compra.data_compra.slice(0, 7)).filter(Boolean))]
                 .sort((a, b) => b.localeCompare(a))
                 .map((mes) => (
@@ -1054,8 +1055,8 @@ export function Compras({ embedded = false, initialSection = "compras" }: { embe
                 ))}
             </select>
           </Field>
-          <Field label="De"><Input type="date" className="h-10" value={de} max={ate || undefined} onChange={(e) => { setDe(e.target.value); setMesGastos(""); }} /></Field>
-          <Field label="Até"><Input type="date" className="h-10" value={ate} min={de || undefined} onChange={(e) => { setAte(e.target.value); setMesGastos(""); }} /></Field>
+          <Field label="De"><Input type="date" className="h-10" value={de} max={ate || undefined} onChange={(e) => { setDe(e.target.value); setMesGastos("personalizado"); }} /></Field>
+          <Field label="Até"><Input type="date" className="h-10" value={ate} min={de || undefined} onChange={(e) => { setAte(e.target.value); setMesGastos("personalizado"); }} /></Field>
         </div>
         {(de || ate) && (
           <button type="button" className="mb-3 text-sm text-primary" onClick={() => { setDe(""); setAte(""); setMesGastos("todos"); }}>Limpar período</button>
