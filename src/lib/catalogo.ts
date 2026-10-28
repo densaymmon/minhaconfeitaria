@@ -45,7 +45,7 @@ export type PedidoAcompanhamento = {
   pagamento_informado: boolean;
   criado_em: string;
   itens: { descricao: string; quantidade: number; preco: number }[];
-  confeitaria: { nome: string; whatsapp: string | null; slug: string | null; endereco_retirada: string | null; pix_chave: string | null };
+  confeitaria: { nome: string; whatsapp: string | null; slug: string | null; endereco_retirada: string | null; pix_chave: string | null; pix_tipo?: string | null; cidade?: string | null };
 };
 
 /** Carrinho: produto_id → quantidade. */
@@ -191,6 +191,8 @@ export type DadosConfirmacao = {
   tipoEntrega: "retirada" | "entrega" | null;
   endereco: string | null;
   pix: string | null;
+  /** Código "Pix copia e cola" com o valor em aberto (opcional). */
+  pixCopiaECola?: string | null;
   link: string | null;
 };
 
@@ -200,6 +202,15 @@ const dataMsg = (iso: string) => {
   const data = new Date(Date.UTC(a ?? 1970, (m ?? 1) - 1, d ?? 1, 12));
   return new Intl.DateTimeFormat("pt-BR", { weekday: "long", day: "2-digit", month: "2-digit", timeZone: "UTC" }).format(data);
 };
+
+function linhasPagamento(d: Pick<DadosConfirmacao, "pix" | "pixCopiaECola">, falta: number) {
+  if (!d.pix && !d.pixCopiaECola) return [`Falta pagar: ${brlMsg(falta)}`];
+  return [
+    `Pagamento por Pix: ${brlMsg(falta)}`,
+    ...(d.pix ? [`Chave: ${d.pix}`] : []),
+    ...(d.pixCopiaECola ? ["Pix copia e cola (já com o valor):", d.pixCopiaECola] : []),
+  ];
+}
 
 /** Mensagem que a confeitaria envia ao cliente confirmando o pedido do catálogo. */
 export function mensagemConfirmacaoPedido(d: DadosConfirmacao) {
@@ -216,7 +227,7 @@ export function mensagemConfirmacaoPedido(d: DadosConfirmacao) {
     "",
     d.tipoEntrega === "entrega" ? `🚚 Entrega ${quando}${d.endereco ? `\nEndereço: ${d.endereco}` : ""}` : `🏠 Retirada ${quando}${d.endereco ? `\nLocal: ${d.endereco}` : ""}`,
     ...(falta > 0
-      ? ["", d.pix ? `Pagamento por Pix: ${brlMsg(falta)}\nChave: ${d.pix}` : `Falta pagar: ${brlMsg(falta)}`]
+      ? ["", ...linhasPagamento(d, falta)]
       : ["", "Pagamento confirmado ✅"]),
     ...(d.link ? ["", `Acompanhe o andamento: ${d.link}`] : []),
     "",
@@ -239,5 +250,22 @@ export function mensagemPedidoParaLoja(d: Omit<DadosConfirmacao, "loja" | "pix">
     d.tipoEntrega === "entrega" ? `🚚 Entrega ${quando}${d.endereco ? `\nEndereço: ${d.endereco}` : ""}` : `🏠 Retirada ${quando}`,
     ...(d.cliente ? [`Nome: ${d.cliente}`] : []),
     ...(d.link ? ["", `Acompanhar o pedido: ${d.link}`] : []),
+  ].join("\n");
+}
+
+/** Aviso de pedido pronto, enviado pela confeitaria ao cliente. */
+export function mensagemPedidoPronto(d: DadosConfirmacao) {
+  const primeiroNome = d.cliente?.trim().split(/\s+/)[0] ?? "";
+  const falta = Math.max(0, Math.round((d.total - d.pago) * 100) / 100);
+  return [
+    `Olá${primeiroNome ? `, ${primeiroNome}` : ""}! Seu pedido #${d.numero} da ${d.loja} está pronto! 🎉`,
+    "",
+    d.tipoEntrega === "entrega"
+      ? `🚚 Já vamos sair para a entrega${d.endereco ? ` em: ${d.endereco}` : ""}.`
+      : `🏠 Pode retirar${d.horaEntrega ? ` a partir das ${d.horaEntrega}` : ""}${d.endereco ? ` em: ${d.endereco}` : ""}.`,
+    ...(falta > 0 ? ["", ...linhasPagamento(d, falta)] : []),
+    ...(d.link ? ["", `Acompanhe: ${d.link}`] : []),
+    "",
+    "Obrigado pela preferência! 💛",
   ].join("\n");
 }

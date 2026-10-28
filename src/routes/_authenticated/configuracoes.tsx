@@ -5,6 +5,8 @@ import { useState } from 'react';
 import { toast } from 'sonner';
 import { configQ, confeitariaQ } from '@/lib/queries';
 import { brl, parseNum } from '@/lib/format';
+import { NativeSelect } from '@/components/app/ui';
+import { ROTULO_CHAVE, normalizarChavePix, pixCopiaECola, tipoChaveValido, type TipoChavePix } from '@/lib/pix';
 import { SLUGS_RESERVADOS, linkCatalogo as montarLinkCatalogo, slugValido, sugerirSlug } from '@/lib/catalogo';
 import { Switch } from '@/components/ui/switch';
 import { Textarea } from '@/components/ui/textarea';
@@ -21,7 +23,10 @@ head:()=>({meta:[{title:'Configurações — Doce Gestão'},{name:'description',
 function ConfigPage(){
  const {data}=useSuspenseQuery(configQ);const {data:confeitaria}=useSuspenseQuery(confeitariaQ);const {user}=Route.useRouteContext();const qc=useQueryClient();
  const [f,setF]=useState(()=>Object.fromEntries(Object.entries(data).map(([k,v])=>[k,String(v)])));const [pixChave,setPixChave]=useState(data.pix_chave??'');const [busy,setBusy]=useState(false);
- const [loja,setLoja]=useState(()=>({nome:confeitaria?.nome??'',slogan:confeitaria?.slogan??'',whatsapp:confeitaria?.whatsapp??''}));
+ const [loja,setLoja]=useState(()=>({nome:confeitaria?.nome??'',slogan:confeitaria?.slogan??'',whatsapp:confeitaria?.whatsapp??'',cidade:confeitaria?.cidade??''}));
+ const [pixTipo,setPixTipo]=useState<TipoChavePix|''>(()=>tipoChaveValido(data.pix_tipo)??'');
+ const chaveDetectada=normalizarChavePix(pixChave,tipoChaveValido(pixTipo));
+ const temCidade=Boolean(confeitaria&&'cidade' in confeitaria);
  // Campos do catálogo existem a partir da migração 0034; antes dela a seção fica oculta.
  const temCatalogo=Boolean(confeitaria&&'catalogo_ativo' in confeitaria);
  const [cat,setCat]=useState(()=>({
@@ -52,11 +57,12 @@ function ConfigPage(){
    if(taxa<0||taxa>1000||minimo<0||minimo>100000){toast.error('Confira a taxa de entrega e o pedido mínimo.');return;}
    if(limite!==null&&(limite<1||limite>500)){toast.error('O limite de pedidos por dia deve ser de 1 a 500, ou ficar em branco.');return;}
   }
+  if(pixChave.trim()&&!chaveDetectada)toast.warning('Não reconhecemos o formato da chave Pix: ela será salva, mas o Pix copia e cola com valor não será gerado. Confira a chave ou escolha o tipo.');
   setBusy(true);
-  const {error}=await supabase.from('configuracoes').upsert({user_id:user.id,...values,pix_chave:pixChave.trim()});
+  const {error}=await supabase.from('configuracoes').upsert({user_id:user.id,...values,pix_chave:pixChave.trim(),...('pix_tipo' in data?{pix_tipo:pixTipo||null}:{})});
   if(error){setBusy(false);toast.error(error.message);return;}
   if(confeitaria){
-   const dadosLoja={user_id:user.id,nome:loja.nome.trim().slice(0,80),slogan:loja.slogan.trim().slice(0,120)||null,whatsapp:loja.whatsapp.trim().slice(0,30)||null};
+   const dadosLoja={user_id:user.id,nome:loja.nome.trim().slice(0,80),slogan:loja.slogan.trim().slice(0,120)||null,whatsapp:loja.whatsapp.trim().slice(0,30)||null,...(temCidade?{cidade:loja.cidade.trim().slice(0,60)||null}:{})};
    const dadosCatalogo=temCatalogo?{slug:cat.slug||null,catalogo_ativo:cat.ativo,catalogo_aviso:cat.aviso.trim().slice(0,300)||null,aceita_retirada:cat.retirada,aceita_entrega:cat.entrega,taxa_entrega:taxa,pedido_minimo:minimo,endereco_retirada:cat.enderecoRetirada.trim().slice(0,300)||null,limite_pedidos_dia:limite}:{};
    const {error:erroLoja}=await supabase.from('confeitarias').upsert({...dadosLoja,...dadosCatalogo},{onConflict:'user_id'});
    if(erroLoja){setBusy(false);toast.error(erroLoja.code==='23505'?'Este endereço de catálogo já está em uso. Escolha outro.':`Não foi possível salvar os dados da confeitaria: ${erroLoja.message}`);return;}
@@ -71,6 +77,7 @@ function ConfigPage(){
    {confeitaria?<>
     <Field label="Nome da confeitaria *" hint="Aparece no menu, nos recibos e nas mensagens enviadas aos clientes."><Input required maxLength={80} value={loja.nome} onChange={e=>setLoja({...loja,nome:e.target.value})} className="h-11 bg-card"/></Field>
     <Field label="Slogan (opcional)"><Input maxLength={120} value={loja.slogan} onChange={e=>setLoja({...loja,slogan:e.target.value})} placeholder="Ex.: Feito com carinho" className="h-11 bg-card"/></Field>
+    {temCidade&&<Field label="Cidade" hint="Aparece no código Pix copia e cola enviado ao cliente."><Input maxLength={60} value={loja.cidade} onChange={e=>setLoja({...loja,cidade:e.target.value})} placeholder="Ex.: Hortolândia" className="h-11 bg-card"/></Field>}
     <Field label="WhatsApp da confeitaria (opcional)"><Input type="tel" inputMode="tel" maxLength={30} value={loja.whatsapp} onChange={e=>setLoja({...loja,whatsapp:e.target.value})} placeholder="(19) 99999-9999" className="h-11 bg-card"/></Field>
    </>:<p className="text-sm text-muted-foreground">Os dados da confeitaria ficam disponíveis assim que a atualização do banco de dados for aplicada.</p>}
   </Card>
@@ -105,7 +112,14 @@ function ConfigPage(){
   </Card>}
   <Card className="space-y-3">
    <h2 className="text-lg font-semibold">Pagamento por Pix</h2>
-   <Field label="Chave Pix" hint="Incluída nos recibos e nas cobranças enviadas ao cliente. Confira se está correta antes de salvar."><Input value={pixChave} maxLength={120} onChange={e=>setPixChave(e.target.value)} placeholder="CPF/CNPJ, e-mail, telefone ou chave aleatória" className="h-11 bg-card"/></Field>
+   <Field label="Chave Pix" hint="Incluída nos recibos, nas cobranças e no Pix copia e cola com o valor de cada pedido."><Input value={pixChave} maxLength={120} onChange={e=>setPixChave(e.target.value)} placeholder="CPF/CNPJ, e-mail, celular ou chave aleatória" className="h-11 bg-card"/></Field>
+   {'pix_tipo' in data&&<Field label="Tipo da chave" hint={pixChave.trim()?(chaveDetectada?`Será usada como ${ROTULO_CHAVE[chaveDetectada.tipo]}: ${chaveDetectada.valor}`:'Chave inválida para este tipo.'):undefined}>
+    <NativeSelect value={pixTipo} onChange={e=>setPixTipo(tipoChaveValido(e.target.value)??'')}>
+     <option value="">Detectar automaticamente</option>
+     {(Object.keys(ROTULO_CHAVE) as TipoChavePix[]).map(t=><option key={t} value={t}>{ROTULO_CHAVE[t][0]?.toUpperCase()}{ROTULO_CHAVE[t].slice(1)}</option>)}
+    </NativeSelect>
+   </Field>}
+   {chaveDetectada&&<details className="rounded-xl bg-muted/60 p-3 text-xs"><summary className="cursor-pointer font-medium">Ver exemplo de Pix copia e cola (R$ 10,00)</summary><code className="mt-2 block break-all">{pixCopiaECola({chave:pixChave,tipoChave:tipoChaveValido(pixTipo),nome:loja.nome||'Confeitaria',cidade:loja.cidade,valor:10,identificador:'TESTE'})}</code><p className="mt-2 text-muted-foreground">Para conferir, cole este código no app do seu banco (área Pix → copia e cola): deve aparecer o seu nome e R$ 10,00. Não precisa concluir o pagamento.</p></details>}
   </Card>
   <Card className="space-y-3">
    <h2 className="text-lg font-semibold">Taxas e impostos</h2>

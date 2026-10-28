@@ -14,7 +14,7 @@ import { Input } from "@/components/ui/input";
 import { ClienteDialog } from "./clientes.index";
 import type { Cliente } from "@/lib/queries";
 import { cn } from "@/lib/utils";
-import { confirmacaoWhatsApp, precisaConfirmar } from "@/lib/whatsapp-pedido";
+import { avisoProntoWhatsApp, confirmacaoWhatsApp, precisaAvisarPronto, precisaConfirmar } from "@/lib/whatsapp-pedido";
 import type { PedidoCalc } from "@/lib/hooks";
 
 const STATUS_ATIVOS = ["recebido", "confirmado", "em_producao", "pronto"];
@@ -57,9 +57,14 @@ function Pedidos() {
   const { data: confeitaria } = useSuspenseQuery(appQueries.confeitariaQ);
   const nomeLoja = confeitaria?.nome?.trim() ?? "";
   const qc = useQueryClient();
-  const opcoesMensagem = { loja: nomeLoja || "nossa confeitaria", pix: config.pix_chave, enderecoRetirada: confeitaria?.endereco_retirada ?? null, origem: typeof window === "undefined" ? "" : window.location.origin };
+  const opcoesMensagem = { loja: nomeLoja || "nossa confeitaria", pix: config.pix_chave, pixTipo: config.pix_tipo, cidade: confeitaria?.cidade ?? null, enderecoRetirada: confeitaria?.endereco_retirada ?? null, origem: typeof window === "undefined" ? "" : window.location.origin };
   // Registra que a confirmação do pedido do catálogo foi enviada. O WhatsApp é aberto por um link
   // comum (<a href>): window.open com "noopener" falha em alguns celulares e no app instalado.
+  async function marcarAvisoPronto(p: PedidoCalc) {
+    if (p.aviso_pronto_enviado_em) return;
+    const { error } = await supabase.from("pedidos").update({ aviso_pronto_enviado_em: new Date().toISOString() }).eq("id", p.id);
+    if (!error) void qc.invalidateQueries({ queryKey: ["pedidos"] });
+  }
   async function marcarConfirmacao(p: PedidoCalc) {
     if (p.confirmacao_enviada_em) return;
     const { error } = await supabase.from("pedidos").update({ confirmacao_enviada_em: new Date().toISOString(), visualizado_em: p.visualizado_em ?? new Date().toISOString() }).eq("id", p.id);
@@ -423,10 +428,14 @@ function Pedidos() {
               "Obrigado! 💛",
             ].join("\n");
             const confirmar = precisaConfirmar(p);
+            const pronto = p.status === "pronto";
+            const avisar = precisaAvisarPronto(p);
             const resumo = confirmacaoWhatsApp(p, opcoesMensagem);
-            const textoWhats = deveCobrar ? textoCobranca : confirmar ? resumo?.texto ?? "" : podeEmitirRecibo ? textoRecibo : resumo?.texto ?? "";
+            const aviso = pronto ? avisoProntoWhatsApp(p, opcoesMensagem) : null;
+            // Pronto: aviso com retirada/entrega, saldo e Pix. Entregue: recibo ou cobrança. Em aberto: resumo do pedido.
+            const textoWhats = deveCobrar ? textoCobranca : pronto ? aviso?.texto ?? "" : confirmar ? resumo?.texto ?? "" : podeEmitirRecibo ? textoRecibo : resumo?.texto ?? "";
             const hrefWhats = telefoneWhatsApp ? `https://wa.me/${telefoneWhatsApp}?text=${encodeURIComponent(textoWhats)}` : null;
-            const rotuloWhats = deveCobrar ? `Cobrar ${brl(p.t.saldo)}` : confirmar ? "Confirmar no WhatsApp" : podeEmitirRecibo ? "Enviar recibo" : "Enviar pedido no WhatsApp";
+            const rotuloWhats = deveCobrar ? `Cobrar ${brl(p.t.saldo)}` : pronto ? (avisar ? "Avisar que está pronto" : "Avisar de novo") : confirmar ? "Confirmar no WhatsApp" : podeEmitirRecibo ? "Enviar recibo" : "Enviar pedido no WhatsApp";
             return (
               <Card
                 key={p.id}
@@ -498,8 +507,8 @@ function Pedidos() {
                       </Button>
                     )}
                     {hrefWhats ? (
-                      <Button asChild size="sm" variant={confirmar ? "default" : "outline"}>
-                        <a href={hrefWhats} target="_blank" rel="noopener noreferrer" onClick={(e) => { e.stopPropagation(); if (confirmar) void marcarConfirmacao(p); }}>
+                      <Button asChild size="sm" variant={confirmar || avisar ? "default" : "outline"}>
+                        <a href={hrefWhats} target="_blank" rel="noopener noreferrer" onClick={(e) => { e.stopPropagation(); if (pronto) void marcarAvisoPronto(p); else if (confirmar) void marcarConfirmacao(p); }}>
                           <MessageCircle className="size-4" /> {rotuloWhats}
                         </a>
                       </Button>
@@ -517,7 +526,8 @@ function Pedidos() {
                         <MessageCircle className="size-4" /> Cadastrar WhatsApp do cliente
                       </Button>
                     )}
-                    {p.origem === "catalogo" && p.confirmacao_enviada_em && <span className="self-center text-xs text-success">✓ Confirmação enviada</span>}
+                    {p.aviso_pronto_enviado_em && pronto ? <span className="self-center text-xs text-success">✓ Cliente avisado</span>
+                      : p.origem === "catalogo" && p.confirmacao_enviada_em && <span className="self-center text-xs text-success">✓ Confirmação enviada</span>}
                   </div>
               </Card>
             );
