@@ -2,8 +2,9 @@ import * as appQueries from "@/lib/queries";
 import { createFileRoute, Link } from "@tanstack/react-router";
 import { useMemo, useState } from "react";
 import { toast } from "sonner";
-import { Minus, Plus, CheckCircle2, Search, List, Layers, SlidersHorizontal, Clock3, AlertTriangle, Pencil, Download, MessageCircle } from "lucide-react";
-import { useQueryClient, useSuspenseQuery } from "@tanstack/react-query";
+import { Minus, Plus, CheckCircle2, Search, List, Layers, SlidersHorizontal, Clock3, AlertTriangle, Pencil, Download, MessageCircle, ShoppingBasket } from "lucide-react";
+import { useQuery, useQueryClient, useSuspenseQuery } from "@tanstack/react-query";
+import { formatarQuantidade, ingredientesNecessarios, intervaloPeriodo, periodoAtual, type PeriodoRapido } from "@/lib/lista-producao";
 import { avisoProntoWhatsApp } from "@/lib/whatsapp-pedido";
 import { supabase } from "@/integrations/supabase/client";
 import { usePedidosCalc, type PedidoCalc } from "@/lib/hooks";
@@ -23,6 +24,8 @@ export const Route = createFileRoute("/_authenticated/producao")({
       context.queryClient.ensureQueryData(appQueries.configQ),
       context.queryClient.ensureQueryData(appQueries.pedidoPagamentosQ),
       context.queryClient.ensureQueryData(appQueries.confeitariaQ),
+      context.queryClient.ensureQueryData(appQueries.produtosQ),
+      context.queryClient.ensureQueryData(appQueries.insumosQ),
     ]);
   },
   errorComponent: ({ error }) => <p role="alert" className="py-8 text-destructive">{error instanceof Error ? error.message : "Não foi possível carregar os registros."}</p>,
@@ -66,6 +69,17 @@ function Producao() {
   const qc = useQueryClient();
   const { data: config } = useSuspenseQuery(appQueries.configQ);
   const { data: confeitaria } = useSuspenseQuery(appQueries.confeitariaQ);
+  const { data: produtos } = useSuspenseQuery(appQueries.produtosQ);
+  const { data: insumos } = useSuspenseQuery(appQueries.insumosQ);
+  // Saldo em estoque (g, ml, un); a lista funciona mesmo se o estoque não carregar.
+  const { data: estoque = [] } = useQuery({
+    queryKey: ["estoque"],
+    queryFn: async () => {
+      const { data, error } = await supabase.rpc("saldo_estoque");
+      if (error) throw new Error(error.message);
+      return data ?? [];
+    },
+  });
   const opcoesMensagem = { loja: confeitaria?.nome?.trim() || "nossa confeitaria", pix: config.pix_chave, pixTipo: config.pix_tipo, cidade: confeitaria?.cidade ?? null, enderecoRetirada: confeitaria?.endereco_retirada ?? null, origem: typeof window === "undefined" ? "" : window.location.origin };
   const hoje = hojeISO();
   const agora = new Date();
@@ -210,6 +224,38 @@ function Producao() {
       (b[1].quantidade - b[1].produzida) - (a[1].quantidade - a[1].produzida),
     );
   }, [pedidosAtivos]);
+
+  const ingredientes = useMemo(() => ingredientesNecessarios(
+    pedidosAtivos.flatMap((p) => p.pedido_itens.map((i) => ({
+      produto_id: i.produto_id,
+      pendente: Math.max(0, Number(i.quantidade) - Number(i.quantidade_produzida)),
+    }))),
+    produtos,
+    insumos,
+    estoque.map((e) => ({ insumo_id: e.insumo_id, saldo: Number(e.saldo), unidade_base: e.unidade_base })),
+  ), [pedidosAtivos, produtos, insumos, estoque]);
+  const faltamComprar = ingredientes.linhas.filter((l) => l.falta > 0).length;
+  const periodo = periodoAtual(dataInicial, dataFinal, hoje);
+  function escolherPeriodo(p: PeriodoRapido) {
+    const intervalo = intervaloPeriodo(p, hoje);
+    setDataInicial(intervalo.inicio);
+    setDataFinal(intervalo.fim);
+  }
+
+  function exportarIngredientes() {
+    if (ingredientes.linhas.length === 0) return void toast.error("Não há ingredientes para exportar com os filtros atuais.");
+    baixarCSV(
+      `ingredientes-producao-${hoje}`,
+      ["Ingrediente", "Necessário", "Em estoque", "Falta comprar"],
+      ingredientes.linhas.map((l) => [
+        l.nome,
+        formatarQuantidade(l.necessario, l.unidade),
+        l.estoque === null ? "Sem controle" : formatarQuantidade(l.estoque, l.unidade),
+        l.falta > 0 ? formatarQuantidade(l.falta, l.unidade) : "",
+      ]),
+    );
+    toast.success("Lista de ingredientes exportada em CSV.");
+  }
 
   const contagens = useMemo(() => ({
     fila: pedidosNoPeriodo.filter((p) => STATUS_ATIVOS.includes(p.status)).length,
@@ -413,6 +459,15 @@ function Producao() {
       </div>
 
       <Card className="mb-4 space-y-3 p-3">
+        <div className="grid grid-cols-4 gap-1 rounded-lg bg-muted p-1" role="group" aria-label="Período de entrega">
+          {([["hoje", "Hoje"], ["amanha", "Amanhã"], ["semana", "7 dias"], ["tudo", "Tudo"]] as const).map(([valor, rotulo]) => (
+            <button key={valor} type="button" onClick={() => escolherPeriodo(valor)} aria-pressed={periodo === valor}
+              className={cn("rounded-md py-2 text-sm font-medium transition-colors", periodo === valor ? "bg-background text-foreground shadow-sm" : "text-muted-foreground hover:text-foreground")}>
+              {rotulo}
+            </button>
+          ))}
+        </div>
+        {(periodo === "hoje" || periodo === "semana") && <p className="-mt-1 text-xs text-muted-foreground">Inclui pedidos atrasados que ainda não foram entregues.</p>}
         <div className="relative">
           <Search className="absolute left-3 top-3.5 size-4 text-muted-foreground" />
           <Input
@@ -481,7 +536,7 @@ function Producao() {
           <div className="mb-3 flex flex-wrap items-center justify-between gap-2">
             <div>
               <h2 className="font-semibold">Demanda por produto</h2>
-              <span className="text-xs text-muted-foreground">Pedidos ativos no período</span>
+              <span className="text-xs text-muted-foreground">O que falta produzir nos pedidos ativos do período</span>
             </div>
             <Button type="button" variant="outline" size="sm" onClick={exportarDemanda} aria-label="Exportar demanda de produção em CSV">
               <Download className="size-4" /> Exportar lista
@@ -519,6 +574,55 @@ function Producao() {
               </Card>
             );
           })}
+
+          {resumoProdutos.some(([, r]) => r.quantidade > r.produzida) && (
+          <section className="pt-4" aria-labelledby="titulo-ingredientes">
+            <div className="mb-3 flex flex-wrap items-center justify-between gap-2">
+              <div>
+                <h2 id="titulo-ingredientes" className="flex items-center gap-2 font-semibold"><ShoppingBasket className="size-4" /> Ingredientes necessários</h2>
+                <span className="text-xs text-muted-foreground">
+                  {faltamComprar > 0 ? `${faltamComprar} ingrediente(s) para comprar` : "Calculado pelas fichas técnicas e pelo estoque"}
+                </span>
+              </div>
+              <Button type="button" variant="outline" size="sm" onClick={exportarIngredientes} aria-label="Exportar lista de ingredientes em CSV">
+                <Download className="size-4" /> Exportar
+              </Button>
+            </div>
+            {ingredientes.linhas.length === 0 ? (
+              <Card className="border-dashed text-center text-sm text-muted-foreground">
+                {ingredientes.semReceita.length > 0 ? "Os produtos pendentes ainda não têm ficha técnica." : "Nenhum ingrediente necessário para o que falta produzir."}
+              </Card>
+            ) : (
+              <Card className="divide-y p-0">
+                {ingredientes.linhas.map((l) => (
+                  <div key={l.insumo_id} className="flex items-center justify-between gap-3 px-3.5 py-2.5">
+                    <div className="min-w-0">
+                      <div className="font-medium">{l.nome}</div>
+                      <div className="text-xs text-muted-foreground">
+                        {l.estoque === null ? "Estoque não controlado" : `Em estoque: ${formatarQuantidade(l.estoque, l.unidade)}`}
+                      </div>
+                    </div>
+                    <div className="shrink-0 text-right">
+                      <div className="font-semibold tabular-nums">{formatarQuantidade(l.necessario, l.unidade)}</div>
+                      {l.falta > 0 ? (
+                        <div className="text-xs font-semibold text-destructive">Comprar {formatarQuantidade(l.falta, l.unidade)}</div>
+                      ) : l.estoque !== null ? (
+                        <div className="text-xs text-success">Estoque suficiente</div>
+                      ) : null}
+                    </div>
+                  </div>
+                ))}
+              </Card>
+            )}
+            {(ingredientes.semReceita.length > 0 || ingredientes.semMedida.length > 0 || ingredientes.avulsos > 0) && (
+              <div className="mt-2 space-y-1 rounded-lg bg-muted/60 p-3 text-xs text-muted-foreground">
+                {ingredientes.semReceita.length > 0 && <p>Sem ficha técnica (não entram na conta): {ingredientes.semReceita.join(", ")}.</p>}
+                {ingredientes.semMedida.length > 0 && <p>Confira a medida na receita de: {ingredientes.semMedida.join(", ")}.</p>}
+                {ingredientes.avulsos > 0 && <p>{ingredientes.avulsos} item(ns) avulso(s), sem produto cadastrado, não entram na conta.</p>}
+              </div>
+            )}
+          </section>
+          )}
         </div>
       ) : pedidosFiltrados.length === 0 ? (
         <Card className="border-dashed text-center">
