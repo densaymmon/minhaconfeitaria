@@ -8,7 +8,8 @@ import { toast } from "sonner";
 import { CalendarClock, Copy, MessageCircle, Plus, Repeat, Trash2 } from "lucide-react";
 import { supabase } from "@/integrations/supabase/client";
 import { clientesQ, configQ, pedidosQ, type PedidoPagamento } from "@/lib/queries";
-import { useCustos } from "@/lib/hooks";
+import { useCustos, usePedidosCalc } from "@/lib/hooks";
+import { confirmacaoWhatsApp, precisaConfirmar } from "@/lib/whatsapp-pedido";
 import { alertaMargem, totaisPedido } from "@/lib/calc";
 import { FORMAS, brl, dataBR, hojeISO, parseNum, statusLabel } from "@/lib/format";
 import { Card, Field, NativeSelect, PagamentoBadge, PageHeader, Row } from "@/components/app/ui";
@@ -18,7 +19,7 @@ import { Textarea } from "@/components/ui/textarea";
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/ui/dialog";
 
 export const Route = createFileRoute("/_authenticated/pedidos/$id")({
- loader: async ({ context }) => { await Promise.all([context.queryClient.ensureQueryData(appQueries.pedidosQ),context.queryClient.ensureQueryData(appQueries.configQ),context.queryClient.ensureQueryData(appQueries.clientesQ),context.queryClient.ensureQueryData(appQueries.produtosQ),context.queryClient.ensureQueryData(appQueries.insumosQ)]); },
+ loader: async ({ context }) => { await Promise.all([context.queryClient.ensureQueryData(appQueries.pedidosQ),context.queryClient.ensureQueryData(appQueries.configQ),context.queryClient.ensureQueryData(appQueries.clientesQ),context.queryClient.ensureQueryData(appQueries.produtosQ),context.queryClient.ensureQueryData(appQueries.insumosQ),context.queryClient.ensureQueryData(appQueries.pedidoPagamentosQ),context.queryClient.ensureQueryData(appQueries.confeitariaQ)]); },
  errorComponent: ({error}) => <p role="alert" className="py-8 text-destructive">{error instanceof Error ? error.message : "Não foi possível carregar os registros."}</p>,
  notFoundComponent: () => <p>Registro não encontrado.</p>,
 
@@ -55,6 +56,9 @@ function PedidoForm() {
   const { data: config } = useSuspenseQuery(configQ);
   const { produtos, custo } = useCustos();
   const existente = novo ? undefined : pedidos.find((p) => p.id === id);
+  const pedidosCalc = usePedidosCalc();
+  const existenteCalc = existente ? pedidosCalc.find((x) => x.id === existente.id) : undefined;
+  const { data: confeitaria } = useSuspenseQuery(appQueries.confeitariaQ);
   const temProducaoRegistrada = Boolean(existente?.pedido_itens.some((item) => Number(item.quantidade_produzida ?? 0) > 0));
 
   const [f, setF] = useState(() => ({
@@ -572,6 +576,20 @@ function PedidoForm() {
           <p>{existente.tipo_entrega === "entrega" ? `Entrega em: ${existente.endereco_entrega ?? "endereço não informado"}` : "Retirada na confeitaria"}</p>
           {existente.pagamento_informado_em && saldoPendente > 0.009 && (
             <p className="font-medium text-warning-foreground">O cliente avisou que pagou por Pix em {new Date(existente.pagamento_informado_em).toLocaleString("pt-BR", { dateStyle: "short", timeStyle: "short" })}. Confira no banco e toque em “Confirmar pagamento”.</p>
+          )}
+          {existenteCalc && (
+            <div className="flex flex-wrap items-center gap-2 pt-1">
+              <Button type="button" size="sm" variant={precisaConfirmar(existenteCalc) ? "default" : "outline"} onClick={() => {
+                const msg = confirmacaoWhatsApp(existenteCalc, { loja: confeitaria?.nome?.trim() || "nossa confeitaria", pix: config.pix_chave, enderecoRetirada: confeitaria?.endereco_retirada ?? null, origem: window.location.origin });
+                if (!msg) return void toast.error("O cliente não tem um WhatsApp válido cadastrado.");
+                window.open(msg.url, "_blank", "noopener,noreferrer");
+                void supabase.from("pedidos").update({ confirmacao_enviada_em: new Date().toISOString() }).eq("id", existenteCalc.id)
+                  .then(({ error }) => { if (!error) void qc.invalidateQueries({ queryKey: ["pedidos"] }); });
+              }}>
+                <MessageCircle className="size-4" /> {existente.confirmacao_enviada_em ? "Reenviar confirmação no WhatsApp" : "Confirmar no WhatsApp"}
+              </Button>
+              {existente.confirmacao_enviada_em && <span className="text-xs text-success">✓ Enviada em {new Date(existente.confirmacao_enviada_em).toLocaleString("pt-BR", { dateStyle: "short", timeStyle: "short" })}</span>}
+            </div>
           )}
         </div>
       )}

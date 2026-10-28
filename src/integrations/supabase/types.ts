@@ -817,7 +817,9 @@ export type Database = {
         Row: {
           catalogo_token: string | null
           cliente_id: string | null
+          codigo_curto: string | null
           codigo_publico: string | null
+          confirmacao_enviada_em: string | null
           created_at: string
           data_entrega: string
           desconto: number
@@ -840,7 +842,9 @@ export type Database = {
         Insert: {
           catalogo_token?: string | null
           cliente_id?: string | null
+          codigo_curto?: string | null
           codigo_publico?: string | null
+          confirmacao_enviada_em?: string | null
           created_at?: string
           data_entrega: string
           desconto?: number
@@ -863,7 +867,9 @@ export type Database = {
         Update: {
           catalogo_token?: string | null
           cliente_id?: string | null
+          codigo_curto?: string | null
           codigo_publico?: string | null
+          confirmacao_enviada_em?: string | null
           created_at?: string
           data_entrega?: string
           desconto?: number
@@ -1045,6 +1051,36 @@ export type Database = {
         }
         Relationships: []
       }
+      produto_midias: {
+        Row: {
+          created_at: string
+          id: string
+          ordem: number
+          produto_id: string
+          tipo: string
+          url: string
+          user_id: string
+        }
+        Insert: {
+          created_at?: string
+          id?: string
+          ordem?: number
+          produto_id: string
+          tipo: string
+          url: string
+          user_id?: string
+        }
+        Update: {
+          created_at?: string
+          id?: string
+          ordem?: number
+          produto_id?: string
+          tipo?: string
+          url?: string
+          user_id?: string
+        }
+        Relationships: []
+      }
       produtos: {
         Row: {
           antecedencia_dias: number
@@ -1158,6 +1194,22 @@ export type Database = {
       [_ in never]: never
     }
     Functions: {
+      codigo_curto_pedido: {
+        Args: { p_codigo: string }
+        Returns: string
+      }
+      informar_pagamento_pedido: {
+        Args: { p_codigo: string }
+        Returns: boolean
+      }
+      pedido_publico: {
+        Args: { p_codigo: string }
+        Returns: Json
+      }
+      salvar_midias_produto: {
+        Args: { p_midias: Json; p_produto_id: string }
+        Returns: number
+      }
       acompanhar_pedido_catalogo: {
         Args: { p_codigo: string }
         Returns: Json

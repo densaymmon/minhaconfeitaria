@@ -1,10 +1,12 @@
 import * as appQueries from "@/lib/queries";
 import { createFileRoute, Link, useNavigate } from "@tanstack/react-router";
-import { useQueryClient } from "@tanstack/react-query";
+import { useQueryClient, useSuspenseQuery } from "@tanstack/react-query";
 import { useState } from "react";
 import { toast } from "sonner";
-import { ImagePlus, Plus, Trash2 } from "lucide-react";
-import { enviarFotoProduto } from "@/lib/foto-catalogo";
+import { Plus, Trash2 } from "lucide-react";
+import { apagarArquivosMidia, enviarMidiaProduto } from "@/lib/foto-catalogo";
+import { GaleriaMidias, midiaSalva, type MidiaEditavel } from "@/components/app/galeria-midias";
+import type { MidiaCatalogo } from "@/lib/catalogo";
 import { supabase } from "@/integrations/supabase/client";
 import { useCustos } from "@/lib/hooks";
 import { alertaMargem, custoReceita, custoItemReceita, margemReal, precoSugerido } from "@/lib/calc";
@@ -18,7 +20,7 @@ import { Switch } from "@/components/ui/switch";
 
 export const Route = createFileRoute("/_authenticated/produtos/$id")({
  validateSearch: (search: Record<string, unknown>) => ({ duplicar: search["duplicar"] === "1" }),
- loader: async ({ context }) => { await Promise.all([context.queryClient.ensureQueryData(appQueries.produtosQ),context.queryClient.ensureQueryData(appQueries.insumosQ)]); },
+ loader: async ({ context, params }) => { await Promise.all([context.queryClient.ensureQueryData(appQueries.produtosQ),context.queryClient.ensureQueryData(appQueries.insumosQ),context.queryClient.ensureQueryData(appQueries.midiasProdutoQ(params.id))]); },
  errorComponent: ({error}) => <p role="alert" className="py-8 text-destructive">{error instanceof Error ? error.message : "Não foi possível carregar os registros."}</p>,
  notFoundComponent: () => <p>Registro não encontrado.</p>,
 
@@ -64,10 +66,11 @@ function ProdutoForm() {
     no_catalogo: duplicar ? false : (p?.no_catalogo ?? false),
     descricao: p?.descricao ?? "",
     antecedencia_dias: String(p?.antecedencia_dias ?? 1),
-    imagem_url: p?.imagem_url ?? null as string | null,
   }));
-  const [foto, setFoto] = useState<File | null>(null);
-  const [previa, setPrevia] = useState<string | null>(null);
+  // Mídias já salvas; a cópia de um produto começa sem fotos para não compartilhar arquivos.
+  const { data: midiasSalvas } = useSuspenseQuery(appQueries.midiasProdutoQ(id));
+  const [midias, setMidias] = useState<MidiaEditavel[]>(() => (duplicar ? [] : midiasSalvas.map((m) => midiaSalva(m.tipo, m.url))));
+  const [progresso, setProgresso] = useState<string | null>(null);
 
   if (!novo && !p) return <p className="py-16 text-center text-muted-foreground">Produto não encontrado. <Link to="/produtos" className="text-primary">Voltar</Link></p>;
 
@@ -112,16 +115,37 @@ function ProdutoForm() {
       try {
         const antecedencia = Math.round(parseNum(cat.antecedencia_dias));
         if (!Number.isFinite(antecedencia) || antecedencia < 0 || antecedencia > 60) throw new Error("A antecedência deve ser de 0 a 60 dias.");
-        const imagem_url = foto && produtoId ? await enviarFotoProduto(user.id, produtoId, foto) : cat.imagem_url;
         const { error: erroCatalogo } = await supabase.from("produtos").update({
           no_catalogo: cat.no_catalogo,
           descricao: cat.descricao.trim().slice(0, 600) || null,
           antecedencia_dias: antecedencia,
-          imagem_url,
         }).eq("id", produtoId);
         if (erroCatalogo) throw new Error(erroCatalogo.message);
+
+        // Envia as fotos e vídeos novos e grava a lista final na ordem escolhida.
+        const novas = midias.filter((m) => m.arquivo).length;
+        let enviadas = 0;
+        const finais: MidiaCatalogo[] = [];
+        for (const m of midias) {
+          if (m.arquivo) {
+            enviadas += 1;
+            setProgresso(`Enviando fotos e vídeos (${enviadas}/${novas})…`);
+            finais.push(await enviarMidiaProduto(user.id, produtoId, m.arquivo));
+          } else if (m.url) {
+            finais.push({ tipo: m.tipo, url: m.url });
+          }
+        }
+        const { error: erroMidias } = await supabase.rpc("salvar_midias_produto", { p_produto_id: produtoId, p_midias: finais });
+        if (erroMidias) throw new Error(erroMidias.message);
+        if (!duplicando) {
+          const removidas = midiasSalvas.map((m) => m.url).filter((url) => !finais.some((f) => f.url === url));
+          void apagarArquivosMidia(user.id, removidas);
+        }
+        void qc.invalidateQueries({ queryKey: ["produto-midias", produtoId] });
       } catch (e) {
         toast.warning(`Produto salvo, mas os dados do catálogo não: ${(e as Error).message}`);
+      } finally {
+        setProgresso(null);
       }
       await qc.invalidateQueries({ queryKey: ["produtos"] });
       toast.success(duplicando ? "Cópia criada com sucesso!" : "Produto salvo!");
@@ -253,25 +277,9 @@ function ProdutoForm() {
           </div>
           {cat.no_catalogo && !f.ativo && <p className="text-xs text-warning-foreground">Produtos inativos não aparecem no catálogo.</p>}
           {cat.no_catalogo && preco <= 0 && <p className="text-xs text-warning-foreground">Informe o preço de venda para o produto aparecer no catálogo.</p>}
-          <div className="flex items-start gap-3">
-            <div className="size-24 shrink-0 overflow-hidden rounded-xl bg-muted">
-              {previa ?? cat.imagem_url
-                ? <img src={previa ?? cat.imagem_url ?? undefined} alt="Foto do produto" className="size-full object-cover" />
-                : <div className="grid size-full place-items-center text-muted-foreground"><ImagePlus className="size-7 opacity-60" /></div>}
-            </div>
-            <div className="flex flex-col gap-2">
-              <label className="inline-flex h-10 cursor-pointer items-center justify-center gap-2 rounded-md border bg-card px-3 text-sm font-medium hover:bg-muted">
-                <ImagePlus className="size-4" /> {previa || cat.imagem_url ? "Trocar foto" : "Escolher foto"}
-                <input type="file" accept="image/*" className="sr-only" onChange={(e) => {
-                  const arquivo = e.target.files?.[0] ?? null;
-                  setFoto(arquivo);
-                  setPrevia(arquivo ? URL.createObjectURL(arquivo) : null);
-                }} />
-              </label>
-              {(previa || cat.imagem_url) && (
-                <Button type="button" variant="ghost" size="sm" onClick={() => { setFoto(null); setPrevia(null); setCat((c) => ({ ...c, imagem_url: null })); }}>Remover foto</Button>
-              )}
-            </div>
+          <div className="space-y-1.5">
+            <span className="text-sm font-medium">Fotos e vídeos</span>
+            <GaleriaMidias midias={midias} onChange={setMidias} desabilitado={salvando} />
           </div>
           <Field label="Descrição para o cliente">
             <Textarea rows={2} maxLength={600} value={cat.descricao} onChange={(e) => setCat((c) => ({ ...c, descricao: e.target.value }))} placeholder="Ex.: Massa fofinha de cenoura com cobertura de chocolate. Serve 10 pessoas." />
@@ -294,7 +302,7 @@ function ProdutoForm() {
             </Button>
           )}
           <Button className="h-12 flex-1 text-base" onClick={salvar} disabled={salvando}>
-            {salvando ? "Salvando..." : duplicando ? "Salvar como novo produto" : "Salvar produto"}
+            {salvando ? (progresso ?? "Salvando...") : duplicando ? "Salvar como novo produto" : "Salvar produto"}
           </Button>
         </div>
       </div>

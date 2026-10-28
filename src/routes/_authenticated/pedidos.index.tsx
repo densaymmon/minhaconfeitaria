@@ -1,7 +1,7 @@
 import * as appQueries from "@/lib/queries";
 import { createFileRoute, Link, useNavigate } from "@tanstack/react-router";
 import { useEffect, useMemo, useState } from "react";
-import { useSuspenseQuery } from "@tanstack/react-query";
+import { useQueryClient, useSuspenseQuery } from "@tanstack/react-query";
 import { toast } from "sonner";
 import { CalendarClock, ChevronDown, Download, MessageCircle, Plus, ReceiptText, Repeat, Search, SlidersHorizontal, Wallet } from "lucide-react";
 import { usePedidosCalc } from "@/lib/hooks";
@@ -14,6 +14,8 @@ import { Input } from "@/components/ui/input";
 import { ClienteDialog } from "./clientes.index";
 import type { Cliente } from "@/lib/queries";
 import { cn } from "@/lib/utils";
+import { confirmacaoWhatsApp, precisaConfirmar } from "@/lib/whatsapp-pedido";
+import type { PedidoCalc } from "@/lib/hooks";
 
 const STATUS_ATIVOS = ["recebido", "confirmado", "em_producao", "pronto"];
 
@@ -54,6 +56,18 @@ function Pedidos() {
   const { data: clientes } = useSuspenseQuery(appQueries.clientesQ);
   const { data: confeitaria } = useSuspenseQuery(appQueries.confeitariaQ);
   const nomeLoja = confeitaria?.nome?.trim() ?? "";
+  const qc = useQueryClient();
+  // Abre o WhatsApp do cliente com a confirmação pronta (enviada do número da confeitaria) e registra o envio.
+  async function enviarConfirmacao(p: PedidoCalc) {
+    const msg = confirmacaoWhatsApp(p, { loja: nomeLoja || "nossa confeitaria", pix: config.pix_chave, enderecoRetirada: confeitaria?.endereco_retirada ?? null, origem: window.location.origin });
+    if (!msg) return void toast.error("O cliente não tem um WhatsApp válido cadastrado.");
+    window.open(msg.url, "_blank", "noopener,noreferrer");
+    const { error } = await supabase.from("pedidos").update({ confirmacao_enviada_em: new Date().toISOString(), visualizado_em: p.visualizado_em ?? new Date().toISOString() }).eq("id", p.id);
+    if (!error) {
+      void qc.invalidateQueries({ queryKey: ["pedidos"] });
+      void qc.invalidateQueries({ queryKey: ["pedidos-catalogo-novos"] });
+    }
+  }
   const cabecalhoRecibo = nomeLoja
     ? [`${nomeLoja.toLocaleUpperCase("pt-BR")}${confeitaria?.slogan?.trim() ? ` — ${confeitaria.slogan.trim()}` : ""}`]
     : [];
@@ -478,7 +492,17 @@ function Pedidos() {
                         <ReceiptText className="size-4" /> Copiar recibo
                       </Button>
                     )}
-                    <Button type="button" size="sm" variant="outline" onClick={(e) => {
+                    {precisaConfirmar(p) && (
+                      <Button type="button" size="sm" onClick={(e) => { e.stopPropagation(); void enviarConfirmacao(p); }}>
+                        <MessageCircle className="size-4" /> Confirmar no WhatsApp
+                      </Button>
+                    )}
+                    {p.origem === "catalogo" && p.confirmacao_enviada_em && (
+                      <button type="button" onClick={(e) => { e.stopPropagation(); void enviarConfirmacao(p); }} className="self-center text-xs text-success underline-offset-2 hover:underline">
+                        ✓ Confirmação enviada · reenviar
+                      </button>
+                    )}
+                    {!precisaConfirmar(p) && <Button type="button" size="sm" variant="outline" onClick={(e) => {
                       e.stopPropagation();
                       if (!telefoneWhatsApp) {
                         const cliente = clientes.find((c) => c.id === p.cliente_id);
@@ -498,7 +522,7 @@ function Pedidos() {
                       window.open(`https://wa.me/${telefoneWhatsApp}?text=${encodeURIComponent(mensagem)}`, "_blank", "noopener,noreferrer");
                     }}>
                       <MessageCircle className="size-4" /> {deveCobrar ? `Cobrar ${brl(p.t.saldo)}` : "Enviar recibo"}
-                    </Button>
+                    </Button>}
                   </div>
               </Card>
             );

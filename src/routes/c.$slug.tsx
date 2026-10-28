@@ -1,7 +1,9 @@
 import { createFileRoute, useNavigate } from "@tanstack/react-router";
 import { useQuery } from "@tanstack/react-query";
 import { useEffect, useMemo, useRef, useState } from "react";
-import { ArrowLeft, CakeSlice, Minus, MessageCircle, Plus, ShoppingBag, Store, Truck } from "lucide-react";
+import { ArrowLeft, CakeSlice, Minus, MessageCircle, PlayCircle, Plus, ShoppingBag, Store, Truck } from "lucide-react";
+import { Dialog, DialogContent, DialogDescription, DialogTitle } from "@/components/ui/dialog";
+import { Carousel, CarouselContent, CarouselItem, CarouselNext, CarouselPrevious, type CarouselApi } from "@/components/ui/carousel";
 import { supabase } from "@/integrations/supabase/client";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -11,6 +13,9 @@ import { brl, dataBR } from "@/lib/format";
 import { cn } from "@/lib/utils";
 import {
   alterarQuantidade,
+  capaDoProduto,
+  midiasDoProduto,
+  type ProdutoCatalogo,
   limparCarrinho,
   linkWhatsApp,
   mensagemErroCatalogo,
@@ -31,8 +36,13 @@ export const Route = createFileRoute("/c/$slug")({
       { property: "og:type", content: "website" },
     ],
   }),
-  component: CatalogoPage,
+  component: CatalogoRota,
 });
+
+function CatalogoRota() {
+  const { slug } = Route.useParams();
+  return <CatalogoPage slug={slug} />;
+}
 
 function lerLocal<T>(chave: string, padrao: T): T {
   try {
@@ -50,8 +60,8 @@ function gravarLocal(chave: string, valor: unknown) {
   }
 }
 
-function CatalogoPage() {
-  const { slug } = Route.useParams();
+/** Página do catálogo; usada em /<endereço> (link curto) e em /c/<endereço>. */
+export function CatalogoPage({ slug }: { slug: string }) {
   const { data: catalogo, isLoading, isError, refetch } = useQuery({
     queryKey: ["catalogo-publico", slug],
     queryFn: async () => {
@@ -100,6 +110,7 @@ function Loja({ slug, catalogo }: { slug: string; catalogo: Catalogo }) {
   const [carrinho, setCarrinho] = useState<Carrinho>(() => limparCarrinho(lerLocal<Carrinho>(chaveCarrinho, {}), catalogo.produtos));
   const [etapa, setEtapa] = useState<"produtos" | "finalizar">("produtos");
   const [categoria, setCategoria] = useState<string | null>(null);
+  const [detalhe, setDetalhe] = useState<ProdutoCatalogo | null>(null);
 
   useEffect(() => gravarLocal(chaveCarrinho, carrinho), [chaveCarrinho, carrinho]);
 
@@ -153,13 +164,12 @@ function Loja({ slug, catalogo }: { slug: string; catalogo: Catalogo }) {
               const qtd = carrinho[p.id] ?? 0;
               return (
                 <li key={p.id} className="flex gap-3 rounded-2xl bg-card p-3 shadow-soft">
-                  <div className="size-24 shrink-0 overflow-hidden rounded-xl bg-muted sm:size-28">
-                    {p.imagem_url
-                      ? <img src={p.imagem_url} alt={p.nome} loading="lazy" className="size-full object-cover" />
-                      : <div className="grid size-full place-items-center text-muted-foreground"><CakeSlice className="size-8 opacity-50" /></div>}
-                  </div>
+                  <button type="button" onClick={() => setDetalhe(p)} aria-label={`Ver fotos e detalhes de ${p.nome}`} className="relative size-24 shrink-0 overflow-hidden rounded-xl bg-muted sm:size-28">
+                    <Capa produto={p} />
+                    {midiasDoProduto(p).length > 1 && <span className="absolute bottom-1 right-1 rounded-full bg-background/90 px-1.5 text-[10px] font-semibold">+{midiasDoProduto(p).length - 1}</span>}
+                  </button>
                   <div className="flex min-w-0 flex-1 flex-col">
-                    <h2 className="font-semibold leading-snug">{p.nome}</h2>
+                    <button type="button" onClick={() => setDetalhe(p)} className="text-left"><h2 className="font-semibold leading-snug">{p.nome}</h2></button>
                     {p.descricao && <p className="mt-0.5 line-clamp-3 text-sm text-muted-foreground">{p.descricao}</p>}
                     {p.antecedencia_dias > 0 && <p className="mt-1 text-xs text-muted-foreground">Encomende com {p.antecedencia_dias} dia(s) de antecedência</p>}
                     <div className="mt-auto flex items-center justify-between gap-2 pt-2">
@@ -179,6 +189,13 @@ function Loja({ slug, catalogo }: { slug: string; catalogo: Catalogo }) {
         <p className="py-8 text-center text-xs text-muted-foreground">Pedidos online por Doce Gestão</p>
       </main>
 
+      <DetalheProduto
+        produto={detalhe}
+        quantidade={detalhe ? (carrinho[detalhe.id] ?? 0) : 0}
+        onClose={() => setDetalhe(null)}
+        onChange={(d) => { if (detalhe) setCarrinho((c) => alterarQuantidade(c, detalhe.id, d)); }}
+      />
+
       {resumo.itens > 0 && (
         <div className="fixed inset-x-0 bottom-0 z-40 border-t bg-card/95 backdrop-blur" style={{ paddingBottom: "env(safe-area-inset-bottom)" }}>
           <div className="mx-auto max-w-2xl px-4 py-3">
@@ -190,6 +207,85 @@ function Loja({ slug, catalogo }: { slug: string; catalogo: Catalogo }) {
         </div>
       )}
     </div>
+  );
+}
+
+function Capa({ produto }: { produto: ProdutoCatalogo }) {
+  const capa = capaDoProduto(produto);
+  if (!capa) return <div className="grid size-full place-items-center text-muted-foreground"><CakeSlice className="size-8 opacity-50" /></div>;
+  if (capa.tipo === "video") {
+    return (
+      <>
+        <video src={`${capa.url}#t=0.1`} muted playsInline preload="metadata" className="size-full object-cover" />
+        <PlayCircle className="pointer-events-none absolute left-1/2 top-1/2 size-8 -translate-x-1/2 -translate-y-1/2 text-white drop-shadow" />
+      </>
+    );
+  }
+  return <img src={capa.url} alt={produto.nome} loading="lazy" className="size-full object-cover" />;
+}
+
+/** Fotos e vídeos do produto em carrossel, com descrição e botão de adicionar. */
+function DetalheProduto({ produto, quantidade, onClose, onChange }: { produto: ProdutoCatalogo | null; quantidade: number; onClose: () => void; onChange: (delta: number) => void }) {
+  const [api, setApi] = useState<CarouselApi>();
+  const [atual, setAtual] = useState(0);
+  useEffect(() => {
+    if (!api) return;
+    const atualizar = () => setAtual(api.selectedScrollSnap());
+    atualizar();
+    api.on("select", atualizar);
+    return () => { api.off("select", atualizar); };
+  }, [api]);
+  const midias = produto ? midiasDoProduto(produto) : [];
+  return (
+    <Dialog open={Boolean(produto)} onOpenChange={(aberto) => { if (!aberto) onClose(); }}>
+      <DialogContent className="max-h-[92dvh] w-[calc(100%-1.5rem)] max-w-lg gap-3 overflow-y-auto rounded-2xl p-0">
+        {produto && (
+          <>
+            {midias.length > 0 ? (
+              <div className="relative">
+                <Carousel setApi={setApi} opts={{ loop: midias.length > 1 }}>
+                  <CarouselContent className="ml-0">
+                    {midias.map((m, i) => (
+                      <CarouselItem key={`${m.url}-${i}`} className="pl-0">
+                        <div className="aspect-square w-full bg-black/5">
+                          {m.tipo === "video"
+                            ? <video src={m.url} controls playsInline preload="metadata" className="size-full bg-black object-contain" />
+                            : <img src={m.url} alt={`${produto.nome} — foto ${i + 1}`} loading={i === 0 ? "eager" : "lazy"} className="size-full object-cover" />}
+                        </div>
+                      </CarouselItem>
+                    ))}
+                  </CarouselContent>
+                  {midias.length > 1 && (
+                    <>
+                      <CarouselPrevious className="left-2 bg-background/90" />
+                      <CarouselNext className="right-2 bg-background/90" />
+                    </>
+                  )}
+                </Carousel>
+                {midias.length > 1 && (
+                  <div className="absolute bottom-2 left-1/2 flex -translate-x-1/2 gap-1.5" aria-hidden="true">
+                    {midias.map((_, i) => <span key={i} className={cn("size-1.5 rounded-full", i === atual ? "bg-white" : "bg-white/50")} />)}
+                  </div>
+                )}
+              </div>
+            ) : (
+              <div className="grid aspect-[2/1] place-items-center bg-muted text-muted-foreground"><CakeSlice className="size-10 opacity-50" /></div>
+            )}
+            <div className="space-y-2 px-5 pb-5">
+              <DialogTitle className="font-display text-xl">{produto.nome}</DialogTitle>
+              <DialogDescription className="whitespace-pre-line text-sm">{produto.descricao || produto.categoria}</DialogDescription>
+              {produto.antecedencia_dias > 0 && <p className="text-xs text-muted-foreground">Encomende com {produto.antecedencia_dias} dia(s) de antecedência.</p>}
+              <div className="flex items-center justify-between gap-3 pt-2">
+                <span className="text-lg font-semibold tabular-nums">{brl(produto.preco)}</span>
+                {quantidade === 0
+                  ? <Button onClick={() => onChange(1)}><Plus className="size-4" /> Adicionar</Button>
+                  : <Stepper nome={produto.nome} quantidade={quantidade} onChange={onChange} />}
+              </div>
+            </div>
+          </>
+        )}
+      </DialogContent>
+    </Dialog>
   );
 }
 
@@ -256,7 +352,10 @@ function Finalizar({ slug, catalogo, carrinho, setCarrinho, voltar, limparCarrin
       return;
     }
     esvaziar();
-    void navigate({ to: "/pedido/$codigo", params: { codigo } });
+    // Link curto (/p/xxxxxxxxxx) para o cliente guardar; o código longo continua valendo.
+    const { data: curto } = await supabase.rpc("codigo_curto_pedido", { p_codigo: codigo });
+    if (curto) void navigate({ to: "/p/$codigo", params: { codigo: curto } });
+    else void navigate({ to: "/pedido/$codigo", params: { codigo } });
   }
 
   return (

@@ -2,6 +2,8 @@
 // Preço, taxa e custo definitivos são sempre recalculados no servidor
 // (criar_pedido_catalogo); aqui os valores servem apenas para mostrar o resumo.
 
+export type MidiaCatalogo = { tipo: "imagem" | "video"; url: string };
+
 export type ProdutoCatalogo = {
   id: string;
   nome: string;
@@ -10,6 +12,7 @@ export type ProdutoCatalogo = {
   preco: number;
   imagem_url: string | null;
   antecedencia_dias: number;
+  midias?: MidiaCatalogo[];
 };
 
 export type Catalogo = {
@@ -129,7 +132,7 @@ export function etapaAtual(status: string) {
 export function sugerirSlug(nome: string) {
   return nome
     .normalize("NFD")
-    .replace(/[̀-ͯ]/g, "")
+    .replace(/[\u0300-\u036f]/g, "")
     .toLowerCase()
     .replace(/[^a-z0-9]+/g, "-")
     .replace(/^-+|-+$/g, "")
@@ -137,6 +140,86 @@ export function sugerirSlug(nome: string) {
     .replace(/-+$/g, "");
 }
 
+/** Endereços usados por páginas do sistema (mesma lista de public._slug_reservado no banco). */
+export const SLUGS_RESERVADOS = [
+  "c", "p", "pedido", "pedidos", "pedidos-recorrentes", "painel", "auth", "mcp", "reset-password",
+  "clientes", "produtos", "producao", "financeiro", "relatorios", "despesas", "compras", "contas-pagar",
+  "configuracoes", "mais", "api", "admin", "app", "login", "entrar", "cadastro", "suporte", "ajuda",
+  "termos", "privacidade", "www", "assets", "static", "catalogo", "loja", "planos", "precos",
+];
+
 export function slugValido(slug: string) {
-  return /^[a-z0-9]+(-[a-z0-9]+)*$/.test(slug) && slug.length >= 3 && slug.length <= 60;
+  return /^[a-z0-9]+(-[a-z0-9]+)*$/.test(slug) && slug.length >= 3 && slug.length <= 60 && !SLUGS_RESERVADOS.includes(slug);
+}
+
+/** Link curto do catálogo: dominio/endereco. */
+export function linkCatalogo(origem: string, slug: string) {
+  return `${origem.replace(/\/+$/, "")}/${slug}`;
+}
+
+/** Link curto de acompanhamento (código de 10 letras); o código longo continua funcionando. */
+export function linkPedido(origem: string, codigo: { curto?: string | null; longo?: string | null }) {
+  const base = origem.replace(/\/+$/, "");
+  if (codigo.curto) return `${base}/p/${codigo.curto}`;
+  if (codigo.longo) return `${base}/pedido/${codigo.longo}`;
+  return null;
+}
+
+/** Fotos e vídeos do produto; produtos antigos só com imagem_url viram uma lista de uma foto. */
+export function midiasDoProduto(p: ProdutoCatalogo): MidiaCatalogo[] {
+  if (p.midias && p.midias.length > 0) return p.midias;
+  return p.imagem_url ? [{ tipo: "imagem", url: p.imagem_url }] : [];
+}
+
+/** Capa do card: primeira foto; se só houver vídeo, o próprio vídeo. */
+export function capaDoProduto(p: ProdutoCatalogo): MidiaCatalogo | null {
+  const midias = midiasDoProduto(p);
+  return midias.find((m) => m.tipo === "imagem") ?? midias[0] ?? null;
+}
+
+export type DadosConfirmacao = {
+  loja: string;
+  cliente: string | null;
+  numero: number;
+  itens: { descricao: string; quantidade: number; preco: number }[];
+  taxaEntrega: number;
+  desconto: number;
+  total: number;
+  pago: number;
+  dataEntrega: string; // AAAA-MM-DD
+  horaEntrega: string | null;
+  tipoEntrega: "retirada" | "entrega" | null;
+  endereco: string | null;
+  pix: string | null;
+  link: string | null;
+};
+
+const brlMsg = (v: number) => new Intl.NumberFormat("pt-BR", { style: "currency", currency: "BRL" }).format(Number.isFinite(v) ? v : 0);
+const dataMsg = (iso: string) => {
+  const [a, m, d] = iso.split("-").map(Number);
+  const data = new Date(Date.UTC(a ?? 1970, (m ?? 1) - 1, d ?? 1, 12));
+  return new Intl.DateTimeFormat("pt-BR", { weekday: "long", day: "2-digit", month: "2-digit", timeZone: "UTC" }).format(data);
+};
+
+/** Mensagem que a confeitaria envia ao cliente confirmando o pedido do catálogo. */
+export function mensagemConfirmacaoPedido(d: DadosConfirmacao) {
+  const primeiroNome = d.cliente?.trim().split(/\s+/)[0] ?? "";
+  const falta = Math.max(0, Math.round((d.total - d.pago) * 100) / 100);
+  const quando = `${dataMsg(d.dataEntrega)}${d.horaEntrega ? ` às ${d.horaEntrega}` : ""}`;
+  return [
+    `Olá${primeiroNome ? `, ${primeiroNome}` : ""}! Recebemos seu pedido #${d.numero} na ${d.loja}. 💛`,
+    "",
+    ...d.itens.map((i) => `• ${Number(i.quantidade)}× ${i.descricao} — ${brlMsg(Number(i.quantidade) * Number(i.preco))}`),
+    ...(d.taxaEntrega > 0 ? [`• Entrega — ${brlMsg(d.taxaEntrega)}`] : []),
+    ...(d.desconto > 0 ? [`• Desconto — −${brlMsg(d.desconto)}`] : []),
+    `*Total: ${brlMsg(d.total)}*`,
+    "",
+    d.tipoEntrega === "entrega" ? `🚚 Entrega ${quando}${d.endereco ? `\nEndereço: ${d.endereco}` : ""}` : `🏠 Retirada ${quando}${d.endereco ? `\nLocal: ${d.endereco}` : ""}`,
+    ...(falta > 0
+      ? ["", d.pix ? `Pagamento por Pix: ${brlMsg(falta)}\nChave: ${d.pix}` : `Falta pagar: ${brlMsg(falta)}`]
+      : ["", "Pagamento confirmado ✅"]),
+    ...(d.link ? ["", `Acompanhe o andamento: ${d.link}`] : []),
+    "",
+    "Qualquer dúvida, é só responder esta mensagem.",
+  ].join("\n");
 }

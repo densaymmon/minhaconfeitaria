@@ -18,20 +18,26 @@ export const Route = createFileRoute("/pedido/$codigo")({
       { name: "robots", content: "noindex" },
     ],
   }),
-  component: AcompanharPedido,
+  component: AcompanharRota,
 });
 
-const UUID = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
-
-function AcompanharPedido() {
+function AcompanharRota() {
   const { codigo } = Route.useParams();
+  return <AcompanharPedido codigo={codigo} />;
+}
+
+// Código longo (UUID) dos primeiros links ou código curto de 10 caracteres.
+const CODIGO = /^([0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}|[a-z2-9]{10})$/i;
+
+/** Acompanhamento do pedido; usado em /p/<código curto> e em /pedido/<código>. */
+export function AcompanharPedido({ codigo }: { codigo: string }) {
   const qc = useQueryClient();
-  const codigoValido = UUID.test(codigo);
+  const codigoValido = CODIGO.test(codigo);
   const { data: pedido, isLoading } = useQuery({
     queryKey: ["pedido-publico", codigo],
     enabled: codigoValido,
     queryFn: async () => {
-      const { data, error } = await supabase.rpc("acompanhar_pedido_catalogo", { p_codigo: codigo });
+      const { data, error } = await supabase.rpc("pedido_publico", { p_codigo: codigo });
       if (error) throw new Error(error.message);
       return (data as unknown as PedidoAcompanhamento | null) ?? null;
     },
@@ -71,7 +77,7 @@ function AcompanharPedido() {
 
   async function informarPagamento() {
     setAvisando(true);
-    const { error } = await supabase.rpc("informar_pagamento_catalogo", { p_codigo: codigo });
+    const { error } = await supabase.rpc("informar_pagamento_pedido", { p_codigo: codigo });
     setAvisando(false);
     if (error) return void toast.error("Não foi possível avisar agora. Tente de novo em instantes.");
     await qc.invalidateQueries({ queryKey: ["pedido-publico", codigo] });
@@ -157,7 +163,7 @@ function AcompanharPedido() {
         )}
         {loja.slug && (
           <Button asChild variant="ghost" className="h-11">
-            <Link to="/c/$slug" params={{ slug: loja.slug }}>Fazer outro pedido</Link>
+            <Link to="/$slug" params={{ slug: loja.slug }}>Fazer outro pedido</Link>
           </Button>
         )}
         <p className="text-center text-xs text-muted-foreground">Guarde este link para acompanhar o pedido.</p>
