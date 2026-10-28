@@ -16,7 +16,7 @@ import { Textarea } from "@/components/ui/textarea";
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/ui/dialog";
 
 export const Route = createFileRoute("/_authenticated/clientes/")({
- loader: async ({ context }) => { await Promise.all([context.queryClient.ensureQueryData(appQueries.clientesQ),context.queryClient.ensureQueryData(appQueries.pedidosQ),context.queryClient.ensureQueryData(appQueries.configQ)]); },
+ loader: async ({ context }) => { await Promise.all([context.queryClient.ensureQueryData(appQueries.clientesQ),context.queryClient.ensureQueryData(appQueries.pedidosHistoricoQ),context.queryClient.ensureQueryData(appQueries.configQ)]); },
  errorComponent: ({error}) => <p role="alert" className="py-8 text-destructive">{error instanceof Error ? error.message : "Não foi possível carregar os registros."}</p>,
  notFoundComponent: () => <p>Registro não encontrado.</p>,
 
@@ -109,7 +109,7 @@ export function ClienteDialog({ cliente, open, onOpenChange }: { cliente?: Clien
 
 function Clientes() {
   const { data: clientes } = useSuspenseQuery(clientesQ);
-  const pedidos = usePedidosCalc();
+  const pedidos = usePedidosCalc("historico");
   const [busca, setBusca] = useState("");
   const [aberto, setAberto] = useState(false);
 

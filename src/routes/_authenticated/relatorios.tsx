@@ -4,7 +4,7 @@ import { useSuspenseQuery } from "@tanstack/react-query";
 import { useEffect, useMemo, useState } from "react";
 import { endOfMonth, format } from "date-fns";
 import { Download } from "lucide-react";
-import { configQ, despesasQ, pedidosQ } from "@/lib/queries";
+import { configQ, despesasQ, pedidosHistoricoQ } from "@/lib/queries";
 import { calcularRecebimentoPedido, recebimentoLegadoPendente, ratearVendaETaxas, totaisPedido } from "@/lib/calc";
 import { medida } from "@/lib/ingredient-cost";
 import { brl, dataBR, hojeISO, mesISO, num } from "@/lib/format";
@@ -17,7 +17,7 @@ import { Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, D
 export const Route = createFileRoute("/_authenticated/relatorios")({
   loader: async ({ context }) => {
     await Promise.all([
-      context.queryClient.ensureQueryData(appQueries.pedidosQ),
+      context.queryClient.ensureQueryData(appQueries.pedidosHistoricoQ),
       context.queryClient.ensureQueryData(appQueries.configQ),
       context.queryClient.ensureQueryData(appQueries.despesasQ),
       context.queryClient.ensureQueryData(appQueries.produtosQ),
@@ -98,7 +98,7 @@ function RelatoriosConteudo({ initialSearch, embedded = false }: { initialSearch
   const [filtroCategoriaDespesa, setFiltroCategoriaDespesa] = useState("todas");
   const [filtroClienteVendas, setFiltroClienteVendas] = useState("todos");
   const [resumoAtivo, setResumoAtivo] = useState<"vendas" | "compras" | "contas" | "lucro" | "futuros" | null>(null);
-  const { data: pedidos } = useSuspenseQuery(pedidosQ);
+  const { data: pedidos } = useSuspenseQuery(pedidosHistoricoQ);
   const { data: config } = useSuspenseQuery(configQ);
   const { data: produtos } = useSuspenseQuery(appQueries.produtosQ);
   const { data: insumos } = useSuspenseQuery(appQueries.insumosQ);

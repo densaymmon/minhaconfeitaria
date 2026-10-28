@@ -28,7 +28,7 @@ export const Route = createFileRoute("/_authenticated/pedidos/")({
    dataFinal: typeof search["dataFinal"] === "string" ? search["dataFinal"] : undefined,
    dataReferencia: search["dataReferencia"] === "recebimento" ? ("recebimento" as const) : undefined,
  }),
- loader: async ({ context }) => { await Promise.all([context.queryClient.ensureQueryData(appQueries.pedidosQ),context.queryClient.ensureQueryData(appQueries.configQ),context.queryClient.ensureQueryData(appQueries.pedidoPagamentosQ),context.queryClient.ensureQueryData(appQueries.clientesQ),context.queryClient.ensureQueryData(appQueries.confeitariaQ)]); },
+ loader: async ({ context }) => { await Promise.all([context.queryClient.ensureQueryData(appQueries.pedidosHistoricoQ),context.queryClient.ensureQueryData(appQueries.configQ),context.queryClient.ensureQueryData(appQueries.pedidoPagamentosQ),context.queryClient.ensureQueryData(appQueries.clientesQ),context.queryClient.ensureQueryData(appQueries.confeitariaQ)]); },
  errorComponent: ({error}) => <p role="alert" className="py-8 text-destructive">{error instanceof Error ? error.message : "Não foi possível carregar os registros."}</p>,
  notFoundComponent: () => <p>Registro não encontrado.</p>,
 
@@ -53,7 +53,7 @@ function normalizarTelefoneWhatsApp(telefone: string | null | undefined): string
 }
 
 function Pedidos() {
-  const pedidos = usePedidosCalc();
+  const pedidos = usePedidosCalc("historico");
   const { data: config } = useSuspenseQuery(appQueries.configQ);
   const { data: clientes } = useSuspenseQuery(appQueries.clientesQ);
   const { data: confeitaria } = useSuspenseQuery(appQueries.confeitariaQ);

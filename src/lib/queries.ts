@@ -5,6 +5,7 @@ import { supabase } from "@/integrations/supabase/client";
 import type { Tables } from "@/integrations/supabase/types";
 import { CONFIG_PADRAO, type Config } from "./calc";
 import { hojeISO } from "./format";
+import { format, subDays } from "date-fns";
 
 export type Cliente = Tables<"clientes">;
 export type Insumo = Tables<"insumos">;
@@ -51,8 +52,32 @@ export const pedidoPagamentosQ = queryOptions({
   queryFn: () => must<PedidoPagamento[]>(supabase.from("pedido_pagamentos").select("*").order("data_pagamento", { ascending: false })),
 });
 
+/** Dias de pedidos já entregues que as telas do dia a dia carregam (os em aberto vêm sempre). */
+export const DIAS_PEDIDOS_RECENTES = 90;
+const STATUS_EM_ABERTO = ["recebido", "confirmado", "em_producao", "pronto"];
+
+/**
+ * Pedidos das telas do dia a dia (Hoje, Produção): os em aberto e os com entrega nos
+ * últimos 90 dias. Leve mesmo com anos de histórico.
+ */
 export const pedidosQ = queryOptions({
   queryKey: ["pedidos"],
+  queryFn: async () => {
+    const limite = format(subDays(new Date(), DIAS_PEDIDOS_RECENTES), "yyyy-MM-dd");
+    const { data, error } = await supabase.from("pedidos")
+      .select("*, pedido_itens(*), clientes(nome, telefone)")
+      .or(`data_entrega.gte.${limite},status.in.(${STATUS_EM_ABERTO.join(",")})`)
+      .order("data_entrega", { ascending: false })
+      .order("numero", { ascending: false });
+    if (error) throw new Error(error.message);
+    return (data ?? []) as Pedido[];
+  },
+  refetchInterval: 60_000,
+});
+
+/** Histórico completo (lista de pedidos, clientes, relatórios, compras). */
+export const pedidosHistoricoQ = queryOptions({
+  queryKey: ["pedidos", "historico"],
   queryFn: async () => {
     const { data, error } = await supabase.from("pedidos")
       .select("*, pedido_itens(*), clientes(nome, telefone)")
@@ -61,8 +86,7 @@ export const pedidosQ = queryOptions({
     if (error) throw new Error(error.message);
     return (data ?? []) as Pedido[];
   },
-  refetchInterval: 60_000,
-});
+  });
 
 export const despesasQ = queryOptions({
   queryKey: ["despesas"],

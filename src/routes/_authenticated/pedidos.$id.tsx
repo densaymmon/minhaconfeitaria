@@ -9,7 +9,7 @@ import { useEffect, useRef, useState, type FormEvent } from "react";
 import { toast } from "sonner";
 import { CalendarClock, Copy, MessageCircle, Plus, Repeat, Trash2 } from "lucide-react";
 import { supabase } from "@/integrations/supabase/client";
-import { clientesQ, configQ, pedidosQ, type Pedido, type PedidoPagamento } from "@/lib/queries";
+import { clientesQ, configQ, pedidosHistoricoQ, type Pedido, type PedidoPagamento } from "@/lib/queries";
 import { alterarPedido, otimista } from "@/lib/cache-pedidos";
 import { useCustos, usePedidosCalc } from "@/lib/hooks";
 import { avisoProntoWhatsApp, confirmacaoWhatsApp, precisaConfirmar } from "@/lib/whatsapp-pedido";
@@ -22,7 +22,7 @@ import { Textarea } from "@/components/ui/textarea";
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/ui/dialog";
 
 export const Route = createFileRoute("/_authenticated/pedidos/$id")({
- loader: async ({ context }) => { await Promise.all([context.queryClient.ensureQueryData(appQueries.pedidosQ),context.queryClient.ensureQueryData(appQueries.configQ),context.queryClient.ensureQueryData(appQueries.clientesQ),context.queryClient.ensureQueryData(appQueries.produtosQ),context.queryClient.ensureQueryData(appQueries.insumosQ),context.queryClient.ensureQueryData(appQueries.pedidoPagamentosQ),context.queryClient.ensureQueryData(appQueries.confeitariaQ)]); },
+ loader: async ({ context }) => { await Promise.all([context.queryClient.ensureQueryData(appQueries.pedidosHistoricoQ),context.queryClient.ensureQueryData(appQueries.configQ),context.queryClient.ensureQueryData(appQueries.clientesQ),context.queryClient.ensureQueryData(appQueries.produtosQ),context.queryClient.ensureQueryData(appQueries.insumosQ),context.queryClient.ensureQueryData(appQueries.pedidoPagamentosQ),context.queryClient.ensureQueryData(appQueries.confeitariaQ)]); },
  errorComponent: ({error}) => <p role="alert" className="py-8 text-destructive">{error instanceof Error ? error.message : "Não foi possível carregar os registros."}</p>,
  notFoundComponent: () => <p>Registro não encontrado.</p>,
 
@@ -55,12 +55,12 @@ function PedidoForm() {
   const novo = id === "novo";
   const navigate = useNavigate();
   const qc = useQueryClient();
-  const { data: pedidos } = useSuspenseQuery(pedidosQ);
+  const { data: pedidos } = useSuspenseQuery(pedidosHistoricoQ);
   const { data: clientes } = useSuspenseQuery(clientesQ);
   const { data: config } = useSuspenseQuery(configQ);
   const { produtos, custo } = useCustos();
   const existente = novo ? undefined : pedidos.find((p) => p.id === id);
-  const pedidosCalc = usePedidosCalc();
+  const pedidosCalc = usePedidosCalc("historico");
   const existenteCalc = existente ? pedidosCalc.find((x) => x.id === existente.id) : undefined;
   const { data: confeitaria } = useSuspenseQuery(appQueries.confeitariaQ);
   const opcoesMensagem = { loja: confeitaria?.nome?.trim() || "nossa confeitaria", pix: config.pix_chave, pixTipo: config.pix_tipo, cidade: confeitaria?.cidade ?? null, enderecoRetirada: confeitaria?.endereco_retirada ?? null, origem: origemPublica() };

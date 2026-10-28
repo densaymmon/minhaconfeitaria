@@ -151,7 +151,7 @@ export function Compras({ embedded = false, initialSection = "compras" }: { embe
       return data ?? [];
     },
   });
-  const { data: pedidos = [] } = useQuery(appQueries.pedidosQ);
+  const { data: pedidos = [] } = useQuery(appQueries.pedidosHistoricoQ);
   const { data: produtos = [] } = useQuery(appQueries.produtosQ);
   const qc = useQueryClient();
   const [data, setData] = useState(hojeISO());

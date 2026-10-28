@@ -2,16 +2,18 @@ import { supabase } from "@/integrations/supabase/client";
 import type { MidiaCatalogo } from "@/lib/catalogo";
 
 const LADO_MAXIMO = 1600;
+/** Miniatura usada na lista do catálogo (2 colunas no celular, telas de alta densidade). */
+const LADO_MINIATURA = 600;
 const TAMANHO_MAXIMO_FOTO = 2 * 1024 * 1024;
 export const TAMANHO_MAXIMO_VIDEO = 50 * 1024 * 1024; // limite do bucket "catalogo"
 export const MAXIMO_MIDIAS = 10;
 const BUCKET = "catalogo";
 
 /** Reduz a foto para no máximo 1600 px em JPEG, para carregar rápido no celular do cliente. */
-export async function comprimirFoto(arquivo: File): Promise<Blob> {
+export async function comprimirFoto(arquivo: File, ladoMaximo = LADO_MAXIMO, qualidade = 0.82): Promise<Blob> {
   try {
     const bitmap = await createImageBitmap(arquivo);
-    const escala = Math.min(1, LADO_MAXIMO / Math.max(bitmap.width, bitmap.height));
+    const escala = Math.min(1, ladoMaximo / Math.max(bitmap.width, bitmap.height));
     const canvas = document.createElement("canvas");
     canvas.width = Math.round(bitmap.width * escala);
     canvas.height = Math.round(bitmap.height * escala);
@@ -19,7 +21,7 @@ export async function comprimirFoto(arquivo: File): Promise<Blob> {
     if (!ctx) throw new Error("canvas");
     ctx.drawImage(bitmap, 0, 0, canvas.width, canvas.height);
     bitmap.close();
-    const blob = await new Promise<Blob | null>((ok) => canvas.toBlob(ok, "image/jpeg", 0.82));
+    const blob = await new Promise<Blob | null>((ok) => canvas.toBlob(ok, "image/jpeg", qualidade));
     if (blob && blob.size <= TAMANHO_MAXIMO_FOTO) return blob;
   } catch {
     /* formato que o navegador não abre (ex.: HEIC em alguns aparelhos): tenta o original */
@@ -54,9 +56,20 @@ export async function enviarMidiaProduto(userId: string, produtoId: string, arqu
   const contentType = conteudo.type || (tipo === "imagem" ? "image/jpeg" : "video/mp4");
   const extensoes: Record<string, string> = { "image/png": "png", "image/webp": "webp", "video/mp4": "mp4", "video/webm": "webm", "video/quicktime": "mov" };
   const extensao = extensoes[contentType] ?? "jpg";
-  const caminho = `${userId}/${produtoId}-${Date.now()}-${Math.random().toString(36).slice(2, 8)}.${extensao}`;
+  const base = `${userId}/${produtoId}-${Date.now()}-${Math.random().toString(36).slice(2, 8)}`;
+  // Fotos em JPEG ganham uma miniatura com o mesmo nome terminado em -p.jpg (ver miniaturaDaFoto).
+  const comMiniatura = tipo === "imagem" && contentType === "image/jpeg";
+  const caminho = comMiniatura ? `${base}-g.jpg` : `${base}.${extensao}`;
   const { error } = await supabase.storage.from(BUCKET).upload(caminho, conteudo, { contentType, upsert: false, cacheControl: "31536000" });
   if (error) throw new Error(`Não foi possível enviar "${arquivo.name}": ${error.message}`);
+  if (comMiniatura) {
+    try {
+      const mini = await comprimirFoto(arquivo, LADO_MINIATURA, 0.76);
+      await supabase.storage.from(BUCKET).upload(`${base}-p.jpg`, mini, { contentType: "image/jpeg", upsert: true, cacheControl: "31536000" });
+    } catch {
+      /* sem miniatura o catálogo usa a foto grande */
+    }
+  }
   return { tipo, url: supabase.storage.from(BUCKET).getPublicUrl(caminho).data.publicUrl };
 }
 
@@ -65,6 +78,7 @@ export async function apagarArquivosMidia(userId: string, urls: string[]) {
   const marcador = `/storage/v1/object/public/${BUCKET}/`;
   const caminhos = urls
     .map((url) => (url.includes(marcador) ? decodeURIComponent(url.split(marcador)[1] ?? "") : ""))
-    .filter((c) => c.startsWith(`${userId}/`));
+    .filter((c) => c.startsWith(`${userId}/`))
+    .flatMap((c) => (c.endsWith("-g.jpg") ? [c, c.replace(/-g\.jpg$/, "-p.jpg")] : [c]));
   if (caminhos.length) await supabase.storage.from(BUCKET).remove(caminhos).catch(() => undefined);
 }
