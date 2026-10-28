@@ -1,9 +1,10 @@
 import * as appQueries from "@/lib/queries";
 import { createFileRoute, Link } from "@tanstack/react-router";
-import { useQueryClient } from "@tanstack/react-query";
 import { useMemo, useState } from "react";
 import { toast } from "sonner";
-import { Minus, Plus, CheckCircle2, Search, List, Layers, SlidersHorizontal, Clock3, AlertTriangle, Pencil, Download } from "lucide-react";
+import { Minus, Plus, CheckCircle2, Search, List, Layers, SlidersHorizontal, Clock3, AlertTriangle, Pencil, Download, MessageCircle } from "lucide-react";
+import { useQueryClient, useSuspenseQuery } from "@tanstack/react-query";
+import { avisoProntoWhatsApp } from "@/lib/whatsapp-pedido";
 import { supabase } from "@/integrations/supabase/client";
 import { usePedidosCalc, type PedidoCalc } from "@/lib/hooks";
 import { brl, dataBR, dataLonga, formaLabel, FORMAS, hojeISO, num, parseNum } from "@/lib/format";
@@ -20,6 +21,8 @@ export const Route = createFileRoute("/_authenticated/producao")({
     await Promise.all([
       context.queryClient.ensureQueryData(appQueries.pedidosQ),
       context.queryClient.ensureQueryData(appQueries.configQ),
+      context.queryClient.ensureQueryData(appQueries.pedidoPagamentosQ),
+      context.queryClient.ensureQueryData(appQueries.confeitariaQ),
     ]);
   },
   errorComponent: ({ error }) => <p role="alert" className="py-8 text-destructive">{error instanceof Error ? error.message : "Não foi possível carregar os registros."}</p>,
@@ -61,6 +64,9 @@ function estaAtrasado(p: PedidoCalc, agora: Date) {
 function Producao() {
   const pedidos = usePedidosCalc();
   const qc = useQueryClient();
+  const { data: config } = useSuspenseQuery(appQueries.configQ);
+  const { data: confeitaria } = useSuspenseQuery(appQueries.confeitariaQ);
+  const opcoesMensagem = { loja: confeitaria?.nome?.trim() || "nossa confeitaria", pix: config.pix_chave, pixTipo: config.pix_tipo, cidade: confeitaria?.cidade ?? null, enderecoRetirada: confeitaria?.endereco_retirada ?? null, origem: typeof window === "undefined" ? "" : window.location.origin };
   const hoje = hojeISO();
   const agora = new Date();
   const [busca, setBusca] = useState("");
@@ -232,6 +238,12 @@ function Producao() {
       qc.invalidateQueries({ queryKey: ["pedidos"] }),
       qc.invalidateQueries({ queryKey: ["estoque"] }),
     ]);
+  }
+
+  async function marcarAvisoPronto(p: PedidoCalc) {
+    if (p.aviso_pronto_enviado_em) return;
+    const { error } = await supabase.from("pedidos").update({ aviso_pronto_enviado_em: new Date().toISOString() }).eq("id", p.id);
+    if (!error) void qc.invalidateQueries({ queryKey: ["pedidos"] });
   }
 
   async function mudarStatus(p: PedidoCalc, status: "pronto") {
@@ -629,6 +641,18 @@ function Producao() {
                         </div>
                       )}
 
+                      {p.status === "pronto" && (() => {
+                        const aviso = avisoProntoWhatsApp(p, opcoesMensagem);
+                        return aviso ? (
+                          <div className="mt-3 border-t pt-3">
+                            <Button asChild size="sm" variant={p.aviso_pronto_enviado_em ? "outline" : "default"} className="w-full">
+                              <a href={aviso.url} target="_blank" rel="noopener noreferrer" onClick={() => void marcarAvisoPronto(p)}>
+                                <MessageCircle className="size-4" /> {p.aviso_pronto_enviado_em ? "✓ Cliente avisado · avisar de novo" : "Avisar cliente que está pronto"}
+                              </a>
+                            </Button>
+                          </div>
+                        ) : null;
+                      })()}
                       {p.status === "pronto" && (
                         <div className="mt-3 flex flex-col gap-2 border-t pt-3 sm:flex-row">
                           <Button size="sm" className="flex-1" onClick={() => void marcarComoEntregue(p)} disabled={finalizandoId === p.id}>

@@ -4,6 +4,7 @@ import { useState } from "react";
 import { toast } from "sonner";
 import { CakeSlice, Check, Copy, MessageCircle } from "lucide-react";
 import { supabase } from "@/integrations/supabase/client";
+import { pixCopiaECola, tipoChaveValido } from "@/lib/pix";
 import { Button } from "@/components/ui/button";
 import { brl, dataLonga } from "@/lib/format";
 import { cn } from "@/lib/utils";
@@ -80,11 +81,16 @@ export function AcompanharPedido({ codigo }: { codigo: string }) {
     link: linkAcompanhamento,
   }));
 
-  async function copiarPix() {
-    if (!loja.pix_chave) return;
+  // Pix copia e cola já com o valor em aberto e o número do pedido.
+  const codigoPix = loja.pix_chave && falta > 0
+    ? pixCopiaECola({ chave: loja.pix_chave, tipoChave: tipoChaveValido(loja.pix_tipo), nome: loja.nome, cidade: loja.cidade ?? null, valor: falta, identificador: `PEDIDO${pedido.numero}` })
+    : null;
+
+  async function copiarPix(texto: string | null | undefined, rotulo: string) {
+    if (!texto) return;
     try {
-      await navigator.clipboard.writeText(loja.pix_chave);
-      toast.success("Chave Pix copiada.");
+      await navigator.clipboard.writeText(texto);
+      toast.success(`${rotulo} copiado. Agora cole no app do seu banco, na área Pix.`);
     } catch {
       toast.error("Não foi possível copiar. Selecione a chave e copie manualmente.");
     }
@@ -142,10 +148,21 @@ export function AcompanharPedido({ codigo }: { codigo: string }) {
           ) : (
             <>
               <p className="mt-1 text-sm text-muted-foreground">Valor a pagar por Pix: <b className="text-foreground tabular-nums">{brl(falta)}</b></p>
+              {codigoPix && (
+                <div className="mt-3 space-y-2 rounded-xl border border-primary/30 bg-primary/5 p-3">
+                  <p className="text-sm font-medium">Pix copia e cola (já com o valor)</p>
+                  <code className="block max-h-20 overflow-y-auto break-all rounded-lg bg-background p-2 text-xs text-muted-foreground">{codigoPix}</code>
+                  <Button type="button" className="h-11 w-full" onClick={() => void copiarPix(codigoPix, "Código Pix")}><Copy className="size-4" /> Copiar código Pix</Button>
+                  <p className="text-xs text-muted-foreground">No app do banco, escolha Pix → “Pix copia e cola” e cole o código. O valor já vem preenchido.</p>
+                </div>
+              )}
               {loja.pix_chave ? (
                 <div className="mt-3 flex items-center gap-2 rounded-xl border bg-background p-3">
-                  <code className="min-w-0 flex-1 break-all text-sm">{loja.pix_chave}</code>
-                  <Button type="button" size="sm" variant="outline" onClick={() => void copiarPix()}><Copy className="size-4" /> Copiar</Button>
+                  <div className="min-w-0 flex-1">
+                    {codigoPix && <p className="text-xs text-muted-foreground">Ou pague pela chave:</p>}
+                    <code className="block break-all text-sm">{loja.pix_chave}</code>
+                  </div>
+                  <Button type="button" size="sm" variant="outline" onClick={() => void copiarPix(loja.pix_chave, "Chave Pix")}><Copy className="size-4" /> Copiar</Button>
                 </div>
               ) : (
                 <p className="mt-3 rounded-xl bg-muted p-3 text-sm">A confeitaria vai enviar os dados do Pix pelo WhatsApp.</p>

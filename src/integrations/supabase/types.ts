@@ -143,6 +143,7 @@ export type Database = {
           aceita_retirada: boolean
           catalogo_ativo: boolean
           catalogo_aviso: string | null
+          cidade: string | null
           created_at: string
           endereco_retirada: string | null
           id: string
@@ -162,6 +163,7 @@ export type Database = {
           aceita_retirada?: boolean
           catalogo_ativo?: boolean
           catalogo_aviso?: string | null
+          cidade?: string | null
           created_at?: string
           endereco_retirada?: string | null
           id?: string
@@ -181,6 +183,7 @@ export type Database = {
           aceita_retirada?: boolean
           catalogo_ativo?: boolean
           catalogo_aviso?: string | null
+          cidade?: string | null
           created_at?: string
           endereco_retirada?: string | null
           id?: string
@@ -201,6 +204,7 @@ export type Database = {
         Row: {
           imposto_pct: number
           pix_chave: string
+          pix_tipo: string | null
           taxa_credito: number
           taxa_debito: number
           taxa_dinheiro: number
@@ -211,6 +215,7 @@ export type Database = {
         Insert: {
           imposto_pct?: number
           pix_chave?: string
+          pix_tipo?: string | null
           taxa_credito?: number
           taxa_debito?: number
           taxa_dinheiro?: number
@@ -221,6 +226,7 @@ export type Database = {
         Update: {
           imposto_pct?: number
           pix_chave?: string
+          pix_tipo?: string | null
           taxa_credito?: number
           taxa_debito?: number
           taxa_dinheiro?: number
@@ -815,6 +821,7 @@ export type Database = {
       }
       pedidos: {
         Row: {
+          aviso_pronto_enviado_em: string | null
           catalogo_token: string | null
           cliente_id: string | null
           codigo_curto: string | null
@@ -840,6 +847,7 @@ export type Database = {
           visualizado_em: string | null
         }
         Insert: {
+          aviso_pronto_enviado_em?: string | null
           catalogo_token?: string | null
           cliente_id?: string | null
           codigo_curto?: string | null
@@ -865,6 +873,7 @@ export type Database = {
           visualizado_em?: string | null
         }
         Update: {
+          aviso_pronto_enviado_em?: string | null
           catalogo_token?: string | null
           cliente_id?: string | null
           codigo_curto?: string | null

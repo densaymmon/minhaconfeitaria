@@ -115,6 +115,8 @@ export type Config = {
   taxa_outros: number;
   imposto_pct: number;
   pix_chave: string;
+  /** Tipo da chave Pix escolhido nas configurações; null = detectar automaticamente. */
+  pix_tipo: string | null;
 };
 
 export const CONFIG_PADRAO: Config = {
@@ -125,6 +127,7 @@ export const CONFIG_PADRAO: Config = {
   taxa_outros: 0,
   imposto_pct: 0,
   pix_chave: "",
+  pix_tipo: null,
 };
 
 export function taxaDaForma(forma: string, c: Config) {

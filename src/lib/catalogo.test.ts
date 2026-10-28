@@ -6,6 +6,7 @@ import {
   linkPedido,
   mensagemConfirmacaoPedido,
   mensagemPedidoParaLoja,
+  mensagemPedidoPronto,
   midiasDoProduto,
   etapaAtual,
   limparCarrinho,
@@ -158,5 +159,41 @@ describe("mensagem do cliente para a confeitaria", () => {
     expect(m).toContain("Nome: Dennys");
     expect(m).toContain("Acompanhar o pedido: https://doce.app/p/hyknh58ymh");
     expect(m).not.toContain("(pago)");
+  });
+});
+
+describe("aviso de pedido pronto e Pix copia e cola", () => {
+  const base = {
+    loja: "O Casal do Bolo",
+    cliente: "Maria Souza",
+    numero: 45,
+    itens: [{ descricao: "Bolo de laranja", quantidade: 1, preco: 25 }],
+    taxaEntrega: 0,
+    desconto: 0,
+    total: 25,
+    pago: 10,
+    dataEntrega: "2026-10-30",
+    horaEntrega: "15:00",
+    tipoEntrega: "retirada" as const,
+    endereco: "Rua A, 1",
+    pix: "pix@loja.com",
+    pixCopiaECola: "00020126CODIGO6304ABCD",
+    link: "https://doce.app/p/abcdefgh23",
+  };
+  it("avisa que está pronto, com retirada, saldo e Pix copia e cola", () => {
+    const m = mensagemPedidoPronto(base);
+    expect(m).toMatch(/^Olá, Maria! Seu pedido #45 da O Casal do Bolo está pronto!/);
+    expect(m).toContain("Pode retirar a partir das 15:00 em: Rua A, 1.");
+    expect(m).toContain("Pagamento por Pix: R$\u00a015,00");
+    expect(m).toContain("Pix copia e cola (já com o valor):\n00020126CODIGO6304ABCD");
+    expect(m).toContain("Acompanhe: https://doce.app/p/abcdefgh23");
+  });
+  it("sem saldo não fala de pagamento; entrega avisa a saída", () => {
+    const m = mensagemPedidoPronto({ ...base, pago: 25, tipoEntrega: "entrega", endereco: "Rua B, 2" });
+    expect(m).toContain("Já vamos sair para a entrega em: Rua B, 2.");
+    expect(m).not.toContain("Pix");
+  });
+  it("a confirmação também leva o Pix copia e cola", () => {
+    expect(mensagemConfirmacaoPedido(base)).toContain("Pix copia e cola (já com o valor):\n00020126CODIGO6304ABCD");
   });
 });

@@ -9,7 +9,7 @@ import { CalendarClock, Copy, MessageCircle, Plus, Repeat, Trash2 } from "lucide
 import { supabase } from "@/integrations/supabase/client";
 import { clientesQ, configQ, pedidosQ, type PedidoPagamento } from "@/lib/queries";
 import { useCustos, usePedidosCalc } from "@/lib/hooks";
-import { confirmacaoWhatsApp, precisaConfirmar } from "@/lib/whatsapp-pedido";
+import { avisoProntoWhatsApp, confirmacaoWhatsApp, precisaConfirmar } from "@/lib/whatsapp-pedido";
 import { alertaMargem, totaisPedido } from "@/lib/calc";
 import { FORMAS, brl, dataBR, hojeISO, parseNum, statusLabel } from "@/lib/format";
 import { Card, Field, NativeSelect, PagamentoBadge, PageHeader, Row } from "@/components/app/ui";
@@ -59,6 +59,7 @@ function PedidoForm() {
   const pedidosCalc = usePedidosCalc();
   const existenteCalc = existente ? pedidosCalc.find((x) => x.id === existente.id) : undefined;
   const { data: confeitaria } = useSuspenseQuery(appQueries.confeitariaQ);
+  const opcoesMensagem = { loja: confeitaria?.nome?.trim() || "nossa confeitaria", pix: config.pix_chave, pixTipo: config.pix_tipo, cidade: confeitaria?.cidade ?? null, enderecoRetirada: confeitaria?.endereco_retirada ?? null, origem: typeof window === "undefined" ? "" : window.location.origin };
   const temProducaoRegistrada = Boolean(existente?.pedido_itens.some((item) => Number(item.quantidade_produzida ?? 0) > 0));
 
   const [f, setF] = useState(() => ({
@@ -570,6 +571,31 @@ function PedidoForm() {
         ) : undefined}
       />
       {novo && <OrderMessage onApply={aplicarRascunho} />}
+      {existenteCalc && existente?.status === "pronto" && (() => {
+        const aviso = avisoProntoWhatsApp(existenteCalc, opcoesMensagem);
+        return (
+          <div className="mb-4 space-y-2 rounded-xl border border-success/40 bg-success/10 p-3 text-sm">
+            <p className="font-semibold">Pedido pronto 🎉</p>
+            <p className="text-muted-foreground">Avise o cliente com a mensagem pronta: {existente.tipo_entrega === "entrega" ? "saída para entrega" : "retirada"}, valor em aberto com Pix copia e cola e link de acompanhamento.</p>
+            <div className="flex flex-wrap items-center gap-2">
+              {aviso ? (
+                <Button asChild size="sm" variant={existente.aviso_pronto_enviado_em ? "outline" : "default"}>
+                  <a href={aviso.url} target="_blank" rel="noopener noreferrer" onClick={() => {
+                    if (existente.aviso_pronto_enviado_em) return;
+                    void supabase.from("pedidos").update({ aviso_pronto_enviado_em: new Date().toISOString() }).eq("id", existenteCalc.id)
+                      .then(({ error }) => { if (!error) void qc.invalidateQueries({ queryKey: ["pedidos"] }); });
+                  }}>
+                    <MessageCircle className="size-4" /> {existente.aviso_pronto_enviado_em ? "Avisar de novo" : "Avisar cliente no WhatsApp"}
+                  </a>
+                </Button>
+              ) : (
+                <span className="text-xs text-warning-foreground">Cadastre um WhatsApp válido para o cliente para enviar o aviso.</span>
+              )}
+              {existente.aviso_pronto_enviado_em && <span className="text-xs text-success">✓ Avisado em {new Date(existente.aviso_pronto_enviado_em).toLocaleString("pt-BR", { dateStyle: "short", timeStyle: "short" })}</span>}
+            </div>
+          </div>
+        );
+      })()}
       {existente?.origem === "catalogo" && (
         <div className="mb-4 space-y-1 rounded-xl border border-info/40 bg-info/10 p-3 text-sm">
           <p className="font-semibold">Pedido feito pelo catálogo online</p>
@@ -578,7 +604,7 @@ function PedidoForm() {
             <p className="font-medium text-warning-foreground">O cliente avisou que pagou por Pix em {new Date(existente.pagamento_informado_em).toLocaleString("pt-BR", { dateStyle: "short", timeStyle: "short" })}. Confira no banco e toque em “Confirmar pagamento”.</p>
           )}
           {existenteCalc && (() => {
-            const msg = confirmacaoWhatsApp(existenteCalc, { loja: confeitaria?.nome?.trim() || "nossa confeitaria", pix: config.pix_chave, enderecoRetirada: confeitaria?.endereco_retirada ?? null, origem: window.location.origin });
+            const msg = confirmacaoWhatsApp(existenteCalc, opcoesMensagem);
             return (
             <div className="flex flex-wrap items-center gap-2 pt-1">
               {msg ? (
