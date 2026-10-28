@@ -3,7 +3,8 @@ import type { Session } from "@supabase/supabase-js";
 import { useQuery, useQueryClient } from "@tanstack/react-query";
 import { toast } from "sonner";
 import { Building2, KeyRound, LayoutDashboard, LogOut, Receipt, Settings, ShieldCheck, Tags } from "lucide-react";
-import { URL_SISTEMA } from "@/lib/catalogo";
+// Endereço principal do sistema (o mesmo do login): o link do e-mail sempre volta para ele.
+const URL_LOGIN = "https://minhaconfeitaria.app";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { cn } from "@/lib/utils";
@@ -89,7 +90,7 @@ function Login() {
       } else {
         // O link abre a página de nova senha do sistema (endereço já autorizado no login);
         // depois de salvar, ela traz de volta para este painel.
-        const { error } = await supabase.auth.resetPasswordForEmail(email, { redirectTo: `${URL_SISTEMA}/reset-password` });
+        const { error } = await supabase.auth.resetPasswordForEmail(email, { redirectTo: `${URL_LOGIN}/reset-password` });
         if (error) throw new Error(/rate|seconds/i.test(error.message) ? "Aguarde um minuto antes de pedir outro link." : error.message);
         setAviso("Enviamos um link para o seu e-mail. Abra o mais recente, crie a nova senha e volte aqui para entrar.");
       }
