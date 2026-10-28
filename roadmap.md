@@ -51,3 +51,9 @@
 - [x] Alerta de pedido novo: contador no menu, som, aviso e notificação opcional.
 - [ ] Aplicar `0034_catalogo_publico.sql` no banco (ver docs/deploy/README-catalogo.md).
 - [ ] Pix automático por gateway (QR com valor e confirmação automática).
+
+## Catálogo — fotos, links curtos e WhatsApp
+- [x] Até 10 fotos e vídeos por produto, com ordem e capa; carrossel no catálogo.
+- [x] Link curto do catálogo (/endereço), QR Code e compartilhar; acompanhamento em /p/código.
+- [x] Confirmação do pedido no WhatsApp do cliente, enviada do número da confeitaria (mensagem pronta com itens, total, Pix e link).
+- [ ] Envio automático pela API oficial do WhatsApp (depende de conta Meta e modelo de mensagem aprovado).

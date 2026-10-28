@@ -1,6 +1,11 @@
 import { describe, expect, it } from "vitest";
 import {
   alterarQuantidade,
+  capaDoProduto,
+  linkCatalogo,
+  linkPedido,
+  mensagemConfirmacaoPedido,
+  midiasDoProduto,
   etapaAtual,
   limparCarrinho,
   linkWhatsApp,
@@ -63,11 +68,68 @@ describe("utilitários do catálogo", () => {
     expect(slugValido("o-casal-do-bolo")).toBe(true);
     expect(slugValido("O Casal")).toBe(false);
     expect(slugValido("ab")).toBe(false);
+    expect(slugValido("painel")).toBe(false);
+    expect(slugValido("pedidos")).toBe(false);
+    expect(sugerirSlug("Confeitaria São João")).toBe("confeitaria-sao-joao");
   });
   it("posiciona o status do pedido na linha do tempo", () => {
     expect(etapaAtual("confirmado")).toBe(0);
     expect(etapaAtual("pronto")).toBe(2);
     expect(etapaAtual("finalizado")).toBe(3);
     expect(etapaAtual("cancelado")).toBe(-1);
+  });
+});
+
+describe("links curtos e mídias", () => {
+  it("monta o link do catálogo e do pedido", () => {
+    expect(linkCatalogo("https://doce.app/", "casaldobolo")).toBe("https://doce.app/casaldobolo");
+    expect(linkPedido("https://doce.app", { curto: "abcdefgh23", longo: "uuid" })).toBe("https://doce.app/p/abcdefgh23");
+    expect(linkPedido("https://doce.app", { curto: null, longo: "uuid" })).toBe("https://doce.app/pedido/uuid");
+    expect(linkPedido("https://doce.app", {})).toBeNull();
+  });
+  it("usa a primeira foto como capa, mesmo com vídeo antes", () => {
+    const comMidias = { ...bolo, midias: [{ tipo: "video" as const, url: "https://x/v.mp4" }, { tipo: "imagem" as const, url: "https://x/1.jpg" }] };
+    expect(capaDoProduto(comMidias)).toEqual({ tipo: "imagem", url: "https://x/1.jpg" });
+    expect(capaDoProduto({ ...bolo, midias: [{ tipo: "video", url: "https://x/v.mp4" }] })).toEqual({ tipo: "video", url: "https://x/v.mp4" });
+    expect(midiasDoProduto({ ...bolo, imagem_url: "https://x/capa.jpg" })).toEqual([{ tipo: "imagem", url: "https://x/capa.jpg" }]);
+    expect(capaDoProduto(bolo)).toBeNull();
+  });
+});
+
+describe("mensagem de confirmação no WhatsApp", () => {
+  const base = {
+    loja: "O Casal do Bolo",
+    cliente: "Maria Souza",
+    numero: 43,
+    itens: [{ descricao: "Bolo de cenoura", quantidade: 2, preco: 25 }],
+    taxaEntrega: 10,
+    desconto: 0,
+    total: 60,
+    pago: 0,
+    dataEntrega: "2026-10-30",
+    horaEntrega: "15:00",
+    tipoEntrega: "entrega" as const,
+    endereco: "Rua das Flores, 10",
+    pix: "pix@casaldobolo.com",
+    link: "https://doce.app/p/abcdefgh23",
+  };
+  it("inclui itens, total, data, endereço, Pix e link de acompanhamento", () => {
+    const m = mensagemConfirmacaoPedido(base);
+    expect(m).toMatch(/^Olá, Maria! Recebemos seu pedido #43 na O Casal do Bolo/);
+    expect(m).toContain("• 2× Bolo de cenoura — R$\u00a050,00");
+    expect(m).toContain("• Entrega — R$\u00a010,00");
+    expect(m).toContain("*Total: R$\u00a060,00*");
+    expect(m).toContain("Entrega sexta-feira, 30/10 às 15:00");
+    expect(m).toContain("Endereço: Rua das Flores, 10");
+    expect(m).toContain("Chave: pix@casaldobolo.com");
+    expect(m).toContain("Acompanhe o andamento: https://doce.app/p/abcdefgh23");
+  });
+  it("mostra pagamento confirmado quando já está pago e omite o que não existe", () => {
+    const m = mensagemConfirmacaoPedido({ ...base, pago: 60, cliente: null, tipoEntrega: "retirada", endereco: null, horaEntrega: null, taxaEntrega: 0, total: 50, link: null });
+    expect(m).toMatch(/^Olá! Recebemos/);
+    expect(m).toContain("Retirada sexta-feira, 30/10");
+    expect(m).toContain("Pagamento confirmado");
+    expect(m).not.toContain("Chave:");
+    expect(m).not.toContain("Acompanhe");
   });
 });

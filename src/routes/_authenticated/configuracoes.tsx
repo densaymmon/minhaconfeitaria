@@ -5,10 +5,10 @@ import { useState } from 'react';
 import { toast } from 'sonner';
 import { configQ, confeitariaQ } from '@/lib/queries';
 import { brl, parseNum } from '@/lib/format';
-import { slugValido, sugerirSlug } from '@/lib/catalogo';
+import { SLUGS_RESERVADOS, linkCatalogo as montarLinkCatalogo, slugValido, sugerirSlug } from '@/lib/catalogo';
 import { Switch } from '@/components/ui/switch';
 import { Textarea } from '@/components/ui/textarea';
-import { Copy, ExternalLink } from 'lucide-react';
+import { Copy, ExternalLink, QrCode, Share2 } from 'lucide-react';
 import { supabase } from '@/integrations/supabase/client';
 import { PageHeader,Field,Card } from '@/components/app/ui';
 import { Input } from '@/components/ui/input';
@@ -26,7 +26,7 @@ function ConfigPage(){
  const temCatalogo=Boolean(confeitaria&&'catalogo_ativo' in confeitaria);
  const [cat,setCat]=useState(()=>({
   ativo:confeitaria?.catalogo_ativo??false,
-  slug:confeitaria?.slug??sugerirSlug(confeitaria?.nome??''),
+  slug:confeitaria?.slug??sugerirSlug(confeitaria?.nome??'').replace(/-/g,'').slice(0,30),
   aviso:confeitaria?.catalogo_aviso??'',
   retirada:confeitaria?.aceita_retirada??true,
   entrega:confeitaria?.aceita_entrega??false,
@@ -35,7 +35,9 @@ function ConfigPage(){
   enderecoRetirada:confeitaria?.endereco_retirada??'',
   limite:confeitaria?.limite_pedidos_dia==null?'':String(confeitaria.limite_pedidos_dia),
  }));
- const linkCatalogo=typeof window!=='undefined'&&slugValido(cat.slug)?`${window.location.origin}/c/${cat.slug}`:'';
+ const linkCatalogo=typeof window!=='undefined'&&slugValido(cat.slug)?montarLinkCatalogo(window.location.origin,cat.slug):'';
+ const [mostrarQr,setMostrarQr]=useState(false);
+ const slugReservado=SLUGS_RESERVADOS.includes(cat.slug);
  const campos=[['taxa_pix','Pix (%)'],['taxa_dinheiro','Dinheiro (%)'],['taxa_debito','Débito (%)'],['taxa_credito','Crédito (%)'],['taxa_outros','Outros (%)'],['imposto_pct','Impostos sobre vendas (%)']] as const;
  async function salvar(e:React.FormEvent){
   e.preventDefault();
@@ -44,7 +46,7 @@ function ConfigPage(){
   if(confeitaria&&!loja.nome.trim()){toast.error('Informe o nome da confeitaria.');return;}
   const taxa=parseNum(cat.taxa),minimo=parseNum(cat.minimo),limite=cat.limite.trim()?Math.round(parseNum(cat.limite)):null;
   if(temCatalogo){
-   if(cat.slug&&!slugValido(cat.slug)){toast.error('O endereço do catálogo deve ter de 3 a 60 letras minúsculas, números ou hífens.');return;}
+   if(cat.slug&&!slugValido(cat.slug)){toast.error(slugReservado?'Este endereço é usado por uma página do sistema. Escolha outro.':'O endereço do catálogo deve ter de 3 a 60 letras minúsculas, números ou hífens.');return;}
    if(cat.ativo&&!cat.slug){toast.error('Defina o endereço do catálogo antes de ativá-lo.');return;}
    if(cat.ativo&&!cat.retirada&&!cat.entrega){toast.error('Ative retirada, entrega ou as duas.');return;}
    if(taxa<0||taxa>1000||minimo<0||minimo>100000){toast.error('Confira a taxa de entrega e o pedido mínimo.');return;}
@@ -77,12 +79,15 @@ function ConfigPage(){
     <div><h2 className="text-lg font-semibold">Catálogo online</h2><p className="text-xs text-muted-foreground">Página onde o cliente vê os produtos e faz o pedido.</p></div>
     <Switch checked={cat.ativo} onCheckedChange={v=>setCat({...cat,ativo:v})} aria-label="Ativar catálogo online"/>
    </div>
-   <Field label="Endereço do catálogo" hint="Só letras minúsculas, números e hífens.">
-    <div className="flex items-center rounded-md border bg-card pl-3 text-sm text-muted-foreground"><span className="shrink-0">/c/</span><Input value={cat.slug} maxLength={60} onChange={e=>setCat({...cat,slug:e.target.value.toLowerCase().replace(/[^a-z0-9-]/g,'')})} className="h-11 border-0 bg-transparent pl-1 shadow-none focus-visible:ring-0"/></div>
+   <Field label="Endereço do catálogo" hint={slugReservado?'Este nome é usado por uma página do sistema. Escolha outro.':'Curto e fácil de digitar, ex.: casaldobolo. Só letras minúsculas, números e hífens.'}>
+    <div className="flex items-center rounded-md border bg-card pl-3 text-sm text-muted-foreground"><span className="shrink-0">/</span><Input value={cat.slug} maxLength={60} onChange={e=>setCat({...cat,slug:e.target.value.toLowerCase().replace(/[^a-z0-9-]/g,'')})} className="h-11 border-0 bg-transparent pl-1 shadow-none focus-visible:ring-0"/></div>
    </Field>
    {linkCatalogo&&<div className="flex flex-wrap items-center gap-2 rounded-xl bg-muted/60 p-3 text-sm"><span className="min-w-0 flex-1 break-all">{linkCatalogo}</span>
     <Button type="button" size="sm" variant="outline" onClick={async()=>{try{await navigator.clipboard.writeText(linkCatalogo);toast.success('Link copiado.');}catch{toast.error('Não foi possível copiar.');}}}><Copy className="size-4"/>Copiar</Button>
+    {typeof navigator!=='undefined'&&'share' in navigator&&<Button type="button" size="sm" variant="outline" onClick={()=>{void navigator.share({title:loja.nome||'Catálogo',text:`Faça seu pedido na ${loja.nome||'nossa confeitaria'}:`,url:linkCatalogo}).catch(()=>undefined);}}><Share2 className="size-4"/>Compartilhar</Button>}
+    <Button type="button" size="sm" variant="outline" onClick={()=>setMostrarQr(v=>!v)} aria-expanded={mostrarQr}><QrCode className="size-4"/>QR Code</Button>
     {confeitaria?.catalogo_ativo&&confeitaria.slug===cat.slug&&<Button type="button" size="sm" variant="ghost" asChild><a href={linkCatalogo} target="_blank" rel="noreferrer"><ExternalLink className="size-4"/>Abrir</a></Button>}
+    {mostrarQr&&<div className="w-full pt-2 text-center"><img src={`https://api.qrserver.com/v1/create-qr-code/?size=480x480&margin=12&data=${encodeURIComponent(linkCatalogo)}`} alt={`QR Code do catálogo: ${linkCatalogo}`} width={240} height={240} className="mx-auto rounded-lg bg-white"/><p className="mt-2 text-xs text-muted-foreground">Imprima ou poste o QR Code: ao apontar a câmera, o cliente abre o catálogo. Para salvar, toque e segure a imagem.</p></div>}
    </div>}
    <div className="grid grid-cols-1 gap-3 sm:grid-cols-2">
     <label className="flex items-center justify-between rounded-xl border p-3 text-sm font-medium">Retirada na confeitaria<Switch checked={cat.retirada} onCheckedChange={v=>setCat({...cat,retirada:v})}/></label>

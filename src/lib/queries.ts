@@ -102,6 +102,20 @@ export const confeitariaQ = queryOptions({
   staleTime: 5 * 60_000,
 });
 
+/** Fotos e vídeos do produto, na ordem do catálogo. Vazio antes da migração 0035. */
+export const midiasProdutoQ = (produtoId: string) => queryOptions({
+  queryKey: ["produto-midias", produtoId],
+  queryFn: async () => {
+    if (!/^[0-9a-f-]{36}$/i.test(produtoId)) return [];
+    const { data, error } = await supabase.from("produto_midias").select("tipo, url, ordem").eq("produto_id", produtoId).order("ordem");
+    if (error) {
+      if (error.code === "PGRST205" || error.code === "42P01" || error.message.includes("produto_midias")) return [];
+      throw new Error(error.message);
+    }
+    return (data ?? []).map((m) => ({ tipo: m.tipo === "video" ? ("video" as const) : ("imagem" as const), url: m.url }));
+  },
+});
+
 export const comprasQ = queryOptions({
   queryKey: ["compras"],
   queryFn: () => must<Compra[]>(supabase.from("compras").select("*").order("data_compra", { ascending: false })),
