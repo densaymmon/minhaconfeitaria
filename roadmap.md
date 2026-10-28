@@ -64,3 +64,7 @@
 
 ## Variações de produto
 - [x] Grupos de opções (tamanho, sabor, recheio) com acréscimo de preço e de custo, escolha obrigatória no catálogo, preço/custo/descrição calculados no servidor.
+
+## Lista de produção do dia
+- [x] Atalhos de período (Hoje, Amanhã, 7 dias, Tudo) na produção; "Hoje" inclui atrasados não entregues.
+- [x] Ingredientes necessários para o que falta produzir (ficha técnica ÷ rendimento, em g/ml/un), comparados com o estoque, com "comprar X" e exportação em CSV.
