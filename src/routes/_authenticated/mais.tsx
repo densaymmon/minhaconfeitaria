@@ -3,7 +3,7 @@ import { useQuery, useQueryClient } from '@tanstack/react-query';
 import { meuPapelQ } from '@/lib/queries';
 import { NOME_PAPEL, paginaPermitidaAoPapel } from '@/lib/assinatura';
 import { desativarPush } from '@/lib/push-cliente';
-import { Store, BookOpen, ChartNoAxesCombined, Settings, LogOut, ChevronRight, CakeSlice, Package, ShoppingCart, Wallet, UsersRound } from 'lucide-react';
+import { Store, BookOpen, ChartNoAxesCombined, Settings, LogOut, ChevronRight, CakeSlice, Package, ShoppingCart, Wallet, UsersRound, CalendarDays, Truck, ShoppingBasket, Tag, TrendingUp, History } from 'lucide-react';
 import { supabase } from '@/integrations/supabase/client';
 import { Button } from '@/components/ui/button';
 import { PageHeader } from '@/components/app/ui';
@@ -13,7 +13,7 @@ export const Route = createFileRoute('/_authenticated/mais')({
 });
 function Mais(){
  const qc=useQueryClient(); const navigate=useNavigate(); const {user}=Route.useRouteContext();
- const links=[{to:'/produtos',label:'Produtos e receitas',icon:BookOpen},{to:'/catalogo',label:'Catálogo online',icon:Store},{to:'/financeiro',label:'Financeiro',icon:Wallet},{to:'/resumo-mes',label:'Resumo do mês',icon:ChartNoAxesCombined},{to:'/configuracoes',label:'Configurações',icon:Settings},{to:'/equipe',label:'Equipe',icon:UsersRound}] as const;
+ const links=[{to:'/agenda',label:'Agenda da semana',icon:CalendarDays},{to:'/entregas',label:'Entregas do dia',icon:Truck},{to:'/lista-compras',label:'Lista de compras',icon:ShoppingBasket},{to:'/etiquetas',label:'Etiquetas',icon:Tag},{to:'/produtos',label:'Produtos e receitas',icon:BookOpen},{to:'/catalogo',label:'Catálogo online',icon:Store},{to:'/financeiro',label:'Financeiro',icon:Wallet},{to:'/resumo-mes',label:'Resumo do mês',icon:ChartNoAxesCombined},{to:'/fluxo-caixa',label:'Fluxo de caixa',icon:TrendingUp},{to:'/historico',label:'Histórico',icon:History},{to:'/configuracoes',label:'Configurações',icon:Settings},{to:'/equipe',label:'Equipe',icon:UsersRound}] as const;
  const {data:meuPapel}=useQuery(meuPapelQ); const papel=meuPapel?.papel??'dono';
  const comprasLinks=[{secao:'compras',label:'Compras de insumos',icon:Package,description:'Cadastrar e consultar compras'},{secao:'gastos',label:'Gastos e histórico de compras',icon:ShoppingCart,description:'Consultar gastos por período e compras registradas'},{secao:'integracao',label:'Conferência de integração',icon:ChartNoAxesCombined,description:'Conferir compras, financeiro e alertas'},{secao:'estoque',label:'Controle de estoque',icon:Package,description:'Saldo atual e contagem física'}] as const;
  async function sair(){await desativarPush().catch(()=>undefined);await qc.cancelQueries();qc.clear();await supabase.auth.signOut();await navigate({to:'/auth',replace:true});}

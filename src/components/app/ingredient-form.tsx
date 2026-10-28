@@ -32,7 +32,7 @@ function parseCampoDecimal(valor: string): number {
 
 export function IngredientForm({ insumo, onDone }: { insumo?: Insumo; onDone?: () => void }) {
   const qc = useQueryClient();
-  const [f, setF] = useState({ nome: insumo?.nome ?? "", tipo: insumo?.tipo ?? "ingrediente", preco: String(insumo?.preco_embalagem ?? insumo?.preco_unidade ?? ""), quantidade: String(insumo?.quantidade_embalagem ?? "1"), unidade: insumo?.unidade_embalagem ?? insumo?.unidade ?? "kg" });
+  const [f, setF] = useState({ nome: insumo?.nome ?? "", tipo: insumo?.tipo ?? "ingrediente", preco: String(insumo?.preco_embalagem ?? insumo?.preco_unidade ?? ""), quantidade: String(insumo?.quantidade_embalagem ?? "1"), unidade: insumo?.unidade_embalagem ?? insumo?.unidade ?? "kg", alergenos: insumo?.alergenos ?? "" });
   const [busy, setBusy] = useState(false);
   const set = (k: keyof typeof f, v: string) => setF((s) => ({ ...s, [k]: v }));
   const preco = parseCampoDecimal(f.preco), quantidade = parseCampoDecimal(f.quantidade);
@@ -42,13 +42,16 @@ export function IngredientForm({ insumo, onDone }: { insumo?: Insumo; onDone?: (
     e.preventDefault();
     if (!f.nome.trim() || f.nome.trim().length > 120 || !unitario) return void toast.error("Confira o nome, o preço e a quantidade da embalagem (maior que zero).");
     setBusy(true);
-    const payload = { nome: f.nome.trim(), tipo: f.tipo, preco_embalagem: preco, quantidade_embalagem: quantidade, unidade_embalagem: f.unidade, ...(insumo ? {} : { unidade: f.unidade }) };
+    const payload = { nome: f.nome.trim(), tipo: f.tipo, preco_embalagem: preco, quantidade_embalagem: quantidade, unidade_embalagem: f.unidade, alergenos: f.alergenos.trim().slice(0, 120) || null, ...(insumo ? {} : { unidade: f.unidade }) };
     try {
       const { error } = insumo ? await supabase.from("insumos").update(payload).eq("id", insumo.id) : await supabase.from("insumos").insert(payload);
       if (error) throw error;
       await Promise.all([qc.invalidateQueries({ queryKey: ["insumos"] }), qc.invalidateQueries({ queryKey: ["produtos"] })]);
-      if (!insumo) setF({ nome: "", tipo: "ingrediente", preco: "", quantidade: "1", unidade: "kg" });
-      toast.success(insumo ? "Ingrediente atualizado; custos das receitas recalculados." : "Insumo adicionado!");
+      if (!insumo) setF({ nome: "", tipo: "ingrediente", preco: "", quantidade: "1", unidade: "kg", alergenos: "" });
+      // Preço mudou: os produtos que usam o ingrediente podem ter ficado com margem baixa.
+      toast.success(insumo ? "Ingrediente atualizado; custos das receitas recalculados." : "Insumo adicionado!", insumo && Number(insumo.preco_embalagem) !== preco
+        ? { description: "Confira se algum produto ficou com margem baixa.", action: { label: "Ver produtos", onClick: () => { window.location.assign("/produtos"); } } }
+        : undefined);
       onDone?.();
     } catch (e) { toast.error(e instanceof Error ? e.message : "Não foi possível salvar o ingrediente."); }
     finally { setBusy(false); }
@@ -65,6 +68,7 @@ export function IngredientForm({ insumo, onDone }: { insumo?: Insumo; onDone?: (
       <Field label="Quantidade da embalagem"><Input required type="text" inputMode="decimal" lang="pt-BR" autoComplete="off" value={f.quantidade} onChange={(e) => set("quantidade", e.currentTarget.value)} className="h-11" /></Field>
       <Field label="Unidade da embalagem"><NativeSelect value={f.unidade} onChange={(e) => set("unidade", e.target.value)}>{unidades.map((u) => <option key={u} value={u}>{medidaLabel(u)}</option>)}</NativeSelect></Field>
     </div>
+    {f.tipo !== "embalagem" && <Field label="Alergênicos (opcional)" hint="Saem nas etiquetas. Ex.: glúten, leite, ovo, castanhas."><Input maxLength={120} value={f.alergenos} onChange={(e) => set("alergenos", e.target.value)} className="h-11" placeholder="Ex.: glúten" /></Field>}
     {unitario && <p className="text-sm text-muted-foreground">Custo unitário: {brl(unitario.custo)} / {medidaLabel(unitario.unidade)}</p>}
     <Button type="submit" className="h-11 w-full" disabled={busy}>{insumo ? <Save className="size-4" /> : <Plus className="size-4" />}{busy ? "Salvando..." : insumo ? "Salvar ingrediente" : "Adicionar"}</Button>
   </form>;

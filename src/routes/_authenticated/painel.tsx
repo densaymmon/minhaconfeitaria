@@ -6,6 +6,8 @@ import { brl, dataCurta, hojeISO, mesISO } from "@/lib/format";
 import { Card, Empty, PageHeader, StatusBadge } from "@/components/app/ui";
 import { Button } from "@/components/ui/button";
 import { PainelHoje } from "@/components/app/painel-hoje";
+import { AlertaMargens, MetaDoMes } from "@/components/app/painel-gestao";
+import { useRecurso } from "@/components/app/plano";
 import { saudacao } from "@/lib/hoje";
 import { endOfMonth, format } from "date-fns";
 import { ptBR } from "date-fns/locale";
@@ -17,6 +19,8 @@ export const Route = createFileRoute("/_authenticated/painel")({
       context.queryClient.ensureQueryData(appQueries.configQ),
       context.queryClient.ensureQueryData(appQueries.despesasQ),
       context.queryClient.ensureQueryData(appQueries.pedidoPagamentosQ),
+      context.queryClient.ensureQueryData(appQueries.produtosQ),
+      context.queryClient.ensureQueryData(appQueries.insumosQ),
     ]);
   },
   errorComponent: ({ error }) => <p role="alert" className="py-8 text-destructive">{error instanceof Error ? error.message : "Não foi possível carregar os registros."}</p>,
@@ -36,6 +40,7 @@ export const Route = createFileRoute("/_authenticated/painel")({
 
 function Painel() {
   const pedidos = usePedidosCalc();
+  const temCustos = useRecurso("custos");
   const hoje = hojeISO();
   const mes = mesISO();
   const primeiroDiaMes = `${mes}-01`;
@@ -113,6 +118,8 @@ function Painel() {
       />
 
       <PainelHoje />
+      <MetaDoMes vendido={valorPedidosDoMes} />
+      {temCustos && <AlertaMargens />}
 
       <section aria-label="Resumo financeiro do mês" className="mb-6">
         <div className="mb-3 flex items-center gap-2">

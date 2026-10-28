@@ -86,6 +86,7 @@ function ProdutoForm() {
     limite_dia: p?.limite_dia == null ? "" : String(p.limite_dia),
     venda_de: p?.venda_de ?? "",
     venda_ate: p?.venda_ate ?? "",
+    validade: p?.validade_dias == null ? "" : String(p.validade_dias),
     kit: componentesDoKit(p?.componentes).map((c) => ({ produto_id: c.produto_id, quantidade: String(c.quantidade) })),
   }));
   // Produtos que podem entrar no kit: outros produtos que não são kits.
@@ -143,6 +144,8 @@ function ProdutoForm() {
         if (limite !== null && (limite < 1 || limite > 10000)) throw new Error("O limite por dia deve ser de 1 a 10.000, ou ficar em branco.");
         if (venda.venda_de && venda.venda_ate && venda.venda_de > venda.venda_ate) throw new Error("A data de início da venda é depois do fim.");
         if (kitNum.some((k) => !(k.quantidade > 0))) throw new Error("Informe a quantidade de cada item do kit.");
+        const validade = venda.validade.trim() ? Math.round(parseNum(venda.validade)) : null;
+        if (validade !== null && (validade < 1 || validade > 365)) throw new Error("A validade deve ser de 1 a 365 dias, ou ficar em branco.");
         if (new Set(kitNum.map((k) => k.produto_id)).size !== kitNum.length) throw new Error("Um produto aparece duas vezes no kit.");
         const { error: erroCatalogo } = await supabase.from("produtos").update({
           no_catalogo: cat.no_catalogo,
@@ -153,6 +156,7 @@ function ProdutoForm() {
           venda_de: venda.venda_de || null,
           venda_ate: venda.venda_ate || null,
           componentes: kitNum,
+          validade_dias: validade,
         }).eq("id", produtoId);
         if (erroCatalogo) throw new Error(erroCatalogo.message);
 
@@ -370,6 +374,9 @@ function ProdutoForm() {
             <Field label="Vender a partir de"><Input type="date" value={venda.venda_de} onChange={(e) => setVenda((s) => ({ ...s, venda_de: e.target.value }))} className="h-11" /></Field>
             <Field label="Vender até"><Input type="date" value={venda.venda_ate} onChange={(e) => setVenda((s) => ({ ...s, venda_ate: e.target.value }))} className="h-11" /></Field>
           </div>
+          <Field label="Validade (dias)" hint="Sai nas etiquetas: data de fabricação + validade. Em branco = não imprime validade.">
+            <Input inputMode="numeric" value={venda.validade} onChange={(e) => setVenda((s) => ({ ...s, validade: e.target.value }))} className="h-11" placeholder="Ex.: 3" />
+          </Field>
           <p className="text-xs text-muted-foreground">Para produtos de época (Páscoa, Natal, Dia das Mães): fora desse período o produto some do catálogo sozinho. Em branco = sempre à venda.</p>
         </Card>
 

@@ -1,5 +1,6 @@
 import { OrderMessage } from "@/components/app/order-message";
 import { FotosReferencia } from "@/components/app/fotos-referencia";
+import { HistoricoDoPedido } from "@/components/app/historico";
 import { origemPublica } from "@/lib/catalogo";
 import { useRecurso } from "@/components/app/plano";
 import type { OrderDraft } from "@/lib/order-draft";
@@ -973,6 +974,7 @@ function PedidoForm() {
                 <Textarea rows={3} value={f.observacoes} disabled={temProducaoRegistrada} onChange={(e) => set("observacoes", e.target.value)} placeholder="Ex.: escrever 'Parabéns Ana', sem lactose..." />
               </Field>
               <FotosReferencia texto={f.observacoes} />
+              {!novo && <div className="mt-3"><HistoricoDoPedido pedidoId={id} /></div>}
             </Card>
           </>
         )}

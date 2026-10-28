@@ -47,7 +47,7 @@ export function temRecurso(a: MinhaAssinatura | null | undefined, recurso: Recur
 
 /** Recurso exigido por cada página do sistema. */
 export function recursoDaPagina(caminho: string): Recurso | null {
-  if (/^\/(financeiro|despesas|contas-pagar|relatorios|resumo-mes)(\/|$)/.test(caminho)) return "financeiro";
+  if (/^\/(financeiro|despesas|contas-pagar|relatorios|resumo-mes|fluxo-caixa)(\/|$)/.test(caminho)) return "financeiro";
   if (/^\/compras(\/|$)/.test(caminho)) return "estoque";
   if (/^\/pedidos-recorrentes(\/|$)/.test(caminho)) return "recorrentes";
   return null;
@@ -115,7 +115,7 @@ export const DESCRICAO_PAPEL: Record<Exclude<Papel, "dono">, string> = {
 /** Páginas que o papel "produção" não acessa (o banco também bloqueia os dados). */
 export function paginaPermitidaAoPapel(caminho: string, papel: Papel | null | undefined) {
   if (papel !== "producao") return true;
-  return !/^\/(financeiro|despesas|contas-pagar|relatorios|resumo-mes|compras|configuracoes|catalogo)(\/|$)/.test(caminho);
+  return !/^\/(financeiro|despesas|contas-pagar|relatorios|resumo-mes|fluxo-caixa|historico|compras|configuracoes|catalogo)(\/|$)/.test(caminho);
 }
 
 /** Mensagem de erro de equipe ("EQUIPE: ...") sem o prefixo técnico. */

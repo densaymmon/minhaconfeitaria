@@ -115,3 +115,8 @@
 
 ## Equipe
 - [x] Vários usuários por confeitaria: convite por link (WhatsApp), papéis Gerente e Produção, cadastro pelo convite mesmo com cadastro fechado, remover/alterar papel e sair da equipe.
+
+## Vendas e gestão (2ª rodada)
+- [x] Limite por produto e por dia; produtos sazonais; kits; sinal para confirmar; fidelidade; avaliações.
+- [x] Agenda da semana; lista de compras com embalagens e custo; entregas do dia com rota; etiquetas com validade e alergênicos.
+- [x] Alerta de margem no Hoje; fluxo de caixa por semana; meta do mês; histórico de quem fez o quê.

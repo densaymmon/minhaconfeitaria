@@ -255,6 +255,7 @@ export type Database = {
         Row: {
           aceita_entrega: boolean
           aceita_encomenda: boolean
+          meta_vendas_mes: number
           fidelidade_a_cada: number
           fidelidade_tipo: string
           fidelidade_valor: number
@@ -293,6 +294,7 @@ export type Database = {
           acesso_atualizado_em?: string | null
           aceita_entrega?: boolean
           aceita_encomenda?: boolean
+          meta_vendas_mes?: number
           fidelidade_a_cada?: number
           fidelidade_tipo?: string
           fidelidade_valor?: number
@@ -329,6 +331,7 @@ export type Database = {
           acesso_atualizado_em?: string | null
           aceita_entrega?: boolean
           aceita_encomenda?: boolean
+          meta_vendas_mes?: number
           fidelidade_a_cada?: number
           fidelidade_tipo?: string
           fidelidade_valor?: number
@@ -919,9 +922,49 @@ export type Database = {
         }
         Relationships: []
       }
+      historico: {
+        Row: {
+          acao: string
+          autor: string
+          autor_id: string | null
+          created_at: string
+          detalhe: string | null
+          entidade: string
+          id: string
+          pedido_numero: number | null
+          registro_id: string | null
+          user_id: string
+        }
+        Insert: {
+          acao: string
+          autor: string
+          autor_id?: string | null
+          created_at?: string
+          detalhe?: string | null
+          entidade: string
+          id?: string
+          pedido_numero?: number | null
+          registro_id?: string | null
+          user_id: string
+        }
+        Update: {
+          acao?: string
+          autor?: string
+          autor_id?: string | null
+          created_at?: string
+          detalhe?: string | null
+          entidade?: string
+          id?: string
+          pedido_numero?: number | null
+          registro_id?: string | null
+          user_id?: string
+        }
+        Relationships: []
+      }
       insumos: {
         Row: {
           ativo: boolean
+          alergenos: string | null
           created_at: string
           id: string
           nome: string
@@ -936,6 +979,7 @@ export type Database = {
         }
         Insert: {
           ativo?: boolean
+          alergenos?: string | null
           created_at?: string
           id?: string
           nome: string
@@ -950,6 +994,7 @@ export type Database = {
         }
         Update: {
           ativo?: boolean
+          alergenos?: string | null
           created_at?: string
           id?: string
           nome?: string
@@ -1480,6 +1525,7 @@ export type Database = {
       produtos: {
         Row: {
           antecedencia_dias: number
+          validade_dias: number | null
           componentes: Json
           limite_dia: number | null
           venda_ate: string | null
@@ -1505,6 +1551,7 @@ export type Database = {
         }
         Insert: {
           antecedencia_dias?: number
+          validade_dias?: number | null
           componentes?: Json
           limite_dia?: number | null
           venda_ate?: string | null
@@ -1530,6 +1577,7 @@ export type Database = {
         }
         Update: {
           antecedencia_dias?: number
+          validade_dias?: number | null
           componentes?: Json
           limite_dia?: number | null
           venda_ate?: string | null

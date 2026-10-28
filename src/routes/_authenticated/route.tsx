@@ -1,7 +1,7 @@
 import { createFileRoute, Link, Outlet, redirect, useNavigate, useRouterState } from "@tanstack/react-router";
 import { Suspense, useEffect, useRef, useState } from "react";
 import { toast } from "sonner";
-import { Store, BookOpen, UsersRound, CakeSlice, ChartNoAxesCombined, ChefHat, ChevronRight, ClipboardList, LayoutDashboard, LogOut, Menu, Package, Settings, ShoppingCart, Users, Wallet, X } from "lucide-react";
+import { Store, BookOpen, UsersRound, CalendarDays, Truck, ShoppingBasket, Tag, TrendingUp, History, CakeSlice, ChartNoAxesCombined, ChefHat, ChevronRight, ClipboardList, LayoutDashboard, LogOut, Menu, Package, Settings, ShoppingCart, Users, Wallet, X } from "lucide-react";
 import { useQuery, useQueryClient } from "@tanstack/react-query";
 import { avancarPedidosDoDia, confeitariaQ, ehAdminQ, meuPapelQ, minhaAssinaturaQ } from "@/lib/queries";
 import { NOME_PAPEL, paginaPermitidaAoPapel, recursoDaPagina, temRecurso } from "@/lib/assinatura";
@@ -33,10 +33,16 @@ const nav = [
 ] as const;
 
 const maisLinks = [
+  { to: "/agenda", label: "Agenda da semana", icon: CalendarDays },
+  { to: "/entregas", label: "Entregas do dia", icon: Truck },
+  { to: "/lista-compras", label: "Lista de compras", icon: ShoppingBasket },
+  { to: "/etiquetas", label: "Etiquetas", icon: Tag },
   { to: "/produtos", label: "Produtos e receitas", icon: BookOpen },
   { to: "/catalogo", label: "Catálogo online", icon: Store },
   { to: "/financeiro", label: "Financeiro", icon: Wallet },
   { to: "/resumo-mes", label: "Resumo do mês", icon: ChartNoAxesCombined },
+  { to: "/fluxo-caixa", label: "Fluxo de caixa", icon: TrendingUp },
+  { to: "/historico", label: "Histórico", icon: History },
   { to: "/configuracoes", label: "Configurações", icon: Settings },
   { to: "/equipe", label: "Equipe", icon: UsersRound },
 ] as const;
@@ -167,7 +173,7 @@ function Layout() {
 
   return (
     <div className="min-h-screen">
-      <aside className="fixed inset-y-0 left-0 z-40 hidden w-64 flex-col border-r bg-card/95 px-4 py-5 backdrop-blur lg:flex">
+      <aside className="fixed inset-y-0 left-0 z-40 hidden w-64 flex-col border-r bg-card/95 px-4 py-5 backdrop-blur lg:flex print:!hidden">
         <Link to="/painel" className="mb-8 flex items-center gap-3 rounded-xl px-2 py-2 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring">
           <span className="grid size-10 shrink-0 place-items-center rounded-xl bg-primary text-primary-foreground shadow-soft">
             <CakeSlice className="size-5" />
@@ -189,8 +195,8 @@ function Layout() {
         </div>
       </aside>
 
-      <div className="min-h-screen lg:pl-64">
-        <header className="sticky top-0 z-30 flex items-center justify-between border-b bg-background/90 px-4 py-3 backdrop-blur lg:hidden">
+      <div className="min-h-screen lg:pl-64 print:!pl-0">
+        <header className="sticky top-0 z-30 flex items-center justify-between border-b bg-background/90 px-4 py-3 backdrop-blur lg:hidden print:hidden">
           <Link to="/painel" className="flex items-center gap-2 rounded-lg focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring">
             <span className="grid size-9 place-items-center rounded-lg bg-primary text-primary-foreground">
               <CakeSlice className="size-5" />
@@ -209,7 +215,7 @@ function Layout() {
           </Suspense>
         </main>
 
-        <nav aria-label="Navegação inferior" className="fixed inset-x-0 bottom-0 z-40 border-t bg-card/95 backdrop-blur lg:hidden" style={{ paddingBottom: "env(safe-area-inset-bottom)" }}>
+        <nav aria-label="Navegação inferior" className="fixed inset-x-0 bottom-0 z-40 border-t bg-card/95 backdrop-blur lg:hidden print:hidden" style={{ paddingBottom: "env(safe-area-inset-bottom)" }}>
           <div className="mx-auto grid max-w-2xl grid-cols-5">
             {nav.map(({ to, label, icon: Icon }) => (
               <Link key={to} to={to} className="flex min-h-14 flex-col items-center justify-center gap-0.5 px-1 py-2 text-[11px] font-medium text-muted-foreground transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring" activeProps={{ className: "flex min-h-14 flex-col items-center justify-center gap-0.5 px-1 py-2 text-[11px] font-semibold text-primary focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring" }}>
