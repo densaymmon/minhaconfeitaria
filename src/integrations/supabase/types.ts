@@ -140,6 +140,8 @@ export type Database = {
       confeitarias: {
         Row: {
           aceita_entrega: boolean
+          acesso: string
+          acesso_atualizado_em: string | null
           aceita_retirada: boolean
           catalogo_ativo: boolean
           catalogo_aviso: string | null
@@ -150,15 +152,20 @@ export type Database = {
           limite_pedidos_dia: number | null
           logo_url: string | null
           nome: string
+          onboarding_concluido_em: string | null
           pedido_minimo: number
           slogan: string | null
           slug: string | null
           taxa_entrega: number
+          termos_aceitos_em: string | null
+          termos_versao: string | null
           updated_at: string
           user_id: string
           whatsapp: string | null
         }
         Insert: {
+          acesso?: string
+          acesso_atualizado_em?: string | null
           aceita_entrega?: boolean
           aceita_retirada?: boolean
           catalogo_ativo?: boolean
@@ -170,15 +177,20 @@ export type Database = {
           limite_pedidos_dia?: number | null
           logo_url?: string | null
           nome?: string
+          onboarding_concluido_em?: string | null
           pedido_minimo?: number
           slogan?: string | null
           slug?: string | null
           taxa_entrega?: number
+          termos_aceitos_em?: string | null
+          termos_versao?: string | null
           updated_at?: string
           user_id?: string
           whatsapp?: string | null
         }
         Update: {
+          acesso?: string
+          acesso_atualizado_em?: string | null
           aceita_entrega?: boolean
           aceita_retirada?: boolean
           catalogo_ativo?: boolean
@@ -190,10 +202,13 @@ export type Database = {
           limite_pedidos_dia?: number | null
           logo_url?: string | null
           nome?: string
+          onboarding_concluido_em?: string | null
           pedido_minimo?: number
           slogan?: string | null
           slug?: string | null
           taxa_entrega?: number
+          termos_aceitos_em?: string | null
+          termos_versao?: string | null
           updated_at?: string
           user_id?: string
           whatsapp?: string | null
@@ -1222,12 +1237,36 @@ export type Database = {
         Args: { p_midias: Json; p_produto_id: string }
         Returns: number
       }
+      aceitar_termos: {
+        Args: { p_versao: string }
+        Returns: undefined
+      }
+      admin_atualizar_confeitaria: {
+        Args: { p_acesso: string; p_observacao: string | null; p_pago_ate: string | null; p_user_id: string }
+        Returns: undefined
+      }
+      admin_listar_confeitarias: {
+        Args: never
+        Returns: Json
+      }
+      admin_salvar_plataforma: {
+        Args: { p: Json }
+        Returns: undefined
+      }
       acompanhar_pedido_catalogo: {
         Args: { p_codigo: string }
         Returns: Json
       }
+      eh_admin_plataforma: {
+        Args: never
+        Returns: boolean
+      }
       catalogo_publico: {
         Args: { p_slug: string }
+        Returns: Json
+      }
+      plataforma_publica: {
+        Args: never
         Returns: Json
       }
       criar_pedido_catalogo: {

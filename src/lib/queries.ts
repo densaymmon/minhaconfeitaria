@@ -1,3 +1,4 @@
+import type { PlataformaPublica } from "./termos";
 import { queryOptions } from "@tanstack/react-query";
 import { supabase } from "@/integrations/supabase/client";
 import type { Tables } from "@/integrations/supabase/types";
@@ -155,4 +156,25 @@ export const contasPagarEstornosQ = queryOptions({
   queryFn: () => must<ContaPagarEstorno[]>(
     supabase.from("contas_pagar_estornos").select("*").order("created_at", { ascending: false }),
   ),
+});
+
+/** Dados públicos da plataforma (cadastro aberto, responsável e contato); null antes da migração 0038. */
+export const plataformaPublicaQ = queryOptions({
+  queryKey: ["plataforma-publica"],
+  queryFn: async (): Promise<PlataformaPublica | null> => {
+    const { data, error } = await supabase.rpc("plataforma_publica");
+    if (error || !data) return null;
+    return data as unknown as PlataformaPublica;
+  },
+  staleTime: 10 * 60_000,
+});
+
+/** A conta logada administra a plataforma? (false se a função ainda não existir). */
+export const ehAdminQ = queryOptions({
+  queryKey: ["eh-admin-plataforma"],
+  queryFn: async () => {
+    const { data, error } = await supabase.rpc("eh_admin_plataforma");
+    return !error && data === true;
+  },
+  staleTime: 10 * 60_000,
 });

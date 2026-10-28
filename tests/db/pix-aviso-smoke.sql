@@ -1,7 +1,7 @@
 \set ON_ERROR_STOP on
 -- Tipo da chave Pix, cidade da confeitaria e aviso de pedido pronto.
 BEGIN;
-UPDATE public.plataforma_config SET cadastro_aberto = true;
+UPDATE public.plataforma_config SET cadastro_aberto = true, aprovacao_manual = false;
 INSERT INTO auth.users(id) VALUES ('a1111111-1111-4111-8111-111111111111');
 
 DO $t$

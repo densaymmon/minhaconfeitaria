@@ -1,9 +1,11 @@
-import { createFileRoute, Link, Outlet, redirect, useNavigate } from "@tanstack/react-router";
+import { createFileRoute, Link, Outlet, redirect, useNavigate, useRouterState } from "@tanstack/react-router";
 import { Suspense, useEffect, useRef, useState } from "react";
 import { toast } from "sonner";
-import { BookOpen, CakeSlice, ChartNoAxesCombined, ChefHat, ChevronRight, ClipboardList, LayoutDashboard, LogOut, Menu, Package, Settings, ShoppingCart, Users, Wallet, X } from "lucide-react";
+import { BookOpen, CakeSlice, ChartNoAxesCombined, ChefHat, ChevronRight, ClipboardList, LayoutDashboard, LogOut, Menu, Package, Settings, ShieldCheck, ShoppingCart, Users, Wallet, X } from "lucide-react";
 import { useQuery, useQueryClient } from "@tanstack/react-query";
-import { confeitariaQ } from "@/lib/queries";
+import { confeitariaQ, ehAdminQ } from "@/lib/queries";
+import { TERMOS_VERSAO } from "@/lib/termos";
+import { AceiteTermos, TelaBloqueada, TelaPendente } from "@/components/app/acesso-conta";
 import { supabase } from "@/integrations/supabase/client";
 
 export const Route = createFileRoute("/_authenticated")({
@@ -41,7 +43,17 @@ function Layout() {
   const { user } = Route.useRouteContext();
   const queryClient = useQueryClient();
   const navigate = useNavigate();
-  const { data: confeitaria } = useQuery(confeitariaQ);
+  // Enquanto a conta aguarda liberação, confere a cada minuto.
+  const { data: confeitaria } = useQuery({ ...confeitariaQ, refetchInterval: (q) => (q.state.data?.acesso === "pendente" ? 60_000 : false) });
+  const { data: adminInfo } = useQuery(ehAdminQ);
+  const admin = adminInfo === true;
+  const pathname = useRouterState({ select: (s) => s.location.pathname });
+  // Campos da migração 0038; antes dela nada é bloqueado.
+  const temControleAcesso = Boolean(confeitaria && "acesso" in confeitaria);
+  const acesso = temControleAcesso && !admin ? confeitaria?.acesso : "ativo";
+  // Só pede o aceite depois de saber que a conta não é da administração (evita piscar a tela).
+  const precisaAceitarTermos = temControleAcesso && adminInfo === false && confeitaria?.termos_versao !== TERMOS_VERSAO;
+  const precisaComecar = temControleAcesso && acesso === "ativo" && !precisaAceitarTermos && !confeitaria?.onboarding_concluido_em;
   const novosCatalogo = useAlertaCatalogo((id) => void navigate({ to: "/pedidos/$id", params: { id } }));
   const nomeLoja = confeitaria?.nome?.trim() || "Gestão da confeitaria";
 
@@ -53,6 +65,10 @@ function Layout() {
     window.addEventListener("keydown", onKeyDown);
     return () => window.removeEventListener("keydown", onKeyDown);
   }, [maisAberto]);
+
+  useEffect(() => {
+    if (precisaComecar && pathname !== "/comecar") void navigate({ to: "/comecar", replace: true });
+  }, [precisaComecar, pathname, navigate]);
 
   async function sair() {
     setMaisAberto(false);
@@ -87,6 +103,12 @@ function Layout() {
                 <span>{label}</span>
               </Link>
             ))}
+            {admin && (
+              <Link to="/plataforma" onClick={close} className={linkClass(false)} activeProps={{ className: linkClass(true) }}>
+                <ShieldCheck className="size-5 shrink-0" />
+                <span>Plataforma</span>
+              </Link>
+            )}
           </div>
         </div>
         <div className="mt-6">
@@ -103,6 +125,10 @@ function Layout() {
       </>
     );
   }
+
+  if (confeitaria && acesso === "bloqueado") return <TelaBloqueada sair={() => void sair()} />;
+  if (confeitaria && acesso === "pendente") return <TelaPendente confeitaria={confeitaria} sair={() => void sair()} />;
+  if (confeitaria && precisaAceitarTermos) return <AceiteTermos jaAceitou={Boolean(confeitaria.termos_versao)} sair={() => void sair()} />;
 
   return (
     <div className="min-h-screen">
