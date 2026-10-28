@@ -1,7 +1,7 @@
 import { createFileRoute, Link, Outlet, redirect, useNavigate, useRouterState } from "@tanstack/react-router";
 import { Suspense, useEffect, useRef, useState } from "react";
 import { toast } from "sonner";
-import { BookOpen, CakeSlice, ChartNoAxesCombined, ChefHat, ChevronRight, ClipboardList, LayoutDashboard, LogOut, Menu, Package, Settings, ShoppingCart, Users, Wallet, X } from "lucide-react";
+import { Store, BookOpen, CakeSlice, ChartNoAxesCombined, ChefHat, ChevronRight, ClipboardList, LayoutDashboard, LogOut, Menu, Package, Settings, ShoppingCart, Users, Wallet, X } from "lucide-react";
 import { useQuery, useQueryClient } from "@tanstack/react-query";
 import { confeitariaQ, ehAdminQ, minhaAssinaturaQ } from "@/lib/queries";
 import { recursoDaPagina, temRecurso } from "@/lib/assinatura";
@@ -29,6 +29,7 @@ const nav = [
 
 const maisLinks = [
   { to: "/produtos", label: "Produtos e receitas", icon: BookOpen },
+  { to: "/catalogo", label: "Catálogo online", icon: Store },
   { to: "/financeiro", label: "Financeiro", icon: Wallet },
   { to: "/configuracoes", label: "Configurações", icon: Settings },
 ] as const;
