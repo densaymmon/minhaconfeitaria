@@ -96,6 +96,8 @@ Seguir o método "expandir, preencher, depois restringir", nunca trocar tudo de 
 
 ## Etapa 3 — Catálogo com pedido, pagamento e alerta
 
+> **Situação (PR da Etapa 3):** catálogo público `/c/<endereço>` com carrinho, retirada ou entrega, data mínima por antecedência, pedido mínimo e limite diário; pedido criado no servidor com preço e custo calculados lá; acompanhamento `/pedido/<código>` com chave Pix e botão "Já fiz o Pix"; alerta de pedido novo (contador, som, aviso na tela e notificação opcional). Pix automático por gateway fica para depois, como decidido.
+
 Objetivo: o cliente vê os produtos, faz o pedido e paga. O sistema cadastra a venda e avisa a confeitaria.
 
 Depende da Etapa 2, porque o catálogo é por confeitaria (`/c/<slug>`).

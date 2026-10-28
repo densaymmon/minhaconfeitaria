@@ -42,3 +42,12 @@
 - [x] Teste de isolamento entre duas confeitarias (tabelas e RPCs) no CI.
 - [ ] Aplicar `0033_base_multiempresa.sql` no banco do Lovable Cloud após backup (ver docs/deploy/README-multiempresa.md).
 - [ ] Funcionários por confeitaria e numeração de pedidos por confeitaria.
+
+## Evolução — Etapa 3: catálogo online
+- [x] Página pública do catálogo com carrinho, retirada/entrega, data mínima, pedido mínimo e limite diário.
+- [x] Pedido criado no servidor (preço, taxa e custo do servidor; idempotente; limites contra abuso).
+- [x] Acompanhamento do pedido com chave Pix e aviso de pagamento do cliente.
+- [x] Configuração do catálogo, fotos e descrição dos produtos.
+- [x] Alerta de pedido novo: contador no menu, som, aviso e notificação opcional.
+- [ ] Aplicar `0034_catalogo_publico.sql` no banco (ver docs/deploy/README-catalogo.md).
+- [ ] Pix automático por gateway (QR com valor e confirmação automática).

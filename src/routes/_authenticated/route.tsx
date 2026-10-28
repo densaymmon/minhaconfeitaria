@@ -1,5 +1,6 @@
 import { createFileRoute, Link, Outlet, redirect, useNavigate } from "@tanstack/react-router";
-import { Suspense, useEffect, useState } from "react";
+import { Suspense, useEffect, useRef, useState } from "react";
+import { toast } from "sonner";
 import { BookOpen, CakeSlice, ChartNoAxesCombined, ChefHat, ChevronRight, ClipboardList, LayoutDashboard, LogOut, Menu, Package, Settings, ShoppingCart, Users, Wallet, X } from "lucide-react";
 import { useQuery, useQueryClient } from "@tanstack/react-query";
 import { confeitariaQ } from "@/lib/queries";
@@ -41,6 +42,7 @@ function Layout() {
   const queryClient = useQueryClient();
   const navigate = useNavigate();
   const { data: confeitaria } = useQuery(confeitariaQ);
+  const novosCatalogo = useAlertaCatalogo((id) => void navigate({ to: "/pedidos/$id", params: { id } }));
   const nomeLoja = confeitaria?.nome?.trim() || "Gestão da confeitaria";
 
   useEffect(() => {
@@ -71,7 +73,8 @@ function Layout() {
           {nav.map(({ to, label, icon: Icon }) => (
             <Link key={to} to={to} onClick={close} className={linkClass(false)} activeProps={{ className: linkClass(true) }}>
               <Icon className="size-5 shrink-0" />
-              <span>{label}</span>
+              <span className="flex-1">{label}</span>
+              {to === "/pedidos" && novosCatalogo > 0 && <ContadorNovos total={novosCatalogo} />}
             </Link>
           ))}
         </div>
@@ -148,7 +151,10 @@ function Layout() {
           <div className="mx-auto grid max-w-2xl grid-cols-5">
             {nav.map(({ to, label, icon: Icon }) => (
               <Link key={to} to={to} className="flex min-h-14 flex-col items-center justify-center gap-0.5 px-1 py-2 text-[11px] font-medium text-muted-foreground transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring" activeProps={{ className: "flex min-h-14 flex-col items-center justify-center gap-0.5 px-1 py-2 text-[11px] font-semibold text-primary focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring" }}>
-                <Icon className="size-5" />
+                <span className="relative">
+                  <Icon className="size-5" />
+                  {to === "/pedidos" && novosCatalogo > 0 && <ContadorNovos total={novosCatalogo} className="absolute -right-2.5 -top-1.5" />}
+                </span>
                 {label}
               </Link>
             ))}
@@ -186,4 +192,99 @@ function Layout() {
       )}
     </div>
   );
+}
+
+function ContadorNovos({ total, className }: { total: number; className?: string }) {
+  return (
+    <span className={`inline-flex min-w-5 items-center justify-center rounded-full bg-primary px-1.5 text-[11px] font-bold leading-5 text-primary-foreground ${className ?? ""}`} aria-label={`${total} pedido(s) novo(s) pelo catálogo`}>
+      {total > 9 ? "9+" : total}
+    </span>
+  );
+}
+
+/** Toca um aviso curto. Navegadores só liberam som depois de uma interação na página. */
+function tocarAlerta() {
+  try {
+    const Ctx = window.AudioContext ?? (window as unknown as { webkitAudioContext?: typeof AudioContext }).webkitAudioContext;
+    if (!Ctx) return;
+    const ctx = new Ctx();
+    [880, 1175].forEach((freq, i) => {
+      const osc = ctx.createOscillator();
+      const gain = ctx.createGain();
+      osc.frequency.value = freq;
+      osc.connect(gain);
+      gain.connect(ctx.destination);
+      const inicio = ctx.currentTime + i * 0.18;
+      gain.gain.setValueAtTime(0.0001, inicio);
+      gain.gain.exponentialRampToValueAtTime(0.25, inicio + 0.02);
+      gain.gain.exponentialRampToValueAtTime(0.0001, inicio + 0.16);
+      osc.start(inicio);
+      osc.stop(inicio + 0.17);
+    });
+    window.setTimeout(() => void ctx.close(), 800);
+  } catch {
+    /* sem som neste aparelho */
+  }
+}
+
+/**
+ * Acompanha pedidos do catálogo ainda não abertos: contador no menu, título da aba,
+ * aviso na tela e som quando chega um pedido novo (verifica a cada 30 segundos).
+ */
+function useAlertaCatalogo(abrir: (id: string) => void) {
+  const { data: novos = [] } = useQuery({
+    queryKey: ["pedidos-catalogo-novos"],
+    queryFn: async () => {
+      const { data, error } = await supabase
+        .from("pedidos")
+        .select("id, numero, created_at")
+        .eq("origem", "catalogo")
+        .is("visualizado_em", null)
+        .neq("status", "cancelado")
+        .order("created_at", { ascending: false })
+        .limit(50);
+      // Antes da migração 0034 a coluna não existe: sem alertas, sem quebrar o app.
+      if (error) return [];
+      return data ?? [];
+    },
+    refetchInterval: 30_000,
+    refetchIntervalInBackground: true,
+  });
+  const conhecidos = useRef<Set<string> | null>(null);
+  const abrirRef = useRef(abrir);
+  abrirRef.current = abrir;
+
+  useEffect(() => {
+    const ids = new Set(novos.map((p) => p.id));
+    if (conhecidos.current === null) {
+      conhecidos.current = ids;
+      if (novos.length > 0) toast.info(`Você tem ${novos.length} pedido(s) novo(s) pelo catálogo.`);
+      return;
+    }
+    const anteriores = conhecidos.current;
+    const chegaram = novos.filter((p) => !anteriores.has(p.id));
+    conhecidos.current = ids;
+    if (chegaram.length === 0) return;
+    tocarAlerta();
+    const primeiro = chegaram[0];
+    if (!primeiro) return;
+    toast.success(chegaram.length === 1 ? `Novo pedido #${primeiro.numero} pelo catálogo!` : `${chegaram.length} pedidos novos pelo catálogo!`, {
+      duration: 15_000,
+      action: { label: "Abrir", onClick: () => abrirRef.current(primeiro.id) },
+    });
+    try {
+      if (typeof Notification !== "undefined" && Notification.permission === "granted" && document.visibilityState !== "visible") {
+        new Notification("Novo pedido pelo catálogo", { body: `Pedido #${primeiro.numero}`, tag: `pedido-${primeiro.id}` });
+      }
+    } catch {
+      /* notificações indisponíveis */
+    }
+  }, [novos]);
+
+  useEffect(() => {
+    const base = document.title.replace(/^\(\d+\+?\) /, "");
+    document.title = novos.length > 0 ? `(${novos.length > 9 ? "9+" : novos.length}) ${base}` : base;
+  }, [novos.length]);
+
+  return novos.length;
 }

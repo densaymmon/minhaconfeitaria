@@ -137,7 +137,7 @@ function Produtos() {
                         <div className="flex justify-between gap-2">
                           <div className="min-w-0">
                             <div className="truncate font-semibold">{p.nome}</div>
-                            <div className="text-xs text-muted-foreground">{p.categoria}{!p.ativo && " · inativo"}</div>
+                            <div className="text-xs text-muted-foreground">{p.categoria}{!p.ativo && " · inativo"}{p.ativo && p.no_catalogo && " · no catálogo"}</div>
                             {p.custo_alterado_em && <div className="mt-1 text-xs text-warning-foreground">Custo atualizado em {dataBR(p.custo_alterado_em)}</div>}
                           </div>
                           <div className="text-right font-semibold">{brl(preco)}</div>
