@@ -3,10 +3,10 @@ import { mensagemEquipe, paginaPermitidaAoPapel } from "./assinatura";
 
 describe("papéis da equipe", () => {
   it("produção não abre páginas de dinheiro e configuração", () => {
-    for (const p of ["/financeiro", "/despesas", "/contas-pagar", "/relatorios", "/resumo-mes", "/compras", "/configuracoes", "/catalogo"]) {
+    for (const p of ["/financeiro", "/despesas", "/contas-pagar", "/relatorios", "/resumo-mes", "/fluxo-caixa", "/historico", "/compras", "/configuracoes", "/catalogo"]) {
       expect(paginaPermitidaAoPapel(p, "producao")).toBe(false);
     }
-    for (const p of ["/painel", "/pedidos", "/pedidos/abc", "/producao", "/clientes", "/produtos", "/equipe", "/mais", "/catalogos-x"]) {
+    for (const p of ["/painel", "/pedidos", "/pedidos/abc", "/producao", "/clientes", "/produtos", "/equipe", "/mais", "/catalogos-x", "/agenda", "/lista-compras", "/entregas", "/etiquetas"]) {
       expect(paginaPermitidaAoPapel(p, "producao")).toBe(true);
     }
   });

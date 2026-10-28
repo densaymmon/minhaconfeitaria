@@ -31,6 +31,12 @@ import { Route as AuthenticatedMaisRouteImport } from './routes/_authenticated/m
 import { Route as AuthenticatedPainelRouteImport } from './routes/_authenticated/painel'
 import { Route as AuthenticatedPedidosRecorrentesRouteImport } from './routes/_authenticated/pedidos-recorrentes'
 import { Route as AuthenticatedProducaoRouteImport } from './routes/_authenticated/producao'
+import { Route as AuthenticatedHistoricoRouteImport } from './routes/_authenticated/historico'
+import { Route as AuthenticatedFluxoCaixaRouteImport } from './routes/_authenticated/fluxo-caixa'
+import { Route as AuthenticatedEtiquetasRouteImport } from './routes/_authenticated/etiquetas'
+import { Route as AuthenticatedEntregasRouteImport } from './routes/_authenticated/entregas'
+import { Route as AuthenticatedListaComprasRouteImport } from './routes/_authenticated/lista-compras'
+import { Route as AuthenticatedAgendaRouteImport } from './routes/_authenticated/agenda'
 import { Route as AuthenticatedEquipeRouteImport } from './routes/_authenticated/equipe'
 import { Route as AuthenticatedResumoMesRouteImport } from './routes/_authenticated/resumo-mes'
 import { Route as AuthenticatedCatalogoRouteImport } from './routes/_authenticated/catalogo'
@@ -157,6 +163,36 @@ const AuthenticatedProducaoRoute = AuthenticatedProducaoRouteImport.update({
   path: '/producao',
   getParentRoute: () => AuthenticatedRouteRoute,
 } as any)
+const AuthenticatedHistoricoRoute = AuthenticatedHistoricoRouteImport.update({
+  id: '/historico',
+  path: '/historico',
+  getParentRoute: () => AuthenticatedRouteRoute,
+} as any)
+const AuthenticatedFluxoCaixaRoute = AuthenticatedFluxoCaixaRouteImport.update({
+  id: '/fluxo-caixa',
+  path: '/fluxo-caixa',
+  getParentRoute: () => AuthenticatedRouteRoute,
+} as any)
+const AuthenticatedEtiquetasRoute = AuthenticatedEtiquetasRouteImport.update({
+  id: '/etiquetas',
+  path: '/etiquetas',
+  getParentRoute: () => AuthenticatedRouteRoute,
+} as any)
+const AuthenticatedEntregasRoute = AuthenticatedEntregasRouteImport.update({
+  id: '/entregas',
+  path: '/entregas',
+  getParentRoute: () => AuthenticatedRouteRoute,
+} as any)
+const AuthenticatedListaComprasRoute = AuthenticatedListaComprasRouteImport.update({
+  id: '/lista-compras',
+  path: '/lista-compras',
+  getParentRoute: () => AuthenticatedRouteRoute,
+} as any)
+const AuthenticatedAgendaRoute = AuthenticatedAgendaRouteImport.update({
+  id: '/agenda',
+  path: '/agenda',
+  getParentRoute: () => AuthenticatedRouteRoute,
+} as any)
 const AuthenticatedEquipeRoute = AuthenticatedEquipeRouteImport.update({
   id: '/equipe',
   path: '/equipe',
@@ -243,6 +279,12 @@ export interface FileRoutesByFullPath {
   '/painel': typeof AuthenticatedPainelRoute
   '/pedidos-recorrentes': typeof AuthenticatedPedidosRecorrentesRoute
   '/producao': typeof AuthenticatedProducaoRoute
+  '/historico': typeof AuthenticatedHistoricoRoute
+  '/fluxo-caixa': typeof AuthenticatedFluxoCaixaRoute
+  '/etiquetas': typeof AuthenticatedEtiquetasRoute
+  '/entregas': typeof AuthenticatedEntregasRoute
+  '/lista-compras': typeof AuthenticatedListaComprasRoute
+  '/agenda': typeof AuthenticatedAgendaRoute
   '/equipe': typeof AuthenticatedEquipeRoute
   '/resumo-mes': typeof AuthenticatedResumoMesRoute
   '/catalogo': typeof AuthenticatedCatalogoRoute
@@ -278,6 +320,12 @@ export interface FileRoutesByTo {
   '/painel': typeof AuthenticatedPainelRoute
   '/pedidos-recorrentes': typeof AuthenticatedPedidosRecorrentesRoute
   '/producao': typeof AuthenticatedProducaoRoute
+  '/historico': typeof AuthenticatedHistoricoRoute
+  '/fluxo-caixa': typeof AuthenticatedFluxoCaixaRoute
+  '/etiquetas': typeof AuthenticatedEtiquetasRoute
+  '/entregas': typeof AuthenticatedEntregasRoute
+  '/lista-compras': typeof AuthenticatedListaComprasRoute
+  '/agenda': typeof AuthenticatedAgendaRoute
   '/equipe': typeof AuthenticatedEquipeRoute
   '/resumo-mes': typeof AuthenticatedResumoMesRoute
   '/catalogo': typeof AuthenticatedCatalogoRoute
@@ -315,6 +363,12 @@ export interface FileRoutesById {
   '/_authenticated/painel': typeof AuthenticatedPainelRoute
   '/_authenticated/pedidos-recorrentes': typeof AuthenticatedPedidosRecorrentesRoute
   '/_authenticated/producao': typeof AuthenticatedProducaoRoute
+  '/_authenticated/historico': typeof AuthenticatedHistoricoRoute
+  '/_authenticated/fluxo-caixa': typeof AuthenticatedFluxoCaixaRoute
+  '/_authenticated/etiquetas': typeof AuthenticatedEtiquetasRoute
+  '/_authenticated/entregas': typeof AuthenticatedEntregasRoute
+  '/_authenticated/lista-compras': typeof AuthenticatedListaComprasRoute
+  '/_authenticated/agenda': typeof AuthenticatedAgendaRoute
   '/_authenticated/equipe': typeof AuthenticatedEquipeRoute
   '/_authenticated/resumo-mes': typeof AuthenticatedResumoMesRoute
   '/_authenticated/catalogo': typeof AuthenticatedCatalogoRoute
@@ -352,6 +406,12 @@ export interface FileRouteTypes {
     | '/painel'
     | '/pedidos-recorrentes'
     | '/producao'
+    | '/historico'
+    | '/fluxo-caixa'
+    | '/etiquetas'
+    | '/entregas'
+    | '/lista-compras'
+    | '/agenda'
     | '/equipe'
     | '/resumo-mes'
     | '/catalogo'
@@ -387,6 +447,12 @@ export interface FileRouteTypes {
     | '/painel'
     | '/pedidos-recorrentes'
     | '/producao'
+    | '/historico'
+    | '/fluxo-caixa'
+    | '/etiquetas'
+    | '/entregas'
+    | '/lista-compras'
+    | '/agenda'
     | '/equipe'
     | '/resumo-mes'
     | '/catalogo'
@@ -423,6 +489,12 @@ export interface FileRouteTypes {
     | '/_authenticated/painel'
     | '/_authenticated/pedidos-recorrentes'
     | '/_authenticated/producao'
+    | '/_authenticated/historico'
+    | '/_authenticated/fluxo-caixa'
+    | '/_authenticated/etiquetas'
+    | '/_authenticated/entregas'
+    | '/_authenticated/lista-compras'
+    | '/_authenticated/agenda'
     | '/_authenticated/equipe'
     | '/_authenticated/resumo-mes'
     | '/_authenticated/catalogo'
@@ -610,6 +682,48 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof AuthenticatedProducaoRouteImport
       parentRoute: typeof AuthenticatedRouteRoute
     }
+    '/_authenticated/historico': {
+      id: '/_authenticated/historico'
+      path: '/historico'
+      fullPath: '/historico'
+      preLoaderRoute: typeof AuthenticatedHistoricoRouteImport
+      parentRoute: typeof AuthenticatedRouteRoute
+    }
+    '/_authenticated/fluxo-caixa': {
+      id: '/_authenticated/fluxo-caixa'
+      path: '/fluxo-caixa'
+      fullPath: '/fluxo-caixa'
+      preLoaderRoute: typeof AuthenticatedFluxoCaixaRouteImport
+      parentRoute: typeof AuthenticatedRouteRoute
+    }
+    '/_authenticated/etiquetas': {
+      id: '/_authenticated/etiquetas'
+      path: '/etiquetas'
+      fullPath: '/etiquetas'
+      preLoaderRoute: typeof AuthenticatedEtiquetasRouteImport
+      parentRoute: typeof AuthenticatedRouteRoute
+    }
+    '/_authenticated/entregas': {
+      id: '/_authenticated/entregas'
+      path: '/entregas'
+      fullPath: '/entregas'
+      preLoaderRoute: typeof AuthenticatedEntregasRouteImport
+      parentRoute: typeof AuthenticatedRouteRoute
+    }
+    '/_authenticated/lista-compras': {
+      id: '/_authenticated/lista-compras'
+      path: '/lista-compras'
+      fullPath: '/lista-compras'
+      preLoaderRoute: typeof AuthenticatedListaComprasRouteImport
+      parentRoute: typeof AuthenticatedRouteRoute
+    }
+    '/_authenticated/agenda': {
+      id: '/_authenticated/agenda'
+      path: '/agenda'
+      fullPath: '/agenda'
+      preLoaderRoute: typeof AuthenticatedAgendaRouteImport
+      parentRoute: typeof AuthenticatedRouteRoute
+    }
     '/_authenticated/equipe': {
       id: '/_authenticated/equipe'
       path: '/equipe'
@@ -707,6 +821,12 @@ interface AuthenticatedRouteRouteChildren {
   AuthenticatedPainelRoute: typeof AuthenticatedPainelRoute
   AuthenticatedPedidosRecorrentesRoute: typeof AuthenticatedPedidosRecorrentesRoute
   AuthenticatedProducaoRoute: typeof AuthenticatedProducaoRoute
+  AuthenticatedHistoricoRoute: typeof AuthenticatedHistoricoRoute
+  AuthenticatedFluxoCaixaRoute: typeof AuthenticatedFluxoCaixaRoute
+  AuthenticatedEtiquetasRoute: typeof AuthenticatedEtiquetasRoute
+  AuthenticatedEntregasRoute: typeof AuthenticatedEntregasRoute
+  AuthenticatedListaComprasRoute: typeof AuthenticatedListaComprasRoute
+  AuthenticatedAgendaRoute: typeof AuthenticatedAgendaRoute
   AuthenticatedEquipeRoute: typeof AuthenticatedEquipeRoute
   AuthenticatedResumoMesRoute: typeof AuthenticatedResumoMesRoute
   AuthenticatedCatalogoRoute: typeof AuthenticatedCatalogoRoute
@@ -730,6 +850,12 @@ const AuthenticatedRouteRouteChildren: AuthenticatedRouteRouteChildren = {
   AuthenticatedPainelRoute: AuthenticatedPainelRoute,
   AuthenticatedPedidosRecorrentesRoute: AuthenticatedPedidosRecorrentesRoute,
   AuthenticatedProducaoRoute: AuthenticatedProducaoRoute,
+  AuthenticatedHistoricoRoute: AuthenticatedHistoricoRoute,
+  AuthenticatedFluxoCaixaRoute: AuthenticatedFluxoCaixaRoute,
+  AuthenticatedEtiquetasRoute: AuthenticatedEtiquetasRoute,
+  AuthenticatedEntregasRoute: AuthenticatedEntregasRoute,
+  AuthenticatedListaComprasRoute: AuthenticatedListaComprasRoute,
+  AuthenticatedAgendaRoute: AuthenticatedAgendaRoute,
   AuthenticatedEquipeRoute: AuthenticatedEquipeRoute,
   AuthenticatedResumoMesRoute: AuthenticatedResumoMesRoute,
   AuthenticatedCatalogoRoute: AuthenticatedCatalogoRoute,
