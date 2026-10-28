@@ -221,6 +221,12 @@ export type Database = {
       confeitarias: {
         Row: {
           aceita_entrega: boolean
+          aceita_encomenda: boolean
+          cor_primaria: string | null
+          datas_bloqueadas: string[]
+          dias_fechados: number[]
+          horarios_retirada: string[]
+          taxas_bairro: Json
           acesso: string
           acesso_atualizado_em: string | null
           aceita_retirada: boolean
@@ -248,6 +254,12 @@ export type Database = {
           acesso?: string
           acesso_atualizado_em?: string | null
           aceita_entrega?: boolean
+          aceita_encomenda?: boolean
+          cor_primaria?: string | null
+          datas_bloqueadas?: string[]
+          dias_fechados?: number[]
+          horarios_retirada?: string[]
+          taxas_bairro?: Json
           aceita_retirada?: boolean
           catalogo_ativo?: boolean
           catalogo_aviso?: string | null
@@ -273,6 +285,12 @@ export type Database = {
           acesso?: string
           acesso_atualizado_em?: string | null
           aceita_entrega?: boolean
+          aceita_encomenda?: boolean
+          cor_primaria?: string | null
+          datas_bloqueadas?: string[]
+          dias_fechados?: number[]
+          horarios_retirada?: string[]
+          taxas_bairro?: Json
           aceita_retirada?: boolean
           catalogo_ativo?: boolean
           catalogo_aviso?: string | null
@@ -293,6 +311,54 @@ export type Database = {
           updated_at?: string
           user_id?: string
           whatsapp?: string | null
+        }
+        Relationships: []
+      }
+      cupons: {
+        Row: {
+          ativo: boolean
+          codigo: string
+          created_at: string
+          descricao: string | null
+          id: string
+          limite_usos: number | null
+          pedido_minimo: number
+          primeira_compra: boolean
+          tipo: string
+          user_id: string
+          usos: number
+          valido_ate: string | null
+          valor: number
+        }
+        Insert: {
+          ativo?: boolean
+          codigo: string
+          created_at?: string
+          descricao?: string | null
+          id?: string
+          limite_usos?: number | null
+          pedido_minimo?: number
+          primeira_compra?: boolean
+          tipo: string
+          user_id?: string
+          usos?: number
+          valido_ate?: string | null
+          valor: number
+        }
+        Update: {
+          ativo?: boolean
+          codigo?: string
+          created_at?: string
+          descricao?: string | null
+          id?: string
+          limite_usos?: number | null
+          pedido_minimo?: number
+          primeira_compra?: boolean
+          tipo?: string
+          user_id?: string
+          usos?: number
+          valido_ate?: string | null
+          valor?: number
         }
         Relationships: []
       }
@@ -923,6 +989,8 @@ export type Database = {
           cliente_id: string | null
           codigo_curto: string | null
           codigo_publico: string | null
+          cupom_codigo: string | null
+          encomenda: boolean
           confirmacao_enviada_em: string | null
           created_at: string
           data_entrega: string
@@ -950,6 +1018,8 @@ export type Database = {
           cliente_id?: string | null
           codigo_curto?: string | null
           codigo_publico?: string | null
+          cupom_codigo?: string | null
+          encomenda?: boolean
           confirmacao_enviada_em?: string | null
           created_at?: string
           data_entrega: string
@@ -977,6 +1047,8 @@ export type Database = {
           cliente_id?: string | null
           codigo_curto?: string | null
           codigo_publico?: string | null
+          cupom_codigo?: string | null
+          encomenda?: boolean
           confirmacao_enviada_em?: string | null
           created_at?: string
           data_entrega?: string
@@ -1417,6 +1489,14 @@ export type Database = {
       }
       plataforma_publica: {
         Args: never
+        Returns: Json
+      }
+      validar_cupom_catalogo: {
+        Args: { p_codigo: string; p_slug: string; p_subtotal: number; p_telefone: string }
+        Returns: Json
+      }
+      criar_encomenda_catalogo: {
+        Args: { p_cliente: Json; p_encomenda: Json; p_slug: string; p_token: string }
         Returns: Json
       }
       criar_pedido_catalogo: {

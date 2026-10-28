@@ -60,13 +60,17 @@ export function AcompanharPedido({ codigo }: { codigo: string }) {
   }
 
   const cancelado = pedido.status === "cancelado";
+  // Encomenda personalizada: chega sem itens e ganha valor quando a confeitaria envia o orçamento.
+  const aguardandoOrcamento = pedido.itens.length === 0;
   const pago = pedido.pago >= pedido.total - 0.009;
   const falta = Math.max(0, Math.round((pedido.total - pedido.pago) * 100) / 100);
   const etapa = etapaAtual(pedido.status);
   const loja = pedido.confeitaria;
   // Resumo do pedido + link desta página, para a confeitaria receber tudo na conversa.
   const linkAcompanhamento = /^[a-z2-9]{10}$/i.test(codigo) ? `${origemPublica()}/p/${codigo.toLowerCase()}` : window.location.href;
-  const whatsapp = linkWhatsApp(loja.whatsapp, mensagemPedidoParaLoja({
+  const whatsapp = linkWhatsApp(loja.whatsapp, aguardandoOrcamento
+    ? `Olá! Pedi um orçamento de encomenda personalizada pelo catálogo (pedido #${pedido.numero}).${pedido.cliente ? `\nNome: ${pedido.cliente}` : ""}\n\nAcompanhar: ${linkAcompanhamento}`
+    : mensagemPedidoParaLoja({
     cliente: pedido.cliente,
     numero: pedido.numero,
     itens: pedido.itens.map((i) => ({ descricao: i.descricao, quantidade: Number(i.quantidade), preco: Number(i.preco) })),
@@ -140,7 +144,14 @@ export function AcompanharPedido({ codigo }: { codigo: string }) {
         </ol>
       )}
 
-      {!cancelado && (
+      {!cancelado && aguardandoOrcamento && (
+        <section className="mt-4 rounded-2xl border border-primary/30 bg-primary/5 p-4">
+          <h2 className="font-semibold">Aguardando orçamento</h2>
+          <p className="mt-1 text-sm text-muted-foreground">Recebemos sua encomenda personalizada. A confeitaria vai analisar e enviar o valor pelo WhatsApp. Quando o orçamento for aprovado, o pagamento aparece aqui.</p>
+        </section>
+      )}
+
+      {!cancelado && !aguardandoOrcamento && (
         <section className="mt-4 rounded-2xl bg-card p-4 shadow-soft">
           <h2 className="font-semibold">Pagamento</h2>
           {pago ? (

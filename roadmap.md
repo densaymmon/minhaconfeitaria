@@ -102,3 +102,10 @@
 - [x] Resumo do mês (/resumo-mes): vendas, custos, despesas, lucro, produtos que mais dão lucro e comparação com o mês anterior.
 - [x] Clientes para reativar (30/45/60/90 dias sem comprar) com mensagem pronta e link do catálogo.
 - [x] Exportar todos os dados (cópia completa .json e planilha de pedidos).
+
+## Catálogo completo
+- [x] Agenda: dias da semana sem atendimento, datas bloqueadas e horários de retirada.
+- [x] Logo e cor da marca no catálogo.
+- [x] Taxa de entrega por bairro (bairros fora da lista não recebem entrega).
+- [x] Cupons de desconto (% ou R$, mínimo, validade, limite de usos, só primeira compra).
+- [x] Encomenda personalizada com fotos de referência ("aguardando orçamento").

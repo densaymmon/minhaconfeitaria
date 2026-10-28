@@ -82,3 +82,27 @@ export async function apagarArquivosMidia(userId: string, urls: string[]) {
     .flatMap((c) => (c.endsWith("-g.jpg") ? [c, c.replace(/-g\.jpg$/, "-p.jpg")] : [c]));
   if (caminhos.length) await supabase.storage.from(BUCKET).remove(caminhos).catch(() => undefined);
 }
+
+/** Logo da confeitaria (quadrado de até 512 px) na pasta da própria confeitaria. */
+export async function enviarLogo(userId: string, arquivo: File): Promise<string> {
+  if (!arquivo.type.startsWith("image/")) throw new Error("Escolha uma imagem (JPG, PNG ou WebP).");
+  const conteudo = await comprimirFoto(arquivo, 512, 0.86);
+  const contentType = conteudo.type || "image/jpeg";
+  const extensao = contentType === "image/png" ? "png" : contentType === "image/webp" ? "webp" : "jpg";
+  const caminho = `${userId}/logo-${Date.now()}.${extensao}`;
+  const { error } = await supabase.storage.from(BUCKET).upload(caminho, conteudo, { contentType, upsert: false, cacheControl: "31536000" });
+  if (error) throw new Error(`Não foi possível enviar o logo: ${error.message}`);
+  return supabase.storage.from(BUCKET).getPublicUrl(caminho).data.publicUrl;
+}
+
+/** Foto de referência da encomenda personalizada, enviada pelo cliente (sem login). */
+export async function enviarFotoEncomenda(slug: string, arquivo: File): Promise<string> {
+  if (!arquivo.type.startsWith("image/")) throw new Error(`"${arquivo.name}" não é uma foto.`);
+  const conteudo = await comprimirFoto(arquivo, 1280, 0.8);
+  const contentType = conteudo.type || "image/jpeg";
+  const extensao = contentType === "image/png" ? "png" : contentType === "image/webp" ? "webp" : "jpg";
+  const caminho = `encomendas/${slug}/${Date.now()}-${Math.random().toString(36).slice(2, 10)}.${extensao}`;
+  const { error } = await supabase.storage.from(BUCKET).upload(caminho, conteudo, { contentType, upsert: false, cacheControl: "31536000" });
+  if (error) throw new Error("Não foi possível enviar a foto. Tente outra imagem.");
+  return supabase.storage.from(BUCKET).getPublicUrl(caminho).data.publicUrl;
+}

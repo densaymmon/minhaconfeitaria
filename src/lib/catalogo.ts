@@ -33,7 +33,89 @@ export type Catalogo = {
   endereco_retirada: string | null;
   hoje: string;
   produtos: ProdutoCatalogo[];
+  /** Campos da versão com agenda, aparência, bairros, cupons e encomenda (opcionais para catálogos em cache). */
+  cor?: string | null;
+  logo_url?: string | null;
+  dias_fechados?: number[];
+  datas_bloqueadas?: string[];
+  horarios_retirada?: string[];
+  bairros?: TaxaBairro[];
+  aceita_encomenda?: boolean;
+  tem_cupons?: boolean;
 };
+
+export type TaxaBairro = { bairro: string; taxa: number };
+
+export const DIAS_SEMANA = ["Domingo", "Segunda", "Terça", "Quarta", "Quinta", "Sexta", "Sábado"] as const;
+
+/** Dia da semana (0 = domingo) de uma data AAAA-MM-DD, sem depender do fuso. */
+export function diaDaSemana(iso: string) {
+  const [a, m, d] = iso.split("-").map(Number);
+  return new Date(Date.UTC(a ?? 1970, (m ?? 1) - 1, d ?? 1)).getUTCDay();
+}
+
+/** Motivo de a data não estar disponível (ou null se a confeitaria atende). */
+export function motivoDataIndisponivel(cat: Pick<Catalogo, "dias_fechados" | "datas_bloqueadas">, iso: string) {
+  if (!/^\d{4}-\d{2}-\d{2}$/.test(iso)) return null;
+  if ((cat.dias_fechados ?? []).includes(diaDaSemana(iso))) return `A confeitaria não atende às ${DIAS_SEMANA[diaDaSemana(iso)]?.toLowerCase()}s. Escolha outra data.`;
+  if ((cat.datas_bloqueadas ?? []).includes(iso)) return "A confeitaria não atende nesta data. Escolha outra.";
+  return null;
+}
+
+/** Primeira data a partir de `desde` em que a confeitaria atende (até 180 dias). */
+export function proximaDataDisponivel(cat: Pick<Catalogo, "dias_fechados" | "datas_bloqueadas">, desde: string) {
+  for (let i = 0; i <= 180; i++) {
+    const d = somarDias(desde, i);
+    if (!motivoDataIndisponivel(cat, d)) return d;
+  }
+  return desde;
+}
+
+/** Taxa de entrega: pelo bairro escolhido quando há lista; senão a taxa única. null = bairro ainda não escolhido. */
+export function taxaDeEntrega(cat: Pick<Catalogo, "taxa_entrega" | "bairros">, bairro: string | null | undefined) {
+  const lista = cat.bairros ?? [];
+  if (lista.length === 0) return Math.max(0, Number(cat.taxa_entrega) || 0);
+  const alvo = (bairro ?? "").trim().toLowerCase();
+  const achado = lista.find((b) => b.bairro.trim().toLowerCase() === alvo);
+  return achado ? Math.max(0, Number(achado.taxa) || 0) : null;
+}
+
+/** Código de cupom como gravado: maiúsculas, só letras e números, até 20. */
+export function normalizarCupom(codigo: string) {
+  return codigo.normalize("NFD").replace(/[\u0300-\u036f]/g, "").toUpperCase().replace(/[^A-Z0-9]/g, "").slice(0, 20);
+}
+
+/** Valida a lista de bairros editada pela confeitaria (mesmas regras do banco). */
+export function validarBairros(lista: TaxaBairro[]): string | null {
+  if (lista.length > 100) return "Cadastre no máximo 100 bairros.";
+  const vistos = new Set<string>();
+  for (const b of lista) {
+    const nome = b.bairro.trim();
+    if (!nome || nome.length > 60) return "Cada bairro precisa de um nome com até 60 letras.";
+    if (!Number.isFinite(b.taxa) || b.taxa < 0 || b.taxa > 1000) return `Taxa inválida para ${nome}.`;
+    const chave = nome.toLowerCase();
+    if (vistos.has(chave)) return `O bairro ${nome} aparece duas vezes.`;
+    vistos.add(chave);
+  }
+  return null;
+}
+
+/** Horários de retirada em HH:MM, sem repetidos e em ordem. */
+export function normalizarHorarios(texto: string[]): string[] | null {
+  const lista = texto.map((h) => h.trim()).filter(Boolean);
+  if (lista.some((h) => !/^([01]\d|2[0-3]):[0-5]\d$/.test(h))) return null;
+  return [...new Set(lista)].sort().slice(0, 24);
+}
+
+/** Cor legível sobre a cor da marca (texto branco ou escuro). */
+export function corDoTexto(hex: string) {
+  const m = /^#([0-9a-f]{6})$/i.exec(hex);
+  if (!m) return "#ffffff";
+  const n = parseInt(m[1] ?? "000000", 16);
+  const lin = (c: number) => { const v = c / 255; return v <= 0.03928 ? v / 12.92 : ((v + 0.055) / 1.055) ** 2.4; };
+  const l = 0.2126 * lin((n >> 16) & 255) + 0.7152 * lin((n >> 8) & 255) + 0.0722 * lin(n & 255);
+  return l > 0.45 ? "#1f1a17" : "#ffffff";
+}
 
 export type PedidoAcompanhamento = {
   numero: number;
@@ -353,4 +435,10 @@ export function mensagemPedidoPronto(d: DadosConfirmacao) {
     "",
     "Obrigado pela preferência! 💛",
   ].join("\n");
+}
+
+/** Fotos de referência da encomenda personalizada citadas nas observações do pedido. */
+export function fotosDeReferencia(texto: string | null | undefined) {
+  const achadas = (texto ?? "").match(/https:\/\/[^\s]+\/storage\/v1\/object\/public\/catalogo\/encomendas\/[^\s]+\.(?:jpe?g|png|webp)/gi) ?? [];
+  return [...new Set(achadas)].slice(0, 3);
 }

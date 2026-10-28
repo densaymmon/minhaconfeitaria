@@ -1,4 +1,5 @@
 import { OrderMessage } from "@/components/app/order-message";
+import { FotosReferencia } from "@/components/app/fotos-referencia";
 import { origemPublica } from "@/lib/catalogo";
 import { useRecurso } from "@/components/app/plano";
 import type { OrderDraft } from "@/lib/order-draft";
@@ -854,6 +855,7 @@ function PedidoForm() {
                 <Field label="Observações e personalizações">
                   <Textarea rows={3} value={f.observacoes} disabled={temProducaoRegistrada} onChange={(e) => set("observacoes", e.target.value)} placeholder="Ex.: escrever 'Parabéns Ana', sem lactose..." />
                 </Field>
+                <FotosReferencia texto={f.observacoes} />
               </div>
             </details>
           </>
@@ -970,6 +972,7 @@ function PedidoForm() {
               <Field label="Observações e personalizações">
                 <Textarea rows={3} value={f.observacoes} disabled={temProducaoRegistrada} onChange={(e) => set("observacoes", e.target.value)} placeholder="Ex.: escrever 'Parabéns Ana', sem lactose..." />
               </Field>
+              <FotosReferencia texto={f.observacoes} />
             </Card>
           </>
         )}
