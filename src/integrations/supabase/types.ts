@@ -14,6 +14,87 @@ export type Database = {
   }
   public: {
     Tables: {
+      assinatura_pagamentos: {
+        Row: {
+          created_at: string
+          forma: string | null
+          id: string
+          meses: number
+          observacao: string | null
+          pago_ate_anterior: string | null
+          pago_ate_novo: string
+          pago_em: string
+          plano_id: string | null
+          registrado_por: string | null
+          user_id: string
+          valor: number
+        }
+        Insert: {
+          created_at?: string
+          forma?: string | null
+          id?: string
+          meses: number
+          observacao?: string | null
+          pago_ate_anterior?: string | null
+          pago_ate_novo: string
+          pago_em: string
+          plano_id?: string | null
+          registrado_por?: string | null
+          user_id: string
+          valor: number
+        }
+        Update: {
+          created_at?: string
+          forma?: string | null
+          id?: string
+          meses?: number
+          observacao?: string | null
+          pago_ate_anterior?: string | null
+          pago_ate_novo?: string
+          pago_em?: string
+          plano_id?: string | null
+          registrado_por?: string | null
+          user_id?: string
+          valor?: number
+        }
+        Relationships: []
+      }
+      assinaturas: {
+        Row: {
+          ciclo: string
+          created_at: string
+          pago_ate: string | null
+          plano_id: string
+          situacao: string
+          teste_ate: string | null
+          updated_at: string
+          user_id: string
+          valor: number | null
+        }
+        Insert: {
+          ciclo?: string
+          created_at?: string
+          pago_ate?: string | null
+          plano_id: string
+          situacao?: string
+          teste_ate?: string | null
+          updated_at?: string
+          user_id: string
+          valor?: number | null
+        }
+        Update: {
+          ciclo?: string
+          created_at?: string
+          pago_ate?: string | null
+          plano_id?: string
+          situacao?: string
+          teste_ate?: string | null
+          updated_at?: string
+          user_id?: string
+          valor?: number | null
+        }
+        Relationships: []
+      }
       clientes: {
         Row: {
           created_at: string
@@ -1075,6 +1156,48 @@ export type Database = {
         }
         Relationships: []
       }
+      planos: {
+        Row: {
+          ativo: boolean
+          descricao: string | null
+          id: string
+          limite_pedidos_mes: number | null
+          limite_produtos: number | null
+          nome: string
+          ordem: number
+          preco_anual: number | null
+          preco_mensal: number
+          recursos: string[]
+          updated_at: string
+        }
+        Insert: {
+          ativo?: boolean
+          descricao?: string | null
+          id: string
+          limite_pedidos_mes?: number | null
+          limite_produtos?: number | null
+          nome: string
+          ordem?: number
+          preco_anual?: number | null
+          preco_mensal?: number
+          recursos?: string[]
+          updated_at?: string
+        }
+        Update: {
+          ativo?: boolean
+          descricao?: string | null
+          id?: string
+          limite_pedidos_mes?: number | null
+          limite_produtos?: number | null
+          nome?: string
+          ordem?: number
+          preco_anual?: number | null
+          preco_mensal?: number
+          recursos?: string[]
+          updated_at?: string
+        }
+        Relationships: []
+      }
       produto_midias: {
         Row: {
           created_at: string
@@ -1241,13 +1364,33 @@ export type Database = {
         Args: { p_versao: string }
         Returns: undefined
       }
-      admin_atualizar_confeitaria: {
-        Args: { p_acesso: string; p_observacao: string | null; p_pago_ate: string | null; p_user_id: string }
-        Returns: undefined
+      admin_config: {
+        Args: never
+        Returns: Json
       }
       admin_listar_confeitarias: {
         Args: never
         Returns: Json
+      }
+      admin_listar_pagamentos: {
+        Args: { p_user_id: string | null }
+        Returns: Json
+      }
+      admin_registrar_pagamento: {
+        Args: { p_forma: string | null; p_meses: number; p_observacao: string | null; p_pago_em: string; p_user_id: string; p_valor: number }
+        Returns: string
+      }
+      admin_resumo: {
+        Args: never
+        Returns: Json
+      }
+      admin_salvar_empresa: {
+        Args: { p: Json; p_user_id: string }
+        Returns: undefined
+      }
+      admin_salvar_plano: {
+        Args: { p: Json }
+        Returns: undefined
       }
       admin_salvar_plataforma: {
         Args: { p: Json }
@@ -1263,6 +1406,10 @@ export type Database = {
       }
       catalogo_publico: {
         Args: { p_slug: string }
+        Returns: Json
+      }
+      minha_assinatura: {
+        Args: never
         Returns: Json
       }
       plataforma_publica: {

@@ -1,3 +1,4 @@
+import type { MinhaAssinatura, Plano } from "./assinatura";
 import type { PlataformaPublica } from "./termos";
 import { queryOptions } from "@tanstack/react-query";
 import { supabase } from "@/integrations/supabase/client";
@@ -175,6 +176,28 @@ export const ehAdminQ = queryOptions({
   queryFn: async () => {
     const { data, error } = await supabase.rpc("eh_admin_plataforma");
     return !error && data === true;
+  },
+  staleTime: 10 * 60_000,
+});
+
+/** Plano e assinatura da conta logada; null em contas sem assinatura (tudo liberado). */
+export const minhaAssinaturaQ = queryOptions({
+  queryKey: ["minha-assinatura"],
+  queryFn: async (): Promise<MinhaAssinatura | null> => {
+    const { data, error } = await supabase.rpc("minha_assinatura");
+    if (error || !data) return null;
+    return data as unknown as MinhaAssinatura;
+  },
+  staleTime: 5 * 60_000,
+});
+
+/** Planos ativos, do mais simples ao mais completo. */
+export const planosQ = queryOptions({
+  queryKey: ["planos"],
+  queryFn: async (): Promise<Plano[]> => {
+    const { data, error } = await supabase.from("planos").select("*").eq("ativo", true).order("ordem");
+    if (error) return [];
+    return (data ?? []).map((p) => ({ ...p, preco_mensal: Number(p.preco_mensal), preco_anual: p.preco_anual == null ? null : Number(p.preco_anual) }));
   },
   staleTime: 10 * 60_000,
 });

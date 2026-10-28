@@ -15,12 +15,14 @@ import { supabase } from '@/integrations/supabase/client';
 import { PageHeader,Field,Card } from '@/components/app/ui';
 import { Input } from '@/components/ui/input';
 import { Button } from '@/components/ui/button';
+import { CartaoMeuPlano, RecursoBloqueado, useRecurso } from '@/components/app/plano';
 export const Route=createFileRoute('/_authenticated/configuracoes')({
  loader: async ({ context }) => { await Promise.all([context.queryClient.ensureQueryData(appQueries.configQ),context.queryClient.ensureQueryData(appQueries.confeitariaQ)]); },
  errorComponent: ({error}) => <p role="alert" className="py-8 text-destructive">{error instanceof Error ? error.message : "Não foi possível carregar os registros."}</p>,
  notFoundComponent: () => <p>Registro não encontrado.</p>,
 head:()=>({meta:[{title:'Configurações — Doce Gestão'},{name:'description',content:'Dados da confeitaria, chave Pix, taxas de pagamento e impostos.'},{property:'og:title',content:'Configurações — Doce Gestão'},{property:'og:description',content:'Dados da confeitaria, chave Pix, taxas de pagamento e impostos.'},{property:'og:type',content:'website'},{name:'twitter:card',content:'summary_large_image'}]}),component:ConfigPage});
 function ConfigPage(){
+ const planoCatalogo=useRecurso('catalogo');
  const {data}=useSuspenseQuery(configQ);const {data:confeitaria}=useSuspenseQuery(confeitariaQ);const {user}=Route.useRouteContext();const qc=useQueryClient();
  const [f,setF]=useState(()=>Object.fromEntries(Object.entries(data).map(([k,v])=>[k,String(v)])));const [pixChave,setPixChave]=useState(data.pix_chave??'');const [busy,setBusy]=useState(false);
  const [loja,setLoja]=useState(()=>({nome:confeitaria?.nome??'',slogan:confeitaria?.slogan??'',whatsapp:confeitaria?.whatsapp??'',cidade:confeitaria?.cidade??''}));
@@ -72,6 +74,7 @@ function ConfigPage(){
   toast.success('Configurações salvas!');
  }
  return <><PageHeader title="Configurações" back="/mais"/><form onSubmit={salvar} className="space-y-5">
+  <CartaoMeuPlano/>
   <Card className="space-y-4">
    <h2 className="text-lg font-semibold">Dados da confeitaria</h2>
    {confeitaria?<>
@@ -81,7 +84,8 @@ function ConfigPage(){
     <Field label="WhatsApp da confeitaria (opcional)"><Input type="tel" inputMode="tel" maxLength={30} value={loja.whatsapp} onChange={e=>setLoja({...loja,whatsapp:e.target.value})} placeholder="(19) 99999-9999" className="h-11 bg-card"/></Field>
    </>:<p className="text-sm text-muted-foreground">Os dados da confeitaria ficam disponíveis assim que a atualização do banco de dados for aplicada.</p>}
   </Card>
-  {temCatalogo&&<Card className="space-y-4">
+  {temCatalogo&&!planoCatalogo&&<RecursoBloqueado recurso="catalogo" compacto/>}
+  {temCatalogo&&planoCatalogo&&<Card className="space-y-4">
    <div className="flex items-center justify-between gap-3">
     <div><h2 className="text-lg font-semibold">Catálogo online</h2><p className="text-xs text-muted-foreground">Página onde o cliente vê os produtos e faz o pedido.</p></div>
     <Switch checked={cat.ativo} onCheckedChange={v=>setCat({...cat,ativo:v})} aria-label="Ativar catálogo online"/>

@@ -1,9 +1,11 @@
 import { createFileRoute, Link, Outlet, redirect, useNavigate, useRouterState } from "@tanstack/react-router";
 import { Suspense, useEffect, useRef, useState } from "react";
 import { toast } from "sonner";
-import { BookOpen, CakeSlice, ChartNoAxesCombined, ChefHat, ChevronRight, ClipboardList, LayoutDashboard, LogOut, Menu, Package, Settings, ShieldCheck, ShoppingCart, Users, Wallet, X } from "lucide-react";
+import { BookOpen, CakeSlice, ChartNoAxesCombined, ChefHat, ChevronRight, ClipboardList, LayoutDashboard, LogOut, Menu, Package, Settings, ShoppingCart, Users, Wallet, X } from "lucide-react";
 import { useQuery, useQueryClient } from "@tanstack/react-query";
-import { confeitariaQ, ehAdminQ } from "@/lib/queries";
+import { confeitariaQ, ehAdminQ, minhaAssinaturaQ } from "@/lib/queries";
+import { recursoDaPagina, temRecurso } from "@/lib/assinatura";
+import { AvisoAssinatura, RecursoBloqueado, TelaAssinaturaSuspensa, TelaContaAdmin } from "@/components/app/plano";
 import { TERMOS_VERSAO } from "@/lib/termos";
 import { AceiteTermos, TelaBloqueada, TelaPendente } from "@/components/app/acesso-conta";
 import { supabase } from "@/integrations/supabase/client";
@@ -47,6 +49,7 @@ function Layout() {
   const { data: confeitaria } = useQuery({ ...confeitariaQ, refetchInterval: (q) => (q.state.data?.acesso === "pendente" ? 60_000 : false) });
   const { data: adminInfo } = useQuery(ehAdminQ);
   const admin = adminInfo === true;
+  const { data: assinatura } = useQuery({ ...minhaAssinaturaQ, refetchInterval: 15 * 60_000 });
   const pathname = useRouterState({ select: (s) => s.location.pathname });
   // Campos da migração 0038; antes dela nada é bloqueado.
   const temControleAcesso = Boolean(confeitaria && "acesso" in confeitaria);
@@ -56,6 +59,8 @@ function Layout() {
   const precisaComecar = temControleAcesso && acesso === "ativo" && !precisaAceitarTermos && !confeitaria?.onboarding_concluido_em;
   const novosCatalogo = useAlertaCatalogo((id) => void navigate({ to: "/pedidos/$id", params: { id } }));
   const nomeLoja = confeitaria?.nome?.trim() || "Gestão da confeitaria";
+  const recursoPagina = recursoDaPagina(pathname);
+  const recursoBloqueado = recursoPagina && !temRecurso(assinatura, recursoPagina) ? recursoPagina : null;
 
   useEffect(() => {
     if (!maisAberto) return;
@@ -103,12 +108,6 @@ function Layout() {
                 <span>{label}</span>
               </Link>
             ))}
-            {admin && (
-              <Link to="/plataforma" onClick={close} className={linkClass(false)} activeProps={{ className: linkClass(true) }}>
-                <ShieldCheck className="size-5 shrink-0" />
-                <span>Plataforma</span>
-              </Link>
-            )}
           </div>
         </div>
         <div className="mt-6">
@@ -126,8 +125,13 @@ function Layout() {
     );
   }
 
+  // Conta de administração (sem confeitaria): o lugar dela é o painel separado.
+  if (admin && confeitaria === null) return <TelaContaAdmin sair={() => void sair()} />;
   if (confeitaria && acesso === "bloqueado") return <TelaBloqueada sair={() => void sair()} />;
   if (confeitaria && acesso === "pendente") return <TelaPendente confeitaria={confeitaria} sair={() => void sair()} />;
+  if (confeitaria && !admin && assinatura && (assinatura.situacao === "suspensa" || assinatura.situacao === "cancelada")) {
+    return <TelaAssinaturaSuspensa assinatura={assinatura} sair={() => void sair()} />;
+  }
   if (confeitaria && precisaAceitarTermos) return <AceiteTermos jaAceitou={Boolean(confeitaria.termos_versao)} sair={() => void sair()} />;
 
   return (
@@ -168,8 +172,9 @@ function Layout() {
         </header>
 
         <main className="mx-auto w-full max-w-7xl px-4 pb-safe pt-4 sm:px-6 sm:pt-6 lg:px-8 lg:pb-8 lg:pt-8">
+          <AvisoAssinatura />
           <Suspense fallback={<div className="py-20 text-center text-sm text-muted-foreground" role="status">Carregando...</div>}>
-            <Outlet />
+            {recursoBloqueado ? <RecursoBloqueado recurso={recursoBloqueado} /> : <Outlet />}
           </Suspense>
         </main>
 
