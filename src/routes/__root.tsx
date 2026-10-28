@@ -119,6 +119,11 @@ function RootComponent() {
     let usuarioAtual: string | null | undefined;
     void supabase.auth.getSession().then(({ data }) => { usuarioAtual ??= data.session?.user.id ?? null; });
     const { data } = supabase.auth.onAuthStateChange((event, session) => {
+      // Link de recuperação que caiu em outra página (ex.: endereço principal): leva para criar a nova senha.
+      if (event === "PASSWORD_RECOVERY" && window.location.pathname !== "/reset-password") {
+        window.location.assign("/reset-password");
+        return;
+      }
       if (event !== "SIGNED_IN" && event !== "SIGNED_OUT" && event !== "USER_UPDATED") return;
       const novo = session?.user.id ?? null;
       if (event === "SIGNED_IN" && novo === usuarioAtual) return;
