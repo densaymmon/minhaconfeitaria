@@ -15,6 +15,7 @@ export type Pedido = Tables<"pedidos"> & {
   clientes: { nome: string; telefone: string | null } | null;
 };
 export type Despesa = Tables<"despesas">;
+export type Confeitaria = Tables<"confeitarias">;
 export type Compra = Tables<"compras">;
 export type CompraItem = Tables<"compra_itens">;
 export type ContaPagar = Tables<"contas_pagar">;
@@ -82,6 +83,23 @@ export const configQ = queryOptions({
     const { user_id: _u, ...rest } = row;
     return Object.fromEntries(Object.entries(rest).map(([k, v]) => [k, k === "pix_chave" ? String(v ?? "") : Number(v)])) as Config;
   },
+});
+
+/**
+ * Dados da confeitaria da conta logada (nome, slogan, WhatsApp).
+ * Retorna null enquanto a migração 0033 não estiver aplicada, para a tela continuar funcionando.
+ */
+export const confeitariaQ = queryOptions({
+  queryKey: ["confeitaria"],
+  queryFn: async (): Promise<Confeitaria | null> => {
+    const { data, error } = await supabase.from("confeitarias").select("*").maybeSingle();
+    if (error) {
+      if (error.code === "PGRST205" || error.code === "42P01" || error.message.includes("confeitarias")) return null;
+      throw new Error(error.message);
+    }
+    return data;
+  },
+  staleTime: 5 * 60_000,
 });
 
 export const comprasQ = queryOptions({

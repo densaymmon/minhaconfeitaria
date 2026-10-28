@@ -33,3 +33,12 @@
 - [x] Aviso de cliente sem telefone.
 - [ ] Custos indiretos (gás, energia, mão de obra) por configuração geral — aguarda decisão do modelo.
 - [ ] Correção assistida de itens antigos com custo zero — exige confirmação do proprietário.
+
+## Evolução — Etapa 2: base multiempresa
+- [x] Cadastro da confeitaria (nome, slogan, WhatsApp, slug do catálogo) com RLS por dona.
+- [x] Confeitaria criada automaticamente a cada novo cadastro; contas existentes preservam a marca atual.
+- [x] Bloqueio de proprietária única substituído por `plataforma_config.cadastro_aberto` (fechado por padrão).
+- [x] Marca e chave Pix configuráveis; nenhum nome de confeitaria fixo no código.
+- [x] Teste de isolamento entre duas confeitarias (tabelas e RPCs) no CI.
+- [ ] Aplicar `0033_base_multiempresa.sql` no banco do Lovable Cloud após backup (ver docs/deploy/README-multiempresa.md).
+- [ ] Funcionários por confeitaria e numeração de pedidos por confeitaria.

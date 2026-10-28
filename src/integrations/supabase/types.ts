@@ -137,6 +137,42 @@ export type Database = {
         }
         Relationships: []
       }
+      confeitarias: {
+        Row: {
+          created_at: string
+          id: string
+          logo_url: string | null
+          nome: string
+          slogan: string | null
+          slug: string | null
+          updated_at: string
+          user_id: string
+          whatsapp: string | null
+        }
+        Insert: {
+          created_at?: string
+          id?: string
+          logo_url?: string | null
+          nome?: string
+          slogan?: string | null
+          slug?: string | null
+          updated_at?: string
+          user_id?: string
+          whatsapp?: string | null
+        }
+        Update: {
+          created_at?: string
+          id?: string
+          logo_url?: string | null
+          nome?: string
+          slogan?: string | null
+          slug?: string | null
+          updated_at?: string
+          user_id?: string
+          whatsapp?: string | null
+        }
+        Relationships: []
+      }
       configuracoes: {
         Row: {
           imposto_pct: number
