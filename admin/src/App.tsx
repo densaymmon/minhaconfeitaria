@@ -74,11 +74,11 @@ function Login() {
         if (error) throw new Error(error.message.includes("Invalid") ? "E-mail ou senha incorretos." : error.message.includes("confirm") ? "Confirme seu e-mail pelo link que enviamos antes de entrar." : error.message);
       } else if (modo === "criar") {
         if (senha.length < 8) throw new Error("A senha precisa ter pelo menos 8 caracteres.");
-        const { data, error } = await supabase.auth.signUp({ email, password: senha, options: { emailRedirectTo: window.location.href.split("#")[0] } });
+        const { data, error } = await supabase.auth.signUp({ email, password: senha, options: { emailRedirectTo: `${window.location.origin}${window.location.pathname}` } });
         if (error) throw new Error(error.message.includes("Database error") ? "Este e-mail não está autorizado a administrar a plataforma." : error.message);
         if (!data.session) setAviso("Acesso criado! Abra seu e-mail e clique no link de confirmação. Depois, volte aqui e entre com e-mail e senha.");
       } else {
-        const { error } = await supabase.auth.resetPasswordForEmail(email, { redirectTo: window.location.href.split("#")[0] });
+        const { error } = await supabase.auth.resetPasswordForEmail(email, { redirectTo: `${window.location.origin}${window.location.pathname}` });
         if (error) throw new Error(error.message);
         setAviso("Enviamos um link para redefinir a senha.");
       }
