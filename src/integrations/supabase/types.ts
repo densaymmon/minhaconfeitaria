@@ -1107,6 +1107,7 @@ export type Database = {
           modo_preparo: string | null
           no_catalogo: boolean
           nome: string
+          opcoes: Json
           preco_venda: number
           rendimento: number
           user_id: string
@@ -1127,6 +1128,7 @@ export type Database = {
           modo_preparo?: string | null
           no_catalogo?: boolean
           nome: string
+          opcoes?: Json
           preco_venda?: number
           rendimento?: number
           user_id?: string
@@ -1147,6 +1149,7 @@ export type Database = {
           modo_preparo?: string | null
           no_catalogo?: boolean
           nome?: string
+          opcoes?: Json
           preco_venda?: number
           rendimento?: number
           user_id?: string

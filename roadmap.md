@@ -61,3 +61,6 @@
 ## Pix copia e cola e aviso de pedido pronto
 - [x] Pix copia e cola (BR Code estático) com o valor em aberto e o número do pedido, sem gateway; tipo da chave e cidade nas configurações.
 - [x] Aviso de pedido pronto no WhatsApp (lista, pedido e produção), com retirada/entrega, saldo, Pix e link; registro do envio.
+
+## Variações de produto
+- [x] Grupos de opções (tamanho, sabor, recheio) com acréscimo de preço e de custo, escolha obrigatória no catálogo, preço/custo/descrição calculados no servidor.

@@ -13,6 +13,11 @@ import { brl, dataBR } from "@/lib/format";
 import { cn } from "@/lib/utils";
 import {
   alterarQuantidade,
+  chaveCarrinho,
+  escolhaCompleta,
+  precoComOpcoes,
+  precoMinimo,
+  type Escolha,
   capaDoProduto,
   midiasDoProduto,
   type ProdutoCatalogo,
@@ -162,6 +167,7 @@ function Loja({ slug, catalogo }: { slug: string; catalogo: Catalogo }) {
           <ul className={cn("grid gap-3", categorias.length > 1 ? "" : "pt-4")}>
             {visiveis.map((p) => {
               const qtd = carrinho[p.id] ?? 0;
+              const temOpcoes = (p.opcoes?.length ?? 0) > 0;
               return (
                 <li key={p.id} className="flex gap-3 rounded-2xl bg-card p-3 shadow-soft">
                   <button type="button" onClick={() => setDetalhe(p)} aria-label={`Ver fotos e detalhes de ${p.nome}`} className="relative size-24 shrink-0 overflow-hidden rounded-xl bg-muted sm:size-28">
@@ -173,8 +179,10 @@ function Loja({ slug, catalogo }: { slug: string; catalogo: Catalogo }) {
                     {p.descricao && <p className="mt-0.5 line-clamp-3 text-sm text-muted-foreground">{p.descricao}</p>}
                     {p.antecedencia_dias > 0 && <p className="mt-1 text-xs text-muted-foreground">Encomende com {p.antecedencia_dias} dia(s) de antecedência</p>}
                     <div className="mt-auto flex items-center justify-between gap-2 pt-2">
-                      <span className="font-semibold tabular-nums">{brl(p.preco)}</span>
-                      {qtd === 0 ? (
+                      <span className="font-semibold tabular-nums">{temOpcoes ? <><span className="text-xs font-normal text-muted-foreground">a partir de </span>{brl(precoMinimo(p))}</> : brl(p.preco)}</span>
+                      {temOpcoes ? (
+                        <Button size="sm" onClick={() => setDetalhe(p)} aria-label={`Escolher opções de ${p.nome}`}><Plus className="size-4" /> Escolher</Button>
+                      ) : qtd === 0 ? (
                         <Button size="sm" onClick={() => setCarrinho((c) => alterarQuantidade(c, p.id, 1))} aria-label={`Adicionar ${p.nome}`}><Plus className="size-4" /> Adicionar</Button>
                       ) : (
                         <Stepper nome={p.nome} quantidade={qtd} onChange={(d) => setCarrinho((c) => alterarQuantidade(c, p.id, d))} />
@@ -190,10 +198,11 @@ function Loja({ slug, catalogo }: { slug: string; catalogo: Catalogo }) {
       </main>
 
       <DetalheProduto
+        key={detalhe?.id ?? "nenhum"}
         produto={detalhe}
-        quantidade={detalhe ? (carrinho[detalhe.id] ?? 0) : 0}
+        carrinho={carrinho}
         onClose={() => setDetalhe(null)}
-        onChange={(d) => { if (detalhe) setCarrinho((c) => alterarQuantidade(c, detalhe.id, d)); }}
+        onChange={(chave, d) => setCarrinho((c) => alterarQuantidade(c, chave, d))}
       />
 
       {resumo.itens > 0 && (
@@ -225,8 +234,13 @@ function Capa({ produto }: { produto: ProdutoCatalogo }) {
 }
 
 /** Fotos e vídeos do produto em carrossel, com descrição e botão de adicionar. */
-function DetalheProduto({ produto, quantidade, onClose, onChange }: { produto: ProdutoCatalogo | null; quantidade: number; onClose: () => void; onChange: (delta: number) => void }) {
+function DetalheProduto({ produto, carrinho, onClose, onChange }: { produto: ProdutoCatalogo | null; carrinho: Carrinho; onClose: () => void; onChange: (chave: string, delta: number) => void }) {
   const [api, setApi] = useState<CarouselApi>();
+  const [escolha, setEscolha] = useState<Escolha>({});
+  const grupos = produto?.opcoes ?? [];
+  const completa = produto ? escolhaCompleta(produto, escolha) : false;
+  const chave = produto && completa ? chaveCarrinho(produto.id, escolha) : null;
+  const quantidade = chave ? (carrinho[chave] ?? 0) : 0;
   const [atual, setAtual] = useState(0);
   useEffect(() => {
     if (!api) return;
@@ -275,11 +289,31 @@ function DetalheProduto({ produto, quantidade, onClose, onChange }: { produto: P
               <DialogTitle className="font-display text-xl">{produto.nome}</DialogTitle>
               <DialogDescription className="whitespace-pre-line text-sm">{produto.descricao || produto.categoria}</DialogDescription>
               {produto.antecedencia_dias > 0 && <p className="text-xs text-muted-foreground">Encomende com {produto.antecedencia_dias} dia(s) de antecedência.</p>}
+              {grupos.map((g) => (
+                <fieldset key={g.grupo} className="space-y-2 pt-1">
+                  <legend className="text-sm font-semibold">{g.grupo} <span className="font-normal text-muted-foreground">· escolha 1</span></legend>
+                  <div className="flex flex-wrap gap-2">
+                    {g.itens.map((i) => {
+                      const marcado = escolha[g.grupo] === i.nome;
+                      return (
+                        <button key={i.nome} type="button" aria-pressed={marcado} onClick={() => setEscolha((e) => ({ ...e, [g.grupo]: i.nome }))}
+                          className={cn("rounded-full border px-3 py-2 text-sm", marcado ? "border-primary bg-primary text-primary-foreground" : "bg-background hover:bg-muted")}>
+                          {i.nome}{Number(i.preco) !== 0 && <span className={cn("ml-1 text-xs", marcado ? "text-primary-foreground/80" : "text-muted-foreground")}>{Number(i.preco) > 0 ? "+" : "−"}{brl(Math.abs(Number(i.preco)))}</span>}
+                        </button>
+                      );
+                    })}
+                  </div>
+                </fieldset>
+              ))}
               <div className="flex items-center justify-between gap-3 pt-2">
-                <span className="text-lg font-semibold tabular-nums">{brl(produto.preco)}</span>
-                {quantidade === 0
-                  ? <Button onClick={() => onChange(1)}><Plus className="size-4" /> Adicionar</Button>
-                  : <Stepper nome={produto.nome} quantidade={quantidade} onChange={onChange} />}
+                <span className="text-lg font-semibold tabular-nums">
+                  {grupos.length && !completa ? <><span className="text-xs font-normal text-muted-foreground">a partir de </span>{brl(precoMinimo(produto))}</> : brl(precoComOpcoes(produto, escolha))}
+                </span>
+                {!chave
+                  ? <Button disabled>Escolha as opções</Button>
+                  : quantidade === 0
+                  ? <Button onClick={() => onChange(chave, 1)}><Plus className="size-4" /> Adicionar</Button>
+                  : <Stepper nome={produto.nome} quantidade={quantidade} onChange={(d) => onChange(chave, d)} />}
               </div>
             </div>
           </>
@@ -341,7 +375,7 @@ function Finalizar({ slug, catalogo, carrinho, setCarrinho, voltar, limparCarrin
       p_token: token.current,
       p_cliente: { nome: cliente.nome.trim(), telefone: cliente.telefone, endereco: tipo === "entrega" ? cliente.endereco.trim() : "" },
       p_entrega: { tipo, data, hora: hora || null, observacoes: obs.trim() },
-      p_itens: resumo.linhas.map((l) => ({ produto_id: l.produto.id, quantidade: l.quantidade })),
+      p_itens: resumo.linhas.map((l) => ({ produto_id: l.produto.id, quantidade: l.quantidade, opcoes: l.escolha })),
     });
     setEnviando(false);
     const codigo = (resposta as { codigo?: string } | null)?.codigo;
@@ -374,12 +408,12 @@ function Finalizar({ slug, catalogo, carrinho, setCarrinho, voltar, limparCarrin
         <section className="rounded-2xl bg-card p-4 shadow-soft">
           <ul className="divide-y">
             {resumo.linhas.map((l) => (
-              <li key={l.produto.id} className="flex items-center justify-between gap-3 py-2.5">
+              <li key={l.chave} className="flex items-center justify-between gap-3 py-2.5">
                 <div className="min-w-0">
-                  <p className="font-medium leading-snug">{l.produto.nome}</p>
-                  <p className="text-xs text-muted-foreground tabular-nums">{brl(l.produto.preco)} cada · {brl(l.total)}</p>
+                  <p className="font-medium leading-snug">{l.descricao}</p>
+                  <p className="text-xs text-muted-foreground tabular-nums">{brl(l.precoUnit)} cada · {brl(l.total)}</p>
                 </div>
-                <Stepper nome={l.produto.nome} quantidade={l.quantidade} onChange={(d) => setCarrinho((c) => alterarQuantidade(c, l.produto.id, d))} />
+                <Stepper nome={l.descricao} quantidade={l.quantidade} onChange={(d) => setCarrinho((c) => alterarQuantidade(c, l.chave, d))} />
               </li>
             ))}
           </ul>

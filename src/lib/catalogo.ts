@@ -4,6 +4,11 @@
 
 export type MidiaCatalogo = { tipo: "imagem" | "video"; url: string };
 
+/** Grupo de escolha única (ex.: Tamanho) com o acréscimo de preço de cada opção. */
+export type GrupoOpcoes = { grupo: string; itens: { nome: string; preco: number }[] };
+/** Opções escolhidas pelo cliente: grupo → opção. */
+export type Escolha = Record<string, string>;
+
 export type ProdutoCatalogo = {
   id: string;
   nome: string;
@@ -13,6 +18,7 @@ export type ProdutoCatalogo = {
   imagem_url: string | null;
   antecedencia_dias: number;
   midias?: MidiaCatalogo[];
+  opcoes?: GrupoOpcoes[];
 };
 
 export type Catalogo = {
@@ -48,8 +54,52 @@ export type PedidoAcompanhamento = {
   confeitaria: { nome: string; whatsapp: string | null; slug: string | null; endereco_retirada: string | null; pix_chave: string | null; pix_tipo?: string | null; cidade?: string | null };
 };
 
-/** Carrinho: produto_id → quantidade. */
+/** Carrinho: chave do item (produto + opções escolhidas) → quantidade. */
 export type Carrinho = Record<string, number>;
+
+const arred = (v: number) => Math.round(v * 100) / 100;
+
+/** Chave estável do item no carrinho: o mesmo produto com opções diferentes vira outra linha. */
+export function chaveCarrinho(produtoId: string, escolha?: Escolha | null) {
+  const pares = Object.entries(escolha ?? {}).sort(([a], [b]) => a.localeCompare(b));
+  return pares.length ? `${produtoId}|${encodeURIComponent(JSON.stringify(pares))}` : produtoId;
+}
+
+export function lerChaveCarrinho(chave: string): { produtoId: string; escolha: Escolha } {
+  const corte = chave.indexOf("|");
+  if (corte < 0) return { produtoId: chave, escolha: {} };
+  try {
+    const pares = JSON.parse(decodeURIComponent(chave.slice(corte + 1))) as unknown;
+    const escolha: Escolha = {};
+    if (Array.isArray(pares)) for (const par of pares) if (Array.isArray(par) && typeof par[0] === "string" && typeof par[1] === "string") escolha[par[0]] = par[1];
+    return { produtoId: chave.slice(0, corte), escolha };
+  } catch {
+    return { produtoId: chave.slice(0, corte), escolha: {} };
+  }
+}
+
+/** Todas as opções obrigatórias escolhidas, sem opções a mais nem inexistentes. */
+export function escolhaCompleta(p: ProdutoCatalogo, escolha: Escolha) {
+  const grupos = p.opcoes ?? [];
+  if (Object.keys(escolha).some((g) => !grupos.some((x) => x.grupo === g))) return false;
+  return grupos.every((g) => g.itens.some((i) => i.nome === escolha[g.grupo]));
+}
+
+export function precoComOpcoes(p: ProdutoCatalogo, escolha: Escolha) {
+  const extra = (p.opcoes ?? []).reduce((s, g) => s + (g.itens.find((i) => i.nome === escolha[g.grupo])?.preco ?? 0), 0);
+  return arred(Number(p.preco) + extra);
+}
+
+/** Menor preço possível ("a partir de"), para produtos com opções. */
+export function precoMinimo(p: ProdutoCatalogo) {
+  return arred(Number(p.preco) + (p.opcoes ?? []).reduce((s, g) => s + Math.min(...g.itens.map((i) => Number(i.preco))), 0));
+}
+
+/** Mesmo formato da descrição gravada pelo servidor: "Bolo (Tamanho: G, Sabor: Morango)". */
+export function descricaoComOpcoes(p: ProdutoCatalogo, escolha: Escolha) {
+  const partes = (p.opcoes ?? []).filter((g) => escolha[g.grupo]).map((g) => `${g.grupo}: ${escolha[g.grupo]}`);
+  return partes.length ? `${p.nome} (${partes.join(", ")})` : p.nome;
+}
 
 export const QTD_MAX = 99;
 
@@ -62,22 +112,27 @@ export function alterarQuantidade(carrinho: Carrinho, produtoId: string, delta: 
   return proximo;
 }
 
-/** Remove do carrinho produtos que saíram do catálogo e limita quantidades. */
+/** Remove do carrinho produtos/opções que saíram do catálogo e limita quantidades. */
 export function limparCarrinho(carrinho: Carrinho, produtos: ProdutoCatalogo[]): Carrinho {
-  const ids = new Set(produtos.map((p) => p.id));
+  const porId = new Map(produtos.map((p) => [p.id, p]));
   const limpo: Carrinho = {};
-  for (const [id, qtd] of Object.entries(carrinho)) {
+  for (const [chave, qtd] of Object.entries(carrinho)) {
     const q = Math.floor(Number(qtd));
-    if (ids.has(id) && q > 0) limpo[id] = Math.min(QTD_MAX, q);
+    const { produtoId, escolha } = lerChaveCarrinho(chave);
+    const produto = porId.get(produtoId);
+    if (produto && q > 0 && escolhaCompleta(produto, escolha)) limpo[chave] = Math.min(QTD_MAX, q);
   }
   return limpo;
 }
 
 export function resumoCarrinho(carrinho: Carrinho, produtos: ProdutoCatalogo[], opcoes: { entrega: boolean; taxaEntrega: number; hoje: string }) {
   const porId = new Map(produtos.map((p) => [p.id, p]));
-  const linhas = Object.entries(carrinho).flatMap(([id, quantidade]) => {
-    const produto = porId.get(id);
-    return produto ? [{ produto, quantidade, total: Math.round(produto.preco * 100) * quantidade / 100 }] : [];
+  const linhas = Object.entries(carrinho).flatMap(([chave, quantidade]) => {
+    const { produtoId, escolha } = lerChaveCarrinho(chave);
+    const produto = porId.get(produtoId);
+    if (!produto || !escolhaCompleta(produto, escolha)) return [];
+    const precoUnit = precoComOpcoes(produto, escolha);
+    return [{ chave, produto, escolha, quantidade, precoUnit, descricao: descricaoComOpcoes(produto, escolha), total: arred(precoUnit * quantidade) }];
   });
   const itens = linhas.reduce((s, l) => s + l.quantidade, 0);
   const subtotal = Math.round(linhas.reduce((s, l) => s + l.total, 0) * 100) / 100;
