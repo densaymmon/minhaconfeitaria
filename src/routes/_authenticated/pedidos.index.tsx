@@ -13,7 +13,8 @@ import { Card, PagamentoBadge, PageHeader, StatusBadge } from "@/components/app/
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { ClienteDialog } from "./clientes.index";
-import type { Cliente } from "@/lib/queries";
+import type { Cliente, Pedido } from "@/lib/queries";
+import { alterarPedido, otimista } from "@/lib/cache-pedidos";
 import { cn } from "@/lib/utils";
 import { avisoProntoWhatsApp, confirmacaoWhatsApp, precisaAvisarPronto, precisaConfirmar } from "@/lib/whatsapp-pedido";
 import type { PedidoCalc } from "@/lib/hooks";
@@ -63,16 +64,20 @@ function Pedidos() {
   // comum (<a href>): window.open com "noopener" falha em alguns celulares e no app instalado.
   async function marcarAvisoPronto(p: PedidoCalc) {
     if (p.aviso_pronto_enviado_em) return;
-    const { error } = await supabase.from("pedidos").update({ aviso_pronto_enviado_em: new Date().toISOString() }).eq("id", p.id);
-    if (!error) void qc.invalidateQueries({ queryKey: ["pedidos"] });
+    const agora = new Date().toISOString();
+    await otimista<Pedido>(qc, (lista) => alterarPedido(lista, p.id, { aviso_pronto_enviado_em: agora }), async () => {
+      const { error } = await supabase.from("pedidos").update({ aviso_pronto_enviado_em: agora }).eq("id", p.id);
+      if (error) throw new Error(error.message);
+    }).catch(() => undefined);
   }
   async function marcarConfirmacao(p: PedidoCalc) {
     if (p.confirmacao_enviada_em) return;
-    const { error } = await supabase.from("pedidos").update({ confirmacao_enviada_em: new Date().toISOString(), visualizado_em: p.visualizado_em ?? new Date().toISOString() }).eq("id", p.id);
-    if (!error) {
-      void qc.invalidateQueries({ queryKey: ["pedidos"] });
-      void qc.invalidateQueries({ queryKey: ["pedidos-catalogo-novos"] });
-    }
+    const agora = new Date().toISOString();
+    const alteracao = { confirmacao_enviada_em: agora, visualizado_em: p.visualizado_em ?? agora };
+    await otimista<Pedido>(qc, (lista) => alterarPedido(lista, p.id, alteracao), async () => {
+      const { error } = await supabase.from("pedidos").update(alteracao).eq("id", p.id);
+      if (error) throw new Error(error.message);
+    }, [["pedidos-catalogo-novos"]]).catch(() => undefined);
   }
   const cabecalhoRecibo = nomeLoja
     ? [`${nomeLoja.toLocaleUpperCase("pt-BR")}${confeitaria?.slogan?.trim() ? ` — ${confeitaria.slogan.trim()}` : ""}`]

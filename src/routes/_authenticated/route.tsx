@@ -3,19 +3,23 @@ import { Suspense, useEffect, useRef, useState } from "react";
 import { toast } from "sonner";
 import { Store, BookOpen, CakeSlice, ChartNoAxesCombined, ChefHat, ChevronRight, ClipboardList, LayoutDashboard, LogOut, Menu, Package, Settings, ShoppingCart, Users, Wallet, X } from "lucide-react";
 import { useQuery, useQueryClient } from "@tanstack/react-query";
-import { confeitariaQ, ehAdminQ, minhaAssinaturaQ } from "@/lib/queries";
+import { avancarPedidosDoDia, confeitariaQ, ehAdminQ, minhaAssinaturaQ } from "@/lib/queries";
 import { recursoDaPagina, temRecurso } from "@/lib/assinatura";
 import { AvisoAssinatura, RecursoBloqueado, TelaAssinaturaSuspensa, TelaContaAdmin } from "@/components/app/plano";
 import { TERMOS_VERSAO } from "@/lib/termos";
 import { AceiteTermos, TelaBloqueada, TelaPendente } from "@/components/app/acesso-conta";
 import { supabase } from "@/integrations/supabase/client";
+import { CarregandoTela } from "@/components/app/carregando";
 
 export const Route = createFileRoute("/_authenticated")({
   ssr: false,
   beforeLoad: async () => {
-    const { data } = await supabase.auth.getUser();
-    if (!data.user) throw redirect({ to: "/auth" });
-    return { user: data.user };
+    // Sessão lida do aparelho (sem ida ao servidor a cada troca de tela).
+    // O banco continua validando o token em toda consulta.
+    const { data } = await supabase.auth.getSession();
+    const user = data.session?.user;
+    if (!user) throw redirect({ to: "/auth" });
+    return { user };
   },
   component: Layout,
 });
@@ -71,6 +75,15 @@ function Layout() {
     window.addEventListener("keydown", onKeyDown);
     return () => window.removeEventListener("keydown", onKeyDown);
   }, [maisAberto]);
+
+  // Passa para "em produção" os pedidos do dia (uma vez por dia; atualiza a lista se algo mudou).
+  useEffect(() => {
+    let ativo = true;
+    const executar = (forcar: boolean) => void avancarPedidosDoDia(user.id, forcar).then((n) => { if (ativo && n > 0) void queryClient.invalidateQueries({ queryKey: ["pedidos"] }); });
+    executar(false);
+    const intervalo = window.setInterval(() => executar(true), 30 * 60_000);
+    return () => { ativo = false; window.clearInterval(intervalo); };
+  }, [user.id, queryClient]);
 
   useEffect(() => {
     if (precisaComecar && pathname !== "/comecar") void navigate({ to: "/comecar", replace: true });
@@ -174,7 +187,7 @@ function Layout() {
 
         <main className="mx-auto w-full max-w-7xl px-4 pb-safe pt-4 sm:px-6 sm:pt-6 lg:px-8 lg:pb-8 lg:pt-8">
           <AvisoAssinatura />
-          <Suspense fallback={<div className="py-20 text-center text-sm text-muted-foreground" role="status">Carregando...</div>}>
+          <Suspense fallback={<CarregandoTela />}>
             {recursoBloqueado ? <RecursoBloqueado recurso={recursoBloqueado} /> : <Outlet />}
           </Suspense>
         </main>

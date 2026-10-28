@@ -86,3 +86,11 @@
 ## Tela Hoje e página de vendas
 - [x] Painel abre com "Hoje": entregas do dia, produção até amanhã, pedidos novos do catálogo, atrasados, avisar pronto e cobrar com um toque.
 - [x] Página de vendas do Doce Gestão no endereço principal (funções, catálogo, planos do banco, dúvidas, teste grátis).
+
+## Desempenho
+- [x] Sessão lida do aparelho, cache de 60 s, pré-carregamento ao tocar e esqueleto nas telas.
+- [x] Leitura dos pedidos sem gravação embutida (transição diária separada).
+- [x] Botões de produção, status e avisos com atualização otimista.
+- [x] Catálogo: busca antecipada, esqueleto e conexão antecipada com o banco.
+- [ ] Carregar só pedidos recentes + em aberto (quando o histórico crescer).
+- [ ] Fontes hospedadas no próprio site e fotos em tamanho reduzido na listagem.

@@ -54,14 +54,6 @@ export const pedidoPagamentosQ = queryOptions({
 export const pedidosQ = queryOptions({
   queryKey: ["pedidos"],
   queryFn: async () => {
-    const hoje = hojeISO();
-    // A partir do dia da entrega, pedidos recebidos/confirmados passam automaticamente para produção.
-    // Finalizado e cancelado não entram nesta transição.
-    const { error: transicao } = await supabase.from("pedidos")
-      .update({ status: "em_producao" })
-      .lte("data_entrega", hoje)
-      .in("status", ["recebido", "confirmado"]);
-    if (transicao) throw new Error(transicao.message);
     const { data, error } = await supabase.from("pedidos")
       .select("*, pedido_itens(*), clientes(nome, telefone)")
       .order("data_entrega", { ascending: false })
@@ -201,3 +193,27 @@ export const planosQ = queryOptions({
   },
   staleTime: 10 * 60_000,
 });
+
+/**
+ * A partir do dia da entrega, pedidos recebidos/confirmados passam para "em produção"
+ * (finalizados e cancelados não mudam). Roda ao abrir o sistema e no máximo uma vez
+ * por dia em cada aparelho, fora da leitura dos pedidos, para não atrasar as telas.
+ * Retorna quantos pedidos mudaram.
+ */
+export async function avancarPedidosDoDia(userId: string, forcar = false) {
+  const hoje = hojeISO();
+  const chave = `docegestao:avanco:${userId}`;
+  try {
+    if (!forcar && localStorage.getItem(chave) === hoje) return 0;
+  } catch {
+    /* sem armazenamento local: segue normalmente */
+  }
+  const { data, error } = await supabase.from("pedidos")
+    .update({ status: "em_producao" })
+    .lte("data_entrega", hoje)
+    .in("status", ["recebido", "confirmado"])
+    .select("id");
+  if (error) return 0;
+  try { localStorage.setItem(chave, hoje); } catch { /* ignore */ }
+  return data?.length ?? 0;
+}

@@ -4,7 +4,8 @@ import { useMemo } from "react";
 import { AlertTriangle, BellRing, CalendarClock, ChefHat, CircleDollarSign, MessageCircle, PartyPopper, ShoppingBag, Truck } from "lucide-react";
 import { supabase } from "@/integrations/supabase/client";
 import { usePedidosCalc, type PedidoCalc } from "@/lib/hooks";
-import { configQ, confeitariaQ } from "@/lib/queries";
+import { configQ, confeitariaQ, type Pedido } from "@/lib/queries";
+import { alterarPedido, otimista } from "@/lib/cache-pedidos";
 import { brl, hojeISO, num } from "@/lib/format";
 import { somarDias } from "@/lib/lista-producao";
 import { mensagemCobranca, montarHoje } from "@/lib/hoje";
@@ -36,8 +37,11 @@ export function PainelHoje() {
 
   async function marcarAvisado(p: PedidoCalc) {
     if (p.aviso_pronto_enviado_em) return;
-    const { error } = await supabase.from("pedidos").update({ aviso_pronto_enviado_em: new Date().toISOString() }).eq("id", p.id);
-    if (!error) void qc.invalidateQueries({ queryKey: ["pedidos"] });
+    const agora = new Date().toISOString();
+    await otimista<Pedido>(qc, (lista) => alterarPedido(lista, p.id, { aviso_pronto_enviado_em: agora }), async () => {
+      const { error } = await supabase.from("pedidos").update({ aviso_pronto_enviado_em: agora }).eq("id", p.id);
+      if (error) throw new Error(error.message);
+    }).catch(() => undefined);
   }
 
   const numeros = [
