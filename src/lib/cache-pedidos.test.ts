@@ -12,7 +12,7 @@ describe("atualização otimista dos pedidos", () => {
     expect(nova?.[1]?.status).toBe("entregue");
     expect(nova?.[0]).toBe(lista[0]);
     expect(lista[1]?.status).toBe("pronto");
-    expect(alterarPedido(undefined, "p1", { status: "x" })).toBeUndefined();
+    expect(alterarPedido<(typeof lista)[number]>(undefined, "p1", { status: "x" })).toBeUndefined();
   });
   it("altera um item onde quer que ele esteja", () => {
     const nova = alterarItem(lista, "i2", { quantidade_produzida: 3 });
