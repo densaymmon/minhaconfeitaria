@@ -47,7 +47,7 @@ export function temRecurso(a: MinhaAssinatura | null | undefined, recurso: Recur
 
 /** Recurso exigido por cada página do sistema. */
 export function recursoDaPagina(caminho: string): Recurso | null {
-  if (/^\/(financeiro|despesas|contas-pagar|relatorios)(\/|$)/.test(caminho)) return "financeiro";
+  if (/^\/(financeiro|despesas|contas-pagar|relatorios|resumo-mes)(\/|$)/.test(caminho)) return "financeiro";
   if (/^\/compras(\/|$)/.test(caminho)) return "estoque";
   if (/^\/pedidos-recorrentes(\/|$)/.test(caminho)) return "recorrentes";
   return null;

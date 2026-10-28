@@ -96,3 +96,9 @@
 - [ ] Fontes hospedadas no próprio site e fotos em tamanho reduzido na listagem.
 - [x] Hoje e Produção carregam só pedidos em aberto + últimos 90 dias (histórico completo na lista, clientes e relatórios).
 - [x] Fontes servidas pelo próprio site; miniaturas das fotos na lista do catálogo.
+
+## Rotina e relacionamento
+- [x] Lembrete da véspera no Hoje (WhatsApp com horário, local, itens e saldo; registra o envio).
+- [x] Resumo do mês (/resumo-mes): vendas, custos, despesas, lucro, produtos que mais dão lucro e comparação com o mês anterior.
+- [x] Clientes para reativar (30/45/60/90 dias sem comprar) com mensagem pronta e link do catálogo.
+- [x] Exportar todos os dados (cópia completa .json e planilha de pedidos).

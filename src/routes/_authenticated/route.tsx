@@ -35,6 +35,7 @@ const maisLinks = [
   { to: "/produtos", label: "Produtos e receitas", icon: BookOpen },
   { to: "/catalogo", label: "Catálogo online", icon: Store },
   { to: "/financeiro", label: "Financeiro", icon: Wallet },
+  { to: "/resumo-mes", label: "Resumo do mês", icon: ChartNoAxesCombined },
   { to: "/configuracoes", label: "Configurações", icon: Settings },
 ] as const;
 

@@ -9,6 +9,9 @@ export type PedidoHoje = {
   origem?: string | null;
   visualizado_em?: string | null;
   aviso_pronto_enviado_em?: string | null;
+  lembrete_enviado_em?: string | null;
+  tipo_entrega?: string | null;
+  endereco_entrega?: string | null;
   data_entrega: string;
   hora_entrega: string | null;
   clientes: { nome: string; telefone?: string | null } | null;
@@ -24,6 +27,8 @@ export type ResumoHoje<P extends PedidoHoje> = {
   entregarHoje: P[];
   entregarAmanha: P[];
   avisarPronto: P[];
+  /** Entregas de amanhã cujo cliente ainda não recebeu o lembrete. */
+  lembrar: P[];
   cobrar: P[];
   produzir: ItemProduzir[];
   aReceberHoje: number;
@@ -44,6 +49,7 @@ export function montarHoje<P extends PedidoHoje>(pedidos: P[], hoje: string, ama
   const atrasados = validos.filter((p) => ativo(p) && p.data_entrega < hoje).sort(porHorario);
   const entregarHoje = validos.filter((p) => ativo(p) && p.data_entrega === hoje).sort(porHorario);
   const entregarAmanha = validos.filter((p) => ativo(p) && p.data_entrega === amanha).sort(porHorario);
+  const lembrar = entregarAmanha.filter((p) => !p.lembrete_enviado_em && p.clientes?.telefone);
   const avisarPronto = validos.filter((p) => p.status === "pronto" && !p.aviso_pronto_enviado_em).sort(porHorario);
   // Cobrar: já entregue com saldo, ou entrega até hoje ainda com saldo.
   const cobrar = validos
@@ -69,7 +75,7 @@ export function montarHoje<P extends PedidoHoje>(pedidos: P[], hoje: string, ama
     .sort((a, b) => a.maisCedo.localeCompare(b.maisCedo) || b.pendente - a.pendente || a.descricao.localeCompare(b.descricao, "pt-BR"));
 
   const aReceberHoje = entregarHoje.reduce((s, p) => s + Math.max(0, p.t.saldo), 0);
-  return { novos, atrasados, entregarHoje, entregarAmanha, avisarPronto, cobrar, produzir, aReceberHoje };
+  return { novos, atrasados, entregarHoje, entregarAmanha, avisarPronto, lembrar, cobrar, produzir, aReceberHoje };
 }
 
 /** Mensagem de cobrança do saldo (mesmo texto da lista de pedidos). */
@@ -92,4 +98,29 @@ export function mensagemCobranca(p: Pick<PedidoHoje, "numero" | "data_entrega" |
 /** Saudação conforme a hora. */
 export function saudacao(hora: number) {
   return hora < 12 ? "Bom dia" : hora < 18 ? "Boa tarde" : "Boa noite";
+}
+
+/** Lembrete da véspera: data, horário, retirada/entrega, itens e o que falta pagar. */
+export function mensagemLembrete(
+  p: Pick<PedidoHoje, "numero" | "data_entrega" | "hora_entrega" | "clientes" | "t" | "pedido_itens" | "tipo_entrega" | "endereco_entrega">,
+  opcoes: { loja: string; pix?: string | null; enderecoRetirada?: string | null; linkPix?: string | null },
+) {
+  const brl = (v: number) => new Intl.NumberFormat("pt-BR", { style: "currency", currency: "BRL" }).format(v);
+  const data = `${p.data_entrega.slice(8, 10)}/${p.data_entrega.slice(5, 7)}`;
+  const hora = p.hora_entrega ? ` às ${p.hora_entrega.slice(0, 5)}` : "";
+  const onde = p.tipo_entrega === "entrega"
+    ? `🚗 Entrega${p.endereco_entrega ? ` em: ${p.endereco_entrega}` : ""}`
+    : `📍 Retirada${opcoes.enderecoRetirada ? ` em: ${opcoes.enderecoRetirada}` : " na confeitaria"}`;
+  const itens = p.pedido_itens.map((i) => `• ${Number(i.quantidade)}× ${i.descricao}`);
+  return [
+    `Olá ${p.clientes?.nome?.split(" ")[0] ?? ""}! Aqui é da ${opcoes.loja} 😊`,
+    `Passando para lembrar que seu pedido #${p.numero} é amanhã (${data})${hora}.`,
+    "",
+    ...itens,
+    "",
+    onde,
+    ...(p.t.saldo > 0.009 ? ["", `Falta pagar: ${brl(p.t.saldo)}`, ...(opcoes.pix?.trim() ? [`Chave Pix: ${opcoes.pix.trim()}`] : [])] : []),
+    "",
+    "Qualquer dúvida é só responder aqui. Até amanhã! 💛",
+  ].join("\n");
 }

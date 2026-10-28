@@ -1,11 +1,14 @@
 import * as appQueries from "@/lib/queries";
 import { createFileRoute, Link } from "@tanstack/react-router";
-import { useQueryClient, useSuspenseQuery } from "@tanstack/react-query";
+import { useQuery, useQueryClient, useSuspenseQuery } from "@tanstack/react-query";
 import { useEffect, useMemo, useState } from "react";
 import { toast } from "sonner";
-import { Download, Plus, Search, ChevronRight } from "lucide-react";
+import { Download, MessageCircle, Plus, Search, ChevronRight } from "lucide-react";
 import { supabase } from "@/integrations/supabase/client";
-import { clientesQ, type Cliente } from "@/lib/queries";
+import { clientesQ, confeitariaQ, type Cliente } from "@/lib/queries";
+import { clientesSumidos, mensagemReativar } from "@/lib/reativar";
+import { linkCatalogo, linkWhatsApp, origemPublica } from "@/lib/catalogo";
+import { cn } from "@/lib/utils";
 import { usePedidosCalc } from "@/lib/hooks";
 import { brl, hojeISO } from "@/lib/format";
 import { baixarCSV } from "@/lib/csv";
@@ -112,6 +115,11 @@ function Clientes() {
   const pedidos = usePedidosCalc("historico");
   const [busca, setBusca] = useState("");
   const [aberto, setAberto] = useState(false);
+  const [modo, setModo] = useState<"todos" | "reativar">("todos");
+  const [diasSumido, setDiasSumido] = useState(45);
+  const { data: loja } = useQuery(confeitariaQ);
+  const sumidos = useMemo(() => clientesSumidos(clientes, pedidos, hojeISO(), diasSumido), [clientes, pedidos, diasSumido]);
+  const linkLoja = loja?.catalogo_ativo && loja.slug ? linkCatalogo(origemPublica(), loja.slug) : null;
 
   const stats = useMemo(() => {
     const m = new Map<string, { n: number; total: number }>();
@@ -163,6 +171,39 @@ function Clientes() {
           </div>
         }
       />
+      <div className="mb-3 inline-flex rounded-xl border bg-card p-1" role="group" aria-label="Visualização">
+        <button type="button" onClick={() => setModo("todos")} aria-pressed={modo === "todos"} className={cn("rounded-lg px-3 py-1.5 text-sm font-medium", modo === "todos" ? "bg-primary text-primary-foreground" : "text-muted-foreground")}>Todos</button>
+        <button type="button" onClick={() => setModo("reativar")} aria-pressed={modo === "reativar"} className={cn("rounded-lg px-3 py-1.5 text-sm font-medium", modo === "reativar" ? "bg-primary text-primary-foreground" : "text-muted-foreground")}>
+          Para reativar{sumidos.length > 0 ? ` (${sumidos.length})` : ""}
+        </button>
+      </div>
+      {modo === "reativar" ? (
+        <div className="space-y-3">
+          <div className="flex flex-wrap items-center gap-2 text-sm">
+            <span className="text-muted-foreground">Sem comprar há pelo menos</span>
+            {[30, 45, 60, 90].map((d) => (
+              <button key={d} type="button" onClick={() => setDiasSumido(d)} aria-pressed={diasSumido === d}
+                className={cn("rounded-full border px-3 py-1", diasSumido === d ? "border-primary bg-primary text-primary-foreground" : "bg-card")}>{d} dias</button>
+            ))}
+          </div>
+          {sumidos.length === 0 ? (
+            <Card className="border-dashed p-6 text-center text-sm text-muted-foreground">Nenhum cliente sumido há {diasSumido} dias ou mais. 🎉</Card>
+          ) : sumidos.map((s) => {
+            const link = linkWhatsApp(s.cliente.telefone, mensagemReativar(s.cliente.nome, loja?.nome?.trim() || "nossa confeitaria", linkLoja));
+            return (
+              <Card key={s.cliente.id} className="flex items-center gap-3 p-3.5">
+                <Link to="/clientes/$id" params={{ id: s.cliente.id }} className="min-w-0 flex-1">
+                  <div className="truncate font-medium">{s.cliente.nome}</div>
+                  <div className="truncate text-xs text-muted-foreground">Última compra há {s.dias} dias · {s.pedidos} pedido(s) · {brl(s.total)}</div>
+                </Link>
+                {link ? (
+                  <Button asChild size="sm" variant="outline"><a href={link} target="_blank" rel="noopener noreferrer"><MessageCircle className="size-4" /> Chamar</a></Button>
+                ) : <span className="text-xs text-muted-foreground">sem WhatsApp</span>}
+              </Card>
+            );
+          })}
+        </div>
+      ) : <>
       <div className="relative mb-4">
         <Search className="absolute top-3.5 left-3 size-4 text-muted-foreground" />
         <Input placeholder="Buscar por nome ou telefone" value={busca} onChange={(e) => setBusca(e.target.value)} className="h-11 bg-card pl-9" />
@@ -205,6 +246,7 @@ function Clientes() {
           ))}
         </div>
       )}
+      </>}
       <ClienteDialog open={aberto} onOpenChange={setAberto} />
     </>
   );
