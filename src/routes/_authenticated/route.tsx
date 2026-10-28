@@ -21,7 +21,7 @@ export const Route = createFileRoute("/_authenticated")({
 });
 
 const nav = [
-  { to: "/painel", label: "Painel", icon: LayoutDashboard },
+  { to: "/painel", label: "Hoje", icon: LayoutDashboard },
   { to: "/pedidos", label: "Pedidos", icon: ClipboardList },
   { to: "/producao", label: "Produção", icon: ChefHat },
   { to: "/clientes", label: "Clientes", icon: Users },

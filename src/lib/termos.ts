@@ -12,6 +12,8 @@ export type PlataformaPublica = {
   empresa_documento: string | null;
   contato_email: string | null;
   contato_whatsapp: string | null;
+  dias_teste?: number | null | undefined;
+  dias_tolerancia?: number | null | undefined;
 };
 
 export type Secao = { titulo: string; paragrafos: string[] };
