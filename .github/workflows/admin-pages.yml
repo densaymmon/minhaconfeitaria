@@ -12,6 +12,11 @@ on:
       - "src/styles.css"
       - ".env"
       - ".github/workflows/admin-pages.yml"
+  # Mesclagens automáticas (feitas pelo GitHub Actions) não disparam "push";
+  # por isso o painel também é publicado ao fim de cada mesclagem automática.
+  workflow_run:
+    workflows: ["Auto-merge verified pull requests"]
+    types: [completed]
   workflow_dispatch:
 permissions:
   contents: read
@@ -22,9 +27,12 @@ concurrency:
   cancel-in-progress: true
 jobs:
   build:
+    if: github.event_name != 'workflow_run' || github.event.workflow_run.conclusion == 'success'
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v4
+        with:
+          ref: main
       - uses: oven-sh/setup-bun@v2
         with:
           bun-version: latest
