@@ -52,6 +52,54 @@ export function margemReal(custoUnit: number, preco: number) {
   return ((preco - custoUnit) / custoUnit) * 100;
 }
 
+export type AlertaMargem = {
+  /** Preço abaixo do custo unitário: cada venda dá prejuízo. */
+  abaixoDoCusto: boolean;
+  /** Preço abaixo do preço sugerido pela margem desejada. */
+  abaixoDaMargem: boolean;
+  sugerido: number;
+  /** Quanto falta no preço para atingir a margem desejada (0 quando já atinge). */
+  faltaParaMargem: number;
+};
+
+/**
+ * Compara o preço de venda com o custo e a margem desejada do produto.
+ * Sem custo calculado (receita vazia) não há alerta, para não acusar produtos ainda sem ficha técnica.
+ */
+export function alertaMargem(custoUnit: number, preco: number, margemDesejadaPct: number): AlertaMargem {
+  const custo = n(custoUnit);
+  const valor = n(preco);
+  const sugerido = round2(precoSugerido(custo, margemDesejadaPct));
+  if (custo <= 0) return { abaixoDoCusto: false, abaixoDaMargem: false, sugerido, faltaParaMargem: 0 };
+  const faltaParaMargem = Math.max(0, round2(sugerido - valor));
+  return {
+    abaixoDoCusto: valor + 0.005 < custo,
+    abaixoDaMargem: faltaParaMargem >= 0.01,
+    sugerido,
+    faltaParaMargem,
+  };
+}
+
+export type SituacaoPagamento = "pago" | "sinal" | "pendente";
+
+/**
+ * Situação única de pagamento do pedido, derivada do que já foi consolidado
+ * (entrada, saldo quitado e histórico de recebimentos) em `calcularRecebimentoPedido`.
+ * Retorna null para pedidos cancelados ou sem valor, que não têm cobrança.
+ */
+export function situacaoPagamento(input: { status: string; venda: number; recebido: number; saldo: number }): SituacaoPagamento | null {
+  if (input.status === "cancelado" || n(input.venda) <= 0) return null;
+  if (n(input.saldo) <= 0.009) return "pago";
+  if (n(input.recebido) > 0.009) return "sinal";
+  return "pendente";
+}
+
+export const SITUACAO_PAGAMENTO_LABEL: Record<SituacaoPagamento, string> = {
+  pago: "Pago",
+  sinal: "Sinal pago",
+  pendente: "Pagamento pendente",
+};
+
 /** Distribui venda e taxas do pedido proporcionalmente ao valor bruto de cada item. */
 export function ratearVendaETaxas(valorItem: number, subtotalItens: number, vendaPedido: number, taxasPedido: number) {
   const proporcao = subtotalItens > 0 ? Math.max(0, valorItem) / subtotalItens : 0;

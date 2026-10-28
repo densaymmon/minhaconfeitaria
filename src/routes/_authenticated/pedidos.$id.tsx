@@ -5,13 +5,13 @@ import { createFileRoute, Link, useNavigate } from "@tanstack/react-router";
 import { useQueryClient, useSuspenseQuery } from "@tanstack/react-query";
 import { useEffect, useRef, useState, type FormEvent } from "react";
 import { toast } from "sonner";
-import { CalendarClock, MessageCircle, Plus, Repeat, Trash2 } from "lucide-react";
+import { CalendarClock, Copy, MessageCircle, Plus, Repeat, Trash2 } from "lucide-react";
 import { supabase } from "@/integrations/supabase/client";
 import { clientesQ, configQ, pedidosQ, type PedidoPagamento } from "@/lib/queries";
 import { useCustos } from "@/lib/hooks";
-import { totaisPedido } from "@/lib/calc";
+import { alertaMargem, totaisPedido } from "@/lib/calc";
 import { FORMAS, brl, dataBR, hojeISO, parseNum, statusLabel } from "@/lib/format";
-import { Card, Field, NativeSelect, PageHeader, Row } from "@/components/app/ui";
+import { Card, Field, NativeSelect, PagamentoBadge, PageHeader, Row } from "@/components/app/ui";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Textarea } from "@/components/ui/textarea";
@@ -222,6 +222,34 @@ function PedidoForm() {
         quantidade_produzida: Number(i.quantidade_produzida),
       })) ?? [],
     );
+    // "Repetir pedido": /pedidos/novo?repetir=<id> pré-preenche cliente e itens de um pedido anterior,
+    // com preço e custo atuais dos produtos. Nada é salvo até a confirmação no formulário.
+    if (novo) {
+      const repetirId = new URLSearchParams(window.location.search).get("repetir");
+      const modelo = repetirId ? pedidos.find((p) => p.id === repetirId) : undefined;
+      if (modelo) {
+        setF((atual) => ({
+          ...atual,
+          cliente_id: modelo.cliente_id ?? "",
+          hora_entrega: modelo.hora_entrega ?? "",
+          forma_pagamento: modelo.forma_pagamento,
+          taxa_entrega: String(modelo.taxa_entrega ?? "0"),
+          observacoes: modelo.observacoes ?? "",
+        }));
+        setItens(modelo.pedido_itens.map((i) => {
+          const produto = produtos.find((p) => p.id === i.produto_id && p.ativo);
+          return {
+            produto_id: produto?.id ?? null,
+            descricao: i.descricao,
+            quantidade: String(i.quantidade),
+            preco_unitario: String(produto ? produto.preco_venda : i.preco_unitario),
+            custo_unitario: produto ? +(custo.get(produto.id) ?? 0).toFixed(4) : 0,
+            quantidade_produzida: 0,
+          };
+        }));
+        toast.info(`Itens do pedido #${modelo.numero} copiados com os preços atuais. Escolha a data de entrega e salve.`);
+      }
+    }
   // eslint-disable-next-line react-hooks/exhaustive-deps -- só reinicializa ao trocar o pedido, não em refetches.
   }, [id, existente?.id]);
 
@@ -521,7 +549,15 @@ function PedidoForm() {
 
   return (
     <>
-      <PageHeader title={novo ? "Novo pedido" : `Pedido #${existente?.numero}`} back="/pedidos" />
+      <PageHeader
+        title={novo ? "Novo pedido" : `Pedido #${existente?.numero}`}
+        back="/pedidos"
+        action={!novo && existente ? (
+          <Button type="button" size="sm" variant="outline" className="h-10" onClick={() => window.location.assign(`/pedidos/novo?repetir=${existente.id}`)}>
+            <Copy className="size-4" /> Repetir pedido
+          </Button>
+        ) : undefined}
+      />
       {novo && <OrderMessage onApply={aplicarRascunho} />}
       <Dialog open={recorrenciaDialogOpen} onOpenChange={(open) => { if (!salvandoRecorrencia) setRecorrenciaDialogOpen(open); }}>
         <DialogContent className="w-[calc(100%-1.5rem)] max-w-lg max-h-[90dvh] overflow-y-auto p-4 sm:p-6">
@@ -687,6 +723,7 @@ function PedidoForm() {
               <div className="text-right text-xs text-muted-foreground">
                 Total {brl(parseNum(it.quantidade) * parseNum(it.preco_unitario))}
               </div>
+              <AvisoPrecoItem item={it} margemDesejada={Number(produtos.find((p) => p.id === it.produto_id)?.margem_desejada ?? 0)} />
             </div>
           ))}
         </Card>
@@ -696,7 +733,7 @@ function PedidoForm() {
             <Card className="space-y-3">
               <div className="flex items-center justify-between gap-2">
                 <h2 className="text-lg font-semibold">Pagamento e resumo</h2>
-                {t.venda > 0 && saldoPendente <= 0 && <span className="rounded-full bg-success/15 px-2.5 py-1 text-xs font-semibold text-success">Pago</span>}
+                <PagamentoBadge status={f.status} venda={t.venda} recebido={valorPagoEfetivo} saldo={saldoPendente} className="px-2.5 py-1" />
               </div>
               <div className="grid grid-cols-1 gap-3 sm:grid-cols-2">
                 <Field label="Forma de pagamento">
@@ -742,9 +779,7 @@ function PedidoForm() {
                 <div>
                   <h2 className="text-lg font-semibold">Pagamento</h2>
                 </div>
-                {t.venda > 0 && saldoPendente <= 0.009 && (
-                  <span className="shrink-0 rounded-full bg-success/15 px-2.5 py-1 text-xs font-semibold text-success">Pago</span>
-                )}
+                <PagamentoBadge status={f.status} venda={t.venda} recebido={valorPagoEfetivo} saldo={saldoPendente} className="shrink-0 px-2.5 py-1" />
               </div>
 
               <div className="grid grid-cols-1 gap-3 sm:grid-cols-2">
@@ -873,4 +908,19 @@ function PedidoForm() {
       </div>
     </>
   );
+}
+/** Avisa no item quando o preço combinado fica abaixo do custo ou da margem desejada do produto. */
+function AvisoPrecoItem({ item, margemDesejada }: { item: Item; margemDesejada: number }) {
+  if (!item.produto_id) return null;
+  if (!(item.custo_unitario > 0)) {
+    return <p className="text-xs text-muted-foreground">Custo não registrado neste item: o lucro deste pedido pode aparecer maior do que é.</p>;
+  }
+  const alerta = alertaMargem(item.custo_unitario, parseNum(item.preco_unitario), margemDesejada);
+  if (alerta.abaixoDoCusto) {
+    return <p role="alert" className="text-xs font-medium text-destructive">Preço abaixo do custo ({brl(item.custo_unitario)}): este item dá prejuízo.</p>;
+  }
+  if (alerta.abaixoDaMargem) {
+    return <p className="text-xs text-warning-foreground">Abaixo da margem desejada de {margemDesejada}%. Preço sugerido: {brl(alerta.sugerido)}.</p>;
+  }
+  return null;
 }

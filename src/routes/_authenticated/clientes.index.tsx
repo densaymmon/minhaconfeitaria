@@ -91,7 +91,7 @@ export function ClienteDialog({ cliente, open, onOpenChange }: { cliente?: Clien
           <Field label="Nome *">
             <Input value={f.nome} onChange={(e) => setF({ ...f, nome: e.target.value })} className="h-11" />
           </Field>
-          <Field label="Telefone / WhatsApp">
+          <Field label="Telefone / WhatsApp" hint={f.telefone.trim() ? undefined : "Recomendado: usado para avisar quando o pedido estiver pronto e para cobrar pelo WhatsApp."}>
             <Input type="tel" inputMode="tel" value={f.telefone} onChange={(e) => setF({ ...f, telefone: e.target.value })} className="h-11" placeholder="(11) 99999-9999" />
           </Field>
           <Field label="Endereço">
