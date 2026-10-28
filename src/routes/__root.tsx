@@ -13,6 +13,7 @@ import { useEffect, type ReactNode } from "react";
 import appCss from "../styles.css?url";
 import { reportLovableError } from "../lib/lovable-error-reporting";
 import { supabase } from "@/integrations/supabase/client";
+import { URL_PAINEL_ADMIN } from "@/lib/assinatura";
 import { Toaster } from "@/components/ui/sonner";
 
 function NotFoundComponent() {
@@ -99,11 +100,12 @@ function RootShell({ children }: { children: ReactNode }) {
   return (
     <html lang="pt-BR">
       <head>
-        {/* Link de recuperação de senha (ou com erro) que caiu em outra página: vai para a página de nova senha
+        {/* Link pedido pelo painel de administração (?painel=admin): volta para o painel, que criou o pedido
+            e é onde a nova senha é criada. Link de recuperação de senha (ou com erro) que caiu em outra página: vai para a página de nova senha
             antes de o app carregar, guardando os dados do link (o cliente do login limpa o endereço). */}
         <script
           dangerouslySetInnerHTML={{
-            __html: `(function(){try{var l=window.location,d=l.hash+l.search;if(/type=recovery|error_code=|error_description=/.test(d)){sessionStorage.setItem("docegestao:link-senha",d);if(l.pathname!=="/reset-password")l.replace("/reset-password"+l.search+l.hash);}}catch(e){}})();`,
+            __html: `(function(){try{var l=window.location,d=l.hash+l.search;if(/[?&]painel=admin/.test(l.search)){l.replace(${JSON.stringify(URL_PAINEL_ADMIN)}+l.search+l.hash);return;}if(/type=recovery|error_code=|error_description=/.test(d)){sessionStorage.setItem("docegestao:link-senha",d);if(l.pathname!=="/reset-password")l.replace("/reset-password"+l.search+l.hash);}}catch(e){}})();`,
           }}
         />
         <HeadContent />

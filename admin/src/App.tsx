@@ -7,6 +7,7 @@ import { Building2, KeyRound, LayoutDashboard, LogOut, Receipt, Settings, Shield
 const URL_LOGIN = "https://minhaconfeitaria.app";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
+import { InputSenha } from "@/components/app/input-senha";
 import { cn } from "@/lib/utils";
 import { supabase } from "./supabase";
 import { Campo, Cartao } from "./ui";
@@ -26,7 +27,12 @@ const PAGINAS = [
 type Pagina = (typeof PAGINAS)[number]["id"];
 
 // Chegou por um link de recuperação de senha? (lido antes de o cliente limpar o endereço)
-const veioDeRecuperacao = typeof window !== "undefined" && /type=recovery/.test(window.location.hash + window.location.search);
+const linkInicial = typeof window === "undefined" ? "" : window.location.hash + window.location.search;
+const veioDeRecuperacao = /type=recovery|painel=admin/.test(linkInicial);
+/** Link de recuperação vencido ou já usado (o sistema principal devolve para cá com o erro). */
+const erroDoLink = /error_code=|error_description=/.test(linkInicial)
+  ? (/expired/i.test(linkInicial) ? "O link de recuperação venceu ou já foi usado. Peça um novo abaixo." : "O link de recuperação não é válido. Peça um novo abaixo.")
+  : null;
 
 function paginaDoEndereco(): Pagina {
   const h = window.location.hash.replace(/^#\/?/, "").split("?")[0] ?? "";
@@ -46,7 +52,8 @@ export function App() {
   }, []);
 
   if (sessao === undefined) return <Carregando />;
-  if (!sessao) return <Login />;
+  // Chegou por um link de recuperação mas sem sessão: o link venceu ou já foi usado.
+  if (!sessao) return <Login erroLink={erroDoLink ?? (veioDeRecuperacao ? "O link de recuperação venceu ou já foi usado. Peça um novo abaixo." : null)} />;
   if (novaSenha) return <DefinirSenha email={sessao.user.email ?? ""} pronto={() => setNovaSenha(false)} />;
   return <AreaAdmin email={sessao.user.email ?? ""} alterarSenha={() => setNovaSenha(true)} />;
 }
@@ -67,8 +74,8 @@ function Marca() {
   );
 }
 
-function Login() {
-  const [modo, setModo] = useState<"entrar" | "criar" | "esqueci">("entrar");
+function Login({ erroLink }: { erroLink: string | null }) {
+  const [modo, setModo] = useState<"entrar" | "criar" | "esqueci">(erroLink ? "esqueci" : "entrar");
   const [email, setEmail] = useState("");
   const [senha, setSenha] = useState("");
   const [aguarde, setAguarde] = useState(false);
@@ -88,11 +95,11 @@ function Login() {
         if (error) throw new Error(error.message.includes("Database error") ? "Este e-mail não está autorizado a administrar a plataforma." : error.message);
         if (!data.session) setAviso("Acesso criado! Abra seu e-mail e clique no link de confirmação. Depois, volte aqui e entre com e-mail e senha.");
       } else {
-        // O link abre a página de nova senha do sistema (endereço já autorizado no login);
-        // depois de salvar, ela traz de volta para este painel.
-        const { error } = await supabase.auth.resetPasswordForEmail(email, { redirectTo: `${URL_LOGIN}/reset-password` });
+        // O link passa pelo endereço principal (o único autorizado no login), que o devolve
+        // na hora para este painel, onde a nova senha é criada.
+        const { error } = await supabase.auth.resetPasswordForEmail(email, { redirectTo: `${URL_LOGIN}/reset-password?painel=admin` });
         if (error) throw new Error(/rate|seconds/i.test(error.message) ? "Aguarde um minuto antes de pedir outro link." : error.message);
-        setAviso("Enviamos um link para o seu e-mail. Abra o mais recente, crie a nova senha e volte aqui para entrar.");
+        setAviso("Enviamos um link para o seu e-mail. Abra o mais recente neste mesmo aparelho e navegador: ele traz você de volta aqui para criar a nova senha.");
       }
     } catch (err) {
       toast.error(err instanceof Error ? err.message : "Não foi possível continuar.");
@@ -109,9 +116,10 @@ function Login() {
           <form onSubmit={enviar} className="space-y-4">
             <h1 className="text-xl font-semibold">{modo === "entrar" ? "Entrar" : modo === "criar" ? "Primeiro acesso" : "Recuperar senha"}</h1>
             {modo === "criar" && <p className="text-xs text-muted-foreground">Somente e-mails autorizados como administração conseguem criar o acesso.</p>}
+            {erroLink && modo === "esqueci" && <p className="rounded-lg bg-destructive/10 p-3 text-sm text-destructive">{erroLink}</p>}
             <Campo rotulo="E-mail"><Input type="email" required autoComplete="email" value={email} onChange={(e) => setEmail(e.target.value)} className="h-11" /></Campo>
             {modo !== "esqueci" && (
-              <Campo rotulo="Senha"><Input type="password" required autoComplete={modo === "criar" ? "new-password" : "current-password"} value={senha} onChange={(e) => setSenha(e.target.value)} className="h-11" /></Campo>
+              <Campo rotulo="Senha"><InputSenha required autoComplete={modo === "criar" ? "new-password" : "current-password"} value={senha} onChange={(e) => setSenha(e.target.value)} className="h-11" /></Campo>
             )}
             {aviso && <p className="rounded-lg bg-success/10 p-3 text-sm text-success">{aviso}</p>}
             <Button type="submit" className="h-11 w-full" disabled={aguarde}>
@@ -147,7 +155,8 @@ function DefinirSenha({ email, pronto }: { email: string; pronto: () => void }) 
     const { error } = await supabase.auth.updateUser({ password: senha });
     setAguarde(false);
     if (error) return void toast.error(/different from the old|same/i.test(error.message) ? "A nova senha precisa ser diferente da anterior." : error.message);
-    if (window.location.hash.includes("type=recovery")) window.history.replaceState(null, "", window.location.pathname);
+    // Limpa os dados do link do endereço (volta para o painel normal).
+    window.history.replaceState(null, "", window.location.pathname);
     toast.success("Senha alterada!");
     pronto();
   }
@@ -160,8 +169,9 @@ function DefinirSenha({ email, pronto }: { email: string; pronto: () => void }) 
           <form onSubmit={salvar} className="space-y-4">
             <h1 className="text-xl font-semibold">Criar nova senha</h1>
             <p className="text-sm text-muted-foreground">Conta: {email}</p>
-            <Campo rotulo="Nova senha"><Input type="password" required minLength={8} autoComplete="new-password" value={senha} onChange={(e) => setSenha(e.target.value)} className="h-11" /></Campo>
-            <Campo rotulo="Repita a nova senha"><Input type="password" required minLength={8} autoComplete="new-password" value={confirmar} onChange={(e) => setConfirmar(e.target.value)} className="h-11" /></Campo>
+            <Campo rotulo="Nova senha" dica="Pelo menos 8 caracteres."><InputSenha required minLength={8} autoComplete="new-password" value={senha} onChange={(e) => setSenha(e.target.value)} className="h-11" /></Campo>
+            <Campo rotulo="Confirme a nova senha"><InputSenha required minLength={8} autoComplete="new-password" value={confirmar} onChange={(e) => setConfirmar(e.target.value)} className="h-11" /></Campo>
+            {confirmar.length > 0 && confirmar !== senha && <p className="text-sm text-destructive">As senhas ainda não são iguais.</p>}
             <Button type="submit" className="h-11 w-full" disabled={aguarde}>{aguarde ? "Salvando…" : "Salvar nova senha"}</Button>
             <button type="button" className="text-sm text-primary hover:underline" onClick={pronto}>Cancelar</button>
           </form>
