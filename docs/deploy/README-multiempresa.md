@@ -24,6 +24,18 @@ A `0033` é autocontida (não depende de `0027`–`0032`), transacional (`BEGIN`
    ```
 4. Só então faça o merge do PR no `main` (o frontend lê `confeitarias`; antes da migração ele funciona, mas sem o nome da confeitaria nos recibos).
 
+## Painel da plataforma (migração 0038)
+
+A partir da migração `0038_plataforma_admin_onboarding_termos.sql`, tudo abaixo é feito pela tela **Plataforma** (menu Gestão → Plataforma, visível só para a administradora, que é a dona da primeira conta):
+
+- abrir/fechar o cadastro e escolher se novas contas precisam ser liberadas manualmente;
+- informar responsável (nome/CPF/CNPJ) e contato, usados nos termos de uso, na política de privacidade e nas telas de conta pendente/bloqueada;
+- liberar ou bloquear cada confeitaria, anotar até quando a mensalidade está paga e observações.
+
+O bloqueio vale no banco: a política RESTRICTIVE `acesso_liberado` impede leitura e gravação nas tabelas da confeitaria e o catálogo sai do ar. Os dados não são apagados.
+
+Para adicionar outra administradora: `insert into public.plataforma_admins (user_id) values ('<uuid da conta>');`
+
 ## Abrir ou fechar novos cadastros
 ```sql
 update public.plataforma_config set cadastro_aberto = true,  updated_at = now();  -- abrir

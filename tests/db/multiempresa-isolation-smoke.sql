@@ -24,7 +24,7 @@ BEGIN
 END $t$;
 
 -- Com o cadastro aberto, a segunda confeitaria é criada.
-UPDATE public.plataforma_config SET cadastro_aberto = true;
+UPDATE public.plataforma_config SET cadastro_aberto = true, aprovacao_manual = false;
 INSERT INTO auth.users(id) VALUES ('b2222222-2222-4222-8222-222222222222');
 
 -- Dados da confeitaria A, criados pela própria dona.

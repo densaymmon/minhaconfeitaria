@@ -1,7 +1,7 @@
 \set ON_ERROR_STOP on
 -- Variações de produto: validação do cadastro, escolha do cliente, preço e custo do servidor.
 BEGIN;
-UPDATE public.plataforma_config SET cadastro_aberto = true;
+UPDATE public.plataforma_config SET cadastro_aberto = true, aprovacao_manual = false;
 INSERT INTO auth.users(id) VALUES ('a1111111-1111-4111-8111-111111111111');
 
 DO $t$

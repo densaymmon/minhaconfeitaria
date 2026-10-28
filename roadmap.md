@@ -68,3 +68,11 @@
 ## Lista de produção do dia
 - [x] Atalhos de período (Hoje, Amanhã, 7 dias, Tudo) na produção; "Hoje" inclui atrasados não entregues.
 - [x] Ingredientes necessários para o que falta produzir (ficha técnica ÷ rendimento, em g/ml/un), comparados com o estoque, com "comprar X" e exportação em CSV.
+
+## Pronto para outras confeitarias
+- [x] Painel da plataforma (/plataforma): lista de confeitarias, liberar/bloquear, "mensalidade paga até" e anotações, abrir/fechar cadastro e aprovação manual.
+- [x] Bloqueio aplicado no banco (política RESTRICTIVE em todas as tabelas); conta pendente/bloqueada não usa o sistema nem publica catálogo.
+- [x] Cadastro com nome, WhatsApp e aceite dos termos; cadastro guiado (/comecar): confeitaria, Pix, catálogo e primeiro produto.
+- [x] Termos de uso e política de privacidade (LGPD) em /termos e /privacidade, com responsável e contato configuráveis.
+- [ ] Cobrança automática da mensalidade (gateway).
+- [ ] Vários usuários (funcionários) por confeitaria.

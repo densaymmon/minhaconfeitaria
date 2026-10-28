@@ -1,4 +1,4 @@
-import { createFileRoute, useNavigate } from "@tanstack/react-router";
+import { createFileRoute, Link, useNavigate } from "@tanstack/react-router";
 import { useQuery } from "@tanstack/react-query";
 import { useEffect, useMemo, useRef, useState } from "react";
 import { ArrowLeft, CakeSlice, Minus, MessageCircle, PlayCircle, Plus, ShoppingBag, Store, Truck } from "lucide-react";
@@ -194,7 +194,7 @@ function Loja({ slug, catalogo }: { slug: string; catalogo: Catalogo }) {
             })}
           </ul>
         )}
-        <p className="py-8 text-center text-xs text-muted-foreground">Pedidos online por Doce Gestão</p>
+        <p className="py-8 text-center text-xs text-muted-foreground">Pedidos online por Doce Gestão · <Link to="/privacidade" className="underline">Privacidade</Link></p>
       </main>
 
       <DetalheProduto
