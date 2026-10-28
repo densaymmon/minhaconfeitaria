@@ -79,7 +79,10 @@ export const testarNotificacao = createServerFn({ method: "POST" })
   .middleware([requireSupabaseAuth])
   .handler(async ({ context }) => {
     setResponseHeader("Cache-Control", "no-store");
-    const r = await avisarConfeitaria(context.userId, {
+    // Membro da equipe: os aparelhos ficam guardados na confeitaria.
+    const { data: papel } = await context.supabase.rpc("meu_papel");
+    const confeitaria = (papel as { confeitaria_id?: string } | null)?.confeitaria_id ?? context.userId;
+    const r = await avisarConfeitaria(confeitaria, {
       titulo: "Notificações ativadas ✅",
       corpo: "É assim que você vai saber de cada pedido novo do catálogo.",
       tag: "teste-notificacao",

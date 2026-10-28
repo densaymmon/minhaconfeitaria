@@ -14,6 +14,7 @@ import { Route as AuthenticatedRouteRouteImport } from './routes/_authenticated/
 import { Route as AuthRouteImport } from './routes/auth'
 import { Route as McpRouteImport } from './routes/mcp'
 import { Route as ResetPasswordRouteImport } from './routes/reset-password'
+import { Route as ConviteTokenRouteImport } from './routes/convite.$token'
 import { Route as PrivacidadeRouteImport } from './routes/privacidade'
 import { Route as TermosRouteImport } from './routes/termos'
 import { Route as CSlugRouteImport } from './routes/c.$slug'
@@ -30,6 +31,7 @@ import { Route as AuthenticatedMaisRouteImport } from './routes/_authenticated/m
 import { Route as AuthenticatedPainelRouteImport } from './routes/_authenticated/painel'
 import { Route as AuthenticatedPedidosRecorrentesRouteImport } from './routes/_authenticated/pedidos-recorrentes'
 import { Route as AuthenticatedProducaoRouteImport } from './routes/_authenticated/producao'
+import { Route as AuthenticatedEquipeRouteImport } from './routes/_authenticated/equipe'
 import { Route as AuthenticatedResumoMesRouteImport } from './routes/_authenticated/resumo-mes'
 import { Route as AuthenticatedCatalogoRouteImport } from './routes/_authenticated/catalogo'
 import { Route as AuthenticatedComecarRouteImport } from './routes/_authenticated/comecar'
@@ -64,6 +66,11 @@ const McpRoute = McpRouteImport.update({
 const ResetPasswordRoute = ResetPasswordRouteImport.update({
   id: '/reset-password',
   path: '/reset-password',
+  getParentRoute: () => rootRouteImport,
+} as any)
+const ConviteTokenRoute = ConviteTokenRouteImport.update({
+  id: '/convite/$token',
+  path: '/convite/$token',
   getParentRoute: () => rootRouteImport,
 } as any)
 const PrivacidadeRoute = PrivacidadeRouteImport.update({
@@ -150,6 +157,11 @@ const AuthenticatedProducaoRoute = AuthenticatedProducaoRouteImport.update({
   path: '/producao',
   getParentRoute: () => AuthenticatedRouteRoute,
 } as any)
+const AuthenticatedEquipeRoute = AuthenticatedEquipeRouteImport.update({
+  id: '/equipe',
+  path: '/equipe',
+  getParentRoute: () => AuthenticatedRouteRoute,
+} as any)
 const AuthenticatedResumoMesRoute = AuthenticatedResumoMesRouteImport.update({
   id: '/resumo-mes',
   path: '/resumo-mes',
@@ -214,6 +226,7 @@ export interface FileRoutesByFullPath {
   '/auth': typeof AuthRoute
   '/mcp': typeof McpRoute
   '/reset-password': typeof ResetPasswordRoute
+  '/convite/$token': typeof ConviteTokenRoute
   '/privacidade': typeof PrivacidadeRoute
   '/termos': typeof TermosRoute
   '/c/$slug': typeof CSlugRoute
@@ -230,6 +243,7 @@ export interface FileRoutesByFullPath {
   '/painel': typeof AuthenticatedPainelRoute
   '/pedidos-recorrentes': typeof AuthenticatedPedidosRecorrentesRoute
   '/producao': typeof AuthenticatedProducaoRoute
+  '/equipe': typeof AuthenticatedEquipeRoute
   '/resumo-mes': typeof AuthenticatedResumoMesRoute
   '/catalogo': typeof AuthenticatedCatalogoRoute
   '/comecar': typeof AuthenticatedComecarRoute
@@ -247,6 +261,7 @@ export interface FileRoutesByTo {
   '/auth': typeof AuthRoute
   '/mcp': typeof McpRoute
   '/reset-password': typeof ResetPasswordRoute
+  '/convite/$token': typeof ConviteTokenRoute
   '/privacidade': typeof PrivacidadeRoute
   '/termos': typeof TermosRoute
   '/c/$slug': typeof CSlugRoute
@@ -263,6 +278,7 @@ export interface FileRoutesByTo {
   '/painel': typeof AuthenticatedPainelRoute
   '/pedidos-recorrentes': typeof AuthenticatedPedidosRecorrentesRoute
   '/producao': typeof AuthenticatedProducaoRoute
+  '/equipe': typeof AuthenticatedEquipeRoute
   '/resumo-mes': typeof AuthenticatedResumoMesRoute
   '/catalogo': typeof AuthenticatedCatalogoRoute
   '/comecar': typeof AuthenticatedComecarRoute
@@ -282,6 +298,7 @@ export interface FileRoutesById {
   '/auth': typeof AuthRoute
   '/mcp': typeof McpRoute
   '/reset-password': typeof ResetPasswordRoute
+  '/convite/$token': typeof ConviteTokenRoute
   '/privacidade': typeof PrivacidadeRoute
   '/termos': typeof TermosRoute
   '/c/$slug': typeof CSlugRoute
@@ -298,6 +315,7 @@ export interface FileRoutesById {
   '/_authenticated/painel': typeof AuthenticatedPainelRoute
   '/_authenticated/pedidos-recorrentes': typeof AuthenticatedPedidosRecorrentesRoute
   '/_authenticated/producao': typeof AuthenticatedProducaoRoute
+  '/_authenticated/equipe': typeof AuthenticatedEquipeRoute
   '/_authenticated/resumo-mes': typeof AuthenticatedResumoMesRoute
   '/_authenticated/catalogo': typeof AuthenticatedCatalogoRoute
   '/_authenticated/comecar': typeof AuthenticatedComecarRoute
@@ -317,6 +335,7 @@ export interface FileRouteTypes {
     | '/auth'
     | '/mcp'
     | '/reset-password'
+    | '/convite/$token'
     | '/privacidade'
     | '/termos'
     | '/c/$slug'
@@ -333,6 +352,7 @@ export interface FileRouteTypes {
     | '/painel'
     | '/pedidos-recorrentes'
     | '/producao'
+    | '/equipe'
     | '/resumo-mes'
     | '/catalogo'
     | '/comecar'
@@ -350,6 +370,7 @@ export interface FileRouteTypes {
     | '/auth'
     | '/mcp'
     | '/reset-password'
+    | '/convite/$token'
     | '/privacidade'
     | '/termos'
     | '/c/$slug'
@@ -366,6 +387,7 @@ export interface FileRouteTypes {
     | '/painel'
     | '/pedidos-recorrentes'
     | '/producao'
+    | '/equipe'
     | '/resumo-mes'
     | '/catalogo'
     | '/comecar'
@@ -384,6 +406,7 @@ export interface FileRouteTypes {
     | '/auth'
     | '/mcp'
     | '/reset-password'
+    | '/convite/$token'
     | '/privacidade'
     | '/termos'
     | '/c/$slug'
@@ -400,6 +423,7 @@ export interface FileRouteTypes {
     | '/_authenticated/painel'
     | '/_authenticated/pedidos-recorrentes'
     | '/_authenticated/producao'
+    | '/_authenticated/equipe'
     | '/_authenticated/resumo-mes'
     | '/_authenticated/catalogo'
     | '/_authenticated/comecar'
@@ -419,6 +443,7 @@ export interface RootRouteChildren {
   AuthRoute: typeof AuthRoute
   McpRoute: typeof McpRoute
   ResetPasswordRoute: typeof ResetPasswordRoute
+  ConviteTokenRoute: typeof ConviteTokenRoute
   PrivacidadeRoute: typeof PrivacidadeRoute
   TermosRoute: typeof TermosRoute
   CSlugRoute: typeof CSlugRoute
@@ -464,6 +489,13 @@ declare module '@tanstack/react-router' {
       path: '/reset-password'
       fullPath: '/reset-password'
       preLoaderRoute: typeof ResetPasswordRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/convite/$token': {
+      id: '/convite/$token'
+      path: '/convite/$token'
+      fullPath: '/convite/$token'
+      preLoaderRoute: typeof ConviteTokenRouteImport
       parentRoute: typeof rootRouteImport
     }
     '/privacidade': {
@@ -578,6 +610,13 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof AuthenticatedProducaoRouteImport
       parentRoute: typeof AuthenticatedRouteRoute
     }
+    '/_authenticated/equipe': {
+      id: '/_authenticated/equipe'
+      path: '/equipe'
+      fullPath: '/equipe'
+      preLoaderRoute: typeof AuthenticatedEquipeRouteImport
+      parentRoute: typeof AuthenticatedRouteRoute
+    }
     '/_authenticated/resumo-mes': {
       id: '/_authenticated/resumo-mes'
       path: '/resumo-mes'
@@ -668,6 +707,7 @@ interface AuthenticatedRouteRouteChildren {
   AuthenticatedPainelRoute: typeof AuthenticatedPainelRoute
   AuthenticatedPedidosRecorrentesRoute: typeof AuthenticatedPedidosRecorrentesRoute
   AuthenticatedProducaoRoute: typeof AuthenticatedProducaoRoute
+  AuthenticatedEquipeRoute: typeof AuthenticatedEquipeRoute
   AuthenticatedResumoMesRoute: typeof AuthenticatedResumoMesRoute
   AuthenticatedCatalogoRoute: typeof AuthenticatedCatalogoRoute
   AuthenticatedComecarRoute: typeof AuthenticatedComecarRoute
@@ -690,6 +730,7 @@ const AuthenticatedRouteRouteChildren: AuthenticatedRouteRouteChildren = {
   AuthenticatedPainelRoute: AuthenticatedPainelRoute,
   AuthenticatedPedidosRecorrentesRoute: AuthenticatedPedidosRecorrentesRoute,
   AuthenticatedProducaoRoute: AuthenticatedProducaoRoute,
+  AuthenticatedEquipeRoute: AuthenticatedEquipeRoute,
   AuthenticatedResumoMesRoute: AuthenticatedResumoMesRoute,
   AuthenticatedCatalogoRoute: AuthenticatedCatalogoRoute,
   AuthenticatedComecarRoute: AuthenticatedComecarRoute,
@@ -711,6 +752,7 @@ const rootRouteChildren: RootRouteChildren = {
   AuthRoute: AuthRoute,
   McpRoute: McpRoute,
   ResetPasswordRoute: ResetPasswordRoute,
+  ConviteTokenRoute: ConviteTokenRoute,
   PrivacidadeRoute: PrivacidadeRoute,
   TermosRoute: TermosRoute,
   CSlugRoute: CSlugRoute,

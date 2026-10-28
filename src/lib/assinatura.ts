@@ -102,3 +102,23 @@ export function precoTexto(v: number | null | undefined) {
 
 /** Endereço do painel de administração (site separado). */
 export const URL_PAINEL_ADMIN = "https://densaymmon.github.io/minhaconfeitaria/";
+
+/** Papel de quem está logado na confeitaria (equipe). */
+export type Papel = "dono" | "gerente" | "producao";
+
+export const NOME_PAPEL: Record<Papel, string> = { dono: "Dona(o)", gerente: "Gerente", producao: "Produção" };
+export const DESCRICAO_PAPEL: Record<Exclude<Papel, "dono">, string> = {
+  gerente: "Tudo do sistema, menos gerenciar a equipe.",
+  producao: "Pedidos, produção, produtos e clientes. Não vê financeiro, compras, cupons nem configurações.",
+};
+
+/** Páginas que o papel "produção" não acessa (o banco também bloqueia os dados). */
+export function paginaPermitidaAoPapel(caminho: string, papel: Papel | null | undefined) {
+  if (papel !== "producao") return true;
+  return !/^\/(financeiro|despesas|contas-pagar|relatorios|resumo-mes|compras|configuracoes|catalogo)(\/|$)/.test(caminho);
+}
+
+/** Mensagem de erro de equipe ("EQUIPE: ...") sem o prefixo técnico. */
+export function mensagemEquipe(erro: string) {
+  return erro.replace(/^.*?EQUIPE:\s*/, "");
+}

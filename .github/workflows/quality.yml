@@ -89,6 +89,8 @@ jobs:
         run: psql "$DATABASE_URL" -v ON_ERROR_STOP=1 -f tests/db/catalogo-extras-smoke.sql
       - name: Smoke-test push subscriptions and platform secrets
         run: psql "$DATABASE_URL" -v ON_ERROR_STOP=1 -f tests/db/push-smoke.sql
+      - name: Smoke-test team members, invites and roles
+        run: psql "$DATABASE_URL" -v ON_ERROR_STOP=1 -f tests/db/equipe-smoke.sql
       - name: Create isolated database for migration-history repair test
         run: psql "$DATABASE_URL" -v ON_ERROR_STOP=1 -c "CREATE DATABASE confeitaria_reconcile_test"
       - name: Simulate the deployed schema with an incomplete Drizzle history

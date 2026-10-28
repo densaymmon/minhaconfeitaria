@@ -36,10 +36,10 @@ function ConfigPage(){
   if(confeitaria&&!loja.nome.trim()){toast.error('Informe o nome da confeitaria.');return;}
    if(pixChave.trim()&&!chaveDetectada)toast.warning('Não reconhecemos o formato da chave Pix: ela será salva, mas o Pix copia e cola com valor não será gerado. Confira a chave ou escolha o tipo.');
   setBusy(true);
-  const {error}=await supabase.from('configuracoes').upsert({user_id:user.id,...values,pix_chave:pixChave.trim(),...('pix_tipo' in data?{pix_tipo:pixTipo||null}:{})});
+  const {error}=await supabase.from('configuracoes').upsert({user_id:confeitaria?.user_id??user.id,...values,pix_chave:pixChave.trim(),...('pix_tipo' in data?{pix_tipo:pixTipo||null}:{})});
   if(error){setBusy(false);toast.error(error.message);return;}
   if(confeitaria){
-   const dadosLoja={user_id:user.id,nome:loja.nome.trim().slice(0,80),slogan:loja.slogan.trim().slice(0,120)||null,whatsapp:loja.whatsapp.trim().slice(0,30)||null,...(temCidade?{cidade:loja.cidade.trim().slice(0,60)||null}:{})};
+   const dadosLoja={user_id:confeitaria?.user_id??user.id,nome:loja.nome.trim().slice(0,80),slogan:loja.slogan.trim().slice(0,120)||null,whatsapp:loja.whatsapp.trim().slice(0,30)||null,...(temCidade?{cidade:loja.cidade.trim().slice(0,60)||null}:{})};
    const {error:erroLoja}=await supabase.from('confeitarias').upsert(dadosLoja,{onConflict:'user_id'});
    if(erroLoja){setBusy(false);toast.error(`Não foi possível salvar os dados da confeitaria: ${erroLoja.message}`);return;}
   }
