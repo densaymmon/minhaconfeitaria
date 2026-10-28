@@ -1,3 +1,4 @@
+import { componentesDoKit } from "./lista-producao";
 import { useMemo } from "react";
 import { useSuspenseQuery } from "@tanstack/react-query";
 import { configQ, insumosQ, pedidosHistoricoQ, pedidosQ, pedidoPagamentosQ, produtosQ, type Pedido } from "./queries";
@@ -10,6 +11,11 @@ export function useCustos() {
     const mapIns = new Map(insumos.map((i) => [i.id, { ...i, preco_unidade: Number(i.preco_unidade) }]));
     const custo = new Map<string, number>();
     for (const p of produtos) custo.set(p.id, custoUnitario(p, p.receita_itens, mapIns));
+    // Kit: soma o custo dos produtos que o compõem.
+    for (const p of produtos) {
+      const itens = componentesDoKit(p.componentes);
+      if (itens.length) custo.set(p.id, (custo.get(p.id) ?? 0) + itens.reduce((s, c) => s + (custo.get(c.produto_id) ?? 0) * c.quantidade, 0));
+    }
     return { produtos, insumos, mapIns, custo };
   }, [produtos, insumos]);
 }

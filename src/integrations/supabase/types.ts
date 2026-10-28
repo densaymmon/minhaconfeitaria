@@ -95,6 +95,39 @@ export type Database = {
         }
         Relationships: []
       }
+      avaliacoes: {
+        Row: {
+          cliente_nome: string | null
+          comentario: string | null
+          created_at: string
+          id: string
+          nota: number
+          pedido_id: string
+          publicada: boolean
+          user_id: string
+        }
+        Insert: {
+          cliente_nome?: string | null
+          comentario?: string | null
+          created_at?: string
+          id?: string
+          nota: number
+          pedido_id: string
+          publicada?: boolean
+          user_id: string
+        }
+        Update: {
+          cliente_nome?: string | null
+          comentario?: string | null
+          created_at?: string
+          id?: string
+          nota?: number
+          pedido_id?: string
+          publicada?: boolean
+          user_id?: string
+        }
+        Relationships: []
+      }
       clientes: {
         Row: {
           created_at: string
@@ -222,6 +255,11 @@ export type Database = {
         Row: {
           aceita_entrega: boolean
           aceita_encomenda: boolean
+          fidelidade_a_cada: number
+          fidelidade_tipo: string
+          fidelidade_valor: number
+          sinal_a_partir_de: number
+          sinal_percentual: number
           cor_primaria: string | null
           datas_bloqueadas: string[]
           dias_fechados: number[]
@@ -255,6 +293,11 @@ export type Database = {
           acesso_atualizado_em?: string | null
           aceita_entrega?: boolean
           aceita_encomenda?: boolean
+          fidelidade_a_cada?: number
+          fidelidade_tipo?: string
+          fidelidade_valor?: number
+          sinal_a_partir_de?: number
+          sinal_percentual?: number
           cor_primaria?: string | null
           datas_bloqueadas?: string[]
           dias_fechados?: number[]
@@ -286,6 +329,11 @@ export type Database = {
           acesso_atualizado_em?: string | null
           aceita_entrega?: boolean
           aceita_encomenda?: boolean
+          fidelidade_a_cada?: number
+          fidelidade_tipo?: string
+          fidelidade_valor?: number
+          sinal_a_partir_de?: number
+          sinal_percentual?: number
           cor_primaria?: string | null
           datas_bloqueadas?: string[]
           dias_fechados?: number[]
@@ -1056,6 +1104,8 @@ export type Database = {
           codigo_curto: string | null
           codigo_publico: string | null
           cupom_codigo: string | null
+          fidelidade: boolean
+          sinal_valor: number
           push_avisado_em: string | null
           encomenda: boolean
           confirmacao_enviada_em: string | null
@@ -1086,6 +1136,8 @@ export type Database = {
           codigo_curto?: string | null
           codigo_publico?: string | null
           cupom_codigo?: string | null
+          fidelidade?: boolean
+          sinal_valor?: number
           push_avisado_em?: string | null
           encomenda?: boolean
           confirmacao_enviada_em?: string | null
@@ -1116,6 +1168,8 @@ export type Database = {
           codigo_curto?: string | null
           codigo_publico?: string | null
           cupom_codigo?: string | null
+          fidelidade?: boolean
+          sinal_valor?: number
           push_avisado_em?: string | null
           encomenda?: boolean
           confirmacao_enviada_em?: string | null
@@ -1426,6 +1480,10 @@ export type Database = {
       produtos: {
         Row: {
           antecedencia_dias: number
+          componentes: Json
+          limite_dia: number | null
+          venda_ate: string | null
+          venda_de: string | null
           ativo: boolean
           categoria: string
           created_at: string
@@ -1447,6 +1505,10 @@ export type Database = {
         }
         Insert: {
           antecedencia_dias?: number
+          componentes?: Json
+          limite_dia?: number | null
+          venda_ate?: string | null
+          venda_de?: string | null
           ativo?: boolean
           categoria?: string
           created_at?: string
@@ -1468,6 +1530,10 @@ export type Database = {
         }
         Update: {
           antecedencia_dias?: number
+          componentes?: Json
+          limite_dia?: number | null
+          venda_ate?: string | null
+          venda_de?: string | null
           ativo?: boolean
           categoria?: string
           created_at?: string
@@ -1609,6 +1675,14 @@ export type Database = {
       }
       plataforma_publica: {
         Args: never
+        Returns: Json
+      }
+      avaliar_pedido: {
+        Args: { p_codigo: string; p_comentario: string; p_nota: number }
+        Returns: boolean
+      }
+      progresso_fidelidade: {
+        Args: { p_slug: string; p_telefone: string }
         Returns: Json
       }
       meu_papel: {

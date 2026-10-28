@@ -1,5 +1,5 @@
 import { describe, expect, it } from "vitest";
-import { formatarQuantidade, ingredientesNecessarios, intervaloPeriodo, periodoAtual, somarDias } from "./lista-producao";
+import { componentesDoKit, formatarQuantidade, ingredientesNecessarios, intervaloPeriodo, periodoAtual, somarDias } from "./lista-producao";
 
 const insumos = [
   { id: "farinha", nome: "Farinha", unidade_embalagem: "kg" },
@@ -73,5 +73,21 @@ describe("formatação e período", () => {
     expect(intervaloPeriodo("semana", "2026-10-28")).toEqual({ inicio: "", fim: "2026-11-03" });
     expect(periodoAtual("", "", "2026-10-28")).toBe("tudo");
     expect(periodoAtual("2026-10-01", "", "2026-10-28")).toBeNull();
+  });
+});
+
+describe("kits na lista de ingredientes", () => {
+  it("abre o kit nos produtos que o compõem", () => {
+    const produtos = [
+      { id: "bolo", nome: "Bolo", rendimento: 1, receita_itens: [{ insumo_id: "farinha", quantidade: 200, unidade_receita: "g" }] },
+      { id: "brig", nome: "Brigadeiro", rendimento: 10, receita_itens: [{ insumo_id: "leite", quantidade: 1, unidade_receita: "un" }] },
+      { id: "kit", nome: "Kit", rendimento: 1, receita_itens: [], componentes: [{ produto_id: "bolo", quantidade: 2 }, { produto_id: "brig", quantidade: 10 }] },
+    ];
+    const insumos = [{ id: "farinha", nome: "Farinha", unidade: "g" }, { id: "leite", nome: "Leite condensado", unidade: "un" }];
+    const r = ingredientesNecessarios([{ produto_id: "kit", pendente: 3 }], produtos, insumos);
+    expect(r.semReceita).toEqual([]);
+    expect(r.linhas.map((l) => [l.nome, l.necessario])).toEqual([["Farinha", 1200], ["Leite condensado", 3]]);
+    expect(componentesDoKit("x")).toEqual([]);
+    expect(componentesDoKit([{ produto_id: "a", quantidade: 0 }, { produto_id: "b", quantidade: 2 }])).toEqual([{ produto_id: "b", quantidade: 2 }]);
   });
 });

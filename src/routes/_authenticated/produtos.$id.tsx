@@ -2,6 +2,7 @@ import * as appQueries from "@/lib/queries";
 import { createFileRoute, Link, useNavigate } from "@tanstack/react-router";
 import { useQuery, useQueryClient, useSuspenseQuery } from "@tanstack/react-query";
 import { useState } from "react";
+import { componentesDoKit } from "@/lib/lista-producao";
 import { toast } from "sonner";
 import { Plus, Trash2 } from "lucide-react";
 import { apagarArquivosMidia, enviarMidiaProduto } from "@/lib/foto-catalogo";
@@ -48,7 +49,7 @@ function ProdutoForm() {
   const { duplicar } = Route.useSearch();
   const navigate = useNavigate();
   const qc = useQueryClient();
-  const { produtos, insumos, mapIns } = useCustos();
+  const { produtos, insumos, mapIns, custo } = useCustos();
   const p = novo ? undefined : produtos.find((x) => x.id === id);
 
   const [f, setF] = useState(() => ({
@@ -80,6 +81,16 @@ function ProdutoForm() {
   const [midias, setMidias] = useState<MidiaEditavel[]>(() => (duplicar ? [] : midiasSalvas.map((m) => midiaSalva(m.tipo, m.url))));
   const [progresso, setProgresso] = useState<string | null>(null);
   const [opcoes, setOpcoes] = useState<GrupoEditavel[]>(() => opcoesParaEdicao(p?.opcoes));
+  // Vendas: limite por dia, janela de venda (sazonal) e itens do kit.
+  const [venda, setVenda] = useState(() => ({
+    limite_dia: p?.limite_dia == null ? "" : String(p.limite_dia),
+    venda_de: p?.venda_de ?? "",
+    venda_ate: p?.venda_ate ?? "",
+    kit: componentesDoKit(p?.componentes).map((c) => ({ produto_id: c.produto_id, quantidade: String(c.quantidade) })),
+  }));
+  // Produtos que podem entrar no kit: outros produtos que não são kits.
+  const paraKit = produtos.filter((x) => x.id !== p?.id && componentesDoKit(x.componentes).length === 0);
+  const usadoEmKit = Boolean(p && produtos.some((x) => componentesDoKit(x.componentes).some((c) => c.produto_id === p.id)));
 
   if (!novo && !p) return <p className="py-16 text-center text-muted-foreground">Produto não encontrado. <Link to="/produtos" className="text-primary">Voltar</Link></p>;
 
@@ -97,7 +108,9 @@ function ProdutoForm() {
     cr = custoReceita(prodNum, itensNum, mapIns);
     if (itensNum.some((i) => !Number.isFinite(i.quantidade) || i.quantidade <= 0)) erroReceita = "Informe quantidade utilizada maior que zero para cada ingrediente.";
   } catch (e) { erroReceita = e instanceof Error ? e.message : "Confira as medidas da receita."; }
-  const unit = cr.total / prodNum.rendimento;
+  const kitNum = venda.kit.filter((k) => k.produto_id).map((k) => ({ produto_id: k.produto_id, quantidade: parseNum(k.quantidade) }));
+  const custoKit = kitNum.reduce((s, k) => s + (custo.get(k.produto_id) ?? 0) * k.quantidade, 0);
+  const unit = cr.total / prodNum.rendimento + custoKit;
   const sugerido = precoSugerido(unit, parseNum(f.margem_desejada));
   const preco = parseNum(f.preco_venda);
 
@@ -126,11 +139,20 @@ function ProdutoForm() {
       try {
         const antecedencia = Math.round(parseNum(cat.antecedencia_dias));
         if (!Number.isFinite(antecedencia) || antecedencia < 0 || antecedencia > 60) throw new Error("A antecedência deve ser de 0 a 60 dias.");
+        const limite = venda.limite_dia.trim() ? Math.round(parseNum(venda.limite_dia)) : null;
+        if (limite !== null && (limite < 1 || limite > 10000)) throw new Error("O limite por dia deve ser de 1 a 10.000, ou ficar em branco.");
+        if (venda.venda_de && venda.venda_ate && venda.venda_de > venda.venda_ate) throw new Error("A data de início da venda é depois do fim.");
+        if (kitNum.some((k) => !(k.quantidade > 0))) throw new Error("Informe a quantidade de cada item do kit.");
+        if (new Set(kitNum.map((k) => k.produto_id)).size !== kitNum.length) throw new Error("Um produto aparece duas vezes no kit.");
         const { error: erroCatalogo } = await supabase.from("produtos").update({
           no_catalogo: cat.no_catalogo,
           descricao: cat.descricao.trim().slice(0, 600) || null,
           antecedencia_dias: antecedencia,
           opcoes: opcoesValidadas.valor,
+          limite_dia: limite,
+          venda_de: venda.venda_de || null,
+          venda_ate: venda.venda_ate || null,
+          componentes: kitNum,
         }).eq("id", produtoId);
         if (erroCatalogo) throw new Error(erroCatalogo.message);
 
@@ -265,7 +287,8 @@ function ProdutoForm() {
           <Row label="Ingredientes e embalagens" value={brl(cr.ingredientes)} />
           <Row label="Gás, energia e mão de obra" value={brl(cr.operacionais)} />
           <Row label="Custo total da receita" value={brl(cr.total)} strong />
-          <Row label={`Custo por unidade (÷ ${prodNum.rendimento})`} value={brl(unit)} strong />
+          {custoKit > 0 && <Row label="Itens do kit" value={brl(custoKit)} />}
+          <Row label={custoKit > 0 ? "Custo por unidade (receita ÷ rendimento + kit)" : `Custo por unidade (÷ ${prodNum.rendimento})`} value={brl(unit)} strong />
           <div className="grid grid-cols-2 gap-3 pt-2">
             <Field label="Margem desejada %">
               <Input inputMode="decimal" value={f.margem_desejada} onChange={(e) => set("margem_desejada", e.target.value)} className="h-11" />
@@ -316,6 +339,39 @@ function ProdutoForm() {
           </Field>
         </Card>
         )}
+
+        <Card className="space-y-3">
+          <h2 className="text-lg font-semibold">Kit</h2>
+          <p className="text-xs text-muted-foreground">Monte um kit com outros produtos (ex.: 1 bolo + 20 brigadeiros). O custo e a lista de ingredientes somam os itens; o preço do kit é o que você definir.</p>
+          {usadoEmKit ? <p className="text-sm text-muted-foreground">Este produto faz parte de um kit, então não pode virar kit.</p> : (
+            <>
+              {venda.kit.map((k, i) => (
+                <div key={i} className="flex gap-2">
+                  <NativeSelect aria-label="Produto do kit" value={k.produto_id} onChange={(e) => { const v = e.target.value; setVenda((s) => ({ ...s, kit: s.kit.map((x, j) => (j === i ? { ...x, produto_id: v } : x)) })); }}>
+                    {paraKit.map((x) => <option key={x.id} value={x.id}>{x.nome}</option>)}
+                  </NativeSelect>
+                  <Input inputMode="decimal" aria-label="Quantidade no kit" value={k.quantidade} onChange={(e) => { const v = e.target.value; setVenda((s) => ({ ...s, kit: s.kit.map((x, j) => (j === i ? { ...x, quantidade: v } : x)) })); }} className="h-11 w-20" />
+                  <Button size="icon" variant="ghost" className="h-11 w-11 shrink-0" aria-label="Remover do kit" onClick={() => setVenda((s) => ({ ...s, kit: s.kit.filter((_, j) => j !== i) }))}><Trash2 className="size-4 text-destructive" /></Button>
+                </div>
+              ))}
+              <Button size="sm" variant="outline" disabled={paraKit.length === 0 || venda.kit.length >= 20} onClick={() => { const primeiro = paraKit[0]; if (primeiro) setVenda((s) => ({ ...s, kit: [...s.kit, { produto_id: primeiro.id, quantidade: "1" }] })); }}>
+                <Plus className="size-4" /> Item do kit
+              </Button>
+            </>
+          )}
+        </Card>
+
+        <Card className="space-y-3">
+          <h2 className="text-lg font-semibold">Quantidade e período de venda</h2>
+          <Field label="Limite por dia de entrega (unidades)" hint="Em branco = sem limite. Conta pedidos de todas as origens; ao esgotar, o catálogo não aceita mais para aquele dia.">
+            <Input inputMode="numeric" value={venda.limite_dia} onChange={(e) => setVenda((s) => ({ ...s, limite_dia: e.target.value }))} className="h-11" placeholder="Sem limite" />
+          </Field>
+          <div className="grid grid-cols-2 gap-3">
+            <Field label="Vender a partir de"><Input type="date" value={venda.venda_de} onChange={(e) => setVenda((s) => ({ ...s, venda_de: e.target.value }))} className="h-11" /></Field>
+            <Field label="Vender até"><Input type="date" value={venda.venda_ate} onChange={(e) => setVenda((s) => ({ ...s, venda_ate: e.target.value }))} className="h-11" /></Field>
+          </div>
+          <p className="text-xs text-muted-foreground">Para produtos de época (Páscoa, Natal, Dia das Mães): fora desse período o produto some do catálogo sozinho. Em branco = sempre à venda.</p>
+        </Card>
 
         <Card>
           <Field label="Modo de preparo / anotações">

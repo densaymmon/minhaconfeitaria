@@ -2,7 +2,7 @@ import { createFileRoute, Link } from "@tanstack/react-router";
 import { useQuery, useQueryClient } from "@tanstack/react-query";
 import { useState } from "react";
 import { toast } from "sonner";
-import { CakeSlice, Check, Copy, MessageCircle } from "lucide-react";
+import { CakeSlice, Check, Copy, MessageCircle, Star } from "lucide-react";
 import { supabase } from "@/integrations/supabase/client";
 import { pixCopiaECola, tipoChaveValido } from "@/lib/pix";
 import { Button } from "@/components/ui/button";
@@ -45,6 +45,10 @@ export function AcompanharPedido({ codigo }: { codigo: string }) {
     refetchInterval: 30_000,
   });
   const [avisando, setAvisando] = useState(false);
+  const [pagarSo, setPagarSo] = useState<"sinal" | "tudo">("sinal");
+  const [nota, setNota] = useState(0);
+  const [comentario, setComentario] = useState("");
+  const [avaliando, setAvaliando] = useState(false);
 
   if (codigoValido && isLoading) return <Pagina><p className="py-24 text-center text-sm text-muted-foreground" role="status">Carregando seu pedido…</p></Pagina>;
   if (!pedido) {
@@ -85,10 +89,23 @@ export function AcompanharPedido({ codigo }: { codigo: string }) {
     link: linkAcompanhamento,
   }));
 
-  // Pix copia e cola já com o valor em aberto e o número do pedido.
-  const codigoPix = loja.pix_chave && falta > 0
-    ? pixCopiaECola({ chave: loja.pix_chave, tipoChave: tipoChaveValido(loja.pix_tipo), nome: loja.nome, cidade: loja.cidade ?? null, valor: falta, identificador: `PEDIDO${pedido.numero}` })
+  // Sinal: valor mínimo para confirmar; o cliente escolhe pagar só o sinal ou tudo.
+  const faltaSinal = Math.max(0, Math.round((Number(pedido.sinal ?? 0) - Number(pedido.pago)) * 100) / 100);
+  const valorPix = faltaSinal > 0 && pagarSo === "sinal" ? faltaSinal : falta;
+  // Pix copia e cola já com o valor escolhido e o número do pedido.
+  const codigoPix = loja.pix_chave && valorPix > 0
+    ? pixCopiaECola({ chave: loja.pix_chave, tipoChave: tipoChaveValido(loja.pix_tipo), nome: loja.nome, cidade: loja.cidade ?? null, valor: valorPix, identificador: `PEDIDO${pedido.numero}` })
     : null;
+
+  async function avaliar() {
+    if (nota < 1) return void toast.error("Toque nas estrelas para dar sua nota.");
+    setAvaliando(true);
+    const { error } = await supabase.rpc("avaliar_pedido", { p_codigo: codigo, p_nota: nota, p_comentario: comentario.trim() });
+    setAvaliando(false);
+    if (error) return void toast.error(error.message.replace(/^.*?CATALOGO:\s*/, ""));
+    await qc.invalidateQueries({ queryKey: ["pedido-publico", codigo] });
+    toast.success("Obrigado pela avaliação! 💛");
+  }
 
   async function copiarPix(texto: string | null | undefined, rotulo: string) {
     if (!texto) return;
@@ -158,7 +175,21 @@ export function AcompanharPedido({ codigo }: { codigo: string }) {
             <p className="mt-2 rounded-xl bg-success/15 p-3 text-sm font-medium text-success">Pagamento confirmado. Obrigado!</p>
           ) : (
             <>
-              <p className="mt-1 text-sm text-muted-foreground">Valor a pagar por Pix: <b className="text-foreground tabular-nums">{brl(falta)}</b></p>
+              {faltaSinal > 0 ? (
+                <>
+                  <p className="mt-1 text-sm">Para confirmar o pedido, pague o <b>sinal de {brl(faltaSinal)}</b>. O restante ({brl(falta - faltaSinal)}) pode ser pago até a entrega.</p>
+                  <div className="mt-3 grid grid-cols-2 gap-2" role="radiogroup" aria-label="Quanto pagar agora">
+                    {(["sinal", "tudo"] as const).map((op) => (
+                      <button key={op} type="button" role="radio" aria-checked={pagarSo === op} onClick={() => setPagarSo(op)}
+                        className={cn("rounded-xl border p-2 text-sm", pagarSo === op ? "border-primary bg-primary/10 font-semibold text-primary" : "bg-background")}>
+                        {op === "sinal" ? `Só o sinal · ${brl(faltaSinal)}` : `Tudo · ${brl(falta)}`}
+                      </button>
+                    ))}
+                  </div>
+                </>
+              ) : (
+                <p className="mt-1 text-sm text-muted-foreground">Valor a pagar por Pix: <b className="text-foreground tabular-nums">{brl(falta)}</b></p>
+              )}
               {codigoPix && (
                 <div className="mt-3 space-y-2 rounded-xl border border-primary/30 bg-primary/5 p-3">
                   <p className="text-sm font-medium">Pix copia e cola (já com o valor)</p>
@@ -188,6 +219,27 @@ export function AcompanharPedido({ codigo }: { codigo: string }) {
             </>
           )}
         </section>
+      )}
+
+      {pedido.pode_avaliar && (
+        <section className="mt-4 rounded-2xl border border-primary/30 bg-primary/5 p-4">
+          <h2 className="font-semibold">Como foi seu pedido?</h2>
+          <div className="mt-2 flex gap-1" role="radiogroup" aria-label="Nota de 1 a 5">
+            {[1, 2, 3, 4, 5].map((i) => (
+              <button key={i} type="button" role="radio" aria-checked={nota === i} aria-label={`${i} estrela(s)`} onClick={() => setNota(i)} className="p-1">
+                <Star className={cn("size-8", i <= nota ? "fill-current text-amber-500" : "text-muted-foreground/40")} />
+              </button>
+            ))}
+          </div>
+          <textarea value={comentario} onChange={(e) => setComentario(e.target.value)} maxLength={500} rows={3} placeholder="Conte o que achou (opcional)"
+            className="mt-2 w-full rounded-xl border bg-background p-3 text-sm" aria-label="Comentário" />
+          <Button type="button" className="mt-2 h-11 w-full" disabled={avaliando || nota < 1} onClick={() => void avaliar()}>{avaliando ? "Enviando…" : "Enviar avaliação"}</Button>
+        </section>
+      )}
+      {pedido.avaliacao && (
+        <p className="mt-4 flex items-center justify-center gap-2 rounded-2xl bg-card p-3 text-sm shadow-soft">
+          Sua avaliação: <span className="inline-flex">{[1, 2, 3, 4, 5].map((i) => <Star key={i} className={cn("size-4", i <= (pedido.avaliacao?.nota ?? 0) ? "fill-current text-amber-500" : "text-muted-foreground/40")} />)}</span> Obrigado!
+        </p>
       )}
 
       <section className="mt-4 rounded-2xl bg-card p-4 shadow-soft">

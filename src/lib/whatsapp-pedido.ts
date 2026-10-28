@@ -34,6 +34,7 @@ export function dadosMensagemPedido(p: PedidoCalc, opcoes: OpcoesMensagemPedido)
       ? pixCopiaECola({ chave: pix, tipoChave: tipoChaveValido(opcoes.pixTipo), nome: opcoes.loja, cidade: opcoes.cidade, valor: falta, identificador: `PEDIDO${p.numero}` })
       : null,
     link: linkPedido(opcoes.origem, { curto: p.codigo_curto, longo: p.codigo_publico }),
+    sinal: Number(p.sinal_valor ?? 0) || 0,
   };
 }
 
