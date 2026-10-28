@@ -1,0 +1,9 @@
+@import "../../src/styles.css";
+@source ".";
+
+/* Identidade do painel de administração: azul-escuro, para não confundir com o sistema das confeitarias. */
+:root {
+  --primary: oklch(0.36 0.07 262);
+  --primary-foreground: oklch(0.98 0.005 262);
+  --ring: oklch(0.36 0.07 262);
+}

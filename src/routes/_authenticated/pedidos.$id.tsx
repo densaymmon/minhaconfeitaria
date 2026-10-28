@@ -1,4 +1,5 @@
 import { OrderMessage } from "@/components/app/order-message";
+import { useRecurso } from "@/components/app/plano";
 import type { OrderDraft } from "@/lib/order-draft";
 import * as appQueries from "@/lib/queries";
 import { createFileRoute, Link, useNavigate } from "@tanstack/react-router";
@@ -47,6 +48,7 @@ type Item = {
 };
 
 function PedidoForm() {
+  const temIa = useRecurso("ia");
   const { id } = Route.useParams();
   const novo = id === "novo";
   const navigate = useNavigate();
@@ -572,7 +574,7 @@ function PedidoForm() {
           </Button>
         ) : undefined}
       />
-      {novo && <OrderMessage onApply={aplicarRascunho} />}
+      {novo && temIa && <OrderMessage onApply={aplicarRascunho} />}
       {existenteCalc && existente?.status === "pronto" && (() => {
         const aviso = avisoProntoWhatsApp(existenteCalc, opcoesMensagem);
         return (

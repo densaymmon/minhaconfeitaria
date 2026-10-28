@@ -1,39 +1,58 @@
 import { describe, expect, it } from "vitest";
-import { filtrarContas, lerContas, mensalidadeVencida, resumoContas } from "./plataforma";
+import { filtrarEmpresas, lerEmpresas, lerPagamentos, lerResumo, previsaoPagoAte, situacaoExibida } from "./plataforma";
 import { contato, responsavel, termosDeUso, politicaPrivacidade, dataVersao, TERMOS_VERSAO } from "./termos";
 
-const contas = lerContas([
-  { user_id: "a", nome: "Casal do Bolo", acesso: "ativo", admin: true, pago_ate: null, pedidos_total: "41", email: "dona@x.com" },
-  { user_id: "b", nome: "Doces da Bia", acesso: "pendente", cidade: "Campinas", whatsapp: "19988887777" },
-  { user_id: "c", nome: "Bolo & Cia", acesso: "ativo", pago_ate: "2026-10-01" },
-  { user_id: "d", nome: "Torta Feliz", acesso: "bloqueado", pago_ate: "2026-09-01" },
-  { user_id: "e", nome: "Brigadeiria", acesso: "ativo", pago_ate: "2026-11-30" },
+const empresas = lerEmpresas([
+  { user_id: "a", nome: "Casal do Bolo", acesso: "ativo", situacao: "cortesia", situacao_cadastrada: "cortesia", plano_nome: "Vitrine", pedidos_total: "41", email: "dona@x.com" },
+  { user_id: "b", nome: "Doces da Bia", acesso: "pendente", situacao: "teste", cidade: "Campinas", whatsapp: "19988887777" },
+  { user_id: "c", nome: "Bolo & Cia", acesso: "ativo", situacao: "atrasada", situacao_cadastrada: "ativa", pago_ate: "2026-10-25", valor_efetivo: 59.9 },
+  { user_id: "d", nome: "Torta Feliz", acesso: "bloqueado", situacao: "ativa" },
+  { user_id: "e", nome: "Brigadeiria", acesso: "ativo", situacao: "teste", situacao_cadastrada: "teste", teste_ate: "2026-11-05", ciclo: "anual" },
+  { user_id: "f", nome: "Doceria", acesso: "ativo", situacao: "suspensa" },
   { nome: "sem id" },
   "lixo",
 ]);
 
-describe("painel da plataforma", () => {
+describe("painel de administração", () => {
   it("lê a lista do servidor com tipos seguros", () => {
-    expect(contas.length).toBe(5);
-    expect(contas[0]?.pedidos_total).toBe(41);
-    expect(contas[1]?.acesso).toBe("pendente");
-    expect(contas[1]?.email).toBeNull();
+    expect(empresas.length).toBe(6);
+    expect(empresas[0]?.pedidos_total).toBe(41);
+    expect(empresas[2]?.valor_efetivo).toBe(59.9);
+    expect(empresas[4]?.ciclo).toBe("anual");
+    expect(empresas[1]?.email).toBeNull();
+    expect(empresas[3]?.plano_id).toBeNull();
   });
-  it("marca mensalidade vencida só em conta ativa que não é da administração", () => {
-    const hoje = "2026-10-28";
-    expect(mensalidadeVencida({ acesso: "ativo", admin: false, pago_ate: "2026-10-27" }, hoje)).toBe(true);
-    expect(mensalidadeVencida({ acesso: "ativo", admin: false, pago_ate: "2026-10-28" }, hoje)).toBe(false);
-    expect(mensalidadeVencida({ acesso: "bloqueado", admin: false, pago_ate: "2026-01-01" }, hoje)).toBe(false);
-    expect(mensalidadeVencida({ acesso: "ativo", admin: true, pago_ate: "2026-01-01" }, hoje)).toBe(false);
-    expect(mensalidadeVencida({ acesso: "ativo", admin: false, pago_ate: null }, hoje)).toBe(false);
+  it("mostra primeiro o acesso manual e depois a assinatura", () => {
+    expect(situacaoExibida({ acesso: "pendente", situacao: "teste" }).rotulo).toBe("Aguardando liberação");
+    expect(situacaoExibida({ acesso: "bloqueado", situacao: "ativa" }).rotulo).toBe("Bloqueada");
+    expect(situacaoExibida({ acesso: "ativo", situacao: "atrasada" }).tom).toBe("alerta");
+    expect(situacaoExibida({ acesso: "ativo", situacao: null }).rotulo).toBe("Sem plano");
   });
-  it("filtra por situação e busca por nome, cidade ou contato", () => {
-    const hoje = "2026-10-28";
-    expect(filtrarContas(contas, "pendente", "", hoje).map((c) => c.user_id)).toEqual(["b"]);
-    expect(filtrarContas(contas, "vencidas", "", hoje).map((c) => c.user_id)).toEqual(["c"]);
-    expect(filtrarContas(contas, "todas", "campinas", hoje).map((c) => c.user_id)).toEqual(["b"]);
-    expect(filtrarContas(contas, "todas", "DONA@", hoje).map((c) => c.user_id)).toEqual(["a"]);
-    expect(resumoContas(contas, hoje)).toEqual({ total: 5, pendente: 1, ativo: 3, bloqueado: 1, vencidas: 1 });
+  it("filtra por situação e busca", () => {
+    const ids = (f: Parameters<typeof filtrarEmpresas>[1], q = "") => filtrarEmpresas(empresas, f, q).map((e) => e.user_id);
+    expect(ids("pendentes")).toEqual(["b"]);
+    expect(ids("teste")).toEqual(["e"]);
+    expect(ids("atrasadas")).toEqual(["c"]);
+    expect(ids("suspensas")).toEqual(["f"]);
+    expect(ids("bloqueadas")).toEqual(["d"]);
+    expect(ids("cortesia")).toEqual(["a"]);
+    expect(ids("todas", "campinas")).toEqual(["b"]);
+    expect(ids("todas", "VITRINE")).toEqual(["a"]);
+  });
+  it("prevê o novo vencimento como o banco", () => {
+    // Em teste: o período pago começa no fim do teste.
+    expect(previsaoPagoAte({ situacao_cadastrada: "teste", teste_ate: "2026-11-05", pago_ate: null }, "2026-10-28", 1)).toBe("2026-12-05");
+    // Atrasada há poucos dias: conta do vencimento anterior.
+    expect(previsaoPagoAte({ situacao_cadastrada: "ativa", teste_ate: null, pago_ate: "2026-10-20", }, "2026-10-28", 1)).toBe("2026-11-20");
+    // Muito atrasada: conta da data do pagamento.
+    expect(previsaoPagoAte({ situacao_cadastrada: "ativa", teste_ate: null, pago_ate: "2026-08-01" }, "2026-10-28", 12)).toBe("2027-10-28");
+    // Fim de mês.
+    expect(previsaoPagoAte({ situacao_cadastrada: "ativa", teste_ate: null, pago_ate: "2026-01-31" }, "2026-01-30", 1)).toBe("2026-02-28");
+  });
+  it("lê resumo e pagamentos", () => {
+    expect(lerResumo({ total: 3, receita_mensal: "149.80" }).receita_mensal).toBe(149.8);
+    expect(lerResumo(null).total).toBe(0);
+    expect(lerPagamentos([{ id: "1", valor: "59.90", pago_em: "2026-10-28", meses: 1, pago_ate_novo: "2026-11-28", user_id: "c" }, {}])[0]?.valor).toBe(59.9);
   });
 });
 

@@ -18,6 +18,7 @@ import { Input } from "@/components/ui/input";
 import { Textarea } from "@/components/ui/textarea";
 import { medidasCompativeis, medidaLabel, numeroIngrediente, custoPorMedida } from "@/lib/ingredient-cost";
 import { Switch } from "@/components/ui/switch";
+import { RecursoBloqueado, useRecurso } from "@/components/app/plano";
 
 export const Route = createFileRoute("/_authenticated/produtos/$id")({
  validateSearch: (search: Record<string, unknown>) => ({ duplicar: search["duplicar"] === "1" }),
@@ -39,6 +40,9 @@ export const Route = createFileRoute("/_authenticated/produtos/$id")({
 });
 
 function ProdutoForm() {
+  // Recursos do plano: sem "custos" só o preço de venda; sem "catalogo" a seção do catálogo fica trancada.
+  const temCustos = useRecurso("custos");
+  const temCatalogo = useRecurso("catalogo");
   const { id } = Route.useParams();
   const novo = id === "novo";
   const { duplicar } = Route.useSearch();
@@ -195,6 +199,15 @@ function ProdutoForm() {
           </label>
         </Card>
 
+        {!temCustos ? <>
+        <Card className="space-y-3">
+          <h2 className="text-lg font-semibold">Preço de venda</h2>
+          <Field label="Preço de venda R$">
+            <Input inputMode="decimal" value={f.preco_venda} onChange={(e) => set("preco_venda", e.target.value)} className="h-11" />
+          </Field>
+        </Card>
+        <RecursoBloqueado recurso="custos" compacto />
+        </> : <>
         <Card className="space-y-3">
           <h2 className="text-lg font-semibold">Ingredientes e embalagens</h2>
           {insumos.length === 0 && (
@@ -271,7 +284,9 @@ function ProdutoForm() {
           <Row label="Margem real sobre o custo" value={pct(margemReal(unit, preco))} />
           <Row label="Lucro da receita inteira" value={brl((preco - unit) * prodNum.rendimento)} />
         </Card>
+        </>}
 
+        {!temCatalogo ? <RecursoBloqueado recurso="catalogo" compacto /> : (
         <Card className="space-y-3">
           <div className="flex items-center justify-between gap-3">
             <div>
@@ -297,6 +312,7 @@ function ProdutoForm() {
             <Input inputMode="numeric" value={cat.antecedencia_dias} onChange={(e) => setCat((c) => ({ ...c, antecedencia_dias: e.target.value }))} className="h-11" />
           </Field>
         </Card>
+        )}
 
         <Card>
           <Field label="Modo de preparo / anotações">

@@ -32,6 +32,8 @@ jobs:
           exit $status
       - run: bun run test --passWithNoTests --reporter=default --reporter=github-actions
       - run: bun run build
+      - name: Build admin panel
+        run: bunx vite build --config admin/vite.config.ts
   postgres-migrations:
     runs-on: ubuntu-latest
     services:

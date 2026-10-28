@@ -76,3 +76,9 @@
 - [x] Termos de uso e política de privacidade (LGPD) em /termos e /privacidade, com responsável e contato configuráveis.
 - [ ] Cobrança automática da mensalidade (gateway).
 - [ ] Vários usuários (funcionários) por confeitaria.
+
+## Planos, assinaturas e administração separada
+- [x] Painel de administração separado (admin/, GitHub Pages) com login próprio: resumo e receita, empresas, assinatura, registro de pagamentos, planos e configurações.
+- [x] Planos Essencial, Confeitaria e Vitrine com preço, limites e recursos editáveis; teste grátis de 14 dias; tolerância de 7 dias e suspensão automática.
+- [x] No sistema da confeitaria: avisos de fim de teste/vencimento, tela de assinatura suspensa, recursos fora do plano trancados e "Meu plano" nas configurações.
+- [ ] Cobrança automática (Pix/cartão por gateway) e recibo da mensalidade.
