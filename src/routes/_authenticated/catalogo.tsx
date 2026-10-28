@@ -1,12 +1,14 @@
 import * as appQueries from "@/lib/queries";
 import { createFileRoute, Link } from "@tanstack/react-router";
-import { useQueryClient, useSuspenseQuery } from "@tanstack/react-query";
-import { useState } from "react";
+import { useQuery, useQueryClient, useSuspenseQuery } from "@tanstack/react-query";
+import { useRef, useState } from "react";
 import { toast } from "sonner";
-import { BellRing, Copy, ExternalLink, Package, QrCode, Share2, Store } from "lucide-react";
+import { BellRing, CalendarOff, Copy, ExternalLink, ImagePlus, MapPin, Package, Palette, Plus, QrCode, Share2, Sparkles, Store, Ticket, Trash2, X } from "lucide-react";
 import { supabase } from "@/integrations/supabase/client";
 import { brl, parseNum } from "@/lib/format";
-import { SLUGS_RESERVADOS, linkCatalogo as montarLinkCatalogo, origemPublica, slugValido, sugerirSlug } from "@/lib/catalogo";
+import { DIAS_SEMANA, SLUGS_RESERVADOS, corDoTexto, linkCatalogo as montarLinkCatalogo, normalizarCupom, normalizarHorarios, origemPublica, slugValido, sugerirSlug, validarBairros, type TaxaBairro } from "@/lib/catalogo";
+import { enviarLogo } from "@/lib/foto-catalogo";
+import { dataBR, hojeISO } from "@/lib/format";
 import { Card, Field, PageHeader } from "@/components/app/ui";
 import { RecursoBloqueado, useRecurso } from "@/components/app/plano";
 import { Button } from "@/components/ui/button";
@@ -20,6 +22,7 @@ export const Route = createFileRoute("/_authenticated/catalogo")({
     await Promise.all([
       context.queryClient.ensureQueryData(appQueries.confeitariaQ),
       context.queryClient.ensureQueryData(appQueries.produtosQ),
+      context.queryClient.ensureQueryData(appQueries.cuponsQ).catch(() => []),
     ]);
   },
   errorComponent: ({ error }) => <p role="alert" className="py-8 text-destructive">{error instanceof Error ? error.message : "Não foi possível carregar o catálogo."}</p>,
@@ -43,7 +46,12 @@ function CatalogoPage() {
     minimo: String(confeitaria?.pedido_minimo ?? 0),
     enderecoRetirada: confeitaria?.endereco_retirada ?? "",
     limite: confeitaria?.limite_pedidos_dia == null ? "" : String(confeitaria.limite_pedidos_dia),
+    ...extrasDe(confeitaria),
   }));
+  const [novaData, setNovaData] = useState("");
+  const [novoHorario, setNovoHorario] = useState("");
+  const [enviandoLogo, setEnviandoLogo] = useState(false);
+  const arquivoLogo = useRef<HTMLInputElement>(null);
   const [mostrarQr, setMostrarQr] = useState(false);
   const [salvando, setSalvando] = useState(false);
 
@@ -58,7 +66,8 @@ function CatalogoPage() {
     cat.ativo !== confeitaria.catalogo_ativo || cat.slug !== (confeitaria.slug ?? "") || cat.aviso !== (confeitaria.catalogo_aviso ?? "") ||
     cat.retirada !== confeitaria.aceita_retirada || cat.entrega !== confeitaria.aceita_entrega || parseNum(cat.taxa) !== Number(confeitaria.taxa_entrega) ||
     parseNum(cat.minimo) !== Number(confeitaria.pedido_minimo) || cat.enderecoRetirada !== (confeitaria.endereco_retirada ?? "") ||
-    cat.limite !== (confeitaria.limite_pedidos_dia == null ? "" : String(confeitaria.limite_pedidos_dia));
+    cat.limite !== (confeitaria.limite_pedidos_dia == null ? "" : String(confeitaria.limite_pedidos_dia)) ||
+    JSON.stringify(extrasDe(confeitaria)) !== JSON.stringify(extrasDe(null, cat));
 
   async function copiar() {
     if (!salvo) return;
@@ -73,11 +82,17 @@ function CatalogoPage() {
     if (cat.ativo && !cat.retirada && !cat.entrega) return void toast.error("Ative retirada, entrega ou as duas.");
     if (taxa < 0 || taxa > 1000 || minimo < 0 || minimo > 100000) return void toast.error("Confira a taxa de entrega e o pedido mínimo.");
     if (limite !== null && (limite < 1 || limite > 500)) return void toast.error("O limite de pedidos por dia deve ser de 1 a 500, ou ficar em branco.");
+    const bairros: TaxaBairro[] = cat.bairros.map((b) => ({ bairro: b.bairro.trim(), taxa: parseNum(b.taxa) }));
+    const erroBairros = cat.entrega ? validarBairros(bairros) : null;
+    if (erroBairros) return void toast.error(erroBairros);
+    if (cat.dias.length === 7) return void toast.error("Deixe pelo menos um dia da semana aberto.");
     setSalvando(true);
     const { error } = await supabase.from("confeitarias").update({
       slug: cat.slug || null, catalogo_ativo: cat.ativo, catalogo_aviso: cat.aviso.trim().slice(0, 300) || null,
       aceita_retirada: cat.retirada, aceita_entrega: cat.entrega, taxa_entrega: taxa, pedido_minimo: minimo,
       endereco_retirada: cat.enderecoRetirada.trim().slice(0, 300) || null, limite_pedidos_dia: limite,
+      cor_primaria: cat.cor || null, logo_url: cat.logo || null, dias_fechados: cat.dias, datas_bloqueadas: cat.datas,
+      horarios_retirada: cat.horarios, taxas_bairro: bairros, aceita_encomenda: cat.encomenda,
     }).eq("user_id", user.id);
     setSalvando(false);
     if (error) return void toast.error(error.code === "23505" ? "Este endereço de catálogo já está em uso. Escolha outro." : `Não foi possível salvar: ${error.message}`);
@@ -146,9 +161,116 @@ function CatalogoPage() {
           </div>
           <Field label="Aviso no topo do catálogo (opcional)"><Textarea rows={2} maxLength={300} value={cat.aviso} onChange={(e) => setCat({ ...cat, aviso: e.target.value })} placeholder="Ex.: Encomendas até quinta para entrega no fim de semana." /></Field>
           <p className="text-xs text-muted-foreground">O cliente paga pela chave Pix cadastrada em <Link to="/configuracoes" className="text-primary hover:underline">Configurações</Link>.</p>
-          <Button className="h-12 w-full" disabled={salvando || !alterado}>{salvando ? "Salvando..." : alterado ? "Salvar catálogo" : "Tudo salvo"}</Button>
         </Card>
+
+        <Card className="space-y-4">
+          <div className="flex items-center gap-2"><Palette className="size-4 text-primary" /><h2 className="text-lg font-semibold">Aparência</h2></div>
+          <div className="flex items-center gap-4">
+            <div className="grid size-20 shrink-0 place-items-center overflow-hidden rounded-2xl border bg-muted">
+              {cat.logo ? <img src={cat.logo} alt="Logo da confeitaria" className="size-full object-cover" /> : <Store className="size-7 text-muted-foreground" />}
+            </div>
+            <div className="flex flex-wrap gap-2">
+              <input ref={arquivoLogo} type="file" accept="image/*" className="hidden" onChange={async (e) => {
+                const arquivo = e.target.files?.[0];
+                e.target.value = "";
+                if (!arquivo) return;
+                setEnviandoLogo(true);
+                try { setCat((c) => ({ ...c, logo: "" })); const url = await enviarLogo(user.id, arquivo); setCat((c) => ({ ...c, logo: url })); toast.success("Logo pronto. Salve para publicar."); }
+                catch (erro) { toast.error(erro instanceof Error ? erro.message : "Não foi possível enviar o logo."); }
+                finally { setEnviandoLogo(false); }
+              }} />
+              <Button type="button" variant="outline" className="h-10" disabled={enviandoLogo} onClick={() => arquivoLogo.current?.click()}><ImagePlus className="size-4" /> {enviandoLogo ? "Enviando..." : cat.logo ? "Trocar logo" : "Enviar logo"}</Button>
+              {cat.logo && <Button type="button" variant="ghost" className="h-10" onClick={() => setCat({ ...cat, logo: "" })}>Remover</Button>}
+            </div>
+          </div>
+          <Field label="Cor da sua marca" hint="Usada nos botões e destaques do catálogo.">
+            <div className="flex flex-wrap items-center gap-2">
+              {CORES_SUGERIDAS.map((c) => (
+                <button key={c} type="button" onClick={() => setCat({ ...cat, cor: c })} aria-label={`Usar a cor ${c}`} aria-pressed={cat.cor === c}
+                  className={cn("size-9 rounded-full border-2 transition", cat.cor === c ? "border-foreground scale-110" : "border-transparent")} style={{ backgroundColor: c }} />
+              ))}
+              <label className="relative grid size-9 cursor-pointer place-items-center rounded-full border text-xs text-muted-foreground" title="Outra cor">
+                <Plus className="size-4" />
+                <input type="color" value={cat.cor || "#b5476b"} onChange={(e) => setCat({ ...cat, cor: e.target.value })} className="absolute inset-0 cursor-pointer opacity-0" aria-label="Escolher outra cor" />
+              </label>
+              {cat.cor && <Button type="button" variant="ghost" size="sm" onClick={() => setCat({ ...cat, cor: "" })}>Cor padrão</Button>}
+            </div>
+          </Field>
+          {cat.cor && (
+            <div className="rounded-xl p-3 text-center text-sm font-semibold" style={{ backgroundColor: cat.cor, color: corDoTexto(cat.cor) }}>Prévia do botão: Fazer pedido</div>
+          )}
+        </Card>
+
+        <Card className="space-y-4">
+          <div className="flex items-center gap-2"><CalendarOff className="size-4 text-primary" /><h2 className="text-lg font-semibold">Agenda</h2></div>
+          <Field label="Dias em que você NÃO atende" hint="O cliente não consegue escolher esses dias no catálogo.">
+            <div className="flex flex-wrap gap-2">
+              {DIAS_SEMANA.map((nome, i) => {
+                const fechado = cat.dias.includes(i);
+                return (
+                  <button key={nome} type="button" aria-pressed={fechado} onClick={() => setCat({ ...cat, dias: fechado ? cat.dias.filter((d) => d !== i) : [...cat.dias, i].sort() })}
+                    className={cn("h-10 rounded-full border px-3 text-sm font-medium transition", fechado ? "border-destructive/40 bg-destructive/10 text-destructive line-through" : "bg-card")}>{nome.slice(0, 3)}</button>
+                );
+              })}
+            </div>
+          </Field>
+          <Field label="Datas bloqueadas" hint="Feriados, férias ou agenda cheia.">
+            <div className="flex gap-2">
+              <Input type="date" min={hojeISO()} value={novaData} onChange={(e) => setNovaData(e.target.value)} className="h-11 bg-card" />
+              <Button type="button" variant="outline" className="h-11" disabled={!novaData || cat.datas.includes(novaData)} onClick={() => { setCat({ ...cat, datas: [...cat.datas, novaData].sort().slice(-200) }); setNovaData(""); }}>Bloquear</Button>
+            </div>
+            {cat.datas.length > 0 && (
+              <div className="mt-2 flex flex-wrap gap-2">
+                {cat.datas.map((d) => <Chip key={d} texto={dataBR(d)} onRemover={() => setCat({ ...cat, datas: cat.datas.filter((x) => x !== d) })} />)}
+              </div>
+            )}
+          </Field>
+          {cat.retirada && (
+            <Field label="Horários de retirada" hint={cat.horarios.length ? "O cliente escolhe um destes horários." : "Sem horários cadastrados, o cliente digita o horário que quiser."}>
+              <div className="flex gap-2">
+                <Input type="time" value={novoHorario} onChange={(e) => setNovoHorario(e.target.value)} className="h-11 bg-card" />
+                <Button type="button" variant="outline" className="h-11" disabled={!novoHorario} onClick={() => {
+                  const lista = normalizarHorarios([...cat.horarios, novoHorario.slice(0, 5)]);
+                  if (!lista) return void toast.error("Horário inválido.");
+                  setCat({ ...cat, horarios: lista }); setNovoHorario("");
+                }}>Adicionar</Button>
+              </div>
+              {cat.horarios.length > 0 && (
+                <div className="mt-2 flex flex-wrap gap-2">
+                  {cat.horarios.map((h) => <Chip key={h} texto={h} onRemover={() => setCat({ ...cat, horarios: cat.horarios.filter((x) => x !== h) })} />)}
+                </div>
+              )}
+            </Field>
+          )}
+        </Card>
+
+        {cat.entrega && (
+          <Card className="space-y-3">
+            <div className="flex items-center gap-2"><MapPin className="size-4 text-primary" /><h2 className="text-lg font-semibold">Taxa de entrega por bairro</h2></div>
+            <p className="text-sm text-muted-foreground">{cat.bairros.length ? "O cliente escolhe o bairro e a taxa entra no pedido. Bairros fora da lista não recebem entrega." : `Sem bairros cadastrados, vale a taxa única de ${brl(parseNum(cat.taxa))} para qualquer endereço.`}</p>
+            {cat.bairros.map((b, i) => (
+              <div key={i} className="flex items-center gap-2">
+                <Input value={b.bairro} maxLength={60} placeholder="Bairro" aria-label="Bairro" onChange={(e) => setCat({ ...cat, bairros: cat.bairros.map((x, j) => (j === i ? { ...x, bairro: e.target.value } : x)) })} className="h-11 flex-1 bg-card" />
+                <Input value={b.taxa} inputMode="decimal" placeholder="Taxa" aria-label={`Taxa de ${b.bairro || "entrega"}`} onChange={(e) => setCat({ ...cat, bairros: cat.bairros.map((x, j) => (j === i ? { ...x, taxa: e.target.value } : x)) })} className="h-11 w-24 bg-card" />
+                <Button type="button" variant="ghost" size="icon" aria-label={`Remover ${b.bairro || "bairro"}`} onClick={() => setCat({ ...cat, bairros: cat.bairros.filter((_, j) => j !== i) })}><Trash2 className="size-4" /></Button>
+              </div>
+            ))}
+            <Button type="button" variant="outline" className="h-10" disabled={cat.bairros.length >= 100} onClick={() => setCat({ ...cat, bairros: [...cat.bairros, { bairro: "", taxa: cat.taxa }] })}><Plus className="size-4" /> Adicionar bairro</Button>
+          </Card>
+        )}
+
+        <Card className="space-y-3">
+          <div className="flex items-center justify-between gap-3">
+            <div className="flex items-center gap-2"><Sparkles className="size-4 text-primary" /><h2 className="text-lg font-semibold">Encomenda personalizada</h2></div>
+            <Switch checked={cat.encomenda} onCheckedChange={(v) => setCat({ ...cat, encomenda: v })} aria-label="Aceitar encomendas personalizadas" />
+          </div>
+          <p className="text-sm text-muted-foreground">O cliente descreve o que quer (tema, tamanho, sabor) e envia até 3 fotos de referência. Chega como pedido "aguardando orçamento" para você combinar o valor.</p>
+        </Card>
+
+        <Button className="h-12 w-full" disabled={salvando || enviandoLogo || !alterado}>{salvando ? "Salvando..." : alterado ? "Salvar catálogo" : "Tudo salvo"}</Button>
       </form>
+
+      <CuponsCard />
 
       <Card className="mt-5 space-y-3">
         <div className="flex items-center gap-2"><BellRing className="size-4 text-primary" /><h2 className="font-semibold">Aviso de pedido novo</h2></div>
@@ -161,5 +283,149 @@ function CatalogoPage() {
         <Button asChild variant="ghost" className="h-10 w-full sm:w-auto"><Link to="/produtos"><Package className="size-4" /> Produtos do catálogo</Link></Button>
       </Card>
     </>
+  );
+}
+
+const CORES_SUGERIDAS = ["#b5476b", "#7a2e3b", "#d9822b", "#2f7d6d", "#4f5bd5", "#6b4226", "#1f1a17"];
+
+type BairroEdicao = { bairro: string; taxa: string };
+
+/** Campos de agenda, aparência, bairros e encomenda: do banco ou do formulário (para comparar). */
+function extrasDe(
+  c: appQueries.Confeitaria | null | undefined,
+  form?: { cor: string; logo: string; dias: number[]; datas: string[]; horarios: string[]; bairros: BairroEdicao[]; encomenda: boolean },
+) {
+  if (form) {
+    return {
+      cor: form.cor, logo: form.logo, dias: [...form.dias].sort(), datas: form.datas, horarios: form.horarios,
+      bairros: form.bairros.map((b) => ({ bairro: b.bairro, taxa: String(parseNum(b.taxa)) })), encomenda: form.encomenda,
+    };
+  }
+  const bairros = Array.isArray(c?.taxas_bairro) ? (c.taxas_bairro as { bairro?: unknown; taxa?: unknown }[]) : [];
+  return {
+    cor: c?.cor_primaria ?? "",
+    logo: c?.logo_url ?? "",
+    dias: [...(c?.dias_fechados ?? [])].sort(),
+    datas: (c?.datas_bloqueadas ?? []).filter((d) => d >= hojeISO()).sort(),
+    horarios: c?.horarios_retirada ?? [],
+    bairros: bairros.map((b) => ({ bairro: String(b.bairro ?? ""), taxa: String(Number(b.taxa ?? 0)) })),
+    encomenda: c?.aceita_encomenda ?? false,
+  };
+}
+
+function Chip({ texto, onRemover }: { texto: string; onRemover: () => void }) {
+  return (
+    <span className="inline-flex items-center gap-1 rounded-full bg-muted py-1 pl-3 pr-1 text-sm">
+      {texto}
+      <button type="button" onClick={onRemover} aria-label={`Remover ${texto}`} className="grid size-6 place-items-center rounded-full hover:bg-background"><X className="size-3.5" /></button>
+    </span>
+  );
+}
+
+const CUPOM_VAZIO = { codigo: "", descricao: "", tipo: "percentual" as "percentual" | "valor", valor: "", minimo: "", validade: "", limite: "", primeira: false };
+
+function CuponsCard() {
+  const qc = useQueryClient();
+  const { data: cupons = [] } = useQuery(appQueries.cuponsQ);
+  const [novo, setNovo] = useState(CUPOM_VAZIO);
+  const [abrir, setAbrir] = useState(false);
+  const [salvando, setSalvando] = useState(false);
+  const hoje = hojeISO();
+
+  async function criar(e: React.FormEvent) {
+    e.preventDefault();
+    const codigo = normalizarCupom(novo.codigo);
+    const valor = parseNum(novo.valor), minimo = parseNum(novo.minimo), limite = novo.limite.trim() ? Math.round(parseNum(novo.limite)) : null;
+    if (codigo.length < 3) return void toast.error("O código precisa de 3 a 20 letras ou números.");
+    if (!(valor > 0) || (novo.tipo === "percentual" && valor > 100) || valor > 10000) return void toast.error(novo.tipo === "percentual" ? "O desconto deve ser de 1% a 100%." : "Informe o valor do desconto.");
+    if (limite !== null && (limite < 1 || limite > 100000)) return void toast.error("O limite de usos deve ser 1 ou mais, ou ficar em branco.");
+    setSalvando(true);
+    const { error } = await supabase.from("cupons").insert({
+      codigo, descricao: novo.descricao.trim().slice(0, 120) || null, tipo: novo.tipo, valor, pedido_minimo: Math.max(0, minimo),
+      valido_ate: novo.validade || null, limite_usos: limite, primeira_compra: novo.primeira,
+    });
+    setSalvando(false);
+    if (error) return void toast.error(error.code === "23505" ? "Já existe um cupom com este código." : `Não foi possível criar: ${error.message}`);
+    setNovo(CUPOM_VAZIO); setAbrir(false);
+    await qc.invalidateQueries({ queryKey: ["cupons"] });
+    toast.success(`Cupom ${codigo} criado.`);
+  }
+
+  async function alternar(id: string, ativo: boolean) {
+    const { error } = await supabase.from("cupons").update({ ativo }).eq("id", id);
+    if (error) return void toast.error(`Não foi possível alterar: ${error.message}`);
+    await qc.invalidateQueries({ queryKey: ["cupons"] });
+  }
+
+  async function excluir(id: string, codigo: string) {
+    if (!window.confirm(`Excluir o cupom ${codigo}? Pedidos que já usaram continuam com o desconto.`)) return;
+    const { error } = await supabase.from("cupons").delete().eq("id", id);
+    if (error) return void toast.error(`Não foi possível excluir: ${error.message}`);
+    await qc.invalidateQueries({ queryKey: ["cupons"] });
+  }
+
+  return (
+    <Card className="mt-5 space-y-3">
+      <div className="flex items-center justify-between gap-2">
+        <div className="flex items-center gap-2"><Ticket className="size-4 text-primary" /><h2 className="text-lg font-semibold">Cupons de desconto</h2></div>
+        {!abrir && <Button type="button" variant="outline" size="sm" onClick={() => setAbrir(true)}><Plus className="size-4" /> Novo cupom</Button>}
+      </div>
+      <p className="text-sm text-muted-foreground">O cliente digita o código no carrinho. O desconto vale sobre os produtos (sem a taxa de entrega).</p>
+
+      {abrir && (
+        <form onSubmit={criar} className="space-y-3 rounded-xl border p-3">
+          <div className="grid grid-cols-1 gap-3 sm:grid-cols-2">
+            <Field label="Código"><Input value={novo.codigo} onChange={(e) => setNovo({ ...novo, codigo: normalizarCupom(e.target.value) })} placeholder="Ex.: BEMVINDO10" className="h-11 bg-card font-mono uppercase" autoFocus /></Field>
+            <Field label="Descrição (opcional)"><Input value={novo.descricao} maxLength={120} onChange={(e) => setNovo({ ...novo, descricao: e.target.value })} placeholder="Ex.: Primeira compra" className="h-11 bg-card" /></Field>
+          </div>
+          <div className="grid grid-cols-2 gap-3 sm:grid-cols-4">
+            <Field label="Tipo">
+              <div className="grid h-11 grid-cols-2 rounded-md border bg-card p-1 text-sm">
+                {(["percentual", "valor"] as const).map((t) => (
+                  <button key={t} type="button" onClick={() => setNovo({ ...novo, tipo: t })} aria-pressed={novo.tipo === t} className={cn("rounded font-medium", novo.tipo === t && "bg-primary text-primary-foreground")}>{t === "percentual" ? "%" : "R$"}</button>
+                ))}
+              </div>
+            </Field>
+            <Field label={novo.tipo === "percentual" ? "Desconto (%)" : "Desconto (R$)"}><Input inputMode="decimal" value={novo.valor} onChange={(e) => setNovo({ ...novo, valor: e.target.value })} className="h-11 bg-card" /></Field>
+            <Field label="Pedido mínimo (R$)"><Input inputMode="decimal" value={novo.minimo} onChange={(e) => setNovo({ ...novo, minimo: e.target.value })} placeholder="0" className="h-11 bg-card" /></Field>
+            <Field label="Limite de usos"><Input inputMode="numeric" value={novo.limite} onChange={(e) => setNovo({ ...novo, limite: e.target.value })} placeholder="Sem limite" className="h-11 bg-card" /></Field>
+          </div>
+          <div className="grid grid-cols-1 gap-3 sm:grid-cols-2">
+            <Field label="Válido até (opcional)"><Input type="date" min={hoje} value={novo.validade} onChange={(e) => setNovo({ ...novo, validade: e.target.value })} className="h-11 bg-card" /></Field>
+            <label className="flex items-center justify-between gap-2 self-end rounded-xl border p-3 text-sm font-medium">Só na primeira compra<Switch checked={novo.primeira} onCheckedChange={(v) => setNovo({ ...novo, primeira: v })} /></label>
+          </div>
+          <div className="flex gap-2">
+            <Button type="button" variant="ghost" className="h-11 flex-1" onClick={() => { setAbrir(false); setNovo(CUPOM_VAZIO); }}>Cancelar</Button>
+            <Button className="h-11 flex-1" disabled={salvando}>{salvando ? "Criando..." : "Criar cupom"}</Button>
+          </div>
+        </form>
+      )}
+
+      {cupons.length === 0 && !abrir ? <p className="text-sm text-muted-foreground">Nenhum cupom criado.</p> : (
+        <ul className="divide-y">
+          {cupons.map((c) => {
+            const vencido = !!c.valido_ate && c.valido_ate < hoje;
+            const esgotado = c.limite_usos != null && c.usos >= c.limite_usos;
+            return (
+              <li key={c.id} className="flex items-center gap-3 py-3">
+                <div className="min-w-0 flex-1">
+                  <div className="flex flex-wrap items-center gap-2">
+                    <span className="font-mono font-semibold">{c.codigo}</span>
+                    <span className="text-sm">{c.tipo === "percentual" ? `${Number(c.valor)}% off` : `${brl(Number(c.valor))} off`}</span>
+                    {(vencido || esgotado) && <span className="rounded-full bg-muted px-2 py-0.5 text-xs text-muted-foreground">{vencido ? "vencido" : "esgotado"}</span>}
+                  </div>
+                  <p className="text-xs text-muted-foreground">
+                    {[c.descricao, Number(c.pedido_minimo) > 0 && `mínimo ${brl(Number(c.pedido_minimo))}`, c.primeira_compra && "1ª compra",
+                      c.valido_ate && `até ${dataBR(c.valido_ate)}`, `${c.usos}${c.limite_usos != null ? `/${c.limite_usos}` : ""} uso(s)`].filter(Boolean).join(" · ")}
+                  </p>
+                </div>
+                <Switch checked={c.ativo} onCheckedChange={(v) => void alternar(c.id, v)} aria-label={`Cupom ${c.codigo} ativo`} />
+                <Button type="button" variant="ghost" size="icon" aria-label={`Excluir cupom ${c.codigo}`} onClick={() => void excluir(c.id, c.codigo)}><Trash2 className="size-4" /></Button>
+              </li>
+            );
+          })}
+        </ul>
+      )}
+    </Card>
   );
 }

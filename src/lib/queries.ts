@@ -107,6 +107,12 @@ export const configQ = queryOptions({
  * Dados da confeitaria da conta logada (nome, slogan, WhatsApp).
  * Retorna null enquanto a migração 0033 não estiver aplicada, para a tela continuar funcionando.
  */
+export type Cupom = Tables<"cupons">;
+export const cuponsQ = queryOptions({
+  queryKey: ["cupons"],
+  queryFn: () => must<Cupom[]>(supabase.from("cupons").select("*").order("created_at", { ascending: false })),
+});
+
 export const confeitariaQ = queryOptions({
   queryKey: ["confeitaria"],
   queryFn: async (): Promise<Confeitaria | null> => {
