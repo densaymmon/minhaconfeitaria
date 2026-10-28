@@ -577,20 +577,28 @@ function PedidoForm() {
           {existente.pagamento_informado_em && saldoPendente > 0.009 && (
             <p className="font-medium text-warning-foreground">O cliente avisou que pagou por Pix em {new Date(existente.pagamento_informado_em).toLocaleString("pt-BR", { dateStyle: "short", timeStyle: "short" })}. Confira no banco e toque em “Confirmar pagamento”.</p>
           )}
-          {existenteCalc && (
+          {existenteCalc && (() => {
+            const msg = confirmacaoWhatsApp(existenteCalc, { loja: confeitaria?.nome?.trim() || "nossa confeitaria", pix: config.pix_chave, enderecoRetirada: confeitaria?.endereco_retirada ?? null, origem: window.location.origin });
+            return (
             <div className="flex flex-wrap items-center gap-2 pt-1">
-              <Button type="button" size="sm" variant={precisaConfirmar(existenteCalc) ? "default" : "outline"} onClick={() => {
-                const msg = confirmacaoWhatsApp(existenteCalc, { loja: confeitaria?.nome?.trim() || "nossa confeitaria", pix: config.pix_chave, enderecoRetirada: confeitaria?.endereco_retirada ?? null, origem: window.location.origin });
-                if (!msg) return void toast.error("O cliente não tem um WhatsApp válido cadastrado.");
-                window.open(msg.url, "_blank", "noopener,noreferrer");
-                void supabase.from("pedidos").update({ confirmacao_enviada_em: new Date().toISOString() }).eq("id", existenteCalc.id)
-                  .then(({ error }) => { if (!error) void qc.invalidateQueries({ queryKey: ["pedidos"] }); });
-              }}>
-                <MessageCircle className="size-4" /> {existente.confirmacao_enviada_em ? "Reenviar confirmação no WhatsApp" : "Confirmar no WhatsApp"}
-              </Button>
+              {msg ? (
+                // Link comum: window.open com "noopener" não abre o WhatsApp em alguns celulares.
+                <Button asChild size="sm" variant={precisaConfirmar(existenteCalc) ? "default" : "outline"}>
+                  <a href={msg.url} target="_blank" rel="noopener noreferrer" onClick={() => {
+                    if (existente.confirmacao_enviada_em) return;
+                    void supabase.from("pedidos").update({ confirmacao_enviada_em: new Date().toISOString() }).eq("id", existenteCalc.id)
+                      .then(({ error }) => { if (!error) void qc.invalidateQueries({ queryKey: ["pedidos"] }); });
+                  }}>
+                    <MessageCircle className="size-4" /> {existente.confirmacao_enviada_em ? "Reenviar confirmação no WhatsApp" : "Confirmar no WhatsApp"}
+                  </a>
+                </Button>
+              ) : (
+                <span className="text-xs text-warning-foreground">Cadastre um WhatsApp válido para o cliente para enviar a confirmação.</span>
+              )}
               {existente.confirmacao_enviada_em && <span className="text-xs text-success">✓ Enviada em {new Date(existente.confirmacao_enviada_em).toLocaleString("pt-BR", { dateStyle: "short", timeStyle: "short" })}</span>}
             </div>
-          )}
+            );
+          })()}
         </div>
       )}
       <Dialog open={recorrenciaDialogOpen} onOpenChange={(open) => { if (!salvandoRecorrencia) setRecorrenciaDialogOpen(open); }}>

@@ -7,7 +7,7 @@ import { supabase } from "@/integrations/supabase/client";
 import { Button } from "@/components/ui/button";
 import { brl, dataLonga } from "@/lib/format";
 import { cn } from "@/lib/utils";
-import { ETAPAS_PEDIDO, etapaAtual, linkWhatsApp, type PedidoAcompanhamento } from "@/lib/catalogo";
+import { ETAPAS_PEDIDO, etapaAtual, linkWhatsApp, mensagemPedidoParaLoja, type PedidoAcompanhamento } from "@/lib/catalogo";
 
 export const Route = createFileRoute("/pedido/$codigo")({
   ssr: false,
@@ -63,7 +63,22 @@ export function AcompanharPedido({ codigo }: { codigo: string }) {
   const falta = Math.max(0, Math.round((pedido.total - pedido.pago) * 100) / 100);
   const etapa = etapaAtual(pedido.status);
   const loja = pedido.confeitaria;
-  const whatsapp = linkWhatsApp(loja.whatsapp, `Olá! Fiz o pedido #${pedido.numero} pelo catálogo${pedido.cliente ? ` (${pedido.cliente})` : ""}.`);
+  // Resumo do pedido + link desta página, para a confeitaria receber tudo na conversa.
+  const linkAcompanhamento = /^[a-z2-9]{10}$/i.test(codigo) ? `${window.location.origin}/p/${codigo.toLowerCase()}` : window.location.href;
+  const whatsapp = linkWhatsApp(loja.whatsapp, mensagemPedidoParaLoja({
+    cliente: pedido.cliente,
+    numero: pedido.numero,
+    itens: pedido.itens.map((i) => ({ descricao: i.descricao, quantidade: Number(i.quantidade), preco: Number(i.preco) })),
+    taxaEntrega: Number(pedido.taxa_entrega) || 0,
+    desconto: Number(pedido.desconto) || 0,
+    total: Number(pedido.total) || 0,
+    pago: Number(pedido.pago) || 0,
+    dataEntrega: pedido.data_entrega,
+    horaEntrega: pedido.hora_entrega,
+    tipoEntrega: pedido.tipo_entrega,
+    endereco: pedido.tipo_entrega === "entrega" ? pedido.endereco_entrega : null,
+    link: linkAcompanhamento,
+  }));
 
   async function copiarPix() {
     if (!loja.pix_chave) return;
@@ -93,6 +108,15 @@ export function AcompanharPedido({ codigo }: { codigo: string }) {
           {pedido.tipo_entrega === "entrega" ? "Entrega" : "Retirada"} {dataLonga(pedido.data_entrega)}{pedido.hora_entrega ? ` às ${pedido.hora_entrega}` : ""}
         </p>
       </header>
+
+      {!cancelado && whatsapp && (
+        <div className="mb-4 rounded-2xl border border-success/30 bg-success/10 p-4 text-center">
+          <p className="text-sm">Envie o resumo do pedido para a confeitaria e combine os detalhes pelo WhatsApp.</p>
+          <Button asChild className="mt-3 h-11 w-full bg-success text-success-foreground hover:bg-success/90">
+            <a href={whatsapp} target="_blank" rel="noopener noreferrer"><MessageCircle className="size-4" /> Enviar pedido no WhatsApp</a>
+          </Button>
+        </div>
+      )}
 
       {cancelado ? (
         <p className="rounded-2xl bg-destructive/10 p-4 text-center text-sm font-medium text-destructive">Este pedido foi cancelado. Em caso de dúvida, fale com a confeitaria.</p>
@@ -158,7 +182,7 @@ export function AcompanharPedido({ codigo }: { codigo: string }) {
       <div className="mt-4 grid gap-2 pb-10">
         {whatsapp && (
           <Button asChild variant="outline" className="h-11">
-            <a href={whatsapp} target="_blank" rel="noreferrer"><MessageCircle className="size-4" /> Falar com a confeitaria</a>
+            <a href={whatsapp} target="_blank" rel="noopener noreferrer"><MessageCircle className="size-4" /> Falar com a confeitaria</a>
           </Button>
         )}
         {loja.slug && (
