@@ -1,7 +1,8 @@
 import { createFileRoute, Link, Outlet, redirect, useNavigate } from "@tanstack/react-router";
 import { Suspense, useEffect, useState } from "react";
 import { BookOpen, CakeSlice, ChartNoAxesCombined, ChefHat, ChevronRight, ClipboardList, LayoutDashboard, LogOut, Menu, Package, Settings, ShoppingCart, Users, Wallet, X } from "lucide-react";
-import { useQueryClient } from "@tanstack/react-query";
+import { useQuery, useQueryClient } from "@tanstack/react-query";
+import { confeitariaQ } from "@/lib/queries";
 import { supabase } from "@/integrations/supabase/client";
 
 export const Route = createFileRoute("/_authenticated")({
@@ -24,7 +25,7 @@ const nav = [
 const maisLinks = [
   { to: "/produtos", label: "Produtos e receitas", icon: BookOpen },
   { to: "/financeiro", label: "Financeiro", icon: Wallet },
-  { to: "/configuracoes", label: "Taxas e configurações", icon: Settings },
+  { to: "/configuracoes", label: "Configurações", icon: Settings },
 ] as const;
 
 const comprasLinks = [
@@ -39,6 +40,8 @@ function Layout() {
   const { user } = Route.useRouteContext();
   const queryClient = useQueryClient();
   const navigate = useNavigate();
+  const { data: confeitaria } = useQuery(confeitariaQ);
+  const nomeLoja = confeitaria?.nome?.trim() || "Gestão da confeitaria";
 
   useEffect(() => {
     if (!maisAberto) return;
@@ -107,7 +110,7 @@ function Layout() {
           </span>
           <span className="min-w-0">
             <span className="block font-display text-lg font-semibold leading-tight text-foreground">Doce Gestão</span>
-            <span className="block text-xs text-muted-foreground">Gestão da confeitaria</span>
+            <span className="block truncate text-xs text-muted-foreground" title={nomeLoja}>{nomeLoja}</span>
           </span>
         </Link>
         <nav aria-label="Navegação principal" className="min-h-0 flex-1 overflow-y-auto">

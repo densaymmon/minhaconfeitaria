@@ -17,9 +17,9 @@ export const Route = createFileRoute("/auth")({
       { property: "og:type", content: "website" },
       { name: "twitter:card", content: "summary_large_image" },
       { title: "Entrar — Doce Gestão" },
-      { name: "description", content: "Acesso exclusivo da proprietária ao sistema da confeitaria." },
+      { name: "description", content: "Acesse ou crie a conta da sua confeitaria." },
       { property: "og:title", content: "Entrar — Doce Gestão" },
-      { property: "og:description", content: "Acesso exclusivo da proprietária." },
+      { property: "og:description", content: "Acesse ou crie a conta da sua confeitaria." },
     ],
   }),
   component: AuthPage,
@@ -55,7 +55,9 @@ function AuthPage() {
         });
         if (error)
           throw new Error(
-            error.message.includes("Database error") ? "O sistema já tem uma proprietária cadastrada." : error.message,
+            error.message.includes("Database error")
+              ? "O cadastro de novas confeitarias está fechado no momento. Fale com o suporte para liberar o acesso."
+              : error.message,
           );
         if (data.session) finishLogin();
         else setAviso("Conta criada! Abra seu e-mail e clique no link de confirmação para entrar.");
@@ -86,11 +88,11 @@ function AuthPage() {
         <img src={bakeryImage} width={1152} height={576} alt="Bolo caseiro, pão italiano e baguetes artesanais" className="mb-6 w-full rounded-lg" />
         <form onSubmit={enviar} className="space-y-4">
           <h2 className="text-xl font-semibold">
-            {modo === "entrar" ? "Entrar" : modo === "criar" ? "Primeiro acesso" : "Recuperar senha"}
+            {modo === "entrar" ? "Entrar" : modo === "criar" ? "Criar conta da confeitaria" : "Recuperar senha"}
           </h2>
           {modo === "criar" && (
             <p className="text-xs text-muted-foreground">
-              Só uma conta pode ser criada. Depois do primeiro cadastro, o sistema fica exclusivo para você.
+              Cada conta é uma confeitaria, com dados separados e acessíveis só por você. Depois de entrar, cadastre o nome da confeitaria e a chave Pix em Configurações.
             </p>
           )}
           <Field label="E-mail">
@@ -123,7 +125,7 @@ function AuthPage() {
                   Esqueci a senha
                 </Button>
                 <Button variant="link" type="button" onClick={() => setModo("criar")}>
-                  Primeiro acesso
+                  Criar conta
                 </Button>
               </>
             )}

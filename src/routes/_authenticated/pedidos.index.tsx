@@ -24,7 +24,7 @@ export const Route = createFileRoute("/_authenticated/pedidos/")({
    dataFinal: typeof search["dataFinal"] === "string" ? search["dataFinal"] : undefined,
    dataReferencia: search["dataReferencia"] === "recebimento" ? ("recebimento" as const) : undefined,
  }),
- loader: async ({ context }) => { await Promise.all([context.queryClient.ensureQueryData(appQueries.pedidosQ),context.queryClient.ensureQueryData(appQueries.configQ),context.queryClient.ensureQueryData(appQueries.pedidoPagamentosQ),context.queryClient.ensureQueryData(appQueries.clientesQ)]); },
+ loader: async ({ context }) => { await Promise.all([context.queryClient.ensureQueryData(appQueries.pedidosQ),context.queryClient.ensureQueryData(appQueries.configQ),context.queryClient.ensureQueryData(appQueries.pedidoPagamentosQ),context.queryClient.ensureQueryData(appQueries.clientesQ),context.queryClient.ensureQueryData(appQueries.confeitariaQ)]); },
  errorComponent: ({error}) => <p role="alert" className="py-8 text-destructive">{error instanceof Error ? error.message : "Não foi possível carregar os registros."}</p>,
  notFoundComponent: () => <p>Registro não encontrado.</p>,
 
@@ -52,6 +52,11 @@ function Pedidos() {
   const pedidos = usePedidosCalc();
   const { data: config } = useSuspenseQuery(appQueries.configQ);
   const { data: clientes } = useSuspenseQuery(appQueries.clientesQ);
+  const { data: confeitaria } = useSuspenseQuery(appQueries.confeitariaQ);
+  const nomeLoja = confeitaria?.nome?.trim() ?? "";
+  const cabecalhoRecibo = nomeLoja
+    ? [`${nomeLoja.toLocaleUpperCase("pt-BR")}${confeitaria?.slogan?.trim() ? ` — ${confeitaria.slogan.trim()}` : ""}`]
+    : [];
   const [ocorrenciasPendentes, setOcorrenciasPendentes] = useState<Array<{ id: string; recorrencia_id: string; cliente_id: string; cliente_nome: string; frequencia: "semanal" | "quinzenal" | "mensal"; data_entrega: string; hora_entrega: string | null; itens: Array<{ descricao: string; quantidade: number; preco_unitario: number }>; observacoes: string | null }>>([]);
   const [recorrenciasPorPedido, setRecorrenciasPorPedido] = useState<Record<string, { frequencia: "semanal" | "quinzenal" | "mensal"; proximaEntrega: string | null }>>({});
   useEffect(() => {
@@ -377,7 +382,7 @@ function Pedidos() {
               `• ${Number(item.quantidade)} × ${item.descricao} — ${brl(Number(item.quantidade) * Number(item.preco_unitario))}`
             );
             const textoRecibo = [
-              "O CASAL DO BOLO — Amor em cada pedaço",
+              ...cabecalhoRecibo,
               `RECIBO DO PEDIDO #${p.numero}`,
               `Cliente: ${p.clientes?.nome ?? "Cliente"}`,
               "",
@@ -481,7 +486,7 @@ function Pedidos() {
                         ? textoCobranca
                         : podeEmitirRecibo
                         ? textoRecibo
-                        : `Olá ${p.clientes?.nome ?? ""}! Estou entrando em contato sobre o pedido #${p.numero} da O Casal do Bolo.`;
+                        : `Olá ${p.clientes?.nome ?? ""}! Estou entrando em contato sobre o pedido #${p.numero}${nomeLoja ? ` da ${nomeLoja}` : ""}.`;
                       window.open(`https://wa.me/${telefoneWhatsApp}?text=${encodeURIComponent(mensagem)}`, "_blank", "noopener,noreferrer");
                     }}>
                       <MessageCircle className="size-4" /> {deveCobrar ? `Cobrar ${brl(p.t.saldo)}` : "Enviar recibo"}

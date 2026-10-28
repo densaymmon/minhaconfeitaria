@@ -73,6 +73,9 @@ Objetivo: o sistema mostrar números confiáveis e ficar mais simples, sem mudar
 
 ## Etapa 2 — Várias confeitarias (multi-tenant)
 
+> **Situação (PR da Etapa 2):** implementado com o modelo "cada conta de proprietária é uma confeitaria" (tenant = `user_id`). A auditoria do banco em produção (27/10/2026) confirmou que todas as tabelas já têm RLS por `user_id` e que as RPCs `SECURITY DEFINER` filtram por `auth.uid()`, então o isolamento já existia; faltavam o cadastro da confeitaria, a marca configurável e a liberação controlada de novos cadastros. Migração `0033_base_multiempresa.sql` + teste `tests/db/multiempresa-isolation-smoke.sql`.
+> Ficam para depois: funcionários na mesma confeitaria (tabela de membros + `confeitaria_id`), numeração de pedidos por confeitaria (hoje `pedidos.numero` é sequencial na plataforma toda) e logo.
+
 Objetivo: permitir que outras confeitarias usem o sistema, cada uma isolada das demais.
 
 **Atenção:** hoje a regra é **proprietário único**. Existe um gatilho (`limitar_proprietario_unico`) que impede qualquer cadastro depois do primeiro, e todas as tabelas filtram por `user_id`. Esta etapa muda uma regra do `AGENTS.md` e precisa atualizá-la.
