@@ -1,4 +1,5 @@
 import * as appQueries from "@/lib/queries";
+import { origemPublica } from "@/lib/catalogo";
 import { createFileRoute, Link, useNavigate } from "@tanstack/react-router";
 import { useEffect, useMemo, useState } from "react";
 import { useQueryClient, useSuspenseQuery } from "@tanstack/react-query";
@@ -57,7 +58,7 @@ function Pedidos() {
   const { data: confeitaria } = useSuspenseQuery(appQueries.confeitariaQ);
   const nomeLoja = confeitaria?.nome?.trim() ?? "";
   const qc = useQueryClient();
-  const opcoesMensagem = { loja: nomeLoja || "nossa confeitaria", pix: config.pix_chave, pixTipo: config.pix_tipo, cidade: confeitaria?.cidade ?? null, enderecoRetirada: confeitaria?.endereco_retirada ?? null, origem: typeof window === "undefined" ? "" : window.location.origin };
+  const opcoesMensagem = { loja: nomeLoja || "nossa confeitaria", pix: config.pix_chave, pixTipo: config.pix_tipo, cidade: confeitaria?.cidade ?? null, enderecoRetirada: confeitaria?.endereco_retirada ?? null, origem: origemPublica() };
   // Registra que a confirmação do pedido do catálogo foi enviada. O WhatsApp é aberto por um link
   // comum (<a href>): window.open com "noopener" falha em alguns celulares e no app instalado.
   async function marcarAvisoPronto(p: PedidoCalc) {

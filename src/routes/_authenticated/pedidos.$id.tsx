@@ -1,4 +1,5 @@
 import { OrderMessage } from "@/components/app/order-message";
+import { origemPublica } from "@/lib/catalogo";
 import { useRecurso } from "@/components/app/plano";
 import type { OrderDraft } from "@/lib/order-draft";
 import * as appQueries from "@/lib/queries";
@@ -61,7 +62,7 @@ function PedidoForm() {
   const pedidosCalc = usePedidosCalc();
   const existenteCalc = existente ? pedidosCalc.find((x) => x.id === existente.id) : undefined;
   const { data: confeitaria } = useSuspenseQuery(appQueries.confeitariaQ);
-  const opcoesMensagem = { loja: confeitaria?.nome?.trim() || "nossa confeitaria", pix: config.pix_chave, pixTipo: config.pix_tipo, cidade: confeitaria?.cidade ?? null, enderecoRetirada: confeitaria?.endereco_retirada ?? null, origem: typeof window === "undefined" ? "" : window.location.origin };
+  const opcoesMensagem = { loja: confeitaria?.nome?.trim() || "nossa confeitaria", pix: config.pix_chave, pixTipo: config.pix_tipo, cidade: confeitaria?.cidade ?? null, enderecoRetirada: confeitaria?.endereco_retirada ?? null, origem: origemPublica() };
   const temProducaoRegistrada = Boolean(existente?.pedido_itens.some((item) => Number(item.quantidade_produzida ?? 0) > 0));
 
   const [f, setF] = useState(() => ({

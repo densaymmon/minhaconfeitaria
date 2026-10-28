@@ -8,7 +8,7 @@ import { configQ, confeitariaQ } from "@/lib/queries";
 import { brl, hojeISO, num } from "@/lib/format";
 import { somarDias } from "@/lib/lista-producao";
 import { mensagemCobranca, montarHoje } from "@/lib/hoje";
-import { linkWhatsApp } from "@/lib/catalogo";
+import { linkWhatsApp, origemPublica } from "@/lib/catalogo";
 import { avisoProntoWhatsApp } from "@/lib/whatsapp-pedido";
 import { Card, StatusBadge } from "@/components/app/ui";
 import { Button } from "@/components/ui/button";
@@ -29,7 +29,7 @@ export function PainelHoje() {
     pixTipo: config.pix_tipo,
     cidade: confeitaria?.cidade ?? null,
     enderecoRetirada: confeitaria?.endereco_retirada ?? null,
-    origem: typeof window === "undefined" ? "" : window.location.origin,
+    origem: origemPublica(),
   };
   const totalProduzir = r.produzir.reduce((s, i) => s + i.pendente, 0);
   const nada = !r.novos.length && !r.atrasados.length && !r.entregarHoje.length && !r.produzir.length && !r.avisarPronto.length && !r.cobrar.length;

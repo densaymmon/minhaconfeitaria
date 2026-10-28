@@ -208,6 +208,27 @@ export function slugValido(slug: string) {
   return /^[a-z0-9]+(-[a-z0-9]+)*$/.test(slug) && slug.length >= 3 && slug.length <= 60 && !SLUGS_RESERVADOS.includes(slug);
 }
 
+/** Endereço público do sistema (o publicado, que clientes conseguem abrir sem login). */
+export const URL_SISTEMA = "https://minhaconfeitaria.lovable.app";
+
+/**
+ * Origem usada nos links enviados a clientes (catálogo, acompanhamento do pedido).
+ * Prévias do Lovable e o ambiente local exigem login ou não existem fora do aparelho,
+ * então nesses casos o link sai sempre com o endereço publicado.
+ */
+export function origemPublica(origem?: string | null) {
+  const atual = origem ?? (typeof window === "undefined" ? "" : window.location.origin);
+  try {
+    const host = new URL(atual).hostname;
+    if (!host || host === "localhost" || /^127\./.test(host) || host.endsWith(".lovableproject.com") || host.startsWith("id-preview--") || host.startsWith("preview--") || host === "lovable.dev" || host.endsWith(".lovable.dev")) {
+      return URL_SISTEMA;
+    }
+    return `${new URL(atual).protocol}//${new URL(atual).host}`;
+  } catch {
+    return URL_SISTEMA;
+  }
+}
+
 /** Link curto do catálogo: dominio/endereco. */
 export function linkCatalogo(origem: string, slug: string) {
   return `${origem.replace(/\/+$/, "")}/${slug}`;
