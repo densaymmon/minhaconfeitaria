@@ -1,7 +1,7 @@
 import { createFileRoute, Link, useNavigate } from "@tanstack/react-router";
 import { queryOptions, useQuery } from "@tanstack/react-query";
 import { useEffect, useMemo, useRef, useState } from "react";
-import { ArrowLeft, CakeSlice, Camera, Minus, MessageCircle, PlayCircle, Plus, ShoppingBag, Sparkles, Store, Ticket, Truck, X } from "lucide-react";
+import { ArrowLeft, CakeSlice, Camera, Gift, Star, Minus, MessageCircle, PlayCircle, Plus, ShoppingBag, Sparkles, Store, Ticket, Truck, X } from "lucide-react";
 import { Dialog, DialogContent, DialogDescription, DialogTitle } from "@/components/ui/dialog";
 import { Carousel, CarouselContent, CarouselItem, CarouselNext, CarouselPrevious, type CarouselApi } from "@/components/ui/carousel";
 import { supabase } from "@/integrations/supabase/client";
@@ -35,6 +35,11 @@ import {
   proximaDataDisponivel,
   somarDias,
   taxaDeEntrega,
+  descontoFidelidade,
+  excessoNoLimite,
+  sinalDoPedido,
+  textoComponentes,
+  textoFidelidade,
 } from "@/lib/catalogo";
 import { enviarFotoEncomenda } from "@/lib/foto-catalogo";
 import { avisarPedidoNovo } from "@/lib/push.functions";
@@ -187,9 +192,11 @@ function Loja({ slug, catalogo }: { slug: string; catalogo: Catalogo }) {
             {catalogo.aceita_retirada && <span className="inline-flex items-center gap-1 rounded-full border bg-background px-2.5 py-1"><Store className="size-3.5" /> Retirada</span>}
             {catalogo.aceita_entrega && <span className="inline-flex items-center gap-1 rounded-full border bg-background px-2.5 py-1"><Truck className="size-3.5" /> Entrega {bairros.length ? (menorTaxa > 0 ? `a partir de ${brl(menorTaxa)}` : "conforme o bairro") : catalogo.taxa_entrega > 0 ? brl(catalogo.taxa_entrega) : "grátis"}</span>}
             {catalogo.pedido_minimo > 0 && <span className="rounded-full border bg-background px-2.5 py-1">Pedido mínimo {brl(catalogo.pedido_minimo)}</span>}
+            {catalogo.avaliacoes && <a href="#avaliacoes" className="inline-flex items-center gap-1 rounded-full border bg-background px-2.5 py-1"><Star className="size-3.5 fill-current text-amber-500" /> {String(catalogo.avaliacoes.media).replace(".", ",")} ({catalogo.avaliacoes.total})</a>}
             {whatsapp && <a href={whatsapp} target="_blank" rel="noreferrer" className="inline-flex items-center gap-1 rounded-full border bg-background px-2.5 py-1 text-success"><MessageCircle className="size-3.5" /> Dúvidas</a>}
           </div>
           {catalogo.aviso && <p className="mt-4 rounded-xl bg-accent p-3 text-sm text-accent-foreground">{catalogo.aviso}</p>}
+          {catalogo.fidelidade && <p className="mt-3 flex items-center gap-2 rounded-xl border border-primary/20 bg-primary/5 p-3 text-sm"><Gift className="size-4 shrink-0 text-primary" /> {textoFidelidade(catalogo.fidelidade)}</p>}
           {catalogo.aceita_encomenda && (
             <button type="button" onClick={() => { setEtapa("encomenda"); window.scrollTo({ top: 0 }); }}
               className="mt-4 flex w-full items-center gap-3 rounded-2xl border border-primary/30 bg-primary/5 p-3 text-left transition-colors hover:bg-primary/10">
@@ -229,6 +236,8 @@ function Loja({ slug, catalogo }: { slug: string; catalogo: Catalogo }) {
                     <button type="button" onClick={() => setDetalhe(p)} className="text-left"><h2 className="font-semibold leading-snug">{p.nome}</h2></button>
                     {p.descricao && <p className="mt-0.5 line-clamp-3 text-sm text-muted-foreground">{p.descricao}</p>}
                     {p.antecedencia_dias > 0 && <p className="mt-1 text-xs text-muted-foreground">Encomende com {p.antecedencia_dias} dia(s) de antecedência</p>}
+                    {p.venda_ate && <p className="mt-1 text-xs font-medium text-primary">Edição limitada · até {dataBR(p.venda_ate)}</p>}
+                    {textoComponentes(p.componentes) && <p className="mt-1 line-clamp-2 text-xs text-muted-foreground">{textoComponentes(p.componentes)}</p>}
                     <div className="mt-auto flex items-center justify-between gap-2 pt-2">
                       <span className="font-semibold tabular-nums">{temOpcoes ? <><span className="text-xs font-normal text-muted-foreground">a partir de </span>{brl(precoMinimo(p))}</> : brl(p.preco)}</span>
                       {temOpcoes ? (
@@ -244,6 +253,22 @@ function Loja({ slug, catalogo }: { slug: string; catalogo: Catalogo }) {
               );
             })}
           </ul>
+        )}
+        {(catalogo.avaliacoes?.ultimas.length ?? 0) > 0 && (
+          <section id="avaliacoes" className="mt-8 space-y-3" aria-label="Avaliações de clientes">
+            <h2 className="flex items-center gap-2 font-display text-lg font-semibold"><Star className="size-5 fill-current text-amber-500" /> {String(catalogo.avaliacoes?.media).replace(".", ",")} · o que dizem os clientes</h2>
+            <ul className="space-y-2">
+              {catalogo.avaliacoes?.ultimas.map((a, i) => (
+                <li key={i} className="rounded-2xl bg-card p-3 shadow-soft">
+                  <div className="flex items-center justify-between gap-2 text-sm">
+                    <span className="font-medium">{a.cliente ?? "Cliente"}</span>
+                    <Estrelas nota={a.nota} />
+                  </div>
+                  {a.comentario && <p className="mt-1 text-sm text-muted-foreground">{a.comentario}</p>}
+                </li>
+              ))}
+            </ul>
+          </section>
         )}
         <p className="py-8 text-center text-xs text-muted-foreground">Pedidos online por Doce Gestão · <Link to="/privacidade" className="underline">Privacidade</Link></p>
       </main>
@@ -341,6 +366,9 @@ function DetalheProduto({ produto, carrinho, onClose, onChange }: { produto: Pro
               <DialogTitle className="font-display text-xl">{produto.nome}</DialogTitle>
               <DialogDescription className="whitespace-pre-line text-sm">{produto.descricao || produto.categoria}</DialogDescription>
               {produto.antecedencia_dias > 0 && <p className="text-xs text-muted-foreground">Encomende com {produto.antecedencia_dias} dia(s) de antecedência.</p>}
+              {produto.venda_ate && <p className="text-xs font-medium text-primary">Edição limitada: pedidos até {dataBR(produto.venda_ate)}.</p>}
+              {textoComponentes(produto.componentes) && <p className="text-sm">{textoComponentes(produto.componentes)}</p>}
+              {produto.limite_dia != null && <p className="text-xs text-muted-foreground">Quantidade limitada por dia.</p>}
               {grupos.map((g) => (
                 <fieldset key={g.grupo} className="space-y-2 pt-1">
                   <legend className="text-sm font-semibold">{g.grupo} <span className="font-normal text-muted-foreground">· escolha 1</span></legend>
@@ -538,9 +566,21 @@ function Finalizar({ slug, catalogo, carrinho, setCarrinho, voltar, limparCarrin
   const base = resumoCarrinho(carrinho, catalogo.produtos, { entrega: false, taxaEntrega: 0, hoje: catalogo.hoje });
   const ag = useAgenda(catalogo, base.dataMinima, 90);
   const subtotal = base.subtotal;
-  const desconto = cupom ? Math.min(cupom.desconto, subtotal) : 0;
+  // Fidelidade (consultada pelo WhatsApp): o cupom tem prioridade, como no servidor.
+  const [fidelidade, setFidelidade] = useState<{ ganha_agora: boolean; faltam: number } | null>(null);
+  useEffect(() => {
+    if (!catalogo.fidelidade || !telefoneValido(cliente.telefone)) { setFidelidade(null); return; }
+    const id = window.setTimeout(() => {
+      void supabase.rpc("progresso_fidelidade", { p_slug: slug, p_telefone: cliente.telefone }).then(({ data }) => setFidelidade((data as { ganha_agora: boolean; faltam: number } | null) ?? null));
+    }, 500);
+    return () => window.clearTimeout(id);
+  }, [catalogo.fidelidade, cliente.telefone, slug]);
+  const premiado = !cupom && Boolean(fidelidade?.ganha_agora);
+  const desconto = cupom ? Math.min(cupom.desconto, subtotal) : premiado ? descontoFidelidade(subtotal, catalogo.fidelidade) : 0;
   const total = Math.round((subtotal - desconto + ag.taxa) * 100) / 100;
+  const sinal = sinalDoPedido(total, catalogo);
   const faltaMinimo = Math.max(0, catalogo.pedido_minimo - subtotal);
+  const excesso = ag.agenda.data ? excessoNoLimite(base.linhas, ag.agenda.data) : [];
 
   async function aplicarCupom(codigo = codigoCupom) {
     const limpo = normalizarCupom(codigo);
@@ -650,15 +690,29 @@ function Finalizar({ slug, catalogo, carrinho, setCarrinho, voltar, limparCarrin
 
         <section className="rounded-2xl bg-card p-4 shadow-soft">
           <div className="flex justify-between py-1 text-sm"><span className="text-muted-foreground">Produtos</span><span className="tabular-nums">{brl(subtotal)}</span></div>
-          {desconto > 0 && <div className="flex justify-between py-1 text-sm text-success"><span>Desconto ({cupom?.codigo})</span><span className="tabular-nums">−{brl(desconto)}</span></div>}
+          {desconto > 0 && <div className="flex justify-between py-1 text-sm text-success"><span>{cupom ? `Desconto (${cupom.codigo})` : "Desconto fidelidade"}</span><span className="tabular-nums">−{brl(desconto)}</span></div>}
           {ag.agenda.tipo === "entrega" && <div className="flex justify-between py-1 text-sm"><span className="text-muted-foreground">Entrega</span><span className="tabular-nums">{ag.taxaEscolhida ? brl(ag.taxa) : "escolha o bairro"}</span></div>}
           <div className="mt-1 flex justify-between border-t pt-2 font-semibold"><span>Total</span><span className="tabular-nums">{brl(total)}</span></div>
-          <p className="mt-2 text-xs text-muted-foreground">Pagamento por Pix: a chave aparece assim que você enviar o pedido.</p>
+          {sinal > 0 && <div className="mt-2 flex justify-between rounded-xl bg-primary/5 p-2 text-sm"><span>Sinal para confirmar ({Number(catalogo.sinal_percentual)}%)</span><span className="font-semibold tabular-nums">{brl(sinal)}</span></div>}
+          <p className="mt-2 text-xs text-muted-foreground">{sinal > 0 ? "O pedido é confirmado com o pagamento do sinal por Pix; o restante você paga até a entrega." : "Pagamento por Pix: a chave aparece assim que você enviar o pedido."}</p>
         </section>
 
+        {catalogo.fidelidade && fidelidade && (
+          <p className={cn("flex items-center gap-2 rounded-xl p-3 text-sm", premiado ? "bg-success/10 text-success" : "bg-muted text-muted-foreground")}>
+            <Gift className="size-4 shrink-0" />
+            {fidelidade.ganha_agora
+              ? cupom ? "Você ganhou o desconto de fidelidade, mas o cupom substitui ele neste pedido." : "Parabéns! Este pedido ganhou o desconto de fidelidade."
+              : `Faltam ${fidelidade.faltam} pedido(s) para você ganhar o desconto de fidelidade.`}
+          </p>
+        )}
+        {excesso.length > 0 && (
+          <p role="alert" className="rounded-xl bg-warning/15 p-3 text-sm text-warning-foreground">
+            Quantidade limitada para {dataBR(ag.agenda.data)}: {excesso.map((e) => `${e.nome} — restam ${e.restante}`).join("; ")}. Diminua a quantidade ou escolha outra data.
+          </p>
+        )}
         {faltaMinimo > 0 && <p className="rounded-xl bg-warning/15 p-3 text-sm text-warning-foreground">Faltam {brl(faltaMinimo)} para o pedido mínimo de {brl(catalogo.pedido_minimo)}.</p>}
         {erro && <p role="alert" className="rounded-xl bg-destructive/10 p-3 text-sm font-medium text-destructive">{erro}</p>}
-        <Button type="submit" className="h-12 w-full text-base" disabled={enviando || faltaMinimo > 0}>
+        <Button type="submit" className="h-12 w-full text-base" disabled={enviando || faltaMinimo > 0 || excesso.length > 0}>
           {enviando ? "Enviando pedido…" : `Enviar pedido · ${brl(total)}`}
         </Button>
       </form>
@@ -770,5 +824,13 @@ function Encomenda({ slug, catalogo, voltar }: { slug: string; catalogo: Catalog
         <Button type="submit" className="h-12 w-full text-base" disabled={enviando || enviandoFoto}>{enviando ? "Enviando…" : "Pedir orçamento"}</Button>
       </form>
     </div>
+  );
+}
+
+function Estrelas({ nota, tamanho = "size-3.5" }: { nota: number; tamanho?: string }) {
+  return (
+    <span className="inline-flex" aria-label={`${nota} de 5 estrelas`}>
+      {[1, 2, 3, 4, 5].map((i) => <Star key={i} className={cn(tamanho, i <= nota ? "fill-current text-amber-500" : "text-muted-foreground/40")} />)}
+    </span>
   );
 }

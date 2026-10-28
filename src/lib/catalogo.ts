@@ -19,7 +19,17 @@ export type ProdutoCatalogo = {
   antecedencia_dias: number;
   midias?: MidiaCatalogo[];
   opcoes?: GrupoOpcoes[];
+  /** Limite de unidades por dia de entrega (null = sem limite) e o já reservado por data. */
+  limite_dia?: number | null;
+  reservas?: Record<string, number> | null;
+  /** Último dia de venda (produto sazonal). */
+  venda_ate?: string | null;
+  /** Itens do kit. */
+  componentes?: { nome: string; quantidade: number }[] | null;
 };
+
+export type Fidelidade = { a_cada: number; tipo: "percentual" | "valor"; valor: number };
+export type ResumoAvaliacoes = { media: number; total: number; ultimas: { nota: number; comentario: string | null; cliente: string | null; data: string }[] };
 
 export type Catalogo = {
   nome: string;
@@ -42,6 +52,10 @@ export type Catalogo = {
   bairros?: TaxaBairro[];
   aceita_encomenda?: boolean;
   tem_cupons?: boolean;
+  sinal_percentual?: number;
+  sinal_a_partir_de?: number;
+  fidelidade?: Fidelidade | null;
+  avaliacoes?: ResumoAvaliacoes | null;
 };
 
 export type TaxaBairro = { bairro: string; taxa: number };
@@ -132,6 +146,10 @@ export type PedidoAcompanhamento = {
   pago: number;
   pagamento_informado: boolean;
   criado_em: string;
+  sinal?: number;
+  encomenda?: boolean;
+  pode_avaliar?: boolean;
+  avaliacao?: { nota: number; comentario: string | null } | null;
   itens: { descricao: string; quantidade: number; preco: number }[];
   confeitaria: { nome: string; whatsapp: string | null; slug: string | null; endereco_retirada: string | null; pix_chave: string | null; pix_tipo?: string | null; cidade?: string | null };
 };
@@ -361,6 +379,8 @@ export type DadosConfirmacao = {
   /** Código "Pix copia e cola" com o valor em aberto (opcional). */
   pixCopiaECola?: string | null;
   link: string | null;
+  /** Sinal para confirmar (0 = sem sinal). */
+  sinal?: number;
 };
 
 const brlMsg = (v: number) => new Intl.NumberFormat("pt-BR", { style: "currency", currency: "BRL" }).format(Number.isFinite(v) ? v : 0);
@@ -394,7 +414,7 @@ export function mensagemConfirmacaoPedido(d: DadosConfirmacao) {
     "",
     d.tipoEntrega === "entrega" ? `🚚 Entrega ${quando}${d.endereco ? `\nEndereço: ${d.endereco}` : ""}` : `🏠 Retirada ${quando}${d.endereco ? `\nLocal: ${d.endereco}` : ""}`,
     ...(falta > 0
-      ? ["", ...linhasPagamento(d, falta)]
+      ? ["", ...(Number(d.sinal ?? 0) > d.pago ? [`Para confirmar, o sinal é de ${brlMsg(Number(d.sinal) - d.pago)} (o restante até a entrega).`] : []), ...linhasPagamento(d, falta)]
       : ["", "Pagamento confirmado ✅"]),
     ...(d.link ? ["", `Acompanhe o andamento: ${d.link}`] : []),
     "",
@@ -441,4 +461,47 @@ export function mensagemPedidoPronto(d: DadosConfirmacao) {
 export function fotosDeReferencia(texto: string | null | undefined) {
   const achadas = (texto ?? "").match(/https:\/\/[^\s]+\/storage\/v1\/object\/public\/catalogo\/encomendas\/[^\s]+\.(?:jpe?g|png|webp)/gi) ?? [];
   return [...new Set(achadas)].slice(0, 3);
+}
+
+/** Unidades ainda disponíveis do produto na data (null = sem limite). */
+export function restanteNoDia(p: Pick<ProdutoCatalogo, "limite_dia" | "reservas">, data: string) {
+  if (p.limite_dia == null) return null;
+  return Math.max(0, Number(p.limite_dia) - Number(p.reservas?.[data] ?? 0));
+}
+
+/** Produtos do carrinho que passam do limite do dia escolhido. */
+export function excessoNoLimite(linhas: { produto: ProdutoCatalogo; quantidade: number }[], data: string) {
+  const porProduto = new Map<string, { produto: ProdutoCatalogo; quantidade: number }>();
+  for (const l of linhas) {
+    const atual = porProduto.get(l.produto.id);
+    porProduto.set(l.produto.id, { produto: l.produto, quantidade: (atual?.quantidade ?? 0) + l.quantidade });
+  }
+  return [...porProduto.values()].flatMap(({ produto, quantidade }) => {
+    const restante = restanteNoDia(produto, data);
+    return restante !== null && quantidade > restante ? [{ nome: produto.nome, pedido: quantidade, restante }] : [];
+  });
+}
+
+/** Sinal para confirmar o pedido (mesma regra do servidor). */
+export function sinalDoPedido(total: number, cat: Pick<Catalogo, "sinal_percentual" | "sinal_a_partir_de">) {
+  const pct = Number(cat.sinal_percentual ?? 0);
+  if (pct <= 0 || total < Number(cat.sinal_a_partir_de ?? 0)) return 0;
+  return Math.round(total * pct) / 100;
+}
+
+/** Desconto da fidelidade sobre os produtos (mesma regra do servidor). */
+export function descontoFidelidade(subtotal: number, f: Fidelidade | null | undefined) {
+  if (!f) return 0;
+  return f.tipo === "valor" ? Math.min(Number(f.valor), subtotal) : Math.round(subtotal * Number(f.valor)) / 100;
+}
+
+export function textoFidelidade(f: Fidelidade) {
+  const premio = f.tipo === "valor" ? new Intl.NumberFormat("pt-BR", { style: "currency", currency: "BRL" }).format(Number(f.valor)) : `${Number(f.valor)}%`;
+  return `A cada ${f.a_cada} pedidos, o próximo ganha ${premio} de desconto.`;
+}
+
+/** "Inclui: 2× Bolo de pote, 10× Brigadeiro". */
+export function textoComponentes(c: ProdutoCatalogo["componentes"]) {
+  if (!c?.length) return null;
+  return `Inclui: ${c.map((i) => `${Number(i.quantidade)}× ${i.nome}`).join(", ")}`;
 }

@@ -1,5 +1,5 @@
 import { describe, expect, it } from "vitest";
-import { corDoTexto, diaDaSemana, fotosDeReferencia, motivoDataIndisponivel, normalizarCupom, normalizarHorarios, proximaDataDisponivel, taxaDeEntrega, validarBairros } from "./catalogo";
+import { corDoTexto, descontoFidelidade, diaDaSemana, excessoNoLimite, fotosDeReferencia, restanteNoDia, sinalDoPedido, textoComponentes, textoFidelidade, motivoDataIndisponivel, normalizarCupom, normalizarHorarios, proximaDataDisponivel, taxaDeEntrega, validarBairros } from "./catalogo";
 
 describe("agenda do catálogo", () => {
   const cat = { dias_fechados: [0, 1], datas_bloqueadas: ["2026-11-04"] };
@@ -64,5 +64,29 @@ describe("fotos de referência da encomenda", () => {
     ]);
     expect(fotosDeReferencia("https://site.com/foto.jpg")).toEqual([]);
     expect(fotosDeReferencia(null)).toEqual([]);
+  });
+});
+
+describe("limites, sinal, fidelidade e kits", () => {
+  const bolo = { id: "b", nome: "Bolo", descricao: null, categoria: "", preco: 20, imagem_url: null, antecedencia_dias: 0, limite_dia: 3, reservas: { "2026-11-02": 2 } };
+  const brig = { ...bolo, id: "g", nome: "Brigadeiro", limite_dia: null, reservas: null };
+  it("calcula o que resta no dia e o excesso do carrinho", () => {
+    expect(restanteNoDia(bolo, "2026-11-02")).toBe(1);
+    expect(restanteNoDia(bolo, "2026-11-03")).toBe(3);
+    expect(restanteNoDia(brig, "2026-11-02")).toBeNull();
+    expect(excessoNoLimite([{ produto: bolo, quantidade: 1 }, { produto: bolo, quantidade: 1 }, { produto: brig, quantidade: 50 }], "2026-11-02"))
+      .toEqual([{ nome: "Bolo", pedido: 2, restante: 1 }]);
+    expect(excessoNoLimite([{ produto: bolo, quantidade: 3 }], "2026-11-03")).toEqual([]);
+  });
+  it("calcula sinal e fidelidade como o servidor", () => {
+    expect(sinalDoPedido(120, { sinal_percentual: 50, sinal_a_partir_de: 100 })).toBe(60);
+    expect(sinalDoPedido(99.99, { sinal_percentual: 50, sinal_a_partir_de: 100 })).toBe(0);
+    expect(sinalDoPedido(80, {})).toBe(0);
+    expect(descontoFidelidade(60, { a_cada: 2, tipo: "percentual", valor: 10 })).toBe(6);
+    expect(descontoFidelidade(15, { a_cada: 5, tipo: "valor", valor: 20 })).toBe(15);
+    expect(descontoFidelidade(15, null)).toBe(0);
+    expect(textoFidelidade({ a_cada: 5, tipo: "percentual", valor: 10 })).toBe("A cada 5 pedidos, o próximo ganha 10% de desconto.");
+    expect(textoComponentes([{ nome: "Bolo", quantidade: 2 }, { nome: "Brigadeiro", quantidade: 10 }])).toBe("Inclui: 2× Bolo, 10× Brigadeiro");
+    expect(textoComponentes([])).toBeNull();
   });
 });

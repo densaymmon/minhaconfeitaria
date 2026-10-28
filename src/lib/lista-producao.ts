@@ -14,7 +14,19 @@ export type ProdutoReceita = {
   nome: string;
   rendimento: number | null;
   receita_itens: { insumo_id: string; quantidade: number; quantidade_utilizada?: number | null; unidade_receita?: string | null }[];
+  /** Kit: produtos que o compõem (as receitas deles entram na conta). */
+  componentes?: unknown;
 };
+
+/** Componentes do kit lidos do banco (jsonb), ignorando itens inválidos. */
+export function componentesDoKit(valor: unknown): { produto_id: string; quantidade: number }[] {
+  if (!Array.isArray(valor)) return [];
+  return valor.flatMap((k) => {
+    const item = k as { produto_id?: unknown; quantidade?: unknown };
+    const quantidade = Number(item?.quantidade);
+    return typeof item?.produto_id === "string" && quantidade > 0 ? [{ produto_id: item.produto_id, quantidade }] : [];
+  });
+}
 
 export type InsumoBase = { id: string; nome: string; unidade?: string | null; unidade_embalagem?: string | null };
 
@@ -60,6 +72,14 @@ export function ingredientesNecessarios(
   }
 
   const mapaProdutos = new Map(produtos.map((p) => [p.id, p]));
+  // Kits viram os produtos que os compõem (um nível, como no banco).
+  for (const [produtoId, quantidade] of [...porProduto]) {
+    const kit = mapaProdutos.get(produtoId);
+    const itensKit = componentesDoKit(kit?.componentes);
+    if (!kit || itensKit.length === 0) continue;
+    if (kit.receita_itens.length === 0) porProduto.delete(produtoId);
+    for (const c of itensKit) porProduto.set(c.produto_id, (porProduto.get(c.produto_id) ?? 0) + c.quantidade * quantidade);
+  }
   const mapaInsumos = new Map(insumos.map((i) => [i.id, i]));
   const mapaSaldos = new Map(saldos.map((s) => [s.insumo_id, s]));
   const total = new Map<string, { nome: string; unidade: UnidadeBase; necessario: number }>();

@@ -3,7 +3,7 @@ import { createFileRoute, Link } from "@tanstack/react-router";
 import { useQuery, useQueryClient, useSuspenseQuery } from "@tanstack/react-query";
 import { useRef, useState } from "react";
 import { toast } from "sonner";
-import { CalendarOff, Copy, ExternalLink, ImagePlus, MapPin, Package, Palette, Plus, QrCode, Share2, Sparkles, Store, Ticket, Trash2, X } from "lucide-react";
+import { CalendarOff, Gift, Star, Wallet, Copy, ExternalLink, ImagePlus, MapPin, Package, Palette, Plus, QrCode, Share2, Sparkles, Store, Ticket, Trash2, X } from "lucide-react";
 import { supabase } from "@/integrations/supabase/client";
 import { brl, parseNum } from "@/lib/format";
 import { DIAS_SEMANA, SLUGS_RESERVADOS, corDoTexto, linkCatalogo as montarLinkCatalogo, normalizarCupom, normalizarHorarios, origemPublica, slugValido, sugerirSlug, validarBairros, type TaxaBairro } from "@/lib/catalogo";
@@ -47,6 +47,7 @@ function CatalogoPage() {
     enderecoRetirada: confeitaria?.endereco_retirada ?? "",
     limite: confeitaria?.limite_pedidos_dia == null ? "" : String(confeitaria.limite_pedidos_dia),
     ...extrasDe(confeitaria),
+    ...vendasDe(confeitaria),
   }));
   const [novaData, setNovaData] = useState("");
   const [novoHorario, setNovoHorario] = useState("");
@@ -69,7 +70,8 @@ function CatalogoPage() {
     cat.retirada !== confeitaria.aceita_retirada || cat.entrega !== confeitaria.aceita_entrega || parseNum(cat.taxa) !== Number(confeitaria.taxa_entrega) ||
     parseNum(cat.minimo) !== Number(confeitaria.pedido_minimo) || cat.enderecoRetirada !== (confeitaria.endereco_retirada ?? "") ||
     cat.limite !== (confeitaria.limite_pedidos_dia == null ? "" : String(confeitaria.limite_pedidos_dia)) ||
-    JSON.stringify(extrasDe(confeitaria)) !== JSON.stringify(extrasDe(null, cat));
+    JSON.stringify(extrasDe(confeitaria)) !== JSON.stringify(extrasDe(null, cat)) ||
+    JSON.stringify(vendasDe(confeitaria)) !== JSON.stringify(vendasDe(null, cat));
 
   async function copiar() {
     if (!salvo) return;
@@ -88,6 +90,10 @@ function CatalogoPage() {
     const erroBairros = cat.entrega ? validarBairros(bairros) : null;
     if (erroBairros) return void toast.error(erroBairros);
     if (cat.dias.length === 7) return void toast.error("Deixe pelo menos um dia da semana aberto.");
+    const sinalPct = parseNum(cat.sinalPct), sinalMin = parseNum(cat.sinalMin), fidA = Math.round(parseNum(cat.fidA)), fidValor = parseNum(cat.fidValor);
+    if (sinalPct < 0 || sinalPct > 100) return void toast.error("O sinal deve ser de 0% a 100%.");
+    if (cat.fidAtiva && (fidA < 2 || fidA > 50)) return void toast.error("A fidelidade deve premiar a cada 2 a 50 pedidos.");
+    if (cat.fidAtiva && (!(fidValor > 0) || (cat.fidTipo === "percentual" && fidValor > 100))) return void toast.error("Informe o desconto da fidelidade.");
     setSalvando(true);
     const { error } = await supabase.from("confeitarias").update({
       slug: cat.slug || null, catalogo_ativo: cat.ativo, catalogo_aviso: cat.aviso.trim().slice(0, 300) || null,
@@ -95,6 +101,8 @@ function CatalogoPage() {
       endereco_retirada: cat.enderecoRetirada.trim().slice(0, 300) || null, limite_pedidos_dia: limite,
       cor_primaria: cat.cor || null, logo_url: cat.logo || null, dias_fechados: cat.dias, datas_bloqueadas: cat.datas,
       horarios_retirada: cat.horarios, taxas_bairro: bairros, aceita_encomenda: cat.encomenda,
+      sinal_percentual: sinalPct, sinal_a_partir_de: Math.max(0, sinalMin),
+      fidelidade_a_cada: cat.fidAtiva ? fidA : 0, fidelidade_tipo: cat.fidTipo, fidelidade_valor: cat.fidAtiva ? fidValor : 0,
     }).eq("user_id", donoId);
     setSalvando(false);
     if (error) return void toast.error(error.code === "23505" ? "Este endereço de catálogo já está em uso. Escolha outro." : `Não foi possível salvar: ${error.message}`);
@@ -269,10 +277,41 @@ function CatalogoPage() {
           <p className="text-sm text-muted-foreground">O cliente descreve o que quer (tema, tamanho, sabor) e envia até 3 fotos de referência. Chega como pedido "aguardando orçamento" para você combinar o valor.</p>
         </Card>
 
+        <Card className="space-y-3">
+          <div className="flex items-center gap-2"><Wallet className="size-4 text-primary" /><h2 className="text-lg font-semibold">Sinal para confirmar</h2></div>
+          <p className="text-sm text-muted-foreground">O cliente vê quanto pagar de sinal por Pix para confirmar o pedido; o restante fica para a entrega. 0% = sem sinal.</p>
+          <div className="grid grid-cols-2 gap-3">
+            <Field label="Sinal (%)"><Input inputMode="decimal" value={cat.sinalPct} onChange={(e) => setCat({ ...cat, sinalPct: e.target.value })} className="h-11 bg-card" /></Field>
+            <Field label="Em pedidos a partir de (R$)" hint="0 = todos os pedidos."><Input inputMode="decimal" value={cat.sinalMin} onChange={(e) => setCat({ ...cat, sinalMin: e.target.value })} className="h-11 bg-card" /></Field>
+          </div>
+        </Card>
+
+        <Card className="space-y-3">
+          <div className="flex items-center justify-between gap-3">
+            <div className="flex items-center gap-2"><Gift className="size-4 text-primary" /><h2 className="text-lg font-semibold">Programa de fidelidade</h2></div>
+            <Switch checked={cat.fidAtiva} onCheckedChange={(v) => setCat({ ...cat, fidAtiva: v })} aria-label="Ativar fidelidade" />
+          </div>
+          <p className="text-sm text-muted-foreground">A cada N pedidos do mesmo WhatsApp, o pedido seguinte pelo catálogo ganha desconto automático (não soma com cupom).</p>
+          {cat.fidAtiva && (
+            <div className="grid grid-cols-3 gap-3">
+              <Field label="A cada (pedidos)"><Input inputMode="numeric" value={cat.fidA} onChange={(e) => setCat({ ...cat, fidA: e.target.value })} className="h-11 bg-card" /></Field>
+              <Field label="Tipo">
+                <div className="grid h-11 grid-cols-2 rounded-md border bg-card p-1 text-sm">
+                  {(["percentual", "valor"] as const).map((t) => (
+                    <button key={t} type="button" onClick={() => setCat({ ...cat, fidTipo: t })} aria-pressed={cat.fidTipo === t} className={cn("rounded font-medium", cat.fidTipo === t && "bg-primary text-primary-foreground")}>{t === "percentual" ? "%" : "R$"}</button>
+                  ))}
+                </div>
+              </Field>
+              <Field label="Desconto"><Input inputMode="decimal" value={cat.fidValor} onChange={(e) => setCat({ ...cat, fidValor: e.target.value })} className="h-11 bg-card" /></Field>
+            </div>
+          )}
+        </Card>
+
         <Button className="h-12 w-full" disabled={salvando || enviandoLogo || !alterado}>{salvando ? "Salvando..." : alterado ? "Salvar catálogo" : "Tudo salvo"}</Button>
       </form>
 
       <CuponsCard />
+      <AvaliacoesCard />
 
       <NotificacoesCard />
       <div className="mt-3"><Button asChild variant="ghost" className="h-10 w-full sm:w-auto"><Link to="/produtos"><Package className="size-4" /> Produtos do catálogo</Link></Button></div>
@@ -420,6 +459,64 @@ function CuponsCard() {
           })}
         </ul>
       )}
+    </Card>
+  );
+}
+
+/** Sinal e fidelidade: do banco ou do formulário (para comparar). */
+function vendasDe(
+  c: appQueries.Confeitaria | null | undefined,
+  form?: { sinalPct: string; sinalMin: string; fidAtiva: boolean; fidA: string; fidTipo: "percentual" | "valor"; fidValor: string },
+) {
+  if (form) {
+    return {
+      sinalPct: String(parseNum(form.sinalPct)), sinalMin: String(parseNum(form.sinalMin)), fidAtiva: form.fidAtiva,
+      fidA: form.fidAtiva ? String(Math.round(parseNum(form.fidA))) : "0", fidTipo: form.fidTipo, fidValor: form.fidAtiva ? String(parseNum(form.fidValor)) : "0",
+    };
+  }
+  const ativa = Number(c?.fidelidade_a_cada ?? 0) > 0;
+  return {
+    sinalPct: String(Number(c?.sinal_percentual ?? 0)), sinalMin: String(Number(c?.sinal_a_partir_de ?? 0)), fidAtiva: ativa,
+    fidA: ativa ? String(c?.fidelidade_a_cada) : "0", fidTipo: (c?.fidelidade_tipo === "valor" ? "valor" : "percentual") as "percentual" | "valor",
+    fidValor: ativa ? String(Number(c?.fidelidade_valor ?? 0)) : "0",
+  };
+}
+
+function AvaliacoesCard() {
+  const qc = useQueryClient();
+  const { data: avaliacoes = [] } = useQuery({
+    queryKey: ["avaliacoes"],
+    queryFn: async () => {
+      const { data, error } = await supabase.from("avaliacoes").select("id,nota,comentario,cliente_nome,publicada,created_at").order("created_at", { ascending: false }).limit(50);
+      return error ? [] : (data ?? []);
+    },
+  });
+  if (avaliacoes.length === 0) return null;
+  const media = avaliacoes.reduce((s, a) => s + a.nota, 0) / avaliacoes.length;
+  async function alternar(id: string, publicada: boolean) {
+    const { error } = await supabase.from("avaliacoes").update({ publicada }).eq("id", id);
+    if (error) return void toast.error(`Não foi possível alterar: ${error.message}`);
+    await qc.invalidateQueries({ queryKey: ["avaliacoes"] });
+  }
+  return (
+    <Card className="mt-5 space-y-3">
+      <div className="flex items-center gap-2"><Star className="size-4 fill-current text-amber-500" /><h2 className="text-lg font-semibold">Avaliações dos clientes</h2></div>
+      <p className="text-sm text-muted-foreground">Média {media.toFixed(1).replace(".", ",")} em {avaliacoes.length} avaliação(ões). As publicadas aparecem no catálogo; desligue para esconder.</p>
+      <ul className="divide-y">
+        {avaliacoes.map((a) => (
+          <li key={a.id} className="flex items-start gap-3 py-3">
+            <div className="min-w-0 flex-1">
+              <div className="flex items-center gap-2 text-sm">
+                <span className="font-medium">{a.cliente_nome ?? "Cliente"}</span>
+                <span className="inline-flex">{[1, 2, 3, 4, 5].map((i) => <Star key={i} className={cn("size-3.5", i <= a.nota ? "fill-current text-amber-500" : "text-muted-foreground/40")} />)}</span>
+                <span className="text-xs text-muted-foreground">{dataBR(a.created_at.slice(0, 10))}</span>
+              </div>
+              {a.comentario && <p className="mt-1 text-sm text-muted-foreground">{a.comentario}</p>}
+            </div>
+            <Switch checked={a.publicada} onCheckedChange={(v) => void alternar(a.id, v)} aria-label="Publicar no catálogo" />
+          </li>
+        ))}
+      </ul>
     </Card>
   );
 }
