@@ -72,6 +72,8 @@ export const Route = createRootRouteWithContext<{ queryClient: QueryClient }>()(
       { charSet: "utf-8" },
       { name: "viewport", content: "width=device-width, initial-scale=1, viewport-fit=cover" },
       { name: "theme-color", content: "#a83a46" },
+      { name: "apple-mobile-web-app-capable", content: "yes" },
+      { name: "apple-mobile-web-app-title", content: "Doce Gestão" },
       { title: "Doce Gestão — Confeitaria" },
       { name: "description", content: "Gestão de pedidos, produção, receitas e finanças da confeitaria." },
       { property: "og:type", content: "website" },
@@ -79,7 +81,9 @@ export const Route = createRootRouteWithContext<{ queryClient: QueryClient }>()(
     ],
     links: [
       { rel: "stylesheet", href: appCss },
-      { rel: "icon", href: "/favicon.ico", type: "image/x-icon" },
+      { rel: "icon", href: "/icons/icone-192.png", type: "image/png" },
+      { rel: "apple-touch-icon", href: "/icons/apple-touch-icon.png" },
+      { rel: "manifest", href: "/manifest.webmanifest" },
       { rel: "preload", href: "/fonts/figtree.woff2", as: "font", type: "font/woff2", crossOrigin: "anonymous" },
       // Abre a conexão com o banco enquanto a página carrega (catálogo e telas aparecem antes).
       ...(import.meta.env["VITE_SUPABASE_URL"] ? [{ rel: "preconnect", href: String(import.meta.env["VITE_SUPABASE_URL"]), crossOrigin: "anonymous" as const }] : []),

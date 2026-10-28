@@ -37,6 +37,7 @@ import {
   taxaDeEntrega,
 } from "@/lib/catalogo";
 import { enviarFotoEncomenda } from "@/lib/foto-catalogo";
+import { avisarPedidoNovo } from "@/lib/push.functions";
 
 export const Route = createFileRoute("/c/$slug")({
   ssr: false,
@@ -594,6 +595,8 @@ function Finalizar({ slug, catalogo, carrinho, setCarrinho, voltar, limparCarrin
     }
     esvaziar();
     // Link curto (/p/xxxxxxxxxx) para o cliente guardar; o código longo continua valendo.
+    // Avisa a confeitaria no celular (sem esperar: o cliente segue para o acompanhamento).
+    void avisarPedidoNovo({ data: { codigo } }).catch(() => undefined);
     const { data: curto } = await supabase.rpc("codigo_curto_pedido", { p_codigo: codigo });
     if (curto) void navigate({ to: "/p/$codigo", params: { codigo: curto } });
     else void navigate({ to: "/pedido/$codigo", params: { codigo } });
@@ -723,6 +726,8 @@ function Encomenda({ slug, catalogo, voltar }: { slug: string; catalogo: Catalog
       token.current = crypto.randomUUID();
       return;
     }
+    // Avisa a confeitaria no celular (sem esperar: o cliente segue para o acompanhamento).
+    void avisarPedidoNovo({ data: { codigo } }).catch(() => undefined);
     const { data: curto } = await supabase.rpc("codigo_curto_pedido", { p_codigo: codigo });
     if (curto) void navigate({ to: "/p/$codigo", params: { codigo: curto } });
     else void navigate({ to: "/pedido/$codigo", params: { codigo } });

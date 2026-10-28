@@ -10,6 +10,7 @@ import { TERMOS_VERSAO } from "@/lib/termos";
 import { AceiteTermos, TelaBloqueada, TelaPendente } from "@/components/app/acesso-conta";
 import { supabase } from "@/integrations/supabase/client";
 import { CarregandoTela } from "@/components/app/carregando";
+import { desativarPush, registrarServiceWorker } from "@/lib/push-cliente";
 
 export const Route = createFileRoute("/_authenticated")({
   ssr: false,
@@ -86,12 +87,17 @@ function Layout() {
     return () => { ativo = false; window.clearInterval(intervalo); };
   }, [user.id, queryClient]);
 
+  // Service worker das notificações de pedido novo (não guarda páginas em cache).
+  useEffect(() => { void registrarServiceWorker(); }, []);
+
   useEffect(() => {
     if (precisaComecar && pathname !== "/comecar") void navigate({ to: "/comecar", replace: true });
   }, [precisaComecar, pathname, navigate]);
 
   async function sair() {
     setMaisAberto(false);
+    // Ao sair, este aparelho para de receber os avisos desta confeitaria.
+    await desativarPush().catch(() => undefined);
     await queryClient.cancelQueries();
     queryClient.clear();
     await supabase.auth.signOut();

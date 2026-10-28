@@ -990,6 +990,7 @@ export type Database = {
           codigo_curto: string | null
           codigo_publico: string | null
           cupom_codigo: string | null
+          push_avisado_em: string | null
           encomenda: boolean
           confirmacao_enviada_em: string | null
           created_at: string
@@ -1019,6 +1020,7 @@ export type Database = {
           codigo_curto?: string | null
           codigo_publico?: string | null
           cupom_codigo?: string | null
+          push_avisado_em?: string | null
           encomenda?: boolean
           confirmacao_enviada_em?: string | null
           created_at?: string
@@ -1048,6 +1050,7 @@ export type Database = {
           codigo_curto?: string | null
           codigo_publico?: string | null
           cupom_codigo?: string | null
+          push_avisado_em?: string | null
           encomenda?: boolean
           confirmacao_enviada_em?: string | null
           created_at?: string
@@ -1303,6 +1306,57 @@ export type Database = {
         }
         Relationships: []
       }
+      plataforma_segredos: {
+        Row: {
+          atualizado_em: string
+          chave: string
+          valor: string
+        }
+        Insert: {
+          atualizado_em?: string
+          chave: string
+          valor: string
+        }
+        Update: {
+          atualizado_em?: string
+          chave?: string
+          valor?: string
+        }
+        Relationships: []
+      }
+      push_inscricoes: {
+        Row: {
+          aparelho: string | null
+          auth: string
+          created_at: string
+          endpoint: string
+          id: string
+          p256dh: string
+          ultimo_envio_em: string | null
+          user_id: string
+        }
+        Insert: {
+          aparelho?: string | null
+          auth: string
+          created_at?: string
+          endpoint: string
+          id?: string
+          p256dh: string
+          ultimo_envio_em?: string | null
+          user_id?: string
+        }
+        Update: {
+          aparelho?: string | null
+          auth?: string
+          created_at?: string
+          endpoint?: string
+          id?: string
+          p256dh?: string
+          ultimo_envio_em?: string | null
+          user_id?: string
+        }
+        Relationships: []
+      }
       produtos: {
         Row: {
           antecedencia_dias: number
@@ -1490,6 +1544,10 @@ export type Database = {
       plataforma_publica: {
         Args: never
         Returns: Json
+      }
+      salvar_inscricao_push: {
+        Args: { p_aparelho: string; p_auth: string; p_endpoint: string; p_p256dh: string }
+        Returns: undefined
       }
       validar_cupom_catalogo: {
         Args: { p_codigo: string; p_slug: string; p_subtotal: number; p_telefone: string }
