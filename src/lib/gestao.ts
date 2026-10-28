@@ -105,7 +105,7 @@ export function linkRota(enderecos: string[], cidade?: string | null) {
   return `https://www.google.com/maps/dir/?api=1&travelmode=driving&destination=${encodeURIComponent(destino)}${meio.length ? `&waypoints=${encodeURIComponent(meio.join("|"))}` : ""}`;
 }
 
-export function mensagemSaiuParaEntrega(d: { cliente?: string | null; numero: number; loja: string; falta?: number }) {
+export function mensagemSaiuParaEntrega(d: { cliente?: string | null | undefined; numero: number; loja: string; falta?: number | undefined }) {
   const nome = d.cliente?.trim().split(/\s+/)[0];
   return [
     `Olá${nome ? `, ${nome}` : ""}! Seu pedido #${d.numero} da ${d.loja} saiu para entrega 🚚`,

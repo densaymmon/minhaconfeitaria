@@ -87,7 +87,7 @@ export function AlertaMargens() {
       <ul className="mt-2 divide-y text-sm">
         {alertas.slice(0, 5).map(({ p, a }) => (
           <li key={p.id}>
-            <Link to="/produtos/$id" params={{ id: p.id }} className="flex items-center justify-between gap-2 py-2 hover:bg-muted/40">
+            <Link to="/produtos/$id" params={{ id: p.id }} search={{ duplicar: false }} className="flex items-center justify-between gap-2 py-2 hover:bg-muted/40">
               <span className="min-w-0 truncate">{p.nome}{a.abaixoDoCusto && <span className="ml-1 text-xs font-semibold text-destructive">prejuízo</span>}</span>
               <span className="shrink-0 text-xs tabular-nums text-muted-foreground">{brl(Number(p.preco_venda))} → sugerido <b className="text-foreground">{brl(a.sugerido)}</b></span>
             </Link>
