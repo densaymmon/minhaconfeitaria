@@ -3,7 +3,7 @@ import { createFileRoute, Link } from "@tanstack/react-router";
 import { useQuery, useQueryClient, useSuspenseQuery } from "@tanstack/react-query";
 import { useRef, useState } from "react";
 import { toast } from "sonner";
-import { BellRing, CalendarOff, Copy, ExternalLink, ImagePlus, MapPin, Package, Palette, Plus, QrCode, Share2, Sparkles, Store, Ticket, Trash2, X } from "lucide-react";
+import { CalendarOff, Copy, ExternalLink, ImagePlus, MapPin, Package, Palette, Plus, QrCode, Share2, Sparkles, Store, Ticket, Trash2, X } from "lucide-react";
 import { supabase } from "@/integrations/supabase/client";
 import { brl, parseNum } from "@/lib/format";
 import { DIAS_SEMANA, SLUGS_RESERVADOS, corDoTexto, linkCatalogo as montarLinkCatalogo, normalizarCupom, normalizarHorarios, origemPublica, slugValido, sugerirSlug, validarBairros, type TaxaBairro } from "@/lib/catalogo";
@@ -11,6 +11,7 @@ import { enviarLogo } from "@/lib/foto-catalogo";
 import { dataBR, hojeISO } from "@/lib/format";
 import { Card, Field, PageHeader } from "@/components/app/ui";
 import { RecursoBloqueado, useRecurso } from "@/components/app/plano";
+import { NotificacoesCard } from "@/components/app/notificacoes";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Switch } from "@/components/ui/switch";
@@ -272,16 +273,8 @@ function CatalogoPage() {
 
       <CuponsCard />
 
-      <Card className="mt-5 space-y-3">
-        <div className="flex items-center gap-2"><BellRing className="size-4 text-primary" /><h2 className="font-semibold">Aviso de pedido novo</h2></div>
-        <p className="text-sm text-muted-foreground">Quando chega um pedido pelo catálogo, o sistema toca um som e mostra um aviso. Com as notificações ligadas, o aviso aparece mesmo com a aba em segundo plano.</p>
-        <Button type="button" variant="outline" className="h-10 w-full sm:w-auto" onClick={async () => {
-          if (typeof Notification === "undefined") return void toast.error("Este navegador não aceita notificações.");
-          const r = await Notification.requestPermission();
-          toast[r === "granted" ? "success" : "error"](r === "granted" ? "Notificações ativadas neste aparelho enquanto o sistema estiver aberto." : "Notificações não permitidas neste aparelho.");
-        }}>Ativar notificações neste aparelho</Button>
-        <Button asChild variant="ghost" className="h-10 w-full sm:w-auto"><Link to="/produtos"><Package className="size-4" /> Produtos do catálogo</Link></Button>
-      </Card>
+      <NotificacoesCard />
+      <div className="mt-3"><Button asChild variant="ghost" className="h-10 w-full sm:w-auto"><Link to="/produtos"><Package className="size-4" /> Produtos do catálogo</Link></Button></div>
     </>
   );
 }

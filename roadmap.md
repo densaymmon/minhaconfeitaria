@@ -109,3 +109,6 @@
 - [x] Taxa de entrega por bairro (bairros fora da lista não recebem entrega).
 - [x] Cupons de desconto (% ou R$, mínimo, validade, limite de usos, só primeira compra).
 - [x] Encomenda personalizada com fotos de referência ("aguardando orçamento").
+
+## Notificações
+- [x] App instalável (ícone na tela inicial) e aviso de pedido novo/orçamento no celular mesmo com o sistema fechado, com botão de teste e lista de aparelhos.
