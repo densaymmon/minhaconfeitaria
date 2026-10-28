@@ -4,7 +4,7 @@ import { toast } from "sonner";
 import { supabase } from "@/integrations/supabase/client";
 import { URL_PAINEL_ADMIN } from "@/lib/assinatura";
 import { Button } from "@/components/ui/button";
-import { Input } from "@/components/ui/input";
+import { InputSenha } from "@/components/app/input-senha";
 import { Field } from "@/components/app/ui";
 
 export const Route = createFileRoute("/reset-password")({
@@ -120,11 +120,12 @@ function Reset() {
             <h1 className="text-xl font-semibold">Definir nova senha</h1>
             {estado === "verificando" ? <p className="text-sm text-muted-foreground" role="status">Conferindo o link…</p> : email && <p className="text-sm text-muted-foreground">Conta: {email}</p>}
             <Field label="Nova senha">
-              <Input type="password" value={senha} onChange={(e) => setSenha(e.target.value)} className="h-11" autoComplete="new-password" minLength={8} required />
+              <InputSenha value={senha} onChange={(e) => setSenha(e.target.value)} className="h-11" autoComplete="new-password" minLength={8} required />
             </Field>
-            <Field label="Repita a nova senha">
-              <Input type="password" value={confirmar} onChange={(e) => setConfirmar(e.target.value)} className="h-11" autoComplete="new-password" minLength={8} required />
+            <Field label="Confirme a nova senha">
+              <InputSenha value={confirmar} onChange={(e) => setConfirmar(e.target.value)} className="h-11" autoComplete="new-password" minLength={8} required />
             </Field>
+            {confirmar.length > 0 && confirmar !== senha && <p className="text-sm text-destructive">As senhas ainda não são iguais.</p>}
             <Button className="h-11 w-full" disabled={loading || estado !== "pronto"}>{loading ? "Salvando…" : "Salvar nova senha"}</Button>
           </form>
         )}
