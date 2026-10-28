@@ -1,5 +1,5 @@
 import { createFileRoute, Link, useNavigate } from "@tanstack/react-router";
-import { useQuery } from "@tanstack/react-query";
+import { queryOptions, useQuery } from "@tanstack/react-query";
 import { useEffect, useMemo, useRef, useState } from "react";
 import { ArrowLeft, CakeSlice, Minus, MessageCircle, PlayCircle, Plus, ShoppingBag, Store, Truck } from "lucide-react";
 import { Dialog, DialogContent, DialogDescription, DialogTitle } from "@/components/ui/dialog";
@@ -41,7 +41,20 @@ export const Route = createFileRoute("/c/$slug")({
       { property: "og:type", content: "website" },
     ],
   }),
+  // Começa a buscar os produtos junto com o carregamento da página.
+  loader: ({ context, params }) => { void context.queryClient.prefetchQuery(catalogoQ(params.slug)); },
   component: CatalogoRota,
+});
+
+/** Consulta do catálogo público (compartilhada entre /c/<endereço> e /<endereço>). */
+export const catalogoQ = (slug: string) => queryOptions({
+  queryKey: ["catalogo-publico", slug],
+  queryFn: async () => {
+    const { data, error } = await supabase.rpc("catalogo_publico", { p_slug: slug });
+    if (error) throw new Error(error.message);
+    return (data as unknown as Catalogo | null) ?? null;
+  },
+  staleTime: 60_000,
 });
 
 function CatalogoRota() {
@@ -67,21 +80,13 @@ function gravarLocal(chave: string, valor: unknown) {
 
 /** Página do catálogo; usada em /<endereço> (link curto) e em /c/<endereço>. */
 export function CatalogoPage({ slug }: { slug: string }) {
-  const { data: catalogo, isLoading, isError, refetch } = useQuery({
-    queryKey: ["catalogo-publico", slug],
-    queryFn: async () => {
-      const { data, error } = await supabase.rpc("catalogo_publico", { p_slug: slug });
-      if (error) throw new Error(error.message);
-      return (data as unknown as Catalogo | null) ?? null;
-    },
-    staleTime: 60_000,
-  });
+  const { data: catalogo, isLoading, isError, refetch } = useQuery(catalogoQ(slug));
 
   useEffect(() => {
     if (catalogo?.nome) document.title = `${catalogo.nome} — faça seu pedido`;
   }, [catalogo?.nome]);
 
-  if (isLoading) return <Tela><p className="py-24 text-center text-sm text-muted-foreground" role="status">Carregando o catálogo…</p></Tela>;
+  if (isLoading) return <EsqueletoCatalogo />;
   if (isError) {
     return (
       <Tela>
@@ -104,6 +109,28 @@ export function CatalogoPage({ slug }: { slug: string }) {
     );
   }
   return <Loja slug={slug} catalogo={catalogo} />;
+}
+
+/** Esqueleto mostrado na hora, enquanto os produtos chegam. */
+function EsqueletoCatalogo() {
+  return (
+    <Tela>
+      <div className="animate-pulse py-6" role="status" aria-label="Carregando o catálogo">
+        <div className="mx-auto h-8 w-48 rounded-lg bg-muted" />
+        <div className="mx-auto mt-2 h-4 w-32 rounded bg-muted" />
+        <div className="mt-6 flex gap-2">{[0, 1, 2].map((i) => <div key={i} className="h-8 w-20 rounded-full bg-muted" />)}</div>
+        <div className="mt-4 grid grid-cols-2 gap-3">
+          {[0, 1, 2, 3].map((i) => (
+            <div key={i} className="overflow-hidden rounded-2xl bg-card shadow-soft">
+              <div className="aspect-square bg-muted" />
+              <div className="space-y-2 p-3"><div className="h-4 w-3/4 rounded bg-muted" /><div className="h-4 w-1/3 rounded bg-muted" /></div>
+            </div>
+          ))}
+        </div>
+        <span className="sr-only">Carregando o catálogo…</span>
+      </div>
+    </Tela>
+  );
 }
 
 function Tela({ children }: { children: React.ReactNode }) {
@@ -230,7 +257,7 @@ function Capa({ produto }: { produto: ProdutoCatalogo }) {
       </>
     );
   }
-  return <img src={capa.url} alt={produto.nome} loading="lazy" className="size-full object-cover" />;
+  return <img src={capa.url} alt={produto.nome} loading="lazy" decoding="async" className="size-full object-cover" />;
 }
 
 /** Fotos e vídeos do produto em carrossel, com descrição e botão de adicionar. */

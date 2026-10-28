@@ -82,6 +82,8 @@ export const Route = createRootRouteWithContext<{ queryClient: QueryClient }>()(
       { rel: "icon", href: "/favicon.ico", type: "image/x-icon" },
       { rel: "preconnect", href: "https://fonts.googleapis.com" },
       { rel: "preconnect", href: "https://fonts.gstatic.com", crossOrigin: "anonymous" },
+      // Abre a conexão com o banco enquanto a página carrega (catálogo e telas aparecem antes).
+      ...(import.meta.env["VITE_SUPABASE_URL"] ? [{ rel: "preconnect", href: String(import.meta.env["VITE_SUPABASE_URL"]), crossOrigin: "anonymous" as const }] : []),
       {
         rel: "stylesheet",
         href: "https://fonts.googleapis.com/css2?family=Figtree:wght@400;500;600;700&family=Fraunces:opsz,wght@9..144,500;9..144,600;9..144,700&display=swap",
@@ -113,10 +115,18 @@ function RootComponent() {
   const router = useRouter();
 
   useEffect(() => {
-    const { data } = supabase.auth.onAuthStateChange((event) => {
+    // O Supabase também avisa "SIGNED_IN" ao voltar para a aba; só recarrega tudo
+    // quando a pessoa logada realmente muda (entrar, sair ou trocar de conta).
+    let usuarioAtual: string | null | undefined;
+    void supabase.auth.getSession().then(({ data }) => { usuarioAtual ??= data.session?.user.id ?? null; });
+    const { data } = supabase.auth.onAuthStateChange((event, session) => {
       if (event !== "SIGNED_IN" && event !== "SIGNED_OUT" && event !== "USER_UPDATED") return;
+      const novo = session?.user.id ?? null;
+      if (event === "SIGNED_IN" && novo === usuarioAtual) return;
+      usuarioAtual = novo;
       router.invalidate();
-      if (event !== "SIGNED_OUT") queryClient.invalidateQueries();
+      if (event === "SIGNED_OUT") queryClient.clear();
+      else queryClient.invalidateQueries();
     });
     return () => data.subscription.unsubscribe();
   }, [router, queryClient]);

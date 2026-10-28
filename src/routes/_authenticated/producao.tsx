@@ -2,6 +2,8 @@ import * as appQueries from "@/lib/queries";
 import { origemPublica } from "@/lib/catalogo";
 import { createFileRoute, Link } from "@tanstack/react-router";
 import { useMemo, useState } from "react";
+import { alterarItem, alterarPedido, criarFila, otimista } from "@/lib/cache-pedidos";
+import type { Pedido } from "@/lib/queries";
 import { toast } from "sonner";
 import { Minus, Plus, CheckCircle2, Search, List, Layers, SlidersHorizontal, Clock3, AlertTriangle, Pencil, Download, MessageCircle, ShoppingBasket } from "lucide-react";
 import { useQuery, useQueryClient, useSuspenseQuery } from "@tanstack/react-query";
@@ -68,6 +70,7 @@ function estaAtrasado(p: PedidoCalc, agora: Date) {
 function Producao() {
   const pedidos = usePedidosCalc();
   const qc = useQueryClient();
+  const [fila] = useState(criarFila);
   const { data: config } = useSuspenseQuery(appQueries.configQ);
   const { data: confeitaria } = useSuspenseQuery(appQueries.confeitariaQ);
   const { data: produtos } = useSuspenseQuery(appQueries.produtosQ);
@@ -273,24 +276,32 @@ function Producao() {
     return [...mapa.entries()];
   }, [pedidosFiltrados]);
 
+  // A quantidade muda na tela no toque; as gravações do mesmo item vão ao servidor em ordem.
   async function ajustar(itemId: string, valor: number, max: number) {
     const v = Math.max(0, Math.min(max, valor));
-    const { error } = await supabase.rpc("ajustar_producao", {
-      pedido_item_id: itemId,
-      quantidade_resultado: v,
-      evento_id: crypto.randomUUID(),
-    });
-    if (error) return void toast.error(`Não foi possível atualizar a produção/estoque: ${error.message}`);
-    await Promise.all([
-      qc.invalidateQueries({ queryKey: ["pedidos"] }),
-      qc.invalidateQueries({ queryKey: ["estoque"] }),
-    ]);
+    try {
+      await otimista<Pedido>(
+        qc,
+        (lista) => alterarItem(lista, itemId, { quantidade_produzida: v }),
+        () => fila.enfileirar(itemId, async () => {
+          const { error } = await supabase.rpc("ajustar_producao", { pedido_item_id: itemId, quantidade_resultado: v, evento_id: crypto.randomUUID() });
+          if (error) throw new Error(error.message);
+        }),
+        [["estoque"]],
+        () => fila.pendentes() === 0,
+      );
+    } catch (e) {
+      toast.error(`Não foi possível atualizar a produção/estoque: ${e instanceof Error ? e.message : "tente novamente."}`);
+    }
   }
 
   async function marcarAvisoPronto(p: PedidoCalc) {
     if (p.aviso_pronto_enviado_em) return;
-    const { error } = await supabase.from("pedidos").update({ aviso_pronto_enviado_em: new Date().toISOString() }).eq("id", p.id);
-    if (!error) void qc.invalidateQueries({ queryKey: ["pedidos"] });
+    const agora = new Date().toISOString();
+    await otimista<Pedido>(qc, (lista) => alterarPedido(lista, p.id, { aviso_pronto_enviado_em: agora }), async () => {
+      const { error } = await supabase.from("pedidos").update({ aviso_pronto_enviado_em: agora }).eq("id", p.id);
+      if (error) throw new Error(error.message);
+    }).catch(() => undefined);
   }
 
   async function mudarStatus(p: PedidoCalc, status: "pronto") {
@@ -309,13 +320,10 @@ function Producao() {
         throw new Error(`Ainda há itens não produzidos. Registre a produção real antes de marcar como pronto. ${resumo}`);
       }
 
-      const { error } = await supabase.from("pedidos").update({ status }).eq("id", p.id);
-      if (error) throw new Error(`Não foi possível marcar o pedido como pronto: ${error.message}`);
-
-      await Promise.all([
-        qc.invalidateQueries({ queryKey: ["pedidos"] }),
-        qc.invalidateQueries({ queryKey: ["estoque"] }),
-      ]);
+      await otimista<Pedido>(qc, (lista) => alterarPedido(lista, p.id, { status }), async () => {
+        const { error } = await supabase.from("pedidos").update({ status }).eq("id", p.id);
+        if (error) throw new Error(`Não foi possível marcar o pedido como pronto: ${error.message}`);
+      }, [["estoque"]]);
       toast.success(`Pedido #${p.numero} marcado como pronto e aguardando entrega.`);
     } catch (e) {
       toast.error(e instanceof Error ? e.message : "Não foi possível finalizar o pedido. Tente novamente.");
@@ -328,9 +336,10 @@ function Producao() {
     if (p.status !== "pronto") return;
     setFinalizandoId(p.id);
     try {
-      const { error } = await supabase.from("pedidos").update({ status: "entregue" }).eq("id", p.id);
-      if (error) throw new Error(error.message);
-      await qc.invalidateQueries({ queryKey: ["pedidos"] });
+      await otimista<Pedido>(qc, (lista) => alterarPedido(lista, p.id, { status: "entregue" }), async () => {
+        const { error } = await supabase.from("pedidos").update({ status: "entregue" }).eq("id", p.id);
+        if (error) throw new Error(error.message);
+      });
       toast.success(`Pedido #${p.numero} marcado como entregue.`);
     } catch (e) {
       toast.error(`Não foi possível marcar o pedido como entregue: ${e instanceof Error ? e.message : "tente novamente."}`);

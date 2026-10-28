@@ -9,7 +9,8 @@ import { useEffect, useRef, useState, type FormEvent } from "react";
 import { toast } from "sonner";
 import { CalendarClock, Copy, MessageCircle, Plus, Repeat, Trash2 } from "lucide-react";
 import { supabase } from "@/integrations/supabase/client";
-import { clientesQ, configQ, pedidosQ, type PedidoPagamento } from "@/lib/queries";
+import { clientesQ, configQ, pedidosQ, type Pedido, type PedidoPagamento } from "@/lib/queries";
+import { alterarPedido, otimista } from "@/lib/cache-pedidos";
 import { useCustos, usePedidosCalc } from "@/lib/hooks";
 import { avisoProntoWhatsApp, confirmacaoWhatsApp, precisaConfirmar } from "@/lib/whatsapp-pedido";
 import { alertaMargem, totaisPedido } from "@/lib/calc";
@@ -533,10 +534,11 @@ function PedidoForm() {
   async function alterarStatusPedido(status: "recebido" | "em_producao" | "pronto" | "entregue") {
     if (!existente || status === f.status) return;
     try {
-      const { error } = await supabase.from("pedidos").update({ status }).eq("id", existente.id);
-      if (error) throw new Error(error.message);
       set("status", status);
-      await qc.invalidateQueries({ queryKey: ["pedidos"] });
+      await otimista<Pedido>(qc, (lista) => alterarPedido(lista, existente.id, { status }), async () => {
+        const { error } = await supabase.from("pedidos").update({ status }).eq("id", existente.id);
+        if (error) throw new Error(error.message);
+      }).catch((e: unknown) => { set("status", existente.status); throw e; });
       toast.success(`Status do pedido #${existente.numero} alterado para ${statusLabel(status)}.`);
     } catch (e) {
       toast.error(`Não foi possível atualizar o status do pedido: ${e instanceof Error ? e.message : "tente novamente."}`);
@@ -545,18 +547,28 @@ function PedidoForm() {
 
   async function cancelarPedido() {
     if (!existente || !confirm(`Cancelar o pedido #${existente.numero}? O pedido será mantido no histórico.`)) return;
-    const { error } = await supabase.from("pedidos").update({ status: "cancelado" }).eq("id", existente.id);
-    if (error) return void toast.error(`Não foi possível cancelar o pedido: ${error.message}`);
-    await qc.invalidateQueries({ queryKey: ["pedidos"] });
+    try {
+      await otimista<Pedido>(qc, (lista) => alterarPedido(lista, existente.id, { status: "cancelado" }), async () => {
+        const { error } = await supabase.from("pedidos").update({ status: "cancelado" }).eq("id", existente.id);
+        if (error) throw new Error(error.message);
+      });
+    } catch (e) {
+      return void toast.error(`Não foi possível cancelar o pedido: ${e instanceof Error ? e.message : "tente novamente."}`);
+    }
     toast.success(`Pedido #${existente.numero} cancelado. O histórico foi preservado.`);
     navigate({ to: "/pedidos", search: { filtro: undefined, dataInicial: undefined, dataFinal: undefined } });
   }
 
   async function excluir() {
     if (!existente || !confirm(`Excluir o pedido #${existente.numero}?`)) return;
-    const { error } = await supabase.from("pedidos").delete().eq("id", existente.id);
-    if (error) return void toast.error(error.message);
-    await qc.invalidateQueries({ queryKey: ["pedidos"] });
+    try {
+      await otimista<Pedido>(qc, (lista) => lista?.filter((p) => p.id !== existente.id), async () => {
+        const { error } = await supabase.from("pedidos").delete().eq("id", existente.id);
+        if (error) throw new Error(error.message);
+      });
+    } catch (e) {
+      return void toast.error(e instanceof Error ? e.message : "Não foi possível excluir o pedido.");
+    }
     toast.success("Pedido excluído.");
     navigate({ to: "/pedidos", search: { filtro: undefined, dataInicial: undefined, dataFinal: undefined } });
   }

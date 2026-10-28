@@ -1,5 +1,5 @@
 import { createFileRoute } from "@tanstack/react-router";
-import { CatalogoPage } from "./c.$slug";
+import { CatalogoPage, catalogoQ } from "./c.$slug";
 
 // Link curto do catálogo: dominio/<endereço>. Páginas do sistema têm prioridade
 // (rotas fixas vencem rotas com parâmetro) e seus nomes são bloqueados como endereço.
@@ -14,6 +14,7 @@ export const Route = createFileRoute("/$slug")({
       { property: "og:type", content: "website" },
     ],
   }),
+  loader: ({ context, params }) => { void context.queryClient.prefetchQuery(catalogoQ(params.slug)); },
   component: CatalogoCurto,
 });
 
