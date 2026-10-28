@@ -197,3 +197,27 @@ export function lerPagamentos(dados: unknown): PagamentoAssinatura[] {
     }))
     .filter((p) => p.id);
 }
+
+/** Uso por confeitaria vindo de admin_metricas. */
+export type UsoEmpresa = { user_id: string; pedidos_30_dias: number; pedidos_total: number; ultimo_pedido: string | null; produtos: number; catalogo: boolean; equipe: number; cadastro: string };
+
+const diasDesde = (iso: string | null | undefined, hoje: string) =>
+  iso ? Math.floor((Date.parse(`${hoje}T12:00:00Z`) - Date.parse(iso)) / 86_400_000) : null;
+
+/**
+ * Sinais de que a confeitaria pode cancelar (do mais grave ao mais leve).
+ * Considera só contas liberadas com assinatura em uso (teste, ativa, cortesia ou atrasada).
+ */
+export function riscoDeCancelamento(e: Pick<Empresa, "acesso" | "situacao" | "teste_ate" | "pedidos_total" | "ultimo_acesso" | "criado_em">, uso: Pick<UsoEmpresa, "ultimo_pedido"> | undefined, hoje: string): string | null {
+  if (e.acesso !== "ativo" || !e.situacao || !["teste", "ativa", "cortesia", "atrasada"].includes(e.situacao)) return null;
+  if (e.situacao === "atrasada") return "Mensalidade atrasada";
+  if (e.situacao === "teste" && e.teste_ate) {
+    const restam = Math.round((Date.parse(`${e.teste_ate}T12:00:00Z`) - Date.parse(`${hoje}T12:00:00Z`)) / 86_400_000);
+    if (restam <= 3 && e.pedidos_total < 3) return `Teste acaba em ${Math.max(0, restam)} dia(s) com pouco uso`;
+  }
+  const semPedido = diasDesde(uso?.ultimo_pedido ?? e.criado_em, hoje);
+  if (semPedido !== null && semPedido >= 14) return uso?.ultimo_pedido ? `Sem pedidos há ${semPedido} dias` : `Nenhum pedido em ${semPedido} dias de conta`;
+  const semEntrar = diasDesde(e.ultimo_acesso, hoje);
+  if (semEntrar !== null && semEntrar >= 14) return `Sem entrar há ${semEntrar} dias`;
+  return null;
+}

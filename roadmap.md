@@ -120,3 +120,4 @@
 - [x] Limite por produto e por dia; produtos sazonais; kits; sinal para confirmar; fidelidade; avaliações.
 - [x] Agenda da semana; lista de compras com embalagens e custo; entregas do dia com rota; etiquetas com validade e alergênicos.
 - [x] Alerta de margem no Hoje; fluxo de caixa por semana; meta do mês; histórico de quem fez o quê.
+- [x] Métricas de uso e risco de cancelamento no painel de administração; monitoramento de erros; primeiros passos guiados.

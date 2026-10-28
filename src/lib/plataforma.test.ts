@@ -1,5 +1,5 @@
 import { describe, expect, it } from "vitest";
-import { filtrarEmpresas, lerEmpresas, lerPagamentos, lerResumo, previsaoPagoAte, situacaoExibida } from "./plataforma";
+import { filtrarEmpresas, lerEmpresas, lerPagamentos, lerResumo, previsaoPagoAte, riscoDeCancelamento, situacaoExibida } from "./plataforma";
 import { contato, responsavel, termosDeUso, politicaPrivacidade, dataVersao, TERMOS_VERSAO } from "./termos";
 
 const empresas = lerEmpresas([
@@ -69,5 +69,21 @@ describe("termos", () => {
     expect(contato(null)).toContain("canais de atendimento");
     expect(politicaPrivacidade(null).length).toBeGreaterThan(5);
     expect(dataVersao(TERMOS_VERSAO)).toMatch(/^\d{2}\/\d{2}\/\d{4}$/);
+  });
+});
+
+describe("risco de cancelamento", () => {
+  const base = { acesso: "ativo" as const, situacao: "ativa" as const, teste_ate: null, pedidos_total: 20, ultimo_acesso: "2026-10-27T10:00:00Z", criado_em: "2026-08-01T10:00:00Z" };
+  it("aponta atraso, teste parado e falta de uso", () => {
+    expect(riscoDeCancelamento({ ...base, situacao: "atrasada" }, undefined, "2026-10-28")).toBe("Mensalidade atrasada");
+    expect(riscoDeCancelamento({ ...base, situacao: "teste", teste_ate: "2026-10-30", pedidos_total: 1 }, { ultimo_pedido: "2026-10-27T10:00:00Z" }, "2026-10-28")).toBe("Teste acaba em 2 dia(s) com pouco uso");
+    expect(riscoDeCancelamento(base, { ultimo_pedido: "2026-10-01T10:00:00Z" }, "2026-10-28")).toBe("Sem pedidos há 27 dias");
+    expect(riscoDeCancelamento(base, { ultimo_pedido: null }, "2026-10-28")).toBe("Nenhum pedido em 88 dias de conta");
+    expect(riscoDeCancelamento({ ...base, ultimo_acesso: "2026-10-01T10:00:00Z" }, { ultimo_pedido: "2026-10-27T10:00:00Z" }, "2026-10-28")).toBe("Sem entrar há 27 dias");
+  });
+  it("não alerta quem está usando ou quem não está liberado", () => {
+    expect(riscoDeCancelamento(base, { ultimo_pedido: "2026-10-27T10:00:00Z" }, "2026-10-28")).toBeNull();
+    expect(riscoDeCancelamento({ ...base, acesso: "pendente" }, undefined, "2026-10-28")).toBeNull();
+    expect(riscoDeCancelamento({ ...base, situacao: "cancelada" }, undefined, "2026-10-28")).toBeNull();
   });
 });

@@ -1725,6 +1725,22 @@ export type Database = {
         Args: never
         Returns: Json
       }
+      admin_metricas: {
+        Args: never
+        Returns: Json
+      }
+      admin_listar_erros: {
+        Args: { p_dias?: number }
+        Returns: Json
+      }
+      admin_limpar_erro: {
+        Args: { p_mensagem: string }
+        Returns: undefined
+      }
+      registrar_erro: {
+        Args: { p_agente: string; p_detalhe: string; p_mensagem: string; p_origem: string; p_url: string }
+        Returns: undefined
+      }
       avaliar_pedido: {
         Args: { p_codigo: string; p_comentario: string; p_nota: number }
         Returns: boolean

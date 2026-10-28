@@ -7,6 +7,7 @@ import { Card, Empty, PageHeader, StatusBadge } from "@/components/app/ui";
 import { Button } from "@/components/ui/button";
 import { PainelHoje } from "@/components/app/painel-hoje";
 import { AlertaMargens, MetaDoMes } from "@/components/app/painel-gestao";
+import { PrimeirosPassos } from "@/components/app/primeiros-passos";
 import { useRecurso } from "@/components/app/plano";
 import { saudacao } from "@/lib/hoje";
 import { endOfMonth, format } from "date-fns";
@@ -117,6 +118,7 @@ function Painel() {
         }
       />
 
+      <PrimeirosPassos />
       <PainelHoje />
       <MetaDoMes vendido={valorPedidosDoMes} />
       {temCustos && <AlertaMargens />}

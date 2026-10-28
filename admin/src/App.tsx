@@ -2,7 +2,7 @@ import { useEffect, useState } from "react";
 import type { Session } from "@supabase/supabase-js";
 import { useQuery, useQueryClient } from "@tanstack/react-query";
 import { toast } from "sonner";
-import { Building2, KeyRound, LayoutDashboard, LogOut, Receipt, Settings, ShieldCheck, Tags } from "lucide-react";
+import { Bug, Building2, KeyRound, LayoutDashboard, LogOut, Receipt, Settings, ShieldCheck, Tags } from "lucide-react";
 // Endereço principal do sistema (o mesmo do login): o link do e-mail sempre volta para ele.
 const URL_LOGIN = "https://minhaconfeitaria.app";
 import { Button } from "@/components/ui/button";
@@ -16,12 +16,14 @@ import { PaginaEmpresas } from "./paginas/Empresas";
 import { PaginaPagamentos } from "./paginas/Pagamentos";
 import { PaginaPlanos } from "./paginas/Planos";
 import { PaginaConfiguracoes } from "./paginas/Configuracoes";
+import { PaginaErros } from "./paginas/Erros";
 
 const PAGINAS = [
   { id: "resumo", rotulo: "Resumo", icone: LayoutDashboard },
   { id: "empresas", rotulo: "Empresas", icone: Building2 },
   { id: "pagamentos", rotulo: "Pagamentos", icone: Receipt },
   { id: "planos", rotulo: "Planos", icone: Tags },
+  { id: "erros", rotulo: "Erros", icone: Bug },
   { id: "configuracoes", rotulo: "Configurações", icone: Settings },
 ] as const;
 type Pagina = (typeof PAGINAS)[number]["id"];
@@ -249,10 +251,11 @@ function AreaAdmin({ email, alterarSenha }: { email: string; alterarSenha: () =>
         {pagina === "empresas" && <PaginaEmpresas />}
         {pagina === "pagamentos" && <PaginaPagamentos />}
         {pagina === "planos" && <PaginaPlanos />}
+        {pagina === "erros" && <PaginaErros />}
         {pagina === "configuracoes" && <PaginaConfiguracoes />}
       </main>
 
-      <nav className="fixed inset-x-0 bottom-0 z-30 grid grid-cols-5 border-t bg-card lg:hidden" aria-label="Menu" style={{ paddingBottom: "env(safe-area-inset-bottom)" }}>
+      <nav className="fixed inset-x-0 bottom-0 z-30 grid grid-cols-6 border-t bg-card lg:hidden" aria-label="Menu" style={{ paddingBottom: "env(safe-area-inset-bottom)" }}>
         {PAGINAS.map(({ id, rotulo, icone: Icone }) => (
           <button key={id} type="button" onClick={() => ir(id)} aria-current={pagina === id ? "page" : undefined}
             className={cn("flex min-h-14 flex-col items-center justify-center gap-0.5 text-[11px] font-medium", pagina === id ? "text-primary" : "text-muted-foreground")}>
