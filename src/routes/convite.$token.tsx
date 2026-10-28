@@ -80,7 +80,7 @@ function Aceite({ token, convite, sessao }: { token: string; convite: Convite; s
   async function aceitar() {
     setOcupado(true);
     setErro(null);
-    const { error } = await supabase.rpc("aceitar_convite", { p_token: token, p_nome: nome.trim() || undefined });
+    const { error } = await supabase.rpc("aceitar_convite", { p_token: token, ...(nome.trim() ? { p_nome: nome.trim() } : {}) });
     setOcupado(false);
     if (error) return setErro(mensagemEquipe(error.message));
     irParaSistema();
