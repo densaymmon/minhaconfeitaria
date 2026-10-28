@@ -2,7 +2,8 @@ import { useEffect, useState } from "react";
 import type { Session } from "@supabase/supabase-js";
 import { useQuery, useQueryClient } from "@tanstack/react-query";
 import { toast } from "sonner";
-import { Building2, LayoutDashboard, LogOut, Receipt, Settings, ShieldCheck, Tags } from "lucide-react";
+import { Building2, KeyRound, LayoutDashboard, LogOut, Receipt, Settings, ShieldCheck, Tags } from "lucide-react";
+import { URL_SISTEMA } from "@/lib/catalogo";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { cn } from "@/lib/utils";
@@ -23,6 +24,9 @@ const PAGINAS = [
 ] as const;
 type Pagina = (typeof PAGINAS)[number]["id"];
 
+// Chegou por um link de recuperação de senha? (lido antes de o cliente limpar o endereço)
+const veioDeRecuperacao = typeof window !== "undefined" && /type=recovery/.test(window.location.hash + window.location.search);
+
 function paginaDoEndereco(): Pagina {
   const h = window.location.hash.replace(/^#\/?/, "").split("?")[0] ?? "";
   return (PAGINAS.find((p) => p.id === h)?.id ?? "resumo") as Pagina;
@@ -30,15 +34,20 @@ function paginaDoEndereco(): Pagina {
 
 export function App() {
   const [sessao, setSessao] = useState<Session | null | undefined>(undefined);
+  const [novaSenha, setNovaSenha] = useState(veioDeRecuperacao);
   useEffect(() => {
     void supabase.auth.getSession().then(({ data }) => setSessao(data.session));
-    const { data } = supabase.auth.onAuthStateChange((_evento, s) => setSessao(s));
+    const { data } = supabase.auth.onAuthStateChange((evento, s) => {
+      setSessao(s);
+      if (evento === "PASSWORD_RECOVERY") setNovaSenha(true);
+    });
     return () => data.subscription.unsubscribe();
   }, []);
 
   if (sessao === undefined) return <Carregando />;
   if (!sessao) return <Login />;
-  return <AreaAdmin email={sessao.user.email ?? ""} />;
+  if (novaSenha) return <DefinirSenha email={sessao.user.email ?? ""} pronto={() => setNovaSenha(false)} />;
+  return <AreaAdmin email={sessao.user.email ?? ""} alterarSenha={() => setNovaSenha(true)} />;
 }
 
 function Carregando() {
@@ -78,9 +87,11 @@ function Login() {
         if (error) throw new Error(error.message.includes("Database error") ? "Este e-mail não está autorizado a administrar a plataforma." : error.message);
         if (!data.session) setAviso("Acesso criado! Abra seu e-mail e clique no link de confirmação. Depois, volte aqui e entre com e-mail e senha.");
       } else {
-        const { error } = await supabase.auth.resetPasswordForEmail(email, { redirectTo: `${window.location.origin}${window.location.pathname}` });
-        if (error) throw new Error(error.message);
-        setAviso("Enviamos um link para redefinir a senha.");
+        // O link abre a página de nova senha do sistema (endereço já autorizado no login);
+        // depois de salvar, ela traz de volta para este painel.
+        const { error } = await supabase.auth.resetPasswordForEmail(email, { redirectTo: `${URL_SISTEMA}/reset-password` });
+        if (error) throw new Error(/rate|seconds/i.test(error.message) ? "Aguarde um minuto antes de pedir outro link." : error.message);
+        setAviso("Enviamos um link para o seu e-mail. Abra o mais recente, crie a nova senha e volte aqui para entrar.");
       }
     } catch (err) {
       toast.error(err instanceof Error ? err.message : "Não foi possível continuar.");
@@ -122,7 +133,44 @@ function Login() {
   );
 }
 
-function AreaAdmin({ email }: { email: string }) {
+function DefinirSenha({ email, pronto }: { email: string; pronto: () => void }) {
+  const [senha, setSenha] = useState("");
+  const [confirmar, setConfirmar] = useState("");
+  const [aguarde, setAguarde] = useState(false);
+
+  async function salvar(e: React.FormEvent) {
+    e.preventDefault();
+    if (senha.length < 8) return void toast.error("Use pelo menos 8 caracteres.");
+    if (senha !== confirmar) return void toast.error("As duas senhas não são iguais.");
+    setAguarde(true);
+    const { error } = await supabase.auth.updateUser({ password: senha });
+    setAguarde(false);
+    if (error) return void toast.error(/different from the old|same/i.test(error.message) ? "A nova senha precisa ser diferente da anterior." : error.message);
+    if (window.location.hash.includes("type=recovery")) window.history.replaceState(null, "", window.location.pathname);
+    toast.success("Senha alterada!");
+    pronto();
+  }
+
+  return (
+    <div className="min-h-screen bg-background px-5 py-12">
+      <div className="mx-auto max-w-sm">
+        <div className="mb-8"><Marca /></div>
+        <Cartao>
+          <form onSubmit={salvar} className="space-y-4">
+            <h1 className="text-xl font-semibold">Criar nova senha</h1>
+            <p className="text-sm text-muted-foreground">Conta: {email}</p>
+            <Campo rotulo="Nova senha"><Input type="password" required minLength={8} autoComplete="new-password" value={senha} onChange={(e) => setSenha(e.target.value)} className="h-11" /></Campo>
+            <Campo rotulo="Repita a nova senha"><Input type="password" required minLength={8} autoComplete="new-password" value={confirmar} onChange={(e) => setConfirmar(e.target.value)} className="h-11" /></Campo>
+            <Button type="submit" className="h-11 w-full" disabled={aguarde}>{aguarde ? "Salvando…" : "Salvar nova senha"}</Button>
+            <button type="button" className="text-sm text-primary hover:underline" onClick={pronto}>Cancelar</button>
+          </form>
+        </Cartao>
+      </div>
+    </div>
+  );
+}
+
+function AreaAdmin({ email, alterarSenha }: { email: string; alterarSenha: () => void }) {
   const qc = useQueryClient();
   const [pagina, setPagina] = useState<Pagina>(paginaDoEndereco);
   const { data: admin, isPending } = useQuery({
@@ -173,12 +221,16 @@ function AreaAdmin({ email }: { email: string }) {
           ))}
         </nav>
         <p className="truncate px-3 text-xs text-muted-foreground" title={email}>{email}</p>
+        <button type="button" onClick={alterarSenha} className="mt-2 flex items-center gap-3 rounded-xl px-3 py-2.5 text-sm font-medium text-muted-foreground hover:bg-muted"><KeyRound className="size-5" /> Alterar senha</button>
         <button type="button" onClick={() => void sair()} className="mt-2 flex items-center gap-3 rounded-xl px-3 py-2.5 text-sm font-medium text-muted-foreground hover:bg-muted"><LogOut className="size-5" /> Sair</button>
       </aside>
 
       <header className="sticky top-0 z-20 flex items-center justify-between border-b bg-background/90 px-4 py-3 backdrop-blur lg:hidden">
         <Marca />
-        <Button type="button" size="sm" variant="ghost" onClick={() => void sair()} aria-label="Sair"><LogOut className="size-4" /></Button>
+        <div className="flex gap-1">
+          <Button type="button" size="sm" variant="ghost" onClick={alterarSenha} aria-label="Alterar senha"><KeyRound className="size-4" /></Button>
+          <Button type="button" size="sm" variant="ghost" onClick={() => void sair()} aria-label="Sair"><LogOut className="size-4" /></Button>
+        </div>
       </header>
 
       <main className="mx-auto max-w-6xl px-4 pb-28 pt-5 sm:px-6 lg:pl-68 lg:pt-8">
