@@ -57,11 +57,11 @@ function Pedidos() {
   const { data: confeitaria } = useSuspenseQuery(appQueries.confeitariaQ);
   const nomeLoja = confeitaria?.nome?.trim() ?? "";
   const qc = useQueryClient();
-  // Abre o WhatsApp do cliente com a confirmação pronta (enviada do número da confeitaria) e registra o envio.
-  async function enviarConfirmacao(p: PedidoCalc) {
-    const msg = confirmacaoWhatsApp(p, { loja: nomeLoja || "nossa confeitaria", pix: config.pix_chave, enderecoRetirada: confeitaria?.endereco_retirada ?? null, origem: window.location.origin });
-    if (!msg) return void toast.error("O cliente não tem um WhatsApp válido cadastrado.");
-    window.open(msg.url, "_blank", "noopener,noreferrer");
+  const opcoesMensagem = { loja: nomeLoja || "nossa confeitaria", pix: config.pix_chave, enderecoRetirada: confeitaria?.endereco_retirada ?? null, origem: typeof window === "undefined" ? "" : window.location.origin };
+  // Registra que a confirmação do pedido do catálogo foi enviada. O WhatsApp é aberto por um link
+  // comum (<a href>): window.open com "noopener" falha em alguns celulares e no app instalado.
+  async function marcarConfirmacao(p: PedidoCalc) {
+    if (p.confirmacao_enviada_em) return;
     const { error } = await supabase.from("pedidos").update({ confirmacao_enviada_em: new Date().toISOString(), visualizado_em: p.visualizado_em ?? new Date().toISOString() }).eq("id", p.id);
     if (!error) {
       void qc.invalidateQueries({ queryKey: ["pedidos"] });
@@ -422,6 +422,11 @@ function Pedidos() {
               "",
               "Obrigado! 💛",
             ].join("\n");
+            const confirmar = precisaConfirmar(p);
+            const resumo = confirmacaoWhatsApp(p, opcoesMensagem);
+            const textoWhats = deveCobrar ? textoCobranca : confirmar ? resumo?.texto ?? "" : podeEmitirRecibo ? textoRecibo : resumo?.texto ?? "";
+            const hrefWhats = telefoneWhatsApp ? `https://wa.me/${telefoneWhatsApp}?text=${encodeURIComponent(textoWhats)}` : null;
+            const rotuloWhats = deveCobrar ? `Cobrar ${brl(p.t.saldo)}` : confirmar ? "Confirmar no WhatsApp" : podeEmitirRecibo ? "Enviar recibo" : "Enviar pedido no WhatsApp";
             return (
               <Card
                 key={p.id}
@@ -492,37 +497,27 @@ function Pedidos() {
                         <ReceiptText className="size-4" /> Copiar recibo
                       </Button>
                     )}
-                    {precisaConfirmar(p) && (
-                      <Button type="button" size="sm" onClick={(e) => { e.stopPropagation(); void enviarConfirmacao(p); }}>
-                        <MessageCircle className="size-4" /> Confirmar no WhatsApp
+                    {hrefWhats ? (
+                      <Button asChild size="sm" variant={confirmar ? "default" : "outline"}>
+                        <a href={hrefWhats} target="_blank" rel="noopener noreferrer" onClick={(e) => { e.stopPropagation(); if (confirmar) void marcarConfirmacao(p); }}>
+                          <MessageCircle className="size-4" /> {rotuloWhats}
+                        </a>
                       </Button>
-                    )}
-                    {p.origem === "catalogo" && p.confirmacao_enviada_em && (
-                      <button type="button" onClick={(e) => { e.stopPropagation(); void enviarConfirmacao(p); }} className="self-center text-xs text-success underline-offset-2 hover:underline">
-                        ✓ Confirmação enviada · reenviar
-                      </button>
-                    )}
-                    {!precisaConfirmar(p) && <Button type="button" size="sm" variant="outline" onClick={(e) => {
-                      e.stopPropagation();
-                      if (!telefoneWhatsApp) {
+                    ) : (
+                      <Button type="button" size="sm" variant="outline" onClick={(e) => {
+                        e.stopPropagation();
                         const cliente = clientes.find((c) => c.id === p.cliente_id);
                         if (cliente) {
                           setClienteEmEdicao(cliente);
                           setDialogClienteAberto(true);
                         } else {
-                          toast.error("Este pedido não tem um cliente cadastrado para editar.");
+                          toast.error("Este pedido não tem um cliente cadastrado.");
                         }
-                        return;
-                      }
-                      const mensagem = deveCobrar
-                        ? textoCobranca
-                        : podeEmitirRecibo
-                        ? textoRecibo
-                        : `Olá ${p.clientes?.nome ?? ""}! Estou entrando em contato sobre o pedido #${p.numero}${nomeLoja ? ` da ${nomeLoja}` : ""}.`;
-                      window.open(`https://wa.me/${telefoneWhatsApp}?text=${encodeURIComponent(mensagem)}`, "_blank", "noopener,noreferrer");
-                    }}>
-                      <MessageCircle className="size-4" /> {deveCobrar ? `Cobrar ${brl(p.t.saldo)}` : "Enviar recibo"}
-                    </Button>}
+                      }}>
+                        <MessageCircle className="size-4" /> Cadastrar WhatsApp do cliente
+                      </Button>
+                    )}
+                    {p.origem === "catalogo" && p.confirmacao_enviada_em && <span className="self-center text-xs text-success">✓ Confirmação enviada</span>}
                   </div>
               </Card>
             );

@@ -223,3 +223,21 @@ export function mensagemConfirmacaoPedido(d: DadosConfirmacao) {
     "Qualquer dúvida, é só responder esta mensagem.",
   ].join("\n");
 }
+
+/** Mensagem que o cliente envia à confeitaria pela página do pedido: resumo e link de acompanhamento. */
+export function mensagemPedidoParaLoja(d: Omit<DadosConfirmacao, "loja" | "pix">) {
+  const quando = `${dataMsg(d.dataEntrega)}${d.horaEntrega ? ` às ${d.horaEntrega}` : ""}`;
+  const falta = Math.max(0, Math.round((d.total - d.pago) * 100) / 100);
+  return [
+    `Olá! Fiz o pedido #${d.numero} pelo catálogo.`,
+    "",
+    ...d.itens.map((i) => `• ${Number(i.quantidade)}× ${i.descricao} — ${brlMsg(Number(i.quantidade) * Number(i.preco))}`),
+    ...(d.taxaEntrega > 0 ? [`• Entrega — ${brlMsg(d.taxaEntrega)}`] : []),
+    ...(d.desconto > 0 ? [`• Desconto — −${brlMsg(d.desconto)}`] : []),
+    `*Total: ${brlMsg(d.total)}*${falta <= 0 ? " (pago)" : ""}`,
+    "",
+    d.tipoEntrega === "entrega" ? `🚚 Entrega ${quando}${d.endereco ? `\nEndereço: ${d.endereco}` : ""}` : `🏠 Retirada ${quando}`,
+    ...(d.cliente ? [`Nome: ${d.cliente}`] : []),
+    ...(d.link ? ["", `Acompanhar o pedido: ${d.link}`] : []),
+  ].join("\n");
+}

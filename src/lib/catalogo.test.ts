@@ -5,6 +5,7 @@ import {
   linkCatalogo,
   linkPedido,
   mensagemConfirmacaoPedido,
+  mensagemPedidoParaLoja,
   midiasDoProduto,
   etapaAtual,
   limparCarrinho,
@@ -131,5 +132,31 @@ describe("mensagem de confirmação no WhatsApp", () => {
     expect(m).toContain("Pagamento confirmado");
     expect(m).not.toContain("Chave:");
     expect(m).not.toContain("Acompanhe");
+  });
+});
+
+describe("mensagem do cliente para a confeitaria", () => {
+  it("resume o pedido e inclui o link de acompanhamento", () => {
+    const m = mensagemPedidoParaLoja({
+      cliente: "Dennys",
+      numero: 44,
+      itens: [{ descricao: "Baguete calabresa com queijo", quantidade: 2, preco: 35 }],
+      taxaEntrega: 0,
+      desconto: 0,
+      total: 70,
+      pago: 0,
+      dataEntrega: "2026-10-29",
+      horaEntrega: null,
+      tipoEntrega: "retirada",
+      endereco: null,
+      link: "https://doce.app/p/hyknh58ymh",
+    });
+    expect(m).toMatch(/^Olá! Fiz o pedido #44 pelo catálogo\./);
+    expect(m).toContain("• 2× Baguete calabresa com queijo — R$\u00a070,00");
+    expect(m).toContain("*Total: R$\u00a070,00*");
+    expect(m).toContain("Retirada quinta-feira, 29/10");
+    expect(m).toContain("Nome: Dennys");
+    expect(m).toContain("Acompanhar o pedido: https://doce.app/p/hyknh58ymh");
+    expect(m).not.toContain("(pago)");
   });
 });
