@@ -98,7 +98,7 @@ export function crc16(texto: string) {
  * Monta o "Pix copia e cola". O valor é opcional (sem valor, o cliente digita);
  * o identificador (txid) usa só letras e números, até 25 caracteres ("***" quando ausente).
  */
-export function pixCopiaECola(opcoes: { chave: string; tipoChave?: TipoChavePix | null; nome: string; cidade?: string | null; valor?: number | null; identificador?: string | null }) {
+export function pixCopiaECola(opcoes: { chave: string; tipoChave?: TipoChavePix | null | undefined; nome: string; cidade?: string | null | undefined; valor?: number | null | undefined; identificador?: string | null | undefined }) {
   const chave = normalizarChavePix(opcoes.chave, opcoes.tipoChave);
   if (!chave) return null;
   const nome = limparTexto(opcoes.nome, 25) || "RECEBEDOR";
