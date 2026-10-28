@@ -12,6 +12,8 @@ export default defineConfig({
   root: aqui("."),
   base: "./",
   envDir: aqui(".."),
+  // Reaproveita public/ do sistema (fontes locais).
+  publicDir: aqui("../public"),
   plugins: [react(), tailwindcss()],
   resolve: { alias: { "@": aqui("../src") } },
   build: { outDir: aqui("../dist-admin"), emptyOutDir: true },

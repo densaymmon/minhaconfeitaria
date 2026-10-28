@@ -94,3 +94,5 @@
 - [x] Catálogo: busca antecipada, esqueleto e conexão antecipada com o banco.
 - [ ] Carregar só pedidos recentes + em aberto (quando o histórico crescer).
 - [ ] Fontes hospedadas no próprio site e fotos em tamanho reduzido na listagem.
+- [x] Hoje e Produção carregam só pedidos em aberto + últimos 90 dias (histórico completo na lista, clientes e relatórios).
+- [x] Fontes servidas pelo próprio site; miniaturas das fotos na lista do catálogo.

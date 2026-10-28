@@ -24,7 +24,7 @@ export function alterarItem<P extends PedidoBase>(lista: P[] | undefined, itemId
 }
 
 /**
- * Executa uma gravação de forma otimista na lista ["pedidos"]:
+ * Executa uma gravação de forma otimista nas listas de pedidos (["pedidos"] e ["pedidos", "historico"]):
  * aplica `alterar` na hora, roda `gravar` e, em erro, desfaz e repassa o erro.
  * Ao final, pede ao servidor a versão atualizada em segundo plano.
  */
@@ -36,13 +36,14 @@ export async function otimista<P extends PedidoBase>(
   /** Retorne false para adiar a atualização (ex.: ainda há toques na fila). */
   podeAtualizar: () => boolean = () => true,
 ) {
+  // Vale para todas as listas de pedidos em memória (recentes e histórico).
   await qc.cancelQueries({ queryKey: ["pedidos"] });
-  const antes = qc.getQueryData<P[]>(["pedidos"]);
-  qc.setQueryData<P[] | undefined>(["pedidos"], (atual) => alterar(atual));
+  const antes = qc.getQueriesData<P[]>({ queryKey: ["pedidos"] });
+  qc.setQueriesData<P[] | undefined>({ queryKey: ["pedidos"] }, (atual) => alterar(atual));
   try {
     await gravar();
   } catch (e) {
-    qc.setQueryData(["pedidos"], antes);
+    for (const [chave, dados] of antes) qc.setQueryData(chave, dados);
     throw e;
   } finally {
     if (podeAtualizar()) {

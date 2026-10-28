@@ -1,6 +1,6 @@
 import { useMemo } from "react";
 import { useSuspenseQuery } from "@tanstack/react-query";
-import { configQ, insumosQ, pedidosQ, pedidoPagamentosQ, produtosQ, type Pedido } from "./queries";
+import { configQ, insumosQ, pedidosHistoricoQ, pedidosQ, pedidoPagamentosQ, produtosQ, type Pedido } from "./queries";
 import { calcularRecebimentoPedido, custoUnitario, totaisPedido } from "./calc";
 
 export function useCustos() {
@@ -16,8 +16,12 @@ export function useCustos() {
 
 export type PedidoCalc = Pedido & { t: ReturnType<typeof totaisPedido> };
 
-export function usePedidosCalc(): PedidoCalc[] {
-  const { data: pedidos } = useSuspenseQuery(pedidosQ);
+/**
+ * Pedidos com totais calculados. "recentes" (padrão) traz os em aberto e os dos últimos
+ * 90 dias, para as telas do dia a dia; "historico" traz todos.
+ */
+export function usePedidosCalc(escopo: "recentes" | "historico" = "recentes"): PedidoCalc[] {
+  const { data: pedidos } = useSuspenseQuery(escopo === "historico" ? pedidosHistoricoQ : pedidosQ);
   const { data: config } = useSuspenseQuery(configQ);
   const { data: pagamentos } = useSuspenseQuery(pedidoPagamentosQ);
   return useMemo(() => {

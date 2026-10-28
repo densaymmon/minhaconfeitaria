@@ -24,6 +24,7 @@ import {
   limparCarrinho,
   linkWhatsApp,
   mensagemErroCatalogo,
+  miniaturaDaFoto,
   resumoCarrinho,
   telefoneValido,
   type Carrinho,
@@ -257,7 +258,8 @@ function Capa({ produto }: { produto: ProdutoCatalogo }) {
       </>
     );
   }
-  return <img src={capa.url} alt={produto.nome} loading="lazy" decoding="async" className="size-full object-cover" />;
+  return <img src={miniaturaDaFoto(capa.url)} alt={produto.nome} loading="lazy" decoding="async" className="size-full object-cover"
+    onError={(e) => { if (e.currentTarget.src !== capa.url) e.currentTarget.src = capa.url; }} />;
 }
 
 /** Fotos e vídeos do produto em carrossel, com descrição e botão de adicionar. */

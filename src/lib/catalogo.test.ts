@@ -1,5 +1,6 @@
 import { describe, expect, it } from "vitest";
 import {
+  miniaturaDaFoto,
   URL_SISTEMA,
   origemPublica,
   alterarQuantidade,
@@ -257,5 +258,14 @@ describe("endereço público dos links", () => {
   it("mantém o endereço publicado e domínios próprios", () => {
     expect(origemPublica("https://minhaconfeitaria.lovable.app")).toBe("https://minhaconfeitaria.lovable.app");
     expect(origemPublica("https://app.docegestao.com.br/")).toBe("https://app.docegestao.com.br");
+  });
+});
+
+describe("miniatura das fotos", () => {
+  it("usa a miniatura das fotos novas e a própria foto nas antigas", () => {
+    expect(miniaturaDaFoto("https://x.supabase.co/storage/v1/object/public/catalogo/u/p-1-abc-g.jpg")).toBe("https://x.supabase.co/storage/v1/object/public/catalogo/u/p-1-abc-p.jpg");
+    expect(miniaturaDaFoto("https://x/catalogo/u/p-1-abc-g.jpg?v=2")).toBe("https://x/catalogo/u/p-1-abc-p.jpg?v=2");
+    expect(miniaturaDaFoto("https://x/catalogo/u/p-1-abc.jpg")).toBe("https://x/catalogo/u/p-1-abc.jpg");
+    expect(miniaturaDaFoto("https://x/catalogo/u/video-g.jpg.mp4")).toBe("https://x/catalogo/u/video-g.jpg.mp4");
   });
 });

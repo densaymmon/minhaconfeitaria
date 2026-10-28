@@ -208,6 +208,14 @@ export function slugValido(slug: string) {
   return /^[a-z0-9]+(-[a-z0-9]+)*$/.test(slug) && slug.length >= 3 && slug.length <= 60 && !SLUGS_RESERVADOS.includes(slug);
 }
 
+/**
+ * Miniatura da foto para a lista do catálogo. Fotos enviadas a partir desta versão
+ * terminam em "-g.jpg" e têm a miniatura em "-p.jpg"; as antigas usam a própria foto.
+ */
+export function miniaturaDaFoto(url: string) {
+  return /-g\.jpg(\?.*)?$/.test(url) ? url.replace(/-g\.jpg(\?.*)?$/, "-p.jpg$1") : url;
+}
+
 /** Endereço público do sistema (o publicado, que clientes conseguem abrir sem login). */
 export const URL_SISTEMA = "https://minhaconfeitaria.lovable.app";
 
