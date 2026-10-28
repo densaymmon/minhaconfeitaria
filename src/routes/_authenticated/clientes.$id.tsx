@@ -3,12 +3,12 @@ import { createFileRoute, Link, useNavigate } from "@tanstack/react-router";
 import { useQueryClient, useSuspenseQuery } from "@tanstack/react-query";
 import { useState } from "react";
 import { toast } from "sonner";
-import { MessageCircle, Pencil, Trash2, MapPin } from "lucide-react";
+import { Copy, MessageCircle, Pencil, Trash2, MapPin } from "lucide-react";
 import { supabase } from "@/integrations/supabase/client";
 import { clientesQ } from "@/lib/queries";
 import { usePedidosCalc } from "@/lib/hooks";
 import { brl, dataBR } from "@/lib/format";
-import { Card, Empty, PageHeader, Stat, StatusBadge } from "@/components/app/ui";
+import { Card, Empty, PagamentoBadge, PageHeader, Stat, StatusBadge } from "@/components/app/ui";
 import { Button } from "@/components/ui/button";
 import { ClienteDialog } from "./clientes.index";
 
@@ -72,6 +72,11 @@ function ClienteDetalhe() {
           <div className="flex gap-2"><MapPin className="size-4 shrink-0 text-muted-foreground" /> {c.endereco}</div>
         )}
         {c.observacoes && <p className="rounded-lg bg-accent p-2 text-accent-foreground">{c.observacoes}</p>}
+        {!tel && (
+          <p className="rounded-lg border border-warning/40 bg-warning/10 p-2 text-xs text-warning-foreground">
+            Sem telefone cadastrado: não dá para avisar que o pedido está pronto nem enviar cobrança pelo WhatsApp.
+          </p>
+        )}
         <div className="flex gap-2 pt-1">
           {tel && (
             <Button asChild size="sm" variant="secondary">
@@ -94,18 +99,26 @@ function ClienteDetalhe() {
       ) : (
         <div className="space-y-2">
           {hist.map((p) => (
-            <Link key={p.id} to="/pedidos/$id" params={{ id: p.id }} className="block">
-              <Card className="flex items-center justify-between gap-2 p-3">
+            <Card key={p.id} className="p-3">
+              <Link to="/pedidos/$id" params={{ id: p.id }} className="flex items-center justify-between gap-2">
                 <div className="min-w-0">
                   <div className="font-medium">#{p.numero} · {dataBR(p.data_entrega)}</div>
                   <div className="truncate text-xs text-muted-foreground">{p.pedido_itens.map((i) => i.descricao).join(", ")}</div>
                 </div>
-                <div className="text-right">
+                <div className="flex flex-col items-end gap-1 text-right">
                   <div className="text-sm font-semibold">{brl(p.t.venda)}</div>
-                  <StatusBadge status={p.status} />
+                  <div className="flex flex-wrap justify-end gap-1">
+                    <PagamentoBadge status={p.status} venda={p.t.venda} recebido={p.t.recebido} saldo={p.t.saldo} />
+                    <StatusBadge status={p.status} />
+                  </div>
                 </div>
-              </Card>
-            </Link>
+              </Link>
+              <div className="mt-2 flex justify-end border-t pt-2">
+                <Button type="button" size="sm" variant="ghost" onClick={() => window.location.assign(`/pedidos/novo?repetir=${p.id}`)}>
+                  <Copy className="size-4" /> Repetir pedido
+                </Button>
+              </div>
+            </Card>
           ))}
         </div>
       )}

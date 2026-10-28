@@ -3,6 +3,7 @@ import { Link } from "@tanstack/react-router";
 import { ArrowLeft } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { statusLabel } from "@/lib/format";
+import { SITUACAO_PAGAMENTO_LABEL, situacaoPagamento } from "@/lib/calc";
 
 export function PageHeader({
   title,
@@ -65,7 +66,7 @@ export function Stat({
   );
 }
 
-export function Field({ label, children, hint }: { label: string; children: ReactNode; hint?: string }) {
+export function Field({ label, children, hint }: { label: string; children: ReactNode; hint?: string | undefined }) {
   return (
     <label className="block space-y-1.5">
       <span className="text-sm font-medium">{label}</span>
@@ -121,5 +122,22 @@ export function Row({ label, value, strong, tone }: { label: string; value: Reac
         {value}
       </span>
     </div>
+  );
+}
+
+const pagamentoTone = {
+  pago: "bg-success/15 text-success",
+  sinal: "bg-warning/25 text-warning-foreground",
+  pendente: "bg-destructive/10 text-destructive",
+} as const;
+
+/** Selo único de pagamento: Pago, Sinal pago ou Pagamento pendente. */
+export function PagamentoBadge({ status, venda, recebido, saldo, className }: { status: string; venda: number; recebido: number; saldo: number; className?: string }) {
+  const situacao = situacaoPagamento({ status, venda, recebido, saldo });
+  if (!situacao) return null;
+  return (
+    <span className={cn("inline-flex rounded-full px-2 py-0.5 text-xs font-semibold", pagamentoTone[situacao], className)}>
+      {SITUACAO_PAGAMENTO_LABEL[situacao]}
+    </span>
   );
 }

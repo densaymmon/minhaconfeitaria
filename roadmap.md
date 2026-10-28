@@ -24,3 +24,12 @@
 ## Rascunho por mensagem
 - [x] Adicionar interpretação com Lovable AI e revisão antes de preencher pedido.
 - [x] Validar interpretação real, revisão, preenchimento, salvamento e leitura com sessão do proprietário; pedido temporário removido e 12 testes aprovados.
+
+## Evolução — Etapa 1 (ver docs/plano-evolucao.md)
+- [x] Selo único de pagamento (Pago / Sinal pago / Pagamento pendente) derivado dos recebimentos consolidados.
+- [x] Cobrança do saldo pelo WhatsApp em pedidos entregues, com chave Pix.
+- [x] Alerta de margem com preço sugerido em produtos e nos itens do pedido; aviso de item sem custo registrado.
+- [x] Repetir pedido a partir do pedido ou do histórico do cliente, com preços e custos atuais.
+- [x] Aviso de cliente sem telefone.
+- [ ] Custos indiretos (gás, energia, mão de obra) por configuração geral — aguarda decisão do modelo.
+- [ ] Correção assistida de itens antigos com custo zero — exige confirmação do proprietário.

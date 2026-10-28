@@ -6,7 +6,7 @@ import { toast } from "sonner";
 import { Plus, Trash2 } from "lucide-react";
 import { supabase } from "@/integrations/supabase/client";
 import { useCustos } from "@/lib/hooks";
-import { custoReceita, custoItemReceita, margemReal, precoSugerido } from "@/lib/calc";
+import { alertaMargem, custoReceita, custoItemReceita, margemReal, precoSugerido } from "@/lib/calc";
 import { CATEGORIAS, brl, parseNum, pct, dataBR } from "@/lib/format";
 import { Card, Field, NativeSelect, PageHeader, Row } from "@/components/app/ui";
 import { Button } from "@/components/ui/button";
@@ -207,6 +207,12 @@ function ProdutoForm() {
           <button type="button" className="w-full rounded-xl bg-accent p-3 text-left text-sm text-accent-foreground" onClick={() => set("preco_venda", sugerido.toFixed(2))}>
             Preço sugerido: <b>{brl(sugerido)}</b> — toque para usar
           </button>
+          {(() => {
+            const alerta = alertaMargem(unit, preco, parseNum(f.margem_desejada));
+            if (alerta.abaixoDoCusto) return <p role="alert" className="rounded-xl bg-destructive/10 p-3 text-sm font-medium text-destructive">O preço de venda está abaixo do custo por unidade: cada venda dá prejuízo.</p>;
+            if (alerta.abaixoDaMargem) return <p className="rounded-xl bg-warning/15 p-3 text-sm text-warning-foreground">O preço está {brl(alerta.faltaParaMargem)} abaixo do necessário para a margem desejada.</p>;
+            return null;
+          })()}
           <Row label="Lucro bruto por unidade" value={brl(preco - unit)} tone={preco - unit >= 0 ? "success" : "danger"} strong />
           <Row label="Margem real sobre o custo" value={pct(margemReal(unit, preco))} />
           <Row label="Lucro da receita inteira" value={brl((preco - unit) * prodNum.rendimento)} />

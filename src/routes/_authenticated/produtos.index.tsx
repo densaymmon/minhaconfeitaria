@@ -3,10 +3,10 @@ import { createFileRoute, Link, useNavigate } from "@tanstack/react-router";
 import { useQueryClient } from "@tanstack/react-query";
 import { useState } from "react";
 import { toast } from "sonner";
-import { Copy, Download, Plus, Trash2, Pencil, Archive, RotateCcw } from "lucide-react";
+import { AlertTriangle, Copy, Download, Plus, Trash2, Pencil, Archive, RotateCcw } from "lucide-react";
 import { supabase } from "@/integrations/supabase/client";
 import { useCustos } from "@/lib/hooks";
-import { margemReal } from "@/lib/calc";
+import { alertaMargem, margemReal } from "@/lib/calc";
 import { brl, hojeISO, pct, dataBR } from "@/lib/format";
 import { custoPorMedida, medidaLabel } from "@/lib/ingredient-cost";
 import { IngredientForm } from "@/components/app/ingredient-form";
@@ -39,11 +39,14 @@ function Produtos() {
   const { produtos, insumos, custo } = useCustos();
   const navigate = useNavigate();
   const [buscaProduto, setBuscaProduto] = useState("");
+  const [soAbaixoDaMargem, setSoAbaixoDaMargem] = useState(false);
+  const alertas = new Map(produtos.map((p) => [p.id, alertaMargem(custo.get(p.id) ?? 0, Number(p.preco_venda), Number(p.margem_desejada))]));
+  const abaixoDaMargem = produtos.filter((p) => p.ativo && alertas.get(p.id)?.abaixoDaMargem).length;
   const termoProduto = buscaProduto.trim().toLocaleLowerCase("pt-BR");
   const produtosFiltrados = produtos.filter((p) =>
-    !termoProduto ||
+    (!(soAbaixoDaMargem && abaixoDaMargem > 0) || (p.ativo && alertas.get(p.id)?.abaixoDaMargem)) && (!termoProduto ||
     p.nome.toLocaleLowerCase("pt-BR").includes(termoProduto) ||
-    (p.categoria ?? "").toLocaleLowerCase("pt-BR").includes(termoProduto)
+    (p.categoria ?? "").toLocaleLowerCase("pt-BR").includes(termoProduto))
   );
   return (
     <>
@@ -77,6 +80,20 @@ function Produtos() {
               <span>Exportar CSV</span>
             </Button>
           </div>
+          {abaixoDaMargem > 0 && (
+            <button
+              type="button"
+              onClick={() => setSoAbaixoDaMargem((v) => !v)}
+              aria-pressed={soAbaixoDaMargem}
+              className="mb-3 flex w-full items-start gap-2 rounded-xl border border-warning/50 bg-warning/10 p-3 text-left text-sm text-warning-foreground"
+            >
+              <AlertTriangle className="mt-0.5 size-4 shrink-0" />
+              <span>
+                <b>{abaixoDaMargem} produto(s) abaixo da margem desejada.</b>{" "}
+                {soAbaixoDaMargem ? "Toque para ver todos os produtos." : "Toque para ver só esses e ajustar o preço."}
+              </span>
+            </button>
+          )}
           {produtos.length > 0 && (
             <div className="mb-3">
               <Input
@@ -112,6 +129,7 @@ function Produtos() {
                 const c = custo.get(p.id) ?? 0;
                 const preco = Number(p.preco_venda);
                 const lucro = preco - c;
+                const alerta = alertas.get(p.id);
                 return (
                   <Card key={p.id} className={`p-3.5 ${p.ativo ? "" : "opacity-60"}`}>
                     <div className="flex items-start gap-2">
@@ -129,6 +147,12 @@ function Produtos() {
                           <div><div className="text-muted-foreground">Lucro un.</div><span className={lucro >= 0 ? "text-success" : "text-destructive"}>{brl(lucro)}</span></div>
                           <div><div className="text-muted-foreground">Margem</div>{pct(margemReal(c, preco))}</div>
                         </div>
+                        {p.ativo && alerta?.abaixoDoCusto && (
+                          <div className="mt-2 rounded-lg bg-destructive/10 px-2 py-1 text-xs font-medium text-destructive">Preço abaixo do custo: cada unidade vendida dá prejuízo. Sugerido: {brl(alerta.sugerido)}</div>
+                        )}
+                        {p.ativo && alerta && !alerta.abaixoDoCusto && alerta.abaixoDaMargem && (
+                          <div className="mt-2 rounded-lg bg-warning/15 px-2 py-1 text-xs text-warning-foreground">Abaixo da margem desejada ({pct(Number(p.margem_desejada))}). Sugerido: {brl(alerta.sugerido)}</div>
+                        )}
                       </Link>
                       <Button
                         type="button"

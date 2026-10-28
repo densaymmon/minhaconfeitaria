@@ -1,5 +1,5 @@
 import { describe, expect, it } from "vitest";
-import { custoReceita, custoUnitario, margemReal, precoSugerido, ratearVendaETaxas, totaisPedido, calcularRecebimentoPedido, recebimentoLegadoPendente, CONFIG_PADRAO } from "./calc";
+import { custoReceita, custoUnitario, margemReal, precoSugerido, ratearVendaETaxas, totaisPedido, calcularRecebimentoPedido, recebimentoLegadoPendente, CONFIG_PADRAO, alertaMargem, situacaoPagamento } from "./calc";
 import { toCSV } from "./csv";
 import { parseNum, STATUS, statusLabel } from "./format";
 
@@ -146,4 +146,36 @@ describe("proteção do CSV", () => {
  it("neutraliza fórmulas em campos de texto", () => {
   expect(toCSV(["Nome"], [["=HYPERLINK(1)"]])).toContain("'=HYPERLINK(1)");
  });
+});
+
+describe("alerta de margem", () => {
+  it("avisa quando o preço não atinge a margem desejada e calcula o sugerido", () => {
+    // Bolo de chocolate G: custo 18,34, margem desejada 100%, vendido a 25.
+    expect(alertaMargem(18.3437, 25, 100)).toEqual({ abaixoDoCusto: false, abaixoDaMargem: true, sugerido: 36.69, faltaParaMargem: 11.69 });
+  });
+  it("avisa prejuízo quando o preço fica abaixo do custo", () => {
+    expect(alertaMargem(18.3437, 18, 100).abaixoDoCusto).toBe(true);
+  });
+  it("não alerta quando o preço atinge a margem", () => {
+    expect(alertaMargem(1.9256, 22, 100)).toMatchObject({ abaixoDoCusto: false, abaixoDaMargem: false, faltaParaMargem: 0 });
+  });
+  it("não alerta produtos sem custo calculado", () => {
+    expect(alertaMargem(0, 10, 100)).toMatchObject({ abaixoDoCusto: false, abaixoDaMargem: false });
+  });
+});
+
+describe("situação de pagamento", () => {
+  it("classifica pago, sinal e pendente", () => {
+    expect(situacaoPagamento({ status: "entregue", venda: 35, recebido: 35, saldo: 0 })).toBe("pago");
+    expect(situacaoPagamento({ status: "recebido", venda: 77, recebido: 35, saldo: 42 })).toBe("sinal");
+    expect(situacaoPagamento({ status: "entregue", venda: 25, recebido: 0, saldo: 25 })).toBe("pendente");
+  });
+  it("não cobra pedidos cancelados ou sem valor", () => {
+    expect(situacaoPagamento({ status: "cancelado", venda: 35, recebido: 0, saldo: 0 })).toBeNull();
+    expect(situacaoPagamento({ status: "recebido", venda: 0, recebido: 0, saldo: 0 })).toBeNull();
+  });
+  it("entrada igual ao total conta como pago mesmo sem saldo quitado marcado", () => {
+    const r = calcularRecebimentoPedido({ venda: 70, status: "entregue", saldo_quitado: false, valor_entrada: 70, pagamentosDetalhados: 0 });
+    expect(situacaoPagamento({ status: "entregue", venda: 70, ...r })).toBe("pago");
+  });
 });

@@ -8,7 +8,7 @@ import { usePedidosCalc } from "@/lib/hooks";
 import { supabase } from "@/integrations/supabase/client";
 import { STATUS, brl, dataBR, formaLabel, hojeISO, statusLabel } from "@/lib/format";
 import { baixarCSV } from "@/lib/csv";
-import { Card, PageHeader, StatusBadge } from "@/components/app/ui";
+import { Card, PagamentoBadge, PageHeader, StatusBadge } from "@/components/app/ui";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { ClienteDialog } from "./clientes.index";
@@ -393,6 +393,16 @@ function Pedidos() {
               "Obrigado pela preferência! 💛",
             ].join("\n");
             const podeEmitirRecibo = ["pronto", "entregue", "finalizado"].includes(p.status);
+            // Pedido já entregue com saldo em aberto: o botão de WhatsApp vira cobrança.
+            const deveCobrar = ["entregue", "finalizado"].includes(p.status) && p.t.saldo > 0.009;
+            const textoCobranca = [
+              `Olá ${p.clientes?.nome ?? ""}! Tudo bem?`,
+              `Passando para lembrar do saldo do pedido #${p.numero} (entregue em ${dataBR(p.data_entrega)}).`,
+              `Valor em aberto: ${brl(p.t.saldo)}`,
+              ...(config.pix_chave?.trim() ? [`Chave Pix: ${config.pix_chave.trim()}`] : []),
+              "",
+              "Obrigado! 💛",
+            ].join("\n");
             return (
               <Card
                 key={p.id}
@@ -416,7 +426,7 @@ function Pedidos() {
                     <div className="min-w-0 font-semibold">#{p.numero} · {p.clientes?.nome ? <button type="button" className="rounded-sm text-left underline-offset-2 hover:underline focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring" onClick={(e) => { e.stopPropagation(); const cliente = clientes.find((c) => c.id === p.cliente_id); if (cliente) { setClienteEmEdicao(cliente); setDialogClienteAberto(true); } else { toast.error("Não foi possível localizar o cadastro deste cliente."); } }}>{p.clientes.nome}</button> : "Sem cliente"}</div>
                     <div className="flex shrink-0 items-center gap-1.5">
                       {infoRecorrencia && <span className="inline-flex items-center gap-1 rounded-full border border-primary/40 bg-primary/10 px-2 py-1 text-xs font-bold text-primary"><Repeat className="size-3" /> Recorrente</span>}
-                      {p.t.venda > 0 && p.t.saldo <= 0 && <span className="rounded-full bg-success/15 px-2 py-0.5 text-xs font-semibold text-success">Pago</span>}
+                      <PagamentoBadge status={p.status} venda={p.t.venda} recebido={p.t.recebido} saldo={p.t.saldo} />
                       <StatusBadge status={p.status} />
                     </div>
                   </div>
@@ -467,12 +477,14 @@ function Pedidos() {
                         }
                         return;
                       }
-                      const mensagem = podeEmitirRecibo
+                      const mensagem = deveCobrar
+                        ? textoCobranca
+                        : podeEmitirRecibo
                         ? textoRecibo
                         : `Olá ${p.clientes?.nome ?? ""}! Estou entrando em contato sobre o pedido #${p.numero} da O Casal do Bolo.`;
                       window.open(`https://wa.me/${telefoneWhatsApp}?text=${encodeURIComponent(mensagem)}`, "_blank", "noopener,noreferrer");
                     }}>
-                      <MessageCircle className="size-4" /> Enviar recibo
+                      <MessageCircle className="size-4" /> {deveCobrar ? `Cobrar ${brl(p.t.saldo)}` : "Enviar recibo"}
                     </Button>
                   </div>
               </Card>
