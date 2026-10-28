@@ -7,7 +7,8 @@ import { configQ, confeitariaQ } from '@/lib/queries';
 import { parseNum } from '@/lib/format';
 import { NativeSelect } from '@/components/app/ui';
 import { ROTULO_CHAVE, normalizarChavePix, pixCopiaECola, tipoChaveValido, type TipoChavePix } from '@/lib/pix';
-import { ChevronRight } from 'lucide-react';
+import { ChevronRight, DatabaseBackup, FileSpreadsheet } from 'lucide-react';
+import { baixarCopiaCompleta, baixarPlanilhaPedidos } from '@/lib/exportar-dados';
 import { supabase } from '@/integrations/supabase/client';
 import { PageHeader,Field,Card } from '@/components/app/ui';
 import { Input } from '@/components/ui/input';
@@ -74,5 +75,30 @@ function ConfigPage(){
    <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">{campos.map(([k,label])=><Field key={k} label={label}><Input inputMode="decimal" value={f[k]??'0'} onChange={e=>setF({...f,[k]:e.target.value})} className="h-11 bg-card"/></Field>)}</div>
   </Card>
   <Button className="h-12 w-full" disabled={busy}>{busy?'Salvando...':'Salvar configurações'}</Button>
- </form></>;
+ </form><SeusDados nomeLoja={loja.nome}/></>;
+}
+
+/** Cópia completa dos dados da confeitaria (JSON) e planilha de pedidos. */
+function SeusDados({nomeLoja}:{nomeLoja:string}){
+ const [andamento,setAndamento]=useState<string|null>(null);
+ async function copia(){
+  try{const total=await baixarCopiaCompleta(nomeLoja,(t)=>setAndamento(`Copiando ${t.replace(/_/g,' ')}…`));toast.success(`Cópia baixada com ${total} registro(s).`);}
+  catch(e){toast.error(`Não foi possível gerar a cópia: ${e instanceof Error?e.message:'tente novamente.'}`);}
+  finally{setAndamento(null);}
+ }
+ async function planilha(){
+  setAndamento('Montando a planilha de pedidos…');
+  try{const n=await baixarPlanilhaPedidos();toast.success(`Planilha com ${n} pedido(s) baixada.`);}
+  catch(e){toast.error(`Não foi possível gerar a planilha: ${e instanceof Error?e.message:'tente novamente.'}`);}
+  finally{setAndamento(null);}
+ }
+ return <Card className="mt-5 space-y-3">
+  <h2 className="text-lg font-semibold">Seus dados</h2>
+  <p className="text-sm text-muted-foreground">Os dados são seus. Baixe quando quiser uma cópia completa (pedidos, clientes, produtos, receitas, estoque, financeiro) ou a planilha de pedidos.</p>
+  <div className="grid gap-2 sm:grid-cols-2">
+   <Button type="button" variant="outline" className="h-11" disabled={!!andamento} onClick={()=>void copia()}><DatabaseBackup className="size-4"/>Cópia completa (arquivo .json)</Button>
+   <Button type="button" variant="outline" className="h-11" disabled={!!andamento} onClick={()=>void planilha()}><FileSpreadsheet className="size-4"/>Planilha de pedidos (.csv)</Button>
+  </div>
+  {andamento&&<p className="text-xs text-muted-foreground" role="status">{andamento}</p>}
+ </Card>;
 }

@@ -30,6 +30,7 @@ import { Route as AuthenticatedMaisRouteImport } from './routes/_authenticated/m
 import { Route as AuthenticatedPainelRouteImport } from './routes/_authenticated/painel'
 import { Route as AuthenticatedPedidosRecorrentesRouteImport } from './routes/_authenticated/pedidos-recorrentes'
 import { Route as AuthenticatedProducaoRouteImport } from './routes/_authenticated/producao'
+import { Route as AuthenticatedResumoMesRouteImport } from './routes/_authenticated/resumo-mes'
 import { Route as AuthenticatedCatalogoRouteImport } from './routes/_authenticated/catalogo'
 import { Route as AuthenticatedComecarRouteImport } from './routes/_authenticated/comecar'
 import { Route as AuthenticatedRelatoriosRouteImport } from './routes/_authenticated/relatorios'
@@ -149,6 +150,11 @@ const AuthenticatedProducaoRoute = AuthenticatedProducaoRouteImport.update({
   path: '/producao',
   getParentRoute: () => AuthenticatedRouteRoute,
 } as any)
+const AuthenticatedResumoMesRoute = AuthenticatedResumoMesRouteImport.update({
+  id: '/resumo-mes',
+  path: '/resumo-mes',
+  getParentRoute: () => AuthenticatedRouteRoute,
+} as any)
 const AuthenticatedCatalogoRoute = AuthenticatedCatalogoRouteImport.update({
   id: '/catalogo',
   path: '/catalogo',
@@ -224,6 +230,7 @@ export interface FileRoutesByFullPath {
   '/painel': typeof AuthenticatedPainelRoute
   '/pedidos-recorrentes': typeof AuthenticatedPedidosRecorrentesRoute
   '/producao': typeof AuthenticatedProducaoRoute
+  '/resumo-mes': typeof AuthenticatedResumoMesRoute
   '/catalogo': typeof AuthenticatedCatalogoRoute
   '/comecar': typeof AuthenticatedComecarRoute
   '/relatorios': typeof AuthenticatedRelatoriosRoute
@@ -256,6 +263,7 @@ export interface FileRoutesByTo {
   '/painel': typeof AuthenticatedPainelRoute
   '/pedidos-recorrentes': typeof AuthenticatedPedidosRecorrentesRoute
   '/producao': typeof AuthenticatedProducaoRoute
+  '/resumo-mes': typeof AuthenticatedResumoMesRoute
   '/catalogo': typeof AuthenticatedCatalogoRoute
   '/comecar': typeof AuthenticatedComecarRoute
   '/relatorios': typeof AuthenticatedRelatoriosRoute
@@ -290,6 +298,7 @@ export interface FileRoutesById {
   '/_authenticated/painel': typeof AuthenticatedPainelRoute
   '/_authenticated/pedidos-recorrentes': typeof AuthenticatedPedidosRecorrentesRoute
   '/_authenticated/producao': typeof AuthenticatedProducaoRoute
+  '/_authenticated/resumo-mes': typeof AuthenticatedResumoMesRoute
   '/_authenticated/catalogo': typeof AuthenticatedCatalogoRoute
   '/_authenticated/comecar': typeof AuthenticatedComecarRoute
   '/_authenticated/relatorios': typeof AuthenticatedRelatoriosRoute
@@ -324,6 +333,7 @@ export interface FileRouteTypes {
     | '/painel'
     | '/pedidos-recorrentes'
     | '/producao'
+    | '/resumo-mes'
     | '/catalogo'
     | '/comecar'
     | '/relatorios'
@@ -356,6 +366,7 @@ export interface FileRouteTypes {
     | '/painel'
     | '/pedidos-recorrentes'
     | '/producao'
+    | '/resumo-mes'
     | '/catalogo'
     | '/comecar'
     | '/relatorios'
@@ -389,6 +400,7 @@ export interface FileRouteTypes {
     | '/_authenticated/painel'
     | '/_authenticated/pedidos-recorrentes'
     | '/_authenticated/producao'
+    | '/_authenticated/resumo-mes'
     | '/_authenticated/catalogo'
     | '/_authenticated/comecar'
     | '/_authenticated/relatorios'
@@ -566,6 +578,13 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof AuthenticatedProducaoRouteImport
       parentRoute: typeof AuthenticatedRouteRoute
     }
+    '/_authenticated/resumo-mes': {
+      id: '/_authenticated/resumo-mes'
+      path: '/resumo-mes'
+      fullPath: '/resumo-mes'
+      preLoaderRoute: typeof AuthenticatedResumoMesRouteImport
+      parentRoute: typeof AuthenticatedRouteRoute
+    }
     '/_authenticated/catalogo': {
       id: '/_authenticated/catalogo'
       path: '/catalogo'
@@ -649,6 +668,7 @@ interface AuthenticatedRouteRouteChildren {
   AuthenticatedPainelRoute: typeof AuthenticatedPainelRoute
   AuthenticatedPedidosRecorrentesRoute: typeof AuthenticatedPedidosRecorrentesRoute
   AuthenticatedProducaoRoute: typeof AuthenticatedProducaoRoute
+  AuthenticatedResumoMesRoute: typeof AuthenticatedResumoMesRoute
   AuthenticatedCatalogoRoute: typeof AuthenticatedCatalogoRoute
   AuthenticatedComecarRoute: typeof AuthenticatedComecarRoute
   AuthenticatedRelatoriosRoute: typeof AuthenticatedRelatoriosRoute
@@ -670,6 +690,7 @@ const AuthenticatedRouteRouteChildren: AuthenticatedRouteRouteChildren = {
   AuthenticatedPainelRoute: AuthenticatedPainelRoute,
   AuthenticatedPedidosRecorrentesRoute: AuthenticatedPedidosRecorrentesRoute,
   AuthenticatedProducaoRoute: AuthenticatedProducaoRoute,
+  AuthenticatedResumoMesRoute: AuthenticatedResumoMesRoute,
   AuthenticatedCatalogoRoute: AuthenticatedCatalogoRoute,
   AuthenticatedComecarRoute: AuthenticatedComecarRoute,
   AuthenticatedRelatoriosRoute: AuthenticatedRelatoriosRoute,

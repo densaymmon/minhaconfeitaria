@@ -918,6 +918,7 @@ export type Database = {
       pedidos: {
         Row: {
           aviso_pronto_enviado_em: string | null
+          lembrete_enviado_em: string | null
           catalogo_token: string | null
           cliente_id: string | null
           codigo_curto: string | null
@@ -944,6 +945,7 @@ export type Database = {
         }
         Insert: {
           aviso_pronto_enviado_em?: string | null
+          lembrete_enviado_em?: string | null
           catalogo_token?: string | null
           cliente_id?: string | null
           codigo_curto?: string | null
@@ -970,6 +972,7 @@ export type Database = {
         }
         Update: {
           aviso_pronto_enviado_em?: string | null
+          lembrete_enviado_em?: string | null
           catalogo_token?: string | null
           cliente_id?: string | null
           codigo_curto?: string | null

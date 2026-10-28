@@ -8,7 +8,7 @@ import { configQ, confeitariaQ, type Pedido } from "@/lib/queries";
 import { alterarPedido, otimista } from "@/lib/cache-pedidos";
 import { brl, hojeISO, num } from "@/lib/format";
 import { somarDias } from "@/lib/lista-producao";
-import { mensagemCobranca, montarHoje } from "@/lib/hoje";
+import { mensagemCobranca, mensagemLembrete, montarHoje } from "@/lib/hoje";
 import { linkWhatsApp, origemPublica } from "@/lib/catalogo";
 import { avisoProntoWhatsApp } from "@/lib/whatsapp-pedido";
 import { Card, StatusBadge } from "@/components/app/ui";
@@ -33,13 +33,21 @@ export function PainelHoje() {
     origem: origemPublica(),
   };
   const totalProduzir = r.produzir.reduce((s, i) => s + i.pendente, 0);
-  const nada = !r.novos.length && !r.atrasados.length && !r.entregarHoje.length && !r.produzir.length && !r.avisarPronto.length && !r.cobrar.length;
+  const nada = !r.novos.length && !r.atrasados.length && !r.entregarHoje.length && !r.produzir.length && !r.avisarPronto.length && !r.cobrar.length && !r.lembrar.length;
 
   async function marcarAvisado(p: PedidoCalc) {
     if (p.aviso_pronto_enviado_em) return;
     const agora = new Date().toISOString();
     await otimista<Pedido>(qc, (lista) => alterarPedido(lista, p.id, { aviso_pronto_enviado_em: agora }), async () => {
       const { error } = await supabase.from("pedidos").update({ aviso_pronto_enviado_em: agora }).eq("id", p.id);
+      if (error) throw new Error(error.message);
+    }).catch(() => undefined);
+  }
+
+  async function marcarLembrete(p: PedidoCalc) {
+    const agora = new Date().toISOString();
+    await otimista<Pedido>(qc, (lista) => alterarPedido(lista, p.id, { lembrete_enviado_em: agora }), async () => {
+      const { error } = await supabase.from("pedidos").update({ lembrete_enviado_em: agora }).eq("id", p.id);
       if (error) throw new Error(error.message);
     }).catch(() => undefined);
   }
@@ -113,6 +121,18 @@ export function PainelHoje() {
               return (
                 <LinhaPedido key={p.id} p={p} detalhe={dataCurta(p.data_entrega, hoje)}
                   acao={aviso ? <Button asChild size="sm" className="bg-success text-success-foreground hover:bg-success/90"><a href={aviso.url} target="_blank" rel="noopener noreferrer" onClick={() => void marcarAvisado(p)}><MessageCircle className="size-4" /> Avisar</a></Button> : null} />
+              );
+            })}
+          </Bloco>
+        )}
+
+        {r.lembrar.length > 0 && (
+          <Bloco titulo="Lembrar clientes de amanhã" icone={CalendarClock}>
+            {r.lembrar.map((p) => {
+              const link = linkWhatsApp(p.clientes?.telefone, mensagemLembrete(p, { loja: opcoes.loja, pix: config.pix_chave, enderecoRetirada: opcoes.enderecoRetirada }));
+              return (
+                <LinhaPedido key={p.id} p={p} detalhe={`amanhã${p.hora_entrega ? ` às ${p.hora_entrega.slice(0, 5)}` : ""}${p.t.saldo > 0.009 ? ` · falta ${brl(p.t.saldo)}` : ""}`}
+                  acao={link ? <Button asChild size="sm" variant="outline"><a href={link} target="_blank" rel="noopener noreferrer" onClick={() => void marcarLembrete(p)}><MessageCircle className="size-4" /> Lembrar</a></Button> : null} />
               );
             })}
           </Bloco>

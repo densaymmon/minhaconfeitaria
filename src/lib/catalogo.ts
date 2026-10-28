@@ -201,7 +201,7 @@ export const SLUGS_RESERVADOS = [
   "clientes", "produtos", "producao", "financeiro", "relatorios", "despesas", "compras", "contas-pagar",
   "configuracoes", "mais", "api", "admin", "app", "login", "entrar", "cadastro", "suporte", "ajuda",
   "termos", "privacidade", "www", "assets", "static", "catalogo", "loja", "planos", "precos",
-  "plataforma", "comecar",
+  "plataforma", "comecar", "resumo-mes", "equipe", "convite", "sw", "manifest", "fonts", "encomenda",
 ];
 
 export function slugValido(slug: string) {
