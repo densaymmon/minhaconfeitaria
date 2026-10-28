@@ -5,6 +5,8 @@ import { usePedidosCalc } from "@/lib/hooks";
 import { brl, dataCurta, hojeISO, mesISO } from "@/lib/format";
 import { Card, Empty, PageHeader, StatusBadge } from "@/components/app/ui";
 import { Button } from "@/components/ui/button";
+import { PainelHoje } from "@/components/app/painel-hoje";
+import { saudacao } from "@/lib/hoje";
 import { endOfMonth, format } from "date-fns";
 import { ptBR } from "date-fns/locale";
 
@@ -99,7 +101,7 @@ function Painel() {
   return (
     <>
       <PageHeader
-        title="Olá! 👩‍🍳"
+        title={`${saudacao(new Date().getHours())}! 👩‍🍳`}
         subtitle={format(new Date(), "EEEE, dd 'de' MMMM", { locale: ptBR })}
         action={
           <Button asChild size="sm" className="mt-1 h-9 gap-1.5">
@@ -109,6 +111,8 @@ function Painel() {
           </Button>
         }
       />
+
+      <PainelHoje />
 
       <section aria-label="Resumo financeiro do mês" className="mb-6">
         <div className="mb-3 flex items-center gap-2">

@@ -82,3 +82,7 @@
 - [x] Planos Essencial, Confeitaria e Vitrine com preço, limites e recursos editáveis; teste grátis de 14 dias; tolerância de 7 dias e suspensão automática.
 - [x] No sistema da confeitaria: avisos de fim de teste/vencimento, tela de assinatura suspensa, recursos fora do plano trancados e "Meu plano" nas configurações.
 - [ ] Cobrança automática (Pix/cartão por gateway) e recibo da mensalidade.
+
+## Tela Hoje e página de vendas
+- [x] Painel abre com "Hoje": entregas do dia, produção até amanhã, pedidos novos do catálogo, atrasados, avisar pronto e cobrar com um toque.
+- [x] Página de vendas do Doce Gestão no endereço principal (funções, catálogo, planos do banco, dúvidas, teste grátis).
