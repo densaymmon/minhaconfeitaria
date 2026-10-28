@@ -805,6 +805,72 @@ export type Database = {
           },
         ]
       }
+      equipe_convites: {
+        Row: {
+          aceito_em: string | null
+          cancelado_em: string | null
+          created_at: string
+          dono_id: string
+          email: string
+          expira_em: string
+          id: string
+          papel: string
+          token: string
+        }
+        Insert: {
+          aceito_em?: string | null
+          cancelado_em?: string | null
+          created_at?: string
+          dono_id: string
+          email: string
+          expira_em?: string
+          id?: string
+          papel: string
+          token?: string
+        }
+        Update: {
+          aceito_em?: string | null
+          cancelado_em?: string | null
+          created_at?: string
+          dono_id?: string
+          email?: string
+          expira_em?: string
+          id?: string
+          papel?: string
+          token?: string
+        }
+        Relationships: []
+      }
+      equipe_membros: {
+        Row: {
+          created_at: string
+          dono_id: string
+          email: string
+          id: string
+          membro_id: string
+          nome: string | null
+          papel: string
+        }
+        Insert: {
+          created_at?: string
+          dono_id: string
+          email: string
+          id?: string
+          membro_id: string
+          nome?: string | null
+          papel: string
+        }
+        Update: {
+          created_at?: string
+          dono_id?: string
+          email?: string
+          id?: string
+          membro_id?: string
+          nome?: string | null
+          papel?: string
+        }
+        Relationships: []
+      }
       insumos: {
         Row: {
           ativo: boolean
@@ -1543,6 +1609,34 @@ export type Database = {
       }
       plataforma_publica: {
         Args: never
+        Returns: Json
+      }
+      meu_papel: {
+        Args: never
+        Returns: Json
+      }
+      convidar_membro: {
+        Args: { p_email: string; p_papel: string }
+        Returns: Json
+      }
+      cancelar_convite: {
+        Args: { p_id: string }
+        Returns: undefined
+      }
+      alterar_membro: {
+        Args: { p_id: string; p_papel: string | null }
+        Returns: undefined
+      }
+      sair_da_equipe: {
+        Args: never
+        Returns: undefined
+      }
+      ver_convite: {
+        Args: { p_token: string }
+        Returns: Json
+      }
+      aceitar_convite: {
+        Args: { p_token: string; p_nome?: string }
         Returns: Json
       }
       salvar_inscricao_push: {

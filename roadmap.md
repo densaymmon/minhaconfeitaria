@@ -112,3 +112,6 @@
 
 ## Notificações
 - [x] App instalável (ícone na tela inicial) e aviso de pedido novo/orçamento no celular mesmo com o sistema fechado, com botão de teste e lista de aparelhos.
+
+## Equipe
+- [x] Vários usuários por confeitaria: convite por link (WhatsApp), papéis Gerente e Produção, cadastro pelo convite mesmo com cadastro fechado, remover/alterar papel e sair da equipe.

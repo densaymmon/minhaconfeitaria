@@ -1,10 +1,10 @@
 import { createFileRoute, Link, Outlet, redirect, useNavigate, useRouterState } from "@tanstack/react-router";
 import { Suspense, useEffect, useRef, useState } from "react";
 import { toast } from "sonner";
-import { Store, BookOpen, CakeSlice, ChartNoAxesCombined, ChefHat, ChevronRight, ClipboardList, LayoutDashboard, LogOut, Menu, Package, Settings, ShoppingCart, Users, Wallet, X } from "lucide-react";
+import { Store, BookOpen, UsersRound, CakeSlice, ChartNoAxesCombined, ChefHat, ChevronRight, ClipboardList, LayoutDashboard, LogOut, Menu, Package, Settings, ShoppingCart, Users, Wallet, X } from "lucide-react";
 import { useQuery, useQueryClient } from "@tanstack/react-query";
-import { avancarPedidosDoDia, confeitariaQ, ehAdminQ, minhaAssinaturaQ } from "@/lib/queries";
-import { recursoDaPagina, temRecurso } from "@/lib/assinatura";
+import { avancarPedidosDoDia, confeitariaQ, ehAdminQ, meuPapelQ, minhaAssinaturaQ } from "@/lib/queries";
+import { NOME_PAPEL, paginaPermitidaAoPapel, recursoDaPagina, temRecurso } from "@/lib/assinatura";
 import { AvisoAssinatura, RecursoBloqueado, TelaAssinaturaSuspensa, TelaContaAdmin } from "@/components/app/plano";
 import { TERMOS_VERSAO } from "@/lib/termos";
 import { AceiteTermos, TelaBloqueada, TelaPendente } from "@/components/app/acesso-conta";
@@ -38,6 +38,7 @@ const maisLinks = [
   { to: "/financeiro", label: "Financeiro", icon: Wallet },
   { to: "/resumo-mes", label: "Resumo do mês", icon: ChartNoAxesCombined },
   { to: "/configuracoes", label: "Configurações", icon: Settings },
+  { to: "/equipe", label: "Equipe", icon: UsersRound },
 ] as const;
 
 const comprasLinks = [
@@ -57,17 +58,24 @@ function Layout() {
   const { data: adminInfo } = useQuery(ehAdminQ);
   const admin = adminInfo === true;
   const { data: assinatura } = useQuery({ ...minhaAssinaturaQ, refetchInterval: 15 * 60_000 });
+  const { data: meuPapel } = useQuery(meuPapelQ);
+  const papel = meuPapel?.papel ?? "dono";
+  const ehDono = papel === "dono";
   const pathname = useRouterState({ select: (s) => s.location.pathname });
   // Campos da migração 0038; antes dela nada é bloqueado.
   const temControleAcesso = Boolean(confeitaria && "acesso" in confeitaria);
   const acesso = temControleAcesso && !admin ? confeitaria?.acesso : "ativo";
   // Só pede o aceite depois de saber que a conta não é da administração (evita piscar a tela).
-  const precisaAceitarTermos = temControleAcesso && adminInfo === false && confeitaria?.termos_versao !== TERMOS_VERSAO;
-  const precisaComecar = temControleAcesso && acesso === "ativo" && !precisaAceitarTermos && !confeitaria?.onboarding_concluido_em;
+  // Termos e primeiros passos são da dona; quem é da equipe entra direto.
+  const precisaAceitarTermos = temControleAcesso && adminInfo === false && ehDono && meuPapel !== undefined && confeitaria?.termos_versao !== TERMOS_VERSAO;
+  const precisaComecar = temControleAcesso && acesso === "ativo" && ehDono && meuPapel !== undefined && !precisaAceitarTermos && !confeitaria?.onboarding_concluido_em;
   const novosCatalogo = useAlertaCatalogo((id) => void navigate({ to: "/pedidos/$id", params: { id } }));
   const nomeLoja = confeitaria?.nome?.trim() || "Gestão da confeitaria";
   const recursoPagina = recursoDaPagina(pathname);
   const recursoBloqueado = recursoPagina && !temRecurso(assinatura, recursoPagina) ? recursoPagina : null;
+  const bloqueadoPeloPapel = !paginaPermitidaAoPapel(pathname, papel);
+  const linksGestao = maisLinks.filter((l) => paginaPermitidaAoPapel(l.to, papel));
+  const verCompras = paginaPermitidaAoPapel("/compras", papel);
 
   useEffect(() => {
     if (!maisAberto) return;
@@ -123,7 +131,7 @@ function Layout() {
         <div className="mt-6">
           <p className="mb-2 px-3 text-xs font-semibold uppercase tracking-wider text-muted-foreground">Gestão</p>
           <div className="space-y-1">
-            {maisLinks.map(({ to, label, icon: Icon }) => (
+            {linksGestao.map(({ to, label, icon: Icon }) => (
               <Link key={to} to={to} onClick={close} className={linkClass(false)} activeProps={{ className: linkClass(true) }}>
                 <Icon className="size-5 shrink-0" />
                 <span>{label}</span>
@@ -131,7 +139,7 @@ function Layout() {
             ))}
           </div>
         </div>
-        <div className="mt-6">
+        {verCompras && <div className="mt-6">
           <p className="mb-2 px-3 text-xs font-semibold uppercase tracking-wider text-muted-foreground">Compras e estoque</p>
           <div className="space-y-1">
             {comprasLinks.map(({ secao, label, icon: Icon }) => (
@@ -141,13 +149,15 @@ function Layout() {
               </Link>
             ))}
           </div>
-        </div>
+        </div>}
       </>
     );
   }
 
   // Conta de administração (sem confeitaria): o lugar dela é o painel separado.
   if (admin && confeitaria === null) return <TelaContaAdmin sair={() => void sair()} />;
+  // Saiu ou foi removida da equipe e não tem confeitaria própria.
+  if (!admin && adminInfo === false && confeitaria === null && meuPapel?.papel === "dono") return <TelaSemConfeitaria sair={() => void sair()} />;
   if (confeitaria && acesso === "bloqueado") return <TelaBloqueada sair={() => void sair()} />;
   if (confeitaria && acesso === "pendente") return <TelaPendente confeitaria={confeitaria} sair={() => void sair()} />;
   if (confeitaria && !admin && assinatura && (assinatura.situacao === "suspensa" || assinatura.situacao === "cancelada")) {
@@ -195,7 +205,7 @@ function Layout() {
         <main className="mx-auto w-full max-w-7xl px-4 pb-safe pt-4 sm:px-6 sm:pt-6 lg:px-8 lg:pb-8 lg:pt-8">
           <AvisoAssinatura />
           <Suspense fallback={<CarregandoTela />}>
-            {recursoBloqueado ? <RecursoBloqueado recurso={recursoBloqueado} /> : <Outlet />}
+            {bloqueadoPeloPapel ? <BloqueioPapel papel={NOME_PAPEL[papel]} /> : recursoBloqueado ? <RecursoBloqueado recurso={recursoBloqueado} /> : <Outlet />}
           </Suspense>
         </main>
 
@@ -339,4 +349,28 @@ function useAlertaCatalogo(abrir: (id: string) => void) {
   }, [novos.length]);
 
   return novos.length;
+}
+
+function BloqueioPapel({ papel }: { papel: string }) {
+  return (
+    <div className="mx-auto max-w-md py-16 text-center">
+      <UsersRound className="mx-auto mb-3 size-10 text-muted-foreground" />
+      <h1 className="font-display text-2xl font-semibold">Página fora do seu acesso</h1>
+      <p className="mt-2 text-sm text-muted-foreground">Seu acesso na equipe é de <b>{papel}</b>. Esta parte do sistema fica com a dona ou a gerência da confeitaria.</p>
+      <Link to="/painel" className="mt-6 inline-flex h-11 items-center justify-center rounded-xl bg-primary px-5 text-sm font-semibold text-primary-foreground">Voltar para o Hoje</Link>
+    </div>
+  );
+}
+
+function TelaSemConfeitaria({ sair }: { sair: () => void }) {
+  return (
+    <div className="grid min-h-screen place-items-center bg-background px-4">
+      <div className="max-w-sm text-center">
+        <UsersRound className="mx-auto mb-3 size-10 text-muted-foreground" />
+        <h1 className="font-display text-2xl font-semibold">Você não faz parte de uma confeitaria</h1>
+        <p className="mt-2 text-sm text-muted-foreground">Seu acesso à equipe foi encerrado. Para voltar, peça um novo convite para a dona da confeitaria.</p>
+        <button type="button" onClick={sair} className="mt-6 inline-flex h-11 items-center justify-center rounded-xl border px-5 text-sm font-semibold">Sair</button>
+      </div>
+    </div>
+  );
 }

@@ -1,6 +1,6 @@
 import * as appQueries from "@/lib/queries";
 import { createFileRoute, Link, useNavigate } from "@tanstack/react-router";
-import { useQueryClient, useSuspenseQuery } from "@tanstack/react-query";
+import { useQuery, useQueryClient, useSuspenseQuery } from "@tanstack/react-query";
 import { useState } from "react";
 import { toast } from "sonner";
 import { Plus, Trash2 } from "lucide-react";
@@ -67,6 +67,9 @@ function ProdutoForm() {
   const [salvando, setSalvando] = useState(false);
   const [duplicando, setDuplicando] = useState(duplicar);
   const { user } = Route.useRouteContext();
+  // Fotos ficam na pasta da confeitaria (a mesma para toda a equipe).
+  const { data: meuPapel } = useQuery(appQueries.meuPapelQ);
+  const pastaConfeitaria = meuPapel?.confeitaria_id ?? user.id;
   const [cat, setCat] = useState(() => ({
     no_catalogo: duplicar ? false : (p?.no_catalogo ?? false),
     descricao: p?.descricao ?? "",
@@ -139,7 +142,7 @@ function ProdutoForm() {
           if (m.arquivo) {
             enviadas += 1;
             setProgresso(`Enviando fotos e vídeos (${enviadas}/${novas})…`);
-            finais.push(await enviarMidiaProduto(user.id, produtoId, m.arquivo));
+            finais.push(await enviarMidiaProduto(pastaConfeitaria, produtoId, m.arquivo));
           } else if (m.url) {
             finais.push({ tipo: m.tipo, url: m.url });
           }
@@ -148,7 +151,7 @@ function ProdutoForm() {
         if (erroMidias) throw new Error(erroMidias.message);
         if (!duplicando) {
           const removidas = midiasSalvas.map((m) => m.url).filter((url) => !finais.some((f) => f.url === url));
-          void apagarArquivosMidia(user.id, removidas);
+          void apagarArquivosMidia(pastaConfeitaria, removidas);
         }
         void qc.invalidateQueries({ queryKey: ["produto-midias", produtoId] });
       } catch (e) {

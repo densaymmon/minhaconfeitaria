@@ -56,7 +56,7 @@ function Comecar() {
   const link = typeof window !== "undefined" && slugValido(slug) ? linkCatalogo(origemPublica(), slug) : "";
 
   async function atualizarLoja(dados: TablesUpdate<"confeitarias">) {
-    const { error } = await supabase.from("confeitarias").update(dados).eq("user_id", user.id);
+    const { error } = await supabase.from("confeitarias").update(dados).eq("user_id", confeitaria?.user_id ?? user.id);
     if (error) throw new Error(error.code === "23505" ? "Este endereço de catálogo já está em uso. Escolha outro." : error.message);
   }
 
@@ -83,7 +83,7 @@ function Comecar() {
       } else if (passo === 1) {
         if (pix.chave.trim() && !chave) throw new Error("Não reconhecemos a chave Pix. Confira a chave ou escolha o tipo.");
         if (pix.chave.trim()) {
-          const { error } = await supabase.from("configuracoes").upsert({ user_id: user.id, pix_chave: pix.chave.trim(), pix_tipo: pix.tipo || null });
+          const { error } = await supabase.from("configuracoes").upsert({ user_id: confeitaria?.user_id ?? user.id, pix_chave: pix.chave.trim(), pix_tipo: pix.tipo || null });
           if (error) throw new Error(error.message);
         }
       } else if (passo === 2) {

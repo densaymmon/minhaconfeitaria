@@ -1,4 +1,4 @@
-import type { MinhaAssinatura, Plano } from "./assinatura";
+import type { MinhaAssinatura, Papel, Plano } from "./assinatura";
 import type { PlataformaPublica } from "./termos";
 import { queryOptions } from "@tanstack/react-query";
 import { supabase } from "@/integrations/supabase/client";
@@ -111,6 +111,19 @@ export type Cupom = Tables<"cupons">;
 export const cuponsQ = queryOptions({
   queryKey: ["cupons"],
   queryFn: () => must<Cupom[]>(supabase.from("cupons").select("*").order("created_at", { ascending: false })),
+});
+
+export type MeuPapel = { papel: Papel; confeitaria_id: string | null; confeitaria: string | null };
+/** Papel na equipe; antes da migração 0043 (ou sem equipe) a conta é a dona. */
+export const meuPapelQ = queryOptions({
+  queryKey: ["meu-papel"],
+  queryFn: async (): Promise<MeuPapel> => {
+    const { data, error } = await supabase.rpc("meu_papel");
+    const r = (error ? null : data) as Partial<MeuPapel> | null;
+    const papel: Papel = r?.papel === "gerente" || r?.papel === "producao" ? r.papel : "dono";
+    return { papel, confeitaria_id: r?.confeitaria_id ?? null, confeitaria: r?.confeitaria ?? null };
+  },
+  staleTime: 5 * 60_000,
 });
 
 export const confeitariaQ = queryOptions({

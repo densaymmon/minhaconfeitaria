@@ -35,7 +35,6 @@ function CatalogoPage() {
   const temPlano = useRecurso("catalogo");
   const { data: confeitaria } = useSuspenseQuery(appQueries.confeitariaQ);
   const { data: produtos } = useSuspenseQuery(appQueries.produtosQ);
-  const { user } = Route.useRouteContext();
   const qc = useQueryClient();
   const [cat, setCat] = useState(() => ({
     ativo: confeitaria?.catalogo_ativo ?? false,
@@ -59,6 +58,8 @@ function CatalogoPage() {
   if (!confeitaria) return <><PageHeader title="Catálogo online" back="/mais" /><Card className="text-sm text-muted-foreground">O catálogo fica disponível depois da atualização do banco de dados.</Card></>;
   if (!temPlano) return <><PageHeader title="Catálogo online" back="/mais" /><RecursoBloqueado recurso="catalogo" /></>;
 
+  // Id da confeitaria (o mesmo para toda a equipe).
+  const donoId = confeitaria.user_id;
   const salvo = confeitaria.catalogo_ativo && confeitaria.slug ? montarLinkCatalogo(origemPublica(), confeitaria.slug) : "";
   const link = slugValido(cat.slug) ? montarLinkCatalogo(origemPublica(), cat.slug) : "";
   const slugReservado = SLUGS_RESERVADOS.includes(cat.slug);
@@ -94,7 +95,7 @@ function CatalogoPage() {
       endereco_retirada: cat.enderecoRetirada.trim().slice(0, 300) || null, limite_pedidos_dia: limite,
       cor_primaria: cat.cor || null, logo_url: cat.logo || null, dias_fechados: cat.dias, datas_bloqueadas: cat.datas,
       horarios_retirada: cat.horarios, taxas_bairro: bairros, aceita_encomenda: cat.encomenda,
-    }).eq("user_id", user.id);
+    }).eq("user_id", donoId);
     setSalvando(false);
     if (error) return void toast.error(error.code === "23505" ? "Este endereço de catálogo já está em uso. Escolha outro." : `Não foi possível salvar: ${error.message}`);
     await qc.invalidateQueries({ queryKey: ["confeitaria"] });
@@ -176,7 +177,7 @@ function CatalogoPage() {
                 e.target.value = "";
                 if (!arquivo) return;
                 setEnviandoLogo(true);
-                try { setCat((c) => ({ ...c, logo: "" })); const url = await enviarLogo(user.id, arquivo); setCat((c) => ({ ...c, logo: url })); toast.success("Logo pronto. Salve para publicar."); }
+                try { setCat((c) => ({ ...c, logo: "" })); const url = await enviarLogo(donoId, arquivo); setCat((c) => ({ ...c, logo: url })); toast.success("Logo pronto. Salve para publicar."); }
                 catch (erro) { toast.error(erro instanceof Error ? erro.message : "Não foi possível enviar o logo."); }
                 finally { setEnviandoLogo(false); }
               }} />
