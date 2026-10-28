@@ -1,4 +1,5 @@
 import * as appQueries from "@/lib/queries";
+import { origemPublica } from "@/lib/catalogo";
 import { createFileRoute, Link } from "@tanstack/react-router";
 import { useMemo, useState } from "react";
 import { toast } from "sonner";
@@ -80,7 +81,7 @@ function Producao() {
       return data ?? [];
     },
   });
-  const opcoesMensagem = { loja: confeitaria?.nome?.trim() || "nossa confeitaria", pix: config.pix_chave, pixTipo: config.pix_tipo, cidade: confeitaria?.cidade ?? null, enderecoRetirada: confeitaria?.endereco_retirada ?? null, origem: typeof window === "undefined" ? "" : window.location.origin };
+  const opcoesMensagem = { loja: confeitaria?.nome?.trim() || "nossa confeitaria", pix: config.pix_chave, pixTipo: config.pix_tipo, cidade: confeitaria?.cidade ?? null, enderecoRetirada: confeitaria?.endereco_retirada ?? null, origem: origemPublica() };
   const hoje = hojeISO();
   const agora = new Date();
   const [busca, setBusca] = useState("");

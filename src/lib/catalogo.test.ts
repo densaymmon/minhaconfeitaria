@@ -1,5 +1,7 @@
 import { describe, expect, it } from "vitest";
 import {
+  URL_SISTEMA,
+  origemPublica,
   alterarQuantidade,
   chaveCarrinho,
   descricaoComOpcoes,
@@ -241,5 +243,19 @@ describe("variações de produto no carrinho", () => {
     expect(r.itens).toBe(3);
     expect(r.subtotal).toBe(135);
     expect(r.linhas.find((l) => l.chave === g)?.descricao).toBe("Bolo (Tamanho: G, Sabor: Morango)");
+  });
+});
+
+describe("endereço público dos links", () => {
+  it("troca prévias do Lovable e o ambiente local pelo endereço publicado", () => {
+    expect(origemPublica("https://id-preview--c2b2cdb7-59d4-4ac1-afc0-f3b8cdffb2cc.lovable.app")).toBe(URL_SISTEMA);
+    expect(origemPublica("https://c2b2cdb7-59d4-4ac1-afc0-f3b8cdffb2cc.lovableproject.com")).toBe(URL_SISTEMA);
+    expect(origemPublica("https://preview--minhaconfeitaria.lovable.app")).toBe(URL_SISTEMA);
+    expect(origemPublica("http://localhost:8080")).toBe(URL_SISTEMA);
+    expect(origemPublica("lixo")).toBe(URL_SISTEMA);
+  });
+  it("mantém o endereço publicado e domínios próprios", () => {
+    expect(origemPublica("https://minhaconfeitaria.lovable.app")).toBe("https://minhaconfeitaria.lovable.app");
+    expect(origemPublica("https://app.docegestao.com.br/")).toBe("https://app.docegestao.com.br");
   });
 });

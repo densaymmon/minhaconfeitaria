@@ -8,7 +8,7 @@ import { pixCopiaECola, tipoChaveValido } from "@/lib/pix";
 import { Button } from "@/components/ui/button";
 import { brl, dataLonga } from "@/lib/format";
 import { cn } from "@/lib/utils";
-import { ETAPAS_PEDIDO, etapaAtual, linkWhatsApp, mensagemPedidoParaLoja, type PedidoAcompanhamento } from "@/lib/catalogo";
+import { ETAPAS_PEDIDO, etapaAtual, linkWhatsApp, origemPublica, mensagemPedidoParaLoja, type PedidoAcompanhamento } from "@/lib/catalogo";
 
 export const Route = createFileRoute("/pedido/$codigo")({
   ssr: false,
@@ -65,7 +65,7 @@ export function AcompanharPedido({ codigo }: { codigo: string }) {
   const etapa = etapaAtual(pedido.status);
   const loja = pedido.confeitaria;
   // Resumo do pedido + link desta página, para a confeitaria receber tudo na conversa.
-  const linkAcompanhamento = /^[a-z2-9]{10}$/i.test(codigo) ? `${window.location.origin}/p/${codigo.toLowerCase()}` : window.location.href;
+  const linkAcompanhamento = /^[a-z2-9]{10}$/i.test(codigo) ? `${origemPublica()}/p/${codigo.toLowerCase()}` : window.location.href;
   const whatsapp = linkWhatsApp(loja.whatsapp, mensagemPedidoParaLoja({
     cliente: pedido.cliente,
     numero: pedido.numero,

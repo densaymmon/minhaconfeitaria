@@ -8,7 +8,7 @@ import { supabase } from "@/integrations/supabase/client";
 import type { TablesUpdate } from "@/integrations/supabase/types";
 import { parseNum } from "@/lib/format";
 import { ROTULO_CHAVE, normalizarChavePix, tipoChaveValido, type TipoChavePix } from "@/lib/pix";
-import { SLUGS_RESERVADOS, linkCatalogo, slugValido, sugerirSlug } from "@/lib/catalogo";
+import { SLUGS_RESERVADOS, linkCatalogo, origemPublica, slugValido, sugerirSlug } from "@/lib/catalogo";
 import { Card, Field, NativeSelect } from "@/components/app/ui";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -53,7 +53,7 @@ function Comecar() {
   const [produto, setProduto] = useState({ nome: "", preco: "", categoria: "" });
   const chave = normalizarChavePix(pix.chave, tipoChaveValido(pix.tipo));
   const slug = cat.slug || sugerirSlug(loja.nome);
-  const link = typeof window !== "undefined" && slugValido(slug) ? linkCatalogo(window.location.origin, slug) : "";
+  const link = typeof window !== "undefined" && slugValido(slug) ? linkCatalogo(origemPublica(), slug) : "";
 
   async function atualizarLoja(dados: TablesUpdate<"confeitarias">) {
     const { error } = await supabase.from("confeitarias").update(dados).eq("user_id", user.id);

@@ -6,7 +6,7 @@ import { toast } from "sonner";
 import { BellRing, Copy, ExternalLink, Package, QrCode, Share2, Store } from "lucide-react";
 import { supabase } from "@/integrations/supabase/client";
 import { brl, parseNum } from "@/lib/format";
-import { SLUGS_RESERVADOS, linkCatalogo as montarLinkCatalogo, slugValido, sugerirSlug } from "@/lib/catalogo";
+import { SLUGS_RESERVADOS, linkCatalogo as montarLinkCatalogo, origemPublica, slugValido, sugerirSlug } from "@/lib/catalogo";
 import { Card, Field, PageHeader } from "@/components/app/ui";
 import { RecursoBloqueado, useRecurso } from "@/components/app/plano";
 import { Button } from "@/components/ui/button";
@@ -50,8 +50,8 @@ function CatalogoPage() {
   if (!confeitaria) return <><PageHeader title="Catálogo online" back="/mais" /><Card className="text-sm text-muted-foreground">O catálogo fica disponível depois da atualização do banco de dados.</Card></>;
   if (!temPlano) return <><PageHeader title="Catálogo online" back="/mais" /><RecursoBloqueado recurso="catalogo" /></>;
 
-  const salvo = confeitaria.catalogo_ativo && confeitaria.slug ? montarLinkCatalogo(window.location.origin, confeitaria.slug) : "";
-  const link = slugValido(cat.slug) ? montarLinkCatalogo(window.location.origin, cat.slug) : "";
+  const salvo = confeitaria.catalogo_ativo && confeitaria.slug ? montarLinkCatalogo(origemPublica(), confeitaria.slug) : "";
+  const link = slugValido(cat.slug) ? montarLinkCatalogo(origemPublica(), cat.slug) : "";
   const slugReservado = SLUGS_RESERVADOS.includes(cat.slug);
   const noCatalogo = produtos.filter((p) => p.no_catalogo && p.ativo && Number(p.preco_venda) > 0).length;
   const alterado =
