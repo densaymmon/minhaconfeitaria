@@ -36,6 +36,7 @@ function Reset() {
   const [estado, setEstado] = useState<"verificando" | "pronto" | "sem-link" | "salvo">("verificando");
   const [email, setEmail] = useState<string | null>(null);
   const [ehAdmin, setEhAdmin] = useState(false);
+  const [motivo, setMotivo] = useState<string | null>(null);
 
   useEffect(() => {
     let ativo = true;
@@ -44,6 +45,21 @@ function Reset() {
       if ((event === "PASSWORD_RECOVERY" || event === "SIGNED_IN") && session) marcarPronto(session.user.email);
     });
     void (async () => {
+      // Erro vindo do link (vencido, já usado): mostra o motivo em vez de esperar a sessão.
+      let link = "";
+      try { link = sessionStorage.getItem("docegestao:link-senha") ?? ""; sessionStorage.removeItem("docegestao:link-senha"); } catch { /* sem armazenamento */ }
+      const dados = new URLSearchParams((link || window.location.hash + window.location.search).replace(/^[#?]/, "").replace(/[#?]/g, "&"));
+      const codigoErro = dados.get("error_code") ?? dados.get("error");
+      if (codigoErro) {
+        const { data: s } = await supabase.auth.getSession();
+        if (!s.session) {
+          if (ativo) {
+            setMotivo(/expired/i.test(codigoErro + (dados.get("error_description") ?? "")) ? "O link venceu ou já foi usado." : "O link não é válido.");
+            setEstado("sem-link");
+          }
+          return;
+        }
+      }
       const params = new URLSearchParams(window.location.search);
       const tokenHash = params.get("token_hash");
       if (tokenHash && params.get("type") === "recovery") {
@@ -96,7 +112,7 @@ function Reset() {
         ) : estado === "sem-link" ? (
           <>
             <h1 className="text-xl font-semibold">Link expirado ou já usado</h1>
-            <p className="text-sm text-muted-foreground">Peça um novo link em “Esqueci a senha” e abra o e-mail mais recente. Cada link funciona uma vez só.</p>
+            <p className="text-sm text-muted-foreground">{motivo ? `${motivo} ` : ""}Peça um novo link em “Esqueci a senha” e abra o e-mail mais recente. Cada link funciona uma vez só e vale por pouco tempo.</p>
             <Button type="button" variant="outline" className="h-11 w-full" onClick={() => navigate({ to: "/auth" })}>Voltar para entrar</Button>
           </>
         ) : (
