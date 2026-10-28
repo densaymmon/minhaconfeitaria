@@ -1,6 +1,12 @@
 import { describe, expect, it } from "vitest";
 import {
   alterarQuantidade,
+  chaveCarrinho,
+  descricaoComOpcoes,
+  escolhaCompleta,
+  lerChaveCarrinho,
+  precoComOpcoes,
+  precoMinimo,
   capaDoProduto,
   linkCatalogo,
   linkPedido,
@@ -195,5 +201,45 @@ describe("aviso de pedido pronto e Pix copia e cola", () => {
   });
   it("a confirmação também leva o Pix copia e cola", () => {
     expect(mensagemConfirmacaoPedido(base)).toContain("Pix copia e cola (já com o valor):\n00020126CODIGO6304ABCD");
+  });
+});
+
+describe("variações de produto no carrinho", () => {
+  const boloOpcoes: ProdutoCatalogo = {
+    ...bolo,
+    preco: 30,
+    opcoes: [
+      { grupo: "Tamanho", itens: [{ nome: "P", preco: -5 }, { nome: "M", preco: 0 }, { nome: "G", preco: 20 }] },
+      { grupo: "Sabor", itens: [{ nome: "Chocolate", preco: 0 }, { nome: "Morango", preco: 5 }] },
+    ],
+  };
+  it("gera a mesma chave independente da ordem e lê de volta", () => {
+    const a = chaveCarrinho("bolo", { Tamanho: "G", Sabor: "Morango" });
+    expect(a).toBe(chaveCarrinho("bolo", { Sabor: "Morango", Tamanho: "G" }));
+    expect(lerChaveCarrinho(a)).toEqual({ produtoId: "bolo", escolha: { Sabor: "Morango", Tamanho: "G" } });
+    expect(chaveCarrinho("pao")).toBe("pao");
+  });
+  it("calcula preço, preço mínimo e descrição", () => {
+    expect(precoComOpcoes(boloOpcoes, { Tamanho: "G", Sabor: "Morango" })).toBe(55);
+    expect(precoMinimo(boloOpcoes)).toBe(25);
+    expect(descricaoComOpcoes(boloOpcoes, { Sabor: "Morango", Tamanho: "G" })).toBe("Bolo (Tamanho: G, Sabor: Morango)");
+  });
+  it("exige uma opção válida em cada grupo", () => {
+    expect(escolhaCompleta(boloOpcoes, { Tamanho: "G" })).toBe(false);
+    expect(escolhaCompleta(boloOpcoes, { Tamanho: "GG", Sabor: "Chocolate" })).toBe(false);
+    expect(escolhaCompleta(boloOpcoes, { Tamanho: "G", Sabor: "Chocolate", Extra: "x" })).toBe(false);
+    expect(escolhaCompleta(boloOpcoes, { Tamanho: "G", Sabor: "Chocolate" })).toBe(true);
+    expect(escolhaCompleta(bolo, {})).toBe(true);
+  });
+  it("monta linhas separadas por opção e descarta escolhas que deixaram de existir", () => {
+    const g = chaveCarrinho("bolo", { Tamanho: "G", Sabor: "Morango" });
+    const p = chaveCarrinho("bolo", { Tamanho: "P", Sabor: "Chocolate" });
+    const velho = chaveCarrinho("bolo", { Tamanho: "GG", Sabor: "Chocolate" });
+    const carrinho = limparCarrinho({ [g]: 2, [p]: 1, [velho]: 1 }, [boloOpcoes]);
+    expect(Object.keys(carrinho).sort()).toEqual([g, p].sort());
+    const r = resumoCarrinho(carrinho, [boloOpcoes], { entrega: false, taxaEntrega: 0, hoje: "2026-10-31" });
+    expect(r.itens).toBe(3);
+    expect(r.subtotal).toBe(135);
+    expect(r.linhas.find((l) => l.chave === g)?.descricao).toBe("Bolo (Tamanho: G, Sabor: Morango)");
   });
 });

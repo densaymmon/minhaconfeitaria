@@ -250,12 +250,14 @@ function PedidoForm() {
         }));
         setItens(modelo.pedido_itens.map((i) => {
           const produto = produtos.find((p) => p.id === i.produto_id && p.ativo);
+          // Itens com variação (ex.: "Bolo (Tamanho: G)") mantêm o preço e o custo do pedido original.
+          const precoAtual = produto && i.descricao === produto.nome;
           return {
             produto_id: produto?.id ?? null,
             descricao: i.descricao,
             quantidade: String(i.quantidade),
-            preco_unitario: String(produto ? produto.preco_venda : i.preco_unitario),
-            custo_unitario: produto ? +(custo.get(produto.id) ?? 0).toFixed(4) : 0,
+            preco_unitario: String(precoAtual && produto ? produto.preco_venda : i.preco_unitario),
+            custo_unitario: precoAtual && produto ? +(custo.get(produto.id) ?? 0).toFixed(4) : Number(i.custo_unitario) || 0,
             quantidade_produzida: 0,
           };
         }));

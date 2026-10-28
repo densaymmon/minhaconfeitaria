@@ -18,6 +18,7 @@
 - Never hardcode a bakery's name, slogan or Pix key in the code; read them from `confeitarias`/`configuracoes`.
 - Public catalog (`/c/$slug`, `/pedido/$codigo`): anonymous visitors never read tables. They only call `catalogo_publico`, `criar_pedido_catalogo`, `acompanhar_pedido_catalogo` and `informar_pagamento_catalogo` (SECURITY DEFINER). Prices, delivery fee and item cost snapshots are computed on the server; never trust values sent by the browser, never return cost, recipe, margin or other customers' data. `tests/db/catalogo-smoke.sql` must keep passing.
 - Short public links: catalog at `/$slug` (also `/c/$slug`) and order tracking at `/p/$codigo` (10-char `pedidos.codigo_curto`; `/pedido/<uuid>` keeps working). Any new top-level page path must be added to both `public._slug_reservado()` and `SLUGS_RESERVADOS` in `src/lib/catalogo.ts`.
+- Product variations live in `produtos.opcoes` (validated by `_opcoes_validas`); catalog orders send `opcoes` per item and `_aplicar_opcoes` computes price, cost and description on the server. Never expose option `custo` publicly.
 - Product photos/videos live in `produto_midias` (max 10, saved through `salvar_midias_produto`, first photo = `produtos.imagem_url` cover); files go to the `catalogo` bucket under `<user_id>/`.
 
 - Expose read-only MCP tools through the SDK TanStack plugin with OAuth caller tokens and a shared RLS client; agents must never bypass owner isolation.

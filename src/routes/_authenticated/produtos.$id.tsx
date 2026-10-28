@@ -6,6 +6,7 @@ import { toast } from "sonner";
 import { Plus, Trash2 } from "lucide-react";
 import { apagarArquivosMidia, enviarMidiaProduto } from "@/lib/foto-catalogo";
 import { GaleriaMidias, midiaSalva, type MidiaEditavel } from "@/components/app/galeria-midias";
+import { EditorOpcoes, opcoesParaEdicao, opcoesParaSalvar, type GrupoEditavel } from "@/components/app/editor-opcoes";
 import type { MidiaCatalogo } from "@/lib/catalogo";
 import { supabase } from "@/integrations/supabase/client";
 import { useCustos } from "@/lib/hooks";
@@ -71,6 +72,7 @@ function ProdutoForm() {
   const { data: midiasSalvas } = useSuspenseQuery(appQueries.midiasProdutoQ(id));
   const [midias, setMidias] = useState<MidiaEditavel[]>(() => (duplicar ? [] : midiasSalvas.map((m) => midiaSalva(m.tipo, m.url))));
   const [progresso, setProgresso] = useState<string | null>(null);
+  const [opcoes, setOpcoes] = useState<GrupoEditavel[]>(() => opcoesParaEdicao(p?.opcoes));
 
   if (!novo && !p) return <p className="py-16 text-center text-muted-foreground">Produto não encontrado. <Link to="/produtos" className="text-primary">Voltar</Link></p>;
 
@@ -95,6 +97,8 @@ function ProdutoForm() {
   async function salvar() {
     if (!f.nome.trim()) return void toast.error("Informe o nome do produto.");
     if (erroReceita) return void toast.error(erroReceita);
+    const opcoesValidadas = opcoesParaSalvar(opcoes);
+    if (!opcoesValidadas.ok) return void toast.error(opcoesValidadas.erro);
     setSalvando(true);
     try {
       const payload = {
@@ -119,6 +123,7 @@ function ProdutoForm() {
           no_catalogo: cat.no_catalogo,
           descricao: cat.descricao.trim().slice(0, 600) || null,
           antecedencia_dias: antecedencia,
+          opcoes: opcoesValidadas.valor,
         }).eq("id", produtoId);
         if (erroCatalogo) throw new Error(erroCatalogo.message);
 
@@ -280,6 +285,10 @@ function ProdutoForm() {
           <div className="space-y-1.5">
             <span className="text-sm font-medium">Fotos e vídeos</span>
             <GaleriaMidias midias={midias} onChange={setMidias} desabilitado={salvando} />
+          </div>
+          <div className="space-y-1.5">
+            <span className="text-sm font-medium">Variações (tamanho, sabor, recheio…)</span>
+            <EditorOpcoes grupos={opcoes} onChange={setOpcoes} precoBase={preco} />
           </div>
           <Field label="Descrição para o cliente">
             <Textarea rows={2} maxLength={600} value={cat.descricao} onChange={(e) => setCat((c) => ({ ...c, descricao: e.target.value }))} placeholder="Ex.: Massa fofinha de cenoura com cobertura de chocolate. Serve 10 pessoas." />
