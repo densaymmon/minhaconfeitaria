@@ -14,6 +14,8 @@ import { Route as AuthenticatedRouteRouteImport } from './routes/_authenticated/
 import { Route as AuthRouteImport } from './routes/auth'
 import { Route as McpRouteImport } from './routes/mcp'
 import { Route as ResetPasswordRouteImport } from './routes/reset-password'
+import { Route as CSlugRouteImport } from './routes/c.$slug'
+import { Route as PedidoCodigoRouteImport } from './routes/pedido.$codigo'
 import { Route as Char91DotwellKnownChar93OauthProtectedResourceRouteImport } from './routes/[.well-known]/oauth-protected-resource'
 import { Route as AuthenticatedComprasRouteImport } from './routes/_authenticated/compras'
 import { Route as AuthenticatedConfiguracoesRouteImport } from './routes/_authenticated/configuracoes'
@@ -55,6 +57,16 @@ const McpRoute = McpRouteImport.update({
 const ResetPasswordRoute = ResetPasswordRouteImport.update({
   id: '/reset-password',
   path: '/reset-password',
+  getParentRoute: () => rootRouteImport,
+} as any)
+const CSlugRoute = CSlugRouteImport.update({
+  id: '/c/$slug',
+  path: '/c/$slug',
+  getParentRoute: () => rootRouteImport,
+} as any)
+const PedidoCodigoRoute = PedidoCodigoRouteImport.update({
+  id: '/pedido/$codigo',
+  path: '/pedido/$codigo',
   getParentRoute: () => rootRouteImport,
 } as any)
 const Char91DotwellKnownChar93OauthProtectedResourceRoute =
@@ -160,6 +172,8 @@ export interface FileRoutesByFullPath {
   '/auth': typeof AuthRoute
   '/mcp': typeof McpRoute
   '/reset-password': typeof ResetPasswordRoute
+  '/c/$slug': typeof CSlugRoute
+  '/pedido/$codigo': typeof PedidoCodigoRoute
   '/.well-known/oauth-protected-resource': typeof Char91DotwellKnownChar93OauthProtectedResourceRoute
   '/compras': typeof AuthenticatedComprasRoute
   '/configuracoes': typeof AuthenticatedConfiguracoesRoute
@@ -184,6 +198,8 @@ export interface FileRoutesByTo {
   '/auth': typeof AuthRoute
   '/mcp': typeof McpRoute
   '/reset-password': typeof ResetPasswordRoute
+  '/c/$slug': typeof CSlugRoute
+  '/pedido/$codigo': typeof PedidoCodigoRoute
   '/.well-known/oauth-protected-resource': typeof Char91DotwellKnownChar93OauthProtectedResourceRoute
   '/compras': typeof AuthenticatedComprasRoute
   '/configuracoes': typeof AuthenticatedConfiguracoesRoute
@@ -210,6 +226,8 @@ export interface FileRoutesById {
   '/auth': typeof AuthRoute
   '/mcp': typeof McpRoute
   '/reset-password': typeof ResetPasswordRoute
+  '/c/$slug': typeof CSlugRoute
+  '/pedido/$codigo': typeof PedidoCodigoRoute
   '/.well-known/oauth-protected-resource': typeof Char91DotwellKnownChar93OauthProtectedResourceRoute
   '/_authenticated/compras': typeof AuthenticatedComprasRoute
   '/_authenticated/configuracoes': typeof AuthenticatedConfiguracoesRoute
@@ -236,6 +254,8 @@ export interface FileRouteTypes {
     | '/auth'
     | '/mcp'
     | '/reset-password'
+    | '/c/$slug'
+    | '/pedido/$codigo'
     | '/.well-known/oauth-protected-resource'
     | '/compras'
     | '/configuracoes'
@@ -260,6 +280,8 @@ export interface FileRouteTypes {
     | '/auth'
     | '/mcp'
     | '/reset-password'
+    | '/c/$slug'
+    | '/pedido/$codigo'
     | '/.well-known/oauth-protected-resource'
     | '/compras'
     | '/configuracoes'
@@ -285,6 +307,8 @@ export interface FileRouteTypes {
     | '/auth'
     | '/mcp'
     | '/reset-password'
+    | '/c/$slug'
+    | '/pedido/$codigo'
     | '/.well-known/oauth-protected-resource'
     | '/_authenticated/compras'
     | '/_authenticated/configuracoes'
@@ -311,6 +335,8 @@ export interface RootRouteChildren {
   AuthRoute: typeof AuthRoute
   McpRoute: typeof McpRoute
   ResetPasswordRoute: typeof ResetPasswordRoute
+  CSlugRoute: typeof CSlugRoute
+  PedidoCodigoRoute: typeof PedidoCodigoRoute
   Char91DotwellKnownChar93OauthProtectedResourceRoute: typeof Char91DotwellKnownChar93OauthProtectedResourceRoute
   DotlovableOauthConsentRoute: typeof DotlovableOauthConsentRoute
 }
@@ -350,6 +376,20 @@ declare module '@tanstack/react-router' {
       path: '/reset-password'
       fullPath: '/reset-password'
       preLoaderRoute: typeof ResetPasswordRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/c/$slug': {
+      id: '/c/$slug'
+      path: '/c/$slug'
+      fullPath: '/c/$slug'
+      preLoaderRoute: typeof CSlugRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/pedido/$codigo': {
+      id: '/pedido/$codigo'
+      path: '/pedido/$codigo'
+      fullPath: '/pedido/$codigo'
+      preLoaderRoute: typeof PedidoCodigoRouteImport
       parentRoute: typeof rootRouteImport
     }
     '/.well-known/oauth-protected-resource': {
@@ -528,6 +568,8 @@ const rootRouteChildren: RootRouteChildren = {
   AuthRoute: AuthRoute,
   McpRoute: McpRoute,
   ResetPasswordRoute: ResetPasswordRoute,
+  CSlugRoute: CSlugRoute,
+  PedidoCodigoRoute: PedidoCodigoRoute,
   Char91DotwellKnownChar93OauthProtectedResourceRoute:
     Char91DotwellKnownChar93OauthProtectedResourceRoute,
   DotlovableOauthConsentRoute: DotlovableOauthConsentRoute,

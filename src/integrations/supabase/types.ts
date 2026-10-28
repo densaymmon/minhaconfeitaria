@@ -139,34 +139,58 @@ export type Database = {
       }
       confeitarias: {
         Row: {
+          aceita_entrega: boolean
+          aceita_retirada: boolean
+          catalogo_ativo: boolean
+          catalogo_aviso: string | null
           created_at: string
+          endereco_retirada: string | null
           id: string
+          limite_pedidos_dia: number | null
           logo_url: string | null
           nome: string
+          pedido_minimo: number
           slogan: string | null
           slug: string | null
+          taxa_entrega: number
           updated_at: string
           user_id: string
           whatsapp: string | null
         }
         Insert: {
+          aceita_entrega?: boolean
+          aceita_retirada?: boolean
+          catalogo_ativo?: boolean
+          catalogo_aviso?: string | null
           created_at?: string
+          endereco_retirada?: string | null
           id?: string
+          limite_pedidos_dia?: number | null
           logo_url?: string | null
           nome?: string
+          pedido_minimo?: number
           slogan?: string | null
           slug?: string | null
+          taxa_entrega?: number
           updated_at?: string
           user_id?: string
           whatsapp?: string | null
         }
         Update: {
+          aceita_entrega?: boolean
+          aceita_retirada?: boolean
+          catalogo_ativo?: boolean
+          catalogo_aviso?: string | null
           created_at?: string
+          endereco_retirada?: string | null
           id?: string
+          limite_pedidos_dia?: number | null
           logo_url?: string | null
           nome?: string
+          pedido_minimo?: number
           slogan?: string | null
           slug?: string | null
+          taxa_entrega?: number
           updated_at?: string
           user_id?: string
           whatsapp?: string | null
@@ -791,52 +815,73 @@ export type Database = {
       }
       pedidos: {
         Row: {
+          catalogo_token: string | null
           cliente_id: string | null
+          codigo_publico: string | null
           created_at: string
           data_entrega: string
           desconto: number
+          endereco_entrega: string | null
           forma_pagamento: string
           hora_entrega: string | null
           id: string
           numero: number
           observacoes: string | null
+          origem: string
+          pagamento_informado_em: string | null
           saldo_quitado: boolean
           status: string
           taxa_entrega: number
+          tipo_entrega: string | null
           user_id: string
           valor_entrada: number
+          visualizado_em: string | null
         }
         Insert: {
+          catalogo_token?: string | null
           cliente_id?: string | null
+          codigo_publico?: string | null
           created_at?: string
           data_entrega: string
           desconto?: number
+          endereco_entrega?: string | null
           forma_pagamento?: string
           hora_entrega?: string | null
           id?: string
           numero?: never
           observacoes?: string | null
+          origem?: string
+          pagamento_informado_em?: string | null
           saldo_quitado?: boolean
           status?: string
           taxa_entrega?: number
+          tipo_entrega?: string | null
           user_id?: string
           valor_entrada?: number
+          visualizado_em?: string | null
         }
         Update: {
+          catalogo_token?: string | null
           cliente_id?: string | null
+          codigo_publico?: string | null
           created_at?: string
           data_entrega?: string
           desconto?: number
+          endereco_entrega?: string | null
           forma_pagamento?: string
           hora_entrega?: string | null
           id?: string
           numero?: never
           observacoes?: string | null
+          origem?: string
+          pagamento_informado_em?: string | null
           saldo_quitado?: boolean
           status?: string
           taxa_entrega?: number
+          tipo_entrega?: string | null
           user_id?: string
           valor_entrada?: number
+          visualizado_em?: string | null
         }
         Relationships: [
           {
@@ -1002,6 +1047,7 @@ export type Database = {
       }
       produtos: {
         Row: {
+          antecedencia_dias: number
           ativo: boolean
           categoria: string
           created_at: string
@@ -1009,15 +1055,19 @@ export type Database = {
           custo_energia: number
           custo_gas: number
           custo_mao_obra: number
+          descricao: string | null
           id: string
+          imagem_url: string | null
           margem_desejada: number
           modo_preparo: string | null
+          no_catalogo: boolean
           nome: string
           preco_venda: number
           rendimento: number
           user_id: string
         }
         Insert: {
+          antecedencia_dias?: number
           ativo?: boolean
           categoria?: string
           created_at?: string
@@ -1025,15 +1075,19 @@ export type Database = {
           custo_energia?: number
           custo_gas?: number
           custo_mao_obra?: number
+          descricao?: string | null
           id?: string
+          imagem_url?: string | null
           margem_desejada?: number
           modo_preparo?: string | null
+          no_catalogo?: boolean
           nome: string
           preco_venda?: number
           rendimento?: number
           user_id?: string
         }
         Update: {
+          antecedencia_dias?: number
           ativo?: boolean
           categoria?: string
           created_at?: string
@@ -1041,9 +1095,12 @@ export type Database = {
           custo_energia?: number
           custo_gas?: number
           custo_mao_obra?: number
+          descricao?: string | null
           id?: string
+          imagem_url?: string | null
           margem_desejada?: number
           modo_preparo?: string | null
+          no_catalogo?: boolean
           nome?: string
           preco_venda?: number
           rendimento?: number
@@ -1101,6 +1158,28 @@ export type Database = {
       [_ in never]: never
     }
     Functions: {
+      acompanhar_pedido_catalogo: {
+        Args: { p_codigo: string }
+        Returns: Json
+      }
+      catalogo_publico: {
+        Args: { p_slug: string }
+        Returns: Json
+      }
+      criar_pedido_catalogo: {
+        Args: {
+          p_cliente: Json
+          p_entrega: Json
+          p_itens: Json
+          p_slug: string
+          p_token: string
+        }
+        Returns: Json
+      }
+      informar_pagamento_catalogo: {
+        Args: { p_codigo: string }
+        Returns: boolean
+      }
       _conta_pagar_operacao_existente: {
         Args: {
           p_hash: string

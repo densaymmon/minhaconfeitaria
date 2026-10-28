@@ -430,6 +430,11 @@ function Pedidos() {
                   <div className="flex items-center justify-between gap-2">
                     <div className="min-w-0 font-semibold">#{p.numero} · {p.clientes?.nome ? <button type="button" className="rounded-sm text-left underline-offset-2 hover:underline focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring" onClick={(e) => { e.stopPropagation(); const cliente = clientes.find((c) => c.id === p.cliente_id); if (cliente) { setClienteEmEdicao(cliente); setDialogClienteAberto(true); } else { toast.error("Não foi possível localizar o cadastro deste cliente."); } }}>{p.clientes.nome}</button> : "Sem cliente"}</div>
                     <div className="flex shrink-0 items-center gap-1.5">
+                      {p.origem === "catalogo" && (
+                        <span className={cn("inline-flex items-center gap-1 rounded-full px-2 py-0.5 text-xs font-bold", p.visualizado_em ? "bg-info/15 text-info" : "bg-primary text-primary-foreground")}>
+                          {p.visualizado_em ? "Catálogo" : "Novo · Catálogo"}
+                        </span>
+                      )}
                       {infoRecorrencia && <span className="inline-flex items-center gap-1 rounded-full border border-primary/40 bg-primary/10 px-2 py-1 text-xs font-bold text-primary"><Repeat className="size-3" /> Recorrente</span>}
                       <PagamentoBadge status={p.status} venda={p.t.venda} recebido={p.t.recebido} saldo={p.t.saldo} />
                       <StatusBadge status={p.status} />
@@ -456,6 +461,9 @@ function Pedidos() {
                     <span className="shrink-0 font-semibold tabular-nums">{brl(p.t.venda)}</span>
                   </div>
                   {p.t.saldo > 0 && <div className="mt-0.5 text-right text-xs text-warning-foreground">Falta receber {brl(p.t.saldo)}</div>}
+                  {p.pagamento_informado_em && p.t.saldo > 0 && p.status !== "cancelado" && (
+                    <div className="mt-1 rounded-lg bg-warning/15 px-2 py-1 text-xs font-medium text-warning-foreground">Cliente avisou que pagou por Pix. Confira e confirme o pagamento.</div>
+                  )}
                   <div className="mt-3 flex flex-wrap gap-2 border-t pt-3">
                     {podeEmitirRecibo && (
                       <Button type="button" size="sm" variant="outline" onClick={async (e) => {

@@ -195,6 +195,13 @@ function PedidoForm() {
   // Bloqueia cliques repetidos mesmo antes de o React atualizar o estado visual.
   const saveLock = useRef(false);
 
+  // Abrir um pedido do catálogo marca como visto e apaga o alerta de pedido novo.
+  useEffect(() => {
+    if (!existente || existente.origem !== "catalogo" || existente.visualizado_em) return;
+    void supabase.from("pedidos").update({ visualizado_em: new Date().toISOString() }).eq("id", existente.id)
+      .then(({ error }) => { if (!error) void qc.invalidateQueries({ queryKey: ["pedidos-catalogo-novos"] }); });
+  }, [existente, qc]);
+
   // A rota pode ser reutilizada quando o parâmetro $id muda. Recarrega o formulário
   // somente quando muda o pedido selecionado, sem apagar edições durante refetches.
   useEffect(() => {
@@ -559,6 +566,15 @@ function PedidoForm() {
         ) : undefined}
       />
       {novo && <OrderMessage onApply={aplicarRascunho} />}
+      {existente?.origem === "catalogo" && (
+        <div className="mb-4 space-y-1 rounded-xl border border-info/40 bg-info/10 p-3 text-sm">
+          <p className="font-semibold">Pedido feito pelo catálogo online</p>
+          <p>{existente.tipo_entrega === "entrega" ? `Entrega em: ${existente.endereco_entrega ?? "endereço não informado"}` : "Retirada na confeitaria"}</p>
+          {existente.pagamento_informado_em && saldoPendente > 0.009 && (
+            <p className="font-medium text-warning-foreground">O cliente avisou que pagou por Pix em {new Date(existente.pagamento_informado_em).toLocaleString("pt-BR", { dateStyle: "short", timeStyle: "short" })}. Confira no banco e toque em “Confirmar pagamento”.</p>
+          )}
+        </div>
+      )}
       <Dialog open={recorrenciaDialogOpen} onOpenChange={(open) => { if (!salvandoRecorrencia) setRecorrenciaDialogOpen(open); }}>
         <DialogContent className="w-[calc(100%-1.5rem)] max-w-lg max-h-[90dvh] overflow-y-auto p-4 sm:p-6">
           <DialogHeader>

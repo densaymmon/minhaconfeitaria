@@ -3,7 +3,8 @@ import { createFileRoute, Link, useNavigate } from "@tanstack/react-router";
 import { useQueryClient } from "@tanstack/react-query";
 import { useState } from "react";
 import { toast } from "sonner";
-import { Plus, Trash2 } from "lucide-react";
+import { ImagePlus, Plus, Trash2 } from "lucide-react";
+import { enviarFotoProduto } from "@/lib/foto-catalogo";
 import { supabase } from "@/integrations/supabase/client";
 import { useCustos } from "@/lib/hooks";
 import { alertaMargem, custoReceita, custoItemReceita, margemReal, precoSugerido } from "@/lib/calc";
@@ -58,6 +59,15 @@ function ProdutoForm() {
   const [itens, setItens] = useState(() => p?.receita_itens.map((i) => ({ insumo_id: i.insumo_id, quantidade: String(i.quantidade_utilizada ?? i.quantidade), unidade_receita: i.unidade_receita ?? mapIns.get(i.insumo_id)?.unidade ?? "un" })) ?? []);
   const [salvando, setSalvando] = useState(false);
   const [duplicando, setDuplicando] = useState(duplicar);
+  const { user } = Route.useRouteContext();
+  const [cat, setCat] = useState(() => ({
+    no_catalogo: duplicar ? false : (p?.no_catalogo ?? false),
+    descricao: p?.descricao ?? "",
+    antecedencia_dias: String(p?.antecedencia_dias ?? 1),
+    imagem_url: p?.imagem_url ?? null as string | null,
+  }));
+  const [foto, setFoto] = useState<File | null>(null);
+  const [previa, setPrevia] = useState<string | null>(null);
 
   if (!novo && !p) return <p className="py-16 text-center text-muted-foreground">Produto não encontrado. <Link to="/produtos" className="text-primary">Voltar</Link></p>;
 
@@ -93,11 +103,26 @@ function ProdutoForm() {
         modo_preparo: f.modo_preparo.trim() || null,
         ativo: f.ativo,
       };
-      const { error } = await supabase.rpc("salvar_produto", {
+      const { data: produtoId, error } = await supabase.rpc("salvar_produto", {
         payload, itens: itensNum,
         ...(p && !duplicando ? { registro_id: p.id } : {}),
       });
       if (error) throw error;
+      // Campos do catálogo ficam fora da RPC de receita; uma falha aqui não desfaz o produto salvo.
+      try {
+        const antecedencia = Math.round(parseNum(cat.antecedencia_dias));
+        if (!Number.isFinite(antecedencia) || antecedencia < 0 || antecedencia > 60) throw new Error("A antecedência deve ser de 0 a 60 dias.");
+        const imagem_url = foto && produtoId ? await enviarFotoProduto(user.id, produtoId, foto) : cat.imagem_url;
+        const { error: erroCatalogo } = await supabase.from("produtos").update({
+          no_catalogo: cat.no_catalogo,
+          descricao: cat.descricao.trim().slice(0, 600) || null,
+          antecedencia_dias: antecedencia,
+          imagem_url,
+        }).eq("id", produtoId);
+        if (erroCatalogo) throw new Error(erroCatalogo.message);
+      } catch (e) {
+        toast.warning(`Produto salvo, mas os dados do catálogo não: ${(e as Error).message}`);
+      }
       await qc.invalidateQueries({ queryKey: ["produtos"] });
       toast.success(duplicando ? "Cópia criada com sucesso!" : "Produto salvo!");
       navigate({ to: "/produtos" });
@@ -216,6 +241,44 @@ function ProdutoForm() {
           <Row label="Lucro bruto por unidade" value={brl(preco - unit)} tone={preco - unit >= 0 ? "success" : "danger"} strong />
           <Row label="Margem real sobre o custo" value={pct(margemReal(unit, preco))} />
           <Row label="Lucro da receita inteira" value={brl((preco - unit) * prodNum.rendimento)} />
+        </Card>
+
+        <Card className="space-y-3">
+          <div className="flex items-center justify-between gap-3">
+            <div>
+              <h2 className="text-lg font-semibold">Catálogo online</h2>
+              <p className="text-xs text-muted-foreground">O que o cliente vê na página de pedidos.</p>
+            </div>
+            <Switch checked={cat.no_catalogo} onCheckedChange={(v) => setCat((c) => ({ ...c, no_catalogo: v }))} aria-label="Mostrar no catálogo" />
+          </div>
+          {cat.no_catalogo && !f.ativo && <p className="text-xs text-warning-foreground">Produtos inativos não aparecem no catálogo.</p>}
+          {cat.no_catalogo && preco <= 0 && <p className="text-xs text-warning-foreground">Informe o preço de venda para o produto aparecer no catálogo.</p>}
+          <div className="flex items-start gap-3">
+            <div className="size-24 shrink-0 overflow-hidden rounded-xl bg-muted">
+              {previa ?? cat.imagem_url
+                ? <img src={previa ?? cat.imagem_url ?? undefined} alt="Foto do produto" className="size-full object-cover" />
+                : <div className="grid size-full place-items-center text-muted-foreground"><ImagePlus className="size-7 opacity-60" /></div>}
+            </div>
+            <div className="flex flex-col gap-2">
+              <label className="inline-flex h-10 cursor-pointer items-center justify-center gap-2 rounded-md border bg-card px-3 text-sm font-medium hover:bg-muted">
+                <ImagePlus className="size-4" /> {previa || cat.imagem_url ? "Trocar foto" : "Escolher foto"}
+                <input type="file" accept="image/*" className="sr-only" onChange={(e) => {
+                  const arquivo = e.target.files?.[0] ?? null;
+                  setFoto(arquivo);
+                  setPrevia(arquivo ? URL.createObjectURL(arquivo) : null);
+                }} />
+              </label>
+              {(previa || cat.imagem_url) && (
+                <Button type="button" variant="ghost" size="sm" onClick={() => { setFoto(null); setPrevia(null); setCat((c) => ({ ...c, imagem_url: null })); }}>Remover foto</Button>
+              )}
+            </div>
+          </div>
+          <Field label="Descrição para o cliente">
+            <Textarea rows={2} maxLength={600} value={cat.descricao} onChange={(e) => setCat((c) => ({ ...c, descricao: e.target.value }))} placeholder="Ex.: Massa fofinha de cenoura com cobertura de chocolate. Serve 10 pessoas." />
+          </Field>
+          <Field label="Antecedência mínima (dias)" hint="0 = pode ser pedido para o mesmo dia.">
+            <Input inputMode="numeric" value={cat.antecedencia_dias} onChange={(e) => setCat((c) => ({ ...c, antecedencia_dias: e.target.value }))} className="h-11" />
+          </Field>
         </Card>
 
         <Card>
