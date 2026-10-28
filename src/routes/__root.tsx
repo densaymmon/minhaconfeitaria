@@ -14,6 +14,10 @@ import appCss from "../styles.css?url";
 import { reportLovableError } from "../lib/lovable-error-reporting";
 import { supabase } from "@/integrations/supabase/client";
 import { URL_PAINEL_ADMIN } from "@/lib/assinatura";
+import { ligarMonitorDeErros, registrarErro } from "@/lib/monitor-erros";
+import type { SupabaseClient } from "@supabase/supabase-js";
+
+let sessaoAtiva = false;
 import { Toaster } from "@/components/ui/sonner";
 
 function NotFoundComponent() {
@@ -41,6 +45,7 @@ function ErrorComponent({ error, reset }: ErrorComponentProps) {
   const router = useRouter();
   useEffect(() => {
     reportLovableError(error, { boundary: "tanstack_root_error_component" });
+    registrarErro(supabase as unknown as SupabaseClient, sessaoAtiva ? "app" : "catalogo", error);
   }, [error]);
 
   return (
@@ -126,7 +131,9 @@ function RootComponent() {
     // O Supabase também avisa "SIGNED_IN" ao voltar para a aba; só recarrega tudo
     // quando a pessoa logada realmente muda (entrar, sair ou trocar de conta).
     let usuarioAtual: string | null | undefined;
-    void supabase.auth.getSession().then(({ data }) => { usuarioAtual ??= data.session?.user.id ?? null; });
+    void supabase.auth.getSession().then(({ data }) => { usuarioAtual ??= data.session?.user.id ?? null; sessaoAtiva = Boolean(data.session); });
+    // Erros de tela vão para o monitoramento da administração (app logado ou catálogo).
+    const desligarMonitor = ligarMonitorDeErros(supabase as unknown as SupabaseClient, () => (sessaoAtiva ? "app" : "catalogo"));
     const { data } = supabase.auth.onAuthStateChange((event, session) => {
       // Link de recuperação que caiu em outra página (ex.: endereço principal): leva para criar a nova senha.
       if (event === "PASSWORD_RECOVERY" && window.location.pathname !== "/reset-password") {
@@ -135,13 +142,14 @@ function RootComponent() {
       }
       if (event !== "SIGNED_IN" && event !== "SIGNED_OUT" && event !== "USER_UPDATED") return;
       const novo = session?.user.id ?? null;
+      sessaoAtiva = Boolean(session);
       if (event === "SIGNED_IN" && novo === usuarioAtual) return;
       usuarioAtual = novo;
       router.invalidate();
       if (event === "SIGNED_OUT") queryClient.clear();
       else queryClient.invalidateQueries();
     });
-    return () => data.subscription.unsubscribe();
+    return () => { data.subscription.unsubscribe(); desligarMonitor(); };
   }, [router, queryClient]);
 
   return (

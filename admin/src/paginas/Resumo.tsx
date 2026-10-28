@@ -1,9 +1,9 @@
 import { useQuery } from "@tanstack/react-query";
-import { AlertTriangle, CalendarClock, Clock3, UserPlus } from "lucide-react";
-import { situacaoExibida } from "@/lib/plataforma";
+import { Activity, AlertTriangle, CalendarClock, Clock3, TrendingDown, UserPlus } from "lucide-react";
+import { riscoDeCancelamento, situacaoExibida } from "@/lib/plataforma";
 import { diasEntre } from "@/lib/assinatura";
 import { cn } from "@/lib/utils";
-import { empresasQ, resumoQ } from "../dados";
+import { empresasQ, metricasQ, resumoQ } from "../dados";
 import { Cartao, Etiqueta, Titulo, brl, data, hoje } from "../ui";
 
 type Ir = (p: "empresas" | "pagamentos") => void;
@@ -11,6 +11,7 @@ type Ir = (p: "empresas" | "pagamentos") => void;
 export function PaginaResumo({ ir }: { ir: Ir }) {
   const { data: r, isLoading, error } = useQuery(resumoQ);
   const { data: empresas = [] } = useQuery(empresasQ);
+  const { data: metricas } = useQuery(metricasQ);
   const h = hoje();
   if (isLoading) return <p className="py-10 text-center text-sm text-muted-foreground" role="status">Carregando…</p>;
   if (error || !r) return <p role="alert" className="py-8 text-destructive">{error?.message ?? "Não foi possível carregar."}</p>;
@@ -25,6 +26,13 @@ export function PaginaResumo({ ir }: { ir: Ir }) {
       return venc && diasEntre(h, venc) <= 7 ? [{ e, venc }] : [];
     })
     .sort((a, b) => a.venc.localeCompare(b.venc));
+
+  const usoPorEmpresa = new Map((metricas?.uso ?? []).map((u) => [u.user_id, u]));
+  const emRisco = empresas
+    .flatMap((e) => { const motivo = riscoDeCancelamento(e, usoPorEmpresa.get(e.user_id), h); return motivo ? [{ e, motivo }] : []; })
+    .slice(0, 12);
+  const maiorMes = Math.max(1, ...(metricas?.cadastros_por_mes ?? []).map((m) => m.novos));
+  const MESES = ["jan", "fev", "mar", "abr", "mai", "jun", "jul", "ago", "set", "out", "nov", "dez"];
 
   const numeros: { rotulo: string; valor: string | number; destaque?: "perigo" | "alerta" | "info" }[] = [
     { rotulo: "Empresas ativas (pagantes)", valor: r.ativas },
@@ -61,6 +69,46 @@ export function PaginaResumo({ ir }: { ir: Ir }) {
           </button>
         ))}
       </div>
+
+      {metricas && (
+        <div className="mt-6 grid gap-4 lg:grid-cols-2">
+          <Cartao>
+            <h2 className="mb-3 flex items-center gap-2 font-semibold"><Activity className="size-4" /> Uso da plataforma (30 dias)</h2>
+            <div className="grid grid-cols-2 gap-3 text-sm">
+              <div><span className="block text-xs text-muted-foreground">Pedidos registrados</span><span className="text-xl font-bold tabular-nums">{metricas.pedidos_30_dias}</span></div>
+              <div><span className="block text-xs text-muted-foreground">Vendido pelas confeitarias</span><span className="text-xl font-bold tabular-nums">{brl(metricas.faturamento_30_dias)}</span></div>
+              <div><span className="block text-xs text-muted-foreground">Pedidos pelo catálogo</span><span className="text-xl font-bold tabular-nums">{metricas.pedidos_catalogo_30_dias}</span></div>
+              <div><span className="block text-xs text-muted-foreground">Ativas nos últimos 7 dias</span><span className="text-xl font-bold tabular-nums">{metricas.ativas_7_dias}</span></div>
+              <div><span className="block text-xs text-muted-foreground">Catálogos no ar</span><span className="text-xl font-bold tabular-nums">{metricas.catalogos_no_ar}</span></div>
+              <div><span className="block text-xs text-muted-foreground">Pessoas em equipes</span><span className="text-xl font-bold tabular-nums">{metricas.membros_equipe}</span></div>
+            </div>
+            <h3 className="mb-2 mt-4 text-xs font-semibold text-muted-foreground">Novos cadastros por mês</h3>
+            <div className="flex h-24 items-end gap-2">
+              {metricas.cadastros_por_mes.map((m) => (
+                <div key={m.mes} className="flex flex-1 flex-col items-center gap-1">
+                  <span className="text-xs tabular-nums">{m.novos}</span>
+                  <div className="w-full rounded-t bg-primary" style={{ height: `${Math.max(4, (m.novos / maiorMes) * 64)}px` }} />
+                  <span className="text-[11px] text-muted-foreground">{MESES[Number(m.mes.slice(5, 7)) - 1]}</span>
+                </div>
+              ))}
+            </div>
+          </Cartao>
+          <Cartao>
+            <h2 className="mb-3 flex items-center gap-2 font-semibold"><TrendingDown className="size-4" /> Risco de cancelamento</h2>
+            {emRisco.length === 0 ? <p className="text-sm text-muted-foreground">Ninguém em risco agora. 🎉</p> : (
+              <ul className="divide-y text-sm">
+                {emRisco.map(({ e, motivo }) => (
+                  <li key={e.user_id} className="flex items-center justify-between gap-2 py-2">
+                    <span className="min-w-0 truncate">{e.nome}</span>
+                    <span className="shrink-0 text-xs text-warning-foreground">{motivo}</span>
+                  </li>
+                ))}
+              </ul>
+            )}
+            <p className="mt-3 text-xs text-muted-foreground">Uma mensagem ou ajuda nesses casos costuma evitar o cancelamento.</p>
+          </Cartao>
+        </div>
+      )}
 
       <div className="mt-6 grid gap-4 lg:grid-cols-2">
         <Cartao>

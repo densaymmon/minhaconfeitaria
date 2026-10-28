@@ -1,5 +1,5 @@
 import { queryOptions } from "@tanstack/react-query";
-import { lerEmpresas, lerPagamentos, lerResumo } from "@/lib/plataforma";
+import { lerEmpresas, lerPagamentos, lerResumo, type UsoEmpresa } from "@/lib/plataforma";
 import type { Plano } from "@/lib/assinatura";
 import { supabase } from "./supabase";
 
@@ -76,5 +76,47 @@ export const configQ = queryOptions({
       dias_tolerancia: Number(d["dias_tolerancia"] ?? 7),
       plano_teste: t(d["plano_teste"]) ?? "vitrine",
     };
+  },
+});
+
+export type Metricas = {
+  pedidos_30_dias: number;
+  faturamento_30_dias: number;
+  pedidos_catalogo_30_dias: number;
+  ativas_7_dias: number;
+  catalogos_no_ar: number;
+  membros_equipe: number;
+  cadastros_por_mes: { mes: string; novos: number }[];
+  uso: UsoEmpresa[];
+};
+
+export const metricasQ = queryOptions({
+  queryKey: ["admin", "metricas"],
+  queryFn: async (): Promise<Metricas> => {
+    const { data, error } = await supabase.rpc("admin_metricas");
+    if (error) falhar(error);
+    return data as unknown as Metricas;
+  },
+});
+
+export type ErroAgrupado = {
+  mensagem: string;
+  origem: "app" | "catalogo" | "admin";
+  vezes: number;
+  pessoas: number;
+  confeitarias: string[];
+  urls: string[];
+  detalhe: string | null;
+  agente: string | null;
+  primeiro_em: string;
+  ultimo_em: string;
+};
+
+export const errosQ = (dias: number) => queryOptions({
+  queryKey: ["admin", "erros", dias],
+  queryFn: async (): Promise<ErroAgrupado[]> => {
+    const { data, error } = await supabase.rpc("admin_listar_erros", { p_dias: dias });
+    if (error) falhar(error);
+    return (data as unknown as ErroAgrupado[] | null) ?? [];
   },
 });
