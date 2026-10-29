@@ -3,6 +3,7 @@ import { getRequest, setResponseHeader } from '@tanstack/react-start/server';
 import { z } from 'zod';
 import { requireSupabaseAuth } from '@/integrations/supabase/auth-middleware';
 import { normalizeOrderDraft } from './order-draft';
+import { podeUsarRecurso, type MinhaAssinatura } from './assinatura';
 import { createResponsesCall } from './ai/responses.server';
 import { APICallError, NoObjectGeneratedError } from 'ai';
 
@@ -11,6 +12,12 @@ export const extractOrderDraft = createServerFn({ method: 'POST' })
   .inputValidator((input: unknown) => z.object({ mensagem: z.string().trim().min(5).max(6000) }).parse(input))
   .handler(async ({ data, context }) => {
     setResponseHeader('Cache-Control', 'no-store');
+    // A leitura por IA consome créditos: o plano e a situação da assinatura são conferidos aqui, no servidor.
+    const { data: assinatura, error: assinaturaError } = await context.supabase.rpc('minha_assinatura');
+    if (assinaturaError) return { ok: false as const, error: 'Não foi possível verificar o seu plano. Tente novamente.' };
+    if (!podeUsarRecurso((assinatura ?? null) as unknown as MinhaAssinatura | null, 'ia')) {
+      return { ok: false as const, error: 'A leitura por IA não está disponível no seu plano atual.' };
+    }
     const key = process.env['LOVABLE_API_KEY'];
     if (!key) return { ok: false as const, error: 'Lovable AI não está configurada. Tente novamente mais tarde.' };
     const { data: produtos, error } = await context.supabase.from('produtos').select('id,nome').eq('ativo', true).limit(501);
