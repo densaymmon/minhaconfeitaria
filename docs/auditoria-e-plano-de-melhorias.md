@@ -89,7 +89,8 @@ Legenda de status: **Confirmado** (há evidência no código/CI) · **A verifica
 - **Correção recomendada:** formatar `despesas.tsx` (parte de C2) e extrair lógica pura das telas grandes **só quando** a etapa correspondente tocar nelas, para não gerar diffs sem relação com o objetivo.
 - **Risco:** baixo a médio. **Testes:** os da área tocada.
 
-#### C6 — Quatorze módulos de `src/lib` sem teste de unidade
+#### C6 — Quatorze módulos de `src/lib` sem teste de unidade (**parcialmente resolvido na Etapa H, 29/10/2026**)
+- **Resolução parcial:** `format.ts` (moeda, números digitados, rótulos de status e de pagamento, datas), `csv.ts` (exportação, inclusive a proteção contra fórmulas do Excel) e as regras de aviso de `whatsapp-pedido.ts` agora têm testes. Seguem sem teste: `error-capture`, `error-page`, `exportar-dados`, `foto-catalogo`, `hooks`, `lovable-error-reporting`, `purchase-document-ocr`, `push-cliente`, `queries`, `termos`, `utils` (risco menor; a montagem das mensagens de WhatsApp em si é coberta por `catalogo.test.ts`).
 - **Gravidade:** baixa
 - **Módulos:** `csv`, `error-capture`, `error-page`, `exportar-dados`, `format`, `foto-catalogo`, `hooks`, `lovable-error-reporting`, `purchase-document-ocr`, `push-cliente`, `queries`, `termos`, `utils`, `whatsapp-pedido`.
 - **Impacto:** `format.ts` (moeda/datas), `csv.ts`/`exportar-dados.ts` (exportações) e `whatsapp-pedido.ts` (mensagens) afetam o que o cliente vê; os demais têm risco menor.
@@ -241,13 +242,16 @@ Decididas em 29/10/2026:
 2. **Registry do lockfile (C7):** sem alteração (origem identificada; ver C7).
 3. **Acesso somente leitura ao banco:** autorizado, apenas para consulta, sem alterar dados.
 
+Decididas depois:
+4. **Custos zerados em pedidos antigos:** corrigidos em 9 itens de pedidos entregues e atualizados os pedidos nº 11 e nº 13, com autorização.
+5. **Custos de gás, energia e mão de obra:** não preencher agora.
+6. **Aplicar a migration `0047` em produção:** autorizado e feito em 29/10/2026.
+
 Em aberto:
-4. **Custos zerados em pedidos antigos:** corrigir com confirmação item a item, ou manter o histórico como está?
-5. **Backups (R6):** verificar na configuração do projeto de banco, que as ferramentas de consulta não expõem.
+7. **Backups (R6):** verificar no painel do provedor (as ferramentas de consulta não expõem) e testar uma restauração.
+8. **Dependabot:** ativar os alertas nas configurações do GitHub.
+9. **Revogar privilégios de tabela do papel anônimo** (defesa em profundidade, sem efeito visível): aguardando autorização.
 
-## 7. Requisitos mínimos para o piloto (rascunho, a ser refinado na Etapa H)
+## 7. Requisitos mínimos para o piloto
 
-- Fechar C2, e conferir R1 (esquema), R3 e R5.
-- Backup verificado e teste de restauração (R6).
-- Fórmulas financeiras documentadas e testadas (C3).
-- Onboarding e catálogo validados com uma confeitaria nova, sem dados reais misturados.
+Consolidados em `docs/avaliacao-comercial-e-piloto.md` (riscos, essencial antes do piloto, o que pode esperar, critérios de escolha e indicadores).
