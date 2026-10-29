@@ -20,7 +20,8 @@ jobs:
       # while deferring the repository-wide Prettier cleanup.
       - run: bun install --frozen-lockfile
       - name: Lint application code (all files; formatting rules off)
-        run: bunx eslint src admin/src --rule "prettier/prettier: off" --format github
+        run: >-
+          bunx eslint src admin/src --rule "prettier/prettier: off" --format github
       # Os erros também viram anotações do GitHub, visíveis na API e no PR sem abrir o log.
       - name: Type-check
         run: |
