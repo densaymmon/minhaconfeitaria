@@ -152,7 +152,7 @@ Método: leitura do código (`pedidos.$id.tsx`, `queries.ts`, `calc.ts`), leitur
 
 ### 3.6 Etapa D — produtos, receitas, custos e estoque (29/10/2026)
 
-Método: consultas somente leitura em produção e leitura das funções `_custo_base_produto` / `_custo_unitario_produto`. Nenhum dado foi alterado nesta etapa.
+Método: consultas somente leitura em produção e leitura das funções `_custo_base_produto` / `_custo_unitario_produto`. A única alteração de dados foi a autorizada nos pedidos nº 11 e nº 13, descrita abaixo.
 
 **Confirmado correto**
 - A fórmula de custo está certa: o baguete de calabresa com queijo custa R$ 15,41 por unidade (insumos da receita R$ 61,64 ÷ rendimento 4), recalculado à mão e igual ao valor do banco.
@@ -160,8 +160,8 @@ Método: consultas somente leitura em produção e leitura das funções `_custo
 - Estoque: nenhum insumo com saldo negativo; movimentos de compra, produção e inventário coerentes entre si.
 
 **Pontos de atenção (decisão do proprietário, nada foi alterado)**
-- **Custos gravados defasados:** 14 itens de pedidos têm custo gravado mais de 30% abaixo do custo atual (12 em pedidos entregues e 2 em pedidos ainda "recebido", nº 11 e nº 13, com entrega em 30/10). Exemplo: baguete de calabresa, R$ 5,49 gravado contra R$ 15,41 atual. Os custos gravados são retratos e não devem ser recalculados em massa (regra do projeto); a causa provável é receita ou preços diferentes na época do pedido, mas o histórico de alterações não permite confirmar. Se os 2 pedidos em aberto devem usar o custo atual, é uma correção pontual a ser autorizada.
-- **Custos de gás, energia e mão de obra estão zerados em todos os produtos**, então as margens exibidas (26% a 91%) consideram só os insumos. É decisão de negócio preencher esses valores.
+- **Custos gravados defasados:** 14 itens de pedidos têm custo gravado mais de 30% abaixo do custo atual (12 em pedidos entregues e 2 em pedidos ainda "recebido", nº 11 e nº 13, com entrega em 30/10). Exemplo: baguete de calabresa, R$ 5,49 gravado contra R$ 15,41 atual. Os custos gravados são retratos e não devem ser recalculados em massa (regra do projeto); a causa provável é receita ou preços diferentes na época do pedido, mas o histórico de alterações não permite confirmar. **Atualizado em 29/10/2026, com autorização do proprietário:** os 2 itens dos pedidos nº 11 e nº 13 (ainda "recebido", sem produção) passaram a usar o custo atual (R$ 15,21 e R$ 15,41); os 12 itens de pedidos entregues continuam com o custo gravado.
+- **Custos de gás, energia e mão de obra estão zerados em todos os produtos**, então as margens exibidas (26% a 91%) consideram só os insumos. Decisão do proprietário em 29/10/2026: não preencher agora.
 - **Estoque só baixa quando a produção é registrada:** 22 itens de pedidos entregues não têm produção registrada, portanto nunca consumiram insumos e o saldo de estoque fica superestimado. Não é defeito de código; é processo de uso.
 
 **Teste novo:** `tests/db/custos-receitas-smoke.sql` cobre a conversão de unidades, o rendimento, os custos extras e a regra de que o custo gravado no pedido não muda quando o preço do insumo muda (verificado também por mutação: o teste falha se o esperado for alterado).
