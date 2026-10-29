@@ -77,6 +77,8 @@ jobs:
         run: psql "$DATABASE_URL" -v ON_ERROR_STOP=1 -f tests/db/salvar-pedido-recebimentos-smoke.sql
       - name: Smoke-test recipe cost formula and order cost snapshots
         run: psql "$DATABASE_URL" -v ON_ERROR_STOP=1 -f tests/db/custos-receitas-smoke.sql
+      - name: Smoke-test anonymous visitors cannot read tables (RLS on every table)
+        run: psql "$DATABASE_URL" -v ON_ERROR_STOP=1 -f tests/db/anonimo-sem-acesso-smoke.sql
       - name: Smoke-test multi-bakery signup gate and data isolation
         run: psql "$DATABASE_URL" -v ON_ERROR_STOP=1 -f tests/db/multiempresa-isolation-smoke.sql
       - name: Smoke-test public catalog orders (server prices, ownership, limits)
