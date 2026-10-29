@@ -17,11 +17,23 @@ jobs:
           bun-version: latest
       # The repository-wide lint currently reports pre-existing formatting violations
       # across unrelated files. Lint the touched application files for code rules,
-      # while deferring the repository-wide Prettier cleanup.
+      # while deferring the repository-wide Prettier cleanup (formatting rules stay off).
       - run: bun install --frozen-lockfile
-      - name: Lint changed application files
-        run: >-
-          bunx eslint src/routes/_authenticated/compras.tsx src/routes/_authenticated/producao.tsx src/routes/_authenticated/relatorios.tsx src/routes/_authenticated/painel.tsx src/routes/_authenticated/pedidos.index.tsx src/routes/_authenticated/pedidos-recorrentes.tsx 'src/routes/_authenticated/pedidos.$id.tsx' src/lib/queries.ts src/lib/calc.ts src/lib/calc.test.ts src/lib/hooks.ts src/integrations/supabase/types.ts --rule "prettier/prettier: off"
+      - name: Lint application code (formatting rules off)
+        run: |
+          status=0
+          bunx eslint src admin/src --rule "prettier/prettier: off" --format json --output-file eslint.json || status=$?
+          # Erros bloqueiam o CI; avisos só aparecem como anotação. A saída vira anotações do GitHub.
+          node - <<'JS'
+          const fs = require("fs");
+          let dados = [];
+          try { dados = JSON.parse(fs.readFileSync("eslint.json", "utf8")); } catch (e) { console.log("::error title=Lint sem saída::" + e.message); process.exit(0); }
+          for (const f of dados) for (const m of f.messages) {
+            const nivel = m.severity === 2 ? "error" : "warning";
+            console.log("::" + nivel + " file=" + f.filePath.replace(process.cwd() + "/", "") + ",line=" + m.line + ",col=" + m.column + "::" + (m.ruleId || "") + " " + m.message);
+          }
+          JS
+          exit $status
       # Os erros também viram anotações do GitHub, visíveis na API e no PR sem abrir o log.
       - name: Type-check
         run: |

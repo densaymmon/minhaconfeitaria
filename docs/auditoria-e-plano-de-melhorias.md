@@ -57,7 +57,9 @@ Legenda de status: **Confirmado** (há evidência no código/CI) · **A verifica
 - **Status:** aceito como decisão de negócio; risco residual conhecido.
 - **Risco da mudança:** baixo. **Testes:** abrir PR de teste em rascunho e confirmar que não é mesclado.
 
-#### C2 — O lint do CI cobre apenas 12 de ~195 arquivos
+#### C2 — O lint do CI cobre apenas 12 de ~195 arquivos (**resolvido na Etapa H, 29/10/2026**)
+- **Resolução:** medição no CI mostrou só 6 erros e 22 avisos em todo o código (a estimativa inicial de "violações de formatação" referia-se apenas ao Prettier, que segue desligado). Os 6 erros foram corrigidos sem mudar comportamento e o passo do CI agora roda `eslint src admin/src` em todos os arquivos, com erros bloqueando e avisos (16 `react-refresh/only-export-components` em componentes de UI e 6 `react-hooks/exhaustive-deps`) apenas informados. O arquivo gerado `previewAuthStorage.ts` ("Do not edit") é ignorado. A formatação com Prettier continua adiada.
+- **Texto original da avaliação:**
 - **Gravidade:** média
 - **Impacto:** erros de código e de hooks em ~94% dos arquivos de `src/` e `admin/` não bloqueiam o CI. O próprio workflow registra em comentário que o lint do repositório inteiro acusa violações de formatação preexistentes e que a limpeza foi adiada.
 - **Arquivos:** `.github/workflows/quality.yml` (passo *Lint changed application files*).
