@@ -208,7 +208,7 @@ Método: consultas somente leitura em produção (privilégios, políticas, fun�
 
 **Proteção nova:** `tests/db/anonimo-sem-acesso-smoke.sql` falha se alguma tabela do schema `public` ficar sem RLS, se surgir política para anônimo além de `planos_leitura`, ou se o anônimo conseguir ler linhas de qualquer tabela (verificado por mutação: tabela sem RLS, política vazando e leitura efetiva fazem o teste falhar).
 
-**Recomendação (não aplicada, precisa de autorização):** revogar os privilégios de tabela do papel `anon`, deixando só a RLS e as funções públicas, como defesa em profundidade. Hoje a segurança depende apenas da RLS estar correta (está).
+**Defesa em profundidade (migração `0048`, autorizada pelo proprietário):** retira do papel `anon` todo privilégio de tabela e sequência do schema `public`, mantendo só `SELECT` em `planos`, e ajusta os privilégios padrão para que tabelas novas também nasçam fechadas. O catálogo público não é afetado (usa funções `SECURITY DEFINER`, cujo `EXECUTE` não muda). Teste: `tests/db/anon-sem-privilegios-smoke.sql` (simula o estado de produção, reaplica a migração duas vezes e confere o resultado; falha se a migração for removida). Reversão: `GRANT` dos privilégios retirados (descrita no cabeçalho da migração). Depois de aplicada em produção, a RLS deixa de ser a única barreira.
 
 ## 4. Pontos fortes confirmados
 
