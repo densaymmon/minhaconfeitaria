@@ -150,6 +150,16 @@ Método: leitura do código (`pedidos.$id.tsx`, `queries.ts`, `calc.ts`), leitur
 - Entregas sem produção registrada (22 itens de pedidos entregues com receita): impacto no estoque a avaliar na Etapa D.
 - Não existe fluxo de estorno/devolução de recebimento de pedido; a correção é feita editando o recebimento.
 
+### 3.7 Etapa E — financeiro (29/10/2026)
+
+Método: leitura das fórmulas de contas a pagar nas telas, consultas somente leitura de consistência em produção e mirror dos testes novos em Node (o Vitest roda no CI).
+
+**Dados de produção (27 contas a pagar):** status e data de cancelamento coerentes (6 canceladas, 5 pagas, 16 pendentes); nenhuma conta paga incompleta, nenhuma pendente com pagamento, nenhuma vencida. O valor pago de todas as contas confere com pagamentos − estornos (as duas contas aparentemente divergentes têm estorno registrado).
+
+**C3 resolvido:** a regra do saldo de conta estava copiada em 4 telas e a definição de "conta em aberto" variava (às vezes só o status, às vezes também a data de cancelamento; o total pago somava status diferentes). Agora há uma única definição em `src/lib/financeiro.ts`, com 10 testes, usada por Financeiro, Contas a pagar, Relatórios e Fluxo de caixa. Com os dados atuais os números exibidos não mudam. Fórmulas descritas em `docs/formulas-financeiras.md`.
+
+**Observação:** "Lucro total do período" (contratado) e "Resultado" (realizado) são indicadores diferentes na mesma tela de Relatórios; agora documentados.
+
 ## 4. Pontos fortes confirmados
 
 - RLS por tenant em todas as tabelas, políticas RESTRICTIVE para papel e acesso, e 88 instruções `REVOKE ALL ON FUNCTION` nas migrations.
