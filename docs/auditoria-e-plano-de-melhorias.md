@@ -87,7 +87,8 @@ Legenda de status: **Confirmado** (há evidência no código/CI) · **A verifica
 - **Correção recomendada:** formatar `despesas.tsx` (parte de C2) e extrair lógica pura das telas grandes **só quando** a etapa correspondente tocar nelas, para não gerar diffs sem relação com o objetivo.
 - **Risco:** baixo a médio. **Testes:** os da área tocada.
 
-#### C6 — Quatorze módulos de `src/lib` sem teste de unidade
+#### C6 — Quatorze módulos de `src/lib` sem teste de unidade (**parcialmente resolvido na Etapa H, 29/10/2026**)
+- **Resolução parcial:** `format.ts` (moeda, números digitados, rótulos de status e de pagamento, datas), `csv.ts` (exportação, inclusive a proteção contra fórmulas do Excel) e as regras de aviso de `whatsapp-pedido.ts` agora têm testes. Seguem sem teste: `error-capture`, `error-page`, `exportar-dados`, `foto-catalogo`, `hooks`, `lovable-error-reporting`, `purchase-document-ocr`, `push-cliente`, `queries`, `termos`, `utils` (risco menor; a montagem das mensagens de WhatsApp em si é coberta por `catalogo.test.ts`).
 - **Gravidade:** baixa
 - **Módulos:** `csv`, `error-capture`, `error-page`, `exportar-dados`, `format`, `foto-catalogo`, `hooks`, `lovable-error-reporting`, `purchase-document-ocr`, `push-cliente`, `queries`, `termos`, `utils`, `whatsapp-pedido`.
 - **Impacto:** `format.ts` (moeda/datas), `csv.ts`/`exportar-dados.ts` (exportações) e `whatsapp-pedido.ts` (mensagens) afetam o que o cliente vê; os demais têm risco menor.
