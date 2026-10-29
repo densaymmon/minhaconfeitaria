@@ -166,6 +166,16 @@ Método: consultas somente leitura em produção e leitura das funções `_custo
 
 **Teste novo:** `tests/db/custos-receitas-smoke.sql` cobre a conversão de unidades, o rendimento, os custos extras e a regra de que o custo gravado no pedido não muda quando o preço do insumo muda (verificado também por mutação: o teste falha se o esperado for alterado).
 
+### 3.7 Etapa E — financeiro (29/10/2026)
+
+Método: leitura das fórmulas de contas a pagar nas telas, consultas somente leitura de consistência em produção e mirror dos testes novos em Node (o Vitest roda no CI).
+
+**Dados de produção (27 contas a pagar):** status e data de cancelamento coerentes (6 canceladas, 5 pagas, 16 pendentes); nenhuma conta paga incompleta, nenhuma pendente com pagamento, nenhuma vencida. O valor pago de todas as contas confere com pagamentos − estornos (as duas contas aparentemente divergentes têm estorno registrado).
+
+**C3 resolvido:** a regra do saldo de conta estava copiada em 4 telas e a definição de "conta em aberto" variava (às vezes só o status, às vezes também a data de cancelamento; o total pago somava status diferentes). Agora há uma única definição em `src/lib/financeiro.ts`, com 10 testes, usada por Financeiro, Contas a pagar, Relatórios e Fluxo de caixa. Com os dados atuais os números exibidos não mudam. Fórmulas descritas em `docs/formulas-financeiras.md`.
+
+**Observação:** "Lucro total do período" (contratado) e "Resultado" (realizado) são indicadores diferentes na mesma tela de Relatórios; agora documentados.
+
 ### 3.9 Etapa G — multiempresa, permissões e segurança (29/10/2026)
 
 Método: consultas somente leitura ao catálogo do banco de produção, leitura das funções de servidor e das ferramentas MCP.

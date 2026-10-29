@@ -5,6 +5,7 @@ import { useMemo, useState } from "react";
 import { CalendarClock, CircleAlert, Receipt, ShoppingCart } from "lucide-react";
 import { contasPagarQ, despesasQ } from "@/lib/queries";
 import { brl, dataBR, hojeISO, mesISO } from "@/lib/format";
+import { contaEmAberto, resumoContas, saldoConta } from "@/lib/financeiro";
 import { PageHeader, Stat, Empty } from "@/components/app/ui";
 import { Button } from "@/components/ui/button";
 import { Despesas } from "./despesas";
@@ -44,16 +45,8 @@ function Financeiro() {
   const [tipoMovimentacao, setTipoMovimentacao] = useState<TipoMovimentacao>("despesas");
   const hoje = hojeISO();
   const inicioMes = mesISO() + "-01";
-  const contasAtivas = contas.filter((conta) => !conta.cancelada_em && conta.status !== "cancelado");
-  const contasAbertas = contasAtivas.filter((conta) => ["pendente", "parcial"].includes(conta.status));
-  const saldoAberto = contasAbertas.reduce(
-    (total, conta) => total + Math.max(0, Number(conta.valor) - Number(conta.valor_pago)),
-    0,
-  );
-  const saldoVencido = contasAbertas
-    .filter((conta) => conta.data_vencimento < hoje)
-    .reduce((total, conta) => total + Math.max(0, Number(conta.valor) - Number(conta.valor_pago)), 0);
-  const totalPago = contasAtivas.reduce((total, conta) => total + Math.max(0, Number(conta.valor_pago) || 0), 0);
+  const contasAbertas = contas.filter(contaEmAberto);
+  const { aberto: saldoAberto, vencido: saldoVencido, pago: totalPago } = resumoContas(contas, hoje);
   const despesasMes = despesas.filter((despesa) => despesa.data >= inicioMes && despesa.data <= hoje);
   const totalDespesasMes = despesasMes.reduce((total, despesa) => total + Math.max(0, Number(despesa.valor) || 0), 0);
   const despesasOrdenadas = useMemo(() => [...despesas].sort((a, b) => b.data.localeCompare(a.data)), [despesas]);
@@ -129,7 +122,7 @@ function Financeiro() {
             {!proximasContas.length ? <Empty>Nenhuma conta em aberto.</Empty> : (
               <div className="divide-y rounded-xl border px-3">
                 {proximasContas.map((conta) => {
-                  const saldo = Math.max(0, Number(conta.valor) - Number(conta.valor_pago));
+                  const saldo = saldoConta(conta);
                   const vencida = conta.data_vencimento < hoje;
                   return (
                     <div key={conta.id} className="flex items-start gap-3 py-3">
