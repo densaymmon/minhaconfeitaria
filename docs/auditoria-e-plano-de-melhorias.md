@@ -104,7 +104,7 @@ Legenda de status: **Confirmado** (há evidência no código/CI) · **A verifica
 
 | ID | Risco | Evidência atual | Como verificar | Etapa |
 |---|---|---|---|---|
-| R1 | Vocabulário de status de pedido possivelmente inconsistente entre camadas | O `CHECK` original (`0000`) lista `recebido, confirmado, em_producao, pronto, entregue, cancelado`; o código e funções posteriores usam também `finalizado` e `perdido`, e há migrations em `supabase/migrations` chamadas `allow_pedido_finalizado_status` e `allow_pedido_pronto_status` | **Parcialmente verificado em 29/10/2026** por leitura dos pedidos: dos 43 pedidos com entrega entre 2025 e 2026, 33 estão `entregue`, 7 `recebido` e 3 `cancelado`; `finalizado`, `perdido`, `pronto`, `confirmado` e `em_producao` não aparecem. Os dados em uso estão todos dentro do vocabulário original. Falta ler o `CHECK` vigente no banco (a ferramenta de consulta não expõe o esquema) e comparar com os testes SQL | C |
+| R1 | ~~Vocabulário de status de pedido inconsistente entre camadas~~ **Verificado na Etapa C** | O `CHECK` vigente em produção (`pedidos_status_check`) aceita `recebido, confirmado, em_producao, pronto, finalizado, entregue, cancelado`, ou seja, inclui `pronto` e `finalizado` (migrations `supabase/migrations`). O texto anterior baseava-se só na migration `0000`. `perdido` não aparece em `src/` | Consulta somente leitura ao `pg_constraint` em 29/10/2026. Os dados em uso continuam dentro do vocabulário | C (concluído) |
 | R2 | Duas fontes de recebimento do pedido (`valor_entrada` legado e `pedido_pagamentos`) | O relatório consolida via `calcularRecebimentoPedido`; falta confirmar que nenhuma tela lê só um dos lados | Revisar usos de `valor_entrada` e rodar `payment-receipts-smoke.sql` | C/E |
 | R3 | RPCs anônimas do catálogo (`avaliar_pedido`, `informar_pagamento_pedido`, `acompanhar_pedido_catalogo`) protegidas por código de 10 caracteres | Funções concedidas a `anon`; não verificada a entropia do código nem limite de tentativas | Revisar geração de `codigo_curto` e política de limite de requisições | G |
 | R4 | `registrar_erro` aceita chamadas anônimas | Mitigado no desenho: deduplicação por hora, teto de 200 novas linhas/hora, retenção de 30 dias | Confirmar o teto no teste `plataforma-uso-smoke.sql` | G |
@@ -134,6 +134,21 @@ Fonte: consulta de pedidos com entrega de 01/01/2025 a 31/12/2026 (43 registros,
 - **Pagamento (não é defeito):** há pedidos `entregue` com `valor_entrada` igual ao total e `saldo_quitado = false`. `calcularRecebimentoPedido` (`src/lib/calc.ts`) calcula `saldo = venda − recebido`, então o saldo é zero. Conferido.
 - **Duas fórmulas de "recebido" (a verificar, R2):** `totaisPedido` ignora o histórico de pagamentos e `calcularRecebimentoPedido` o considera. Falta confirmar qual tela usa cada uma.
 - **Numeração com lacunas:** os números 1, 26 e 32 não aparecem no período consultado (podem estar fora do período ou ter sido excluídos). Verificar na Etapa C como a exclusão de pedidos é tratada.
+
+### 3.5 Etapa C — pedidos, pagamentos e produção (29/10/2026)
+
+Método: leitura do código (`pedidos.$id.tsx`, `queries.ts`, `calc.ts`), leitura da função `salvar_pedido` em produção (mesma definição das migrations: hash idêntico) e consultas somente leitura de consistência. Os testes de banco foram executados **localmente** em um PostgreSQL 16 descartável, com as 51 migrations aplicadas; o banco de produção não foi alterado.
+
+**Dados de produção (43 pedidos):** 0 divergências entre `valor_entrada` e a soma de `pedido_pagamentos` (20 pedidos com recebimentos detalhados); 0 pedidos pagos acima do total; 0 cancelados com dinheiro registrado. 10 pedidos antigos estão marcados como quitados sem valor registrado (legado, sem linhas de pagamento): não foram alterados.
+
+**Confirmado e corrigido (C8):** `salvar_pedido`, ao editar, gravava `valor_entrada` e `saldo_quitado` vindos do navegador. Com um recebimento feito em outro aparelho, um salvamento com tela desatualizada zerava o valor pago do pedido enquanto o histórico mantinha o recebimento (reproduzido no banco local: pagamentos R$ 50, pedido R$ 0). A tela se protege usando o cache, mas isso não é uma garantia. Correção na migration `0047_salvar_pedido_preservar_recebimentos.sql` (preserva os dois campos quando o pedido já tem linhas em `pedido_pagamentos`) e teste `tests/db/salvar-pedido-recebimentos-smoke.sql`, que falha sem a migration e passa com ela. **A migration só vale em produção depois de aplicada pelo procedimento manual de migrations, com autorização do proprietário.**
+
+**Observações sem correção nesta etapa (decisão ou etapa futura):**
+- Não há regra central de transição de status: o status é gravado diretamente em cinco pontos do código. Sem incidente nos dados; avaliar uma regra única com testes numa etapa posterior.
+- `avancarPedidosDoDia` (passagem para "em produção") roda no navegador, uma vez por dia; se ninguém abrir o app, não roda.
+- `pedidos.numero` é uma sequência global (não por confeitaria): números têm lacunas (1, 26, 32) e uma confeitaria vê saltos por causa de outras. Cosmético; relevante para o piloto com várias confeitarias.
+- Entregas sem produção registrada (22 itens de pedidos entregues com receita): impacto no estoque a avaliar na Etapa D.
+- Não existe fluxo de estorno/devolução de recebimento de pedido; a correção é feita editando o recebimento.
 
 ## 4. Pontos fortes confirmados
 
