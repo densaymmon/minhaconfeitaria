@@ -6,6 +6,7 @@ import { ArrowDownCircle, ArrowUpCircle, TrendingUp } from "lucide-react";
 import { usePedidosCalc } from "@/lib/hooks";
 import { brl, dataBR, hojeISO } from "@/lib/format";
 import { fluxoDeCaixa, type Movimento } from "@/lib/gestao";
+import { contaEmAberto, saldoConta } from "@/lib/financeiro";
 import { Card, PageHeader } from "@/components/app/ui";
 import { Button } from "@/components/ui/button";
 import { cn } from "@/lib/utils";
@@ -34,8 +35,8 @@ function FluxoCaixaPage() {
     .filter((p) => p.status !== "cancelado" && p.t.saldo > 0.009)
     .map((p) => ({ data: p.data_entrega, valor: p.t.saldo, descricao: `Pedido #${p.numero} · ${p.clientes?.nome ?? "Sem cliente"}` })), [pedidos]);
   const saidas: Movimento[] = useMemo(() => contas
-    .filter((c) => !c.cancelada_em && c.status !== "cancelado" && c.status !== "pago" && Number(c.valor) - Number(c.valor_pago ?? 0) > 0.009)
-    .map((c) => ({ data: c.data_vencimento, valor: Math.round((Number(c.valor) - Number(c.valor_pago ?? 0)) * 100) / 100, descricao: c.descricao + (c.fornecedor ? ` · ${c.fornecedor}` : "") })), [contas]);
+    .filter((c) => contaEmAberto(c) && saldoConta(c) > 0.009)
+    .map((c) => ({ data: c.data_vencimento, valor: saldoConta(c), descricao: c.descricao + (c.fornecedor ? ` · ${c.fornecedor}` : "") })), [contas]);
   const fluxo = fluxoDeCaixa(entradas, saidas, hoje, semanas);
   const maior = Math.max(1, ...fluxo.flatMap((s) => [s.entradas, s.saidas]));
   const fimPeriodo = fluxo[fluxo.length - 1]?.fim ?? hoje;
