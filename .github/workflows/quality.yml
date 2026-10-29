@@ -22,12 +22,21 @@ jobs:
       - name: Lint application code (all files; formatting rules off)
         run: |
           status=0
-          bunx eslint src admin/src --rule "prettier/prettier: off" --format unix > eslint-output.txt 2>&1 || status=$?
-          tail -n 5 eslint-output.txt
-          # Resumo em uma única anotação (a API só mostra poucas anotações por etapa).
-          regras=$(grep -oE '\[(Error|Warning)/[^]]+\]' eslint-output.txt | sort | uniq -c | sort -rn | head -25 | tr '\n' ';')
-          arquivos=$(grep -oE '^[^:]+' eslint-output.txt | sort | uniq -c | sort -rn | head -25 | tr '\n' ';')
-          echo "::error title=Resumo do lint (status $status)::REGRAS: $regras ARQUIVOS: $arquivos"
+          bunx eslint src admin/src --rule "prettier/prettier: off" --format json --output-file eslint.json || status=$?
+          node - "$status" <<'JS'
+          const fs = require("fs");
+          const status = process.argv[2];
+          let dados = [];
+          try { dados = JSON.parse(fs.readFileSync("eslint.json", "utf8")); } catch (e) { console.log("::error title=Lint sem saída JSON::" + e.message); process.exit(0); }
+          const regras = {}, arquivos = {}; let erros = 0, avisos = 0;
+          for (const f of dados) for (const m of f.messages) {
+            const r = m.ruleId || "(sem regra) " + String(m.message).slice(0, 60);
+            regras[r] = (regras[r] || 0) + 1; arquivos[f.filePath.replace(process.cwd() + "/", "")] = (arquivos[f.filePath.replace(process.cwd() + "/", "")] || 0) + 1;
+            if (m.severity === 2) erros++; else avisos++;
+          }
+          const topo = (o, n) => Object.entries(o).sort((a, b) => b[1] - a[1]).slice(0, n).map(([k, v]) => k + "=" + v).join("; ");
+          console.log("::error title=Resumo do lint (status " + status + ")::ERROS=" + erros + " AVISOS=" + avisos + " ARQUIVOS_COM_PROBLEMA=" + Object.keys(arquivos).length + " | REGRAS: " + topo(regras, 25) + " | ARQUIVOS: " + topo(arquivos, 25));
+          JS
           exit $status
       # Os erros também viram anotações do GitHub, visíveis na API e no PR sem abrir o log.
       - name: Type-check
