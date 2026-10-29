@@ -141,7 +141,7 @@ Método: leitura do código (`pedidos.$id.tsx`, `queries.ts`, `calc.ts`), leitur
 
 **Dados de produção (43 pedidos):** 0 divergências entre `valor_entrada` e a soma de `pedido_pagamentos` (20 pedidos com recebimentos detalhados); 0 pedidos pagos acima do total; 0 cancelados com dinheiro registrado. 10 pedidos antigos estão marcados como quitados sem valor registrado (legado, sem linhas de pagamento): não foram alterados.
 
-**Confirmado e corrigido (C8):** `salvar_pedido`, ao editar, gravava `valor_entrada` e `saldo_quitado` vindos do navegador. Com um recebimento feito em outro aparelho, um salvamento com tela desatualizada zerava o valor pago do pedido enquanto o histórico mantinha o recebimento (reproduzido no banco local: pagamentos R$ 50, pedido R$ 0). A tela se protege usando o cache, mas isso não é uma garantia. Correção na migration `0047_salvar_pedido_preservar_recebimentos.sql` (preserva os dois campos quando o pedido já tem linhas em `pedido_pagamentos`) e teste `tests/db/salvar-pedido-recebimentos-smoke.sql`, que falha sem a migration e passa com ela. **A migration só vale em produção depois de aplicada pelo procedimento manual de migrations, com autorização do proprietário.**
+**Confirmado e corrigido (C8):** `salvar_pedido`, ao editar, gravava `valor_entrada` e `saldo_quitado` vindos do navegador. Com um recebimento feito em outro aparelho, um salvamento com tela desatualizada zerava o valor pago do pedido enquanto o histórico mantinha o recebimento (reproduzido no banco local: pagamentos R$ 50, pedido R$ 0). A tela se protege usando o cache, mas isso não é uma garantia. Correção na migration `0047_salvar_pedido_preservar_recebimentos.sql` (preserva os dois campos quando o pedido já tem linhas em `pedido_pagamentos`) e teste `tests/db/salvar-pedido-recebimentos-smoke.sql`, que falha sem a migration e passa com ela. **Aplicada em produção em 29/10/2026 com autorização do proprietário** (troca apenas do corpo da função; definição conferida por hash contra a do banco de teste; reversão: reaplicar a definição da migration `0011`).
 
 **Observações sem correção nesta etapa (decisão ou etapa futura):**
 - Não há regra central de transição de status: o status é gravado diretamente em cinco pontos do código. Sem incidente nos dados; avaliar uma regra única com testes numa etapa posterior.
@@ -149,6 +149,22 @@ Método: leitura do código (`pedidos.$id.tsx`, `queries.ts`, `calc.ts`), leitur
 - `pedidos.numero` é uma sequência global (não por confeitaria): números têm lacunas (1, 26, 32) e uma confeitaria vê saltos por causa de outras. Cosmético; relevante para o piloto com várias confeitarias.
 - Entregas sem produção registrada (22 itens de pedidos entregues com receita): impacto no estoque a avaliar na Etapa D.
 - Não existe fluxo de estorno/devolução de recebimento de pedido; a correção é feita editando o recebimento.
+
+### 3.6 Etapa D — produtos, receitas, custos e estoque (29/10/2026)
+
+Método: consultas somente leitura em produção e leitura das funções `_custo_base_produto` / `_custo_unitario_produto`. Nenhum dado foi alterado nesta etapa.
+
+**Confirmado correto**
+- A fórmula de custo está certa: o baguete de calabresa com queijo custa R$ 15,41 por unidade (insumos da receita R$ 61,64 ÷ rendimento 4), recalculado à mão e igual ao valor do banco.
+- Nenhuma receita tem unidade incompatível com a do insumo (o que faria o insumo ser ignorado no custo); nenhum insumo usado em receita está sem preço; todo produto tem receita e preço de venda acima do custo.
+- Estoque: nenhum insumo com saldo negativo; movimentos de compra, produção e inventário coerentes entre si.
+
+**Pontos de atenção (decisão do proprietário, nada foi alterado)**
+- **Custos gravados defasados:** 14 itens de pedidos têm custo gravado mais de 30% abaixo do custo atual (12 em pedidos entregues e 2 em pedidos ainda "recebido", nº 11 e nº 13, com entrega em 30/10). Exemplo: baguete de calabresa, R$ 5,49 gravado contra R$ 15,41 atual. Os custos gravados são retratos e não devem ser recalculados em massa (regra do projeto); a causa provável é receita ou preços diferentes na época do pedido, mas o histórico de alterações não permite confirmar. Se os 2 pedidos em aberto devem usar o custo atual, é uma correção pontual a ser autorizada.
+- **Custos de gás, energia e mão de obra estão zerados em todos os produtos**, então as margens exibidas (26% a 91%) consideram só os insumos. É decisão de negócio preencher esses valores.
+- **Estoque só baixa quando a produção é registrada:** 22 itens de pedidos entregues não têm produção registrada, portanto nunca consumiram insumos e o saldo de estoque fica superestimado. Não é defeito de código; é processo de uso.
+
+**Teste novo:** `tests/db/custos-receitas-smoke.sql` cobre a conversão de unidades, o rendimento, os custos extras e a regra de que o custo gravado no pedido não muda quando o preço do insumo muda (verificado também por mutação: o teste falha se o esperado for alterado).
 
 ## 4. Pontos fortes confirmados
 
