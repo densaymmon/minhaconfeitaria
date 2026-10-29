@@ -1,0 +1,14 @@
+# Dependabot: este projeto usa Bun (bun.lock), então o ecossistema precisa ser "bun".
+# Sem este arquivo, as atualizações de segurança falhavam com
+# "Dependabot's npm_and_yarn ecosystem cannot update bun.lock".
+#
+# open-pull-requests-limit: 0 desliga as atualizações de versão rotineiras (que abririam muitas PRs
+# e, com o merge automático, poderiam entrar sem revisão) e mantém só as atualizações de segurança,
+# que continuam sendo abertas pelo Dependabot quando há um alerta.
+version: 2
+updates:
+  - package-ecosystem: "bun"
+    directory: "/"
+    schedule:
+      interval: "weekly"
+    open-pull-requests-limit: 0
