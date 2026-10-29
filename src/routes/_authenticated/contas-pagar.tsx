@@ -15,6 +15,7 @@ import {
 } from "@/lib/queries";
 import { brl, dataBR, hojeISO, parseNum } from "@/lib/format";
 import { baixarCSV } from "@/lib/csv";
+import { contaAtiva, contaEmAberto, contaVencida, resumoContas, saldoConta, somaSaldos } from "@/lib/financeiro";
 import { Empty, Field, PageHeader, Stat } from "@/components/app/ui";
 import { Input } from "@/components/ui/input";
 import { Textarea } from "@/components/ui/textarea";
@@ -90,12 +91,8 @@ export function ContasPagar({ embedded = false, viewOnly = false }: { embedded?:
   const operacoesRef = useRef<Record<string, { assinatura: string; id: string }>>({});
 
   const hoje = hojeISO();
-  const abertas = contas.filter((c) => ["pendente", "parcial"].includes(c.status));
-  const totalAberto = abertas.reduce((s, c) => s + Math.max(0, Number(c.valor) - Number(c.valor_pago)), 0);
-  const totalVencido = abertas.filter((c) => c.data_vencimento < hoje)
-    .reduce((s, c) => s + Math.max(0, Number(c.valor) - Number(c.valor_pago)), 0);
-  const totalPago = contas.filter((c) => ["pago", "parcial"].includes(c.status))
-    .reduce((s, c) => s + Number(c.valor_pago), 0);
+  const abertas = contas.filter(contaEmAberto);
+  const { aberto: totalAberto, vencido: totalVencido, pago: totalPago } = resumoContas(contas, hoje);
   const ordenadas = useMemo(() => {
     const termo = buscaContas.trim().toLocaleLowerCase("pt-BR");
     return [...contas]
@@ -125,8 +122,8 @@ export function ContasPagar({ embedded = false, viewOnly = false }: { embedded?:
       itens,
       total: itens.reduce((s, c) => s + Math.max(0, Number(c.valor) || 0), 0),
       pago: itens.reduce((s, c) => s + Math.max(0, Number(c.valor_pago) || 0), 0),
-      saldo: itens.filter((c) => c.status !== "cancelado").reduce((s, c) => s + Math.max(0, Number(c.valor) - Number(c.valor_pago)), 0),
-      vencido: itens.filter((c) => ["pendente", "parcial"].includes(c.status) && c.data_vencimento < hoje).reduce((s, c) => s + Math.max(0, Number(c.valor) - Number(c.valor_pago)), 0),
+      saldo: somaSaldos(itens.filter(contaAtiva)),
+      vencido: somaSaldos(itens.filter((c) => contaVencida(c, hoje))),
     }));
   }, [ordenadas, hoje]);
   const pagamentosPorConta = useMemo(() => {
@@ -271,7 +268,7 @@ export function ContasPagar({ embedded = false, viewOnly = false }: { embedded?:
 
   function abrirPagamento(c: ContaPagar) {
     setAcao({ tipo: "pagamento", conta: c });
-    setValorPagamento(String(Math.max(0, Number(c.valor) - Number(c.valor_pago)).toFixed(2)));
+    setValorPagamento(String(saldoConta(c).toFixed(2)));
     setDataPagamento(hojeISO());
     setFormaPagamento("pix");
     setObsPagamento("");
@@ -281,7 +278,7 @@ export function ContasPagar({ embedded = false, viewOnly = false }: { embedded?:
     e.preventDefault();
     if (acao?.tipo !== "pagamento") return;
     const valor = parseNum(valorPagamento);
-    const saldo = Math.max(0, Number(acao.conta.valor) - Number(acao.conta.valor_pago));
+    const saldo = saldoConta(acao.conta);
     if (!Number.isFinite(valor) || valor <= 0 || valor > saldo) {
       toast.error("Informe um valor positivo que não ultrapasse o saldo devedor.");
       return;
@@ -584,7 +581,7 @@ export function ContasPagar({ embedded = false, viewOnly = false }: { embedded?:
                 </div>
                 <div className="divide-y px-3 sm:px-4">
             {grupo.itens.map((c) => {
-              const saldo = Math.max(0, Number(c.valor) - Number(c.valor_pago));
+              const saldo = saldoConta(c);
               const vencida = ["pendente", "parcial"].includes(c.status) && c.data_vencimento < hoje;
               const pagamentosConta = pagamentosPorConta.get(c.id) ?? [];
               const temPagamento = pagamentosConta.length > 0;
