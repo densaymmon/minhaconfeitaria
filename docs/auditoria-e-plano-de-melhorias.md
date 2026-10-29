@@ -108,7 +108,7 @@ Legenda de status: **Confirmado** (há evidência no código/CI) · **A verifica
 | R2 | Duas fontes de recebimento do pedido (`valor_entrada` legado e `pedido_pagamentos`) | O relatório consolida via `calcularRecebimentoPedido`; falta confirmar que nenhuma tela lê só um dos lados | Revisar usos de `valor_entrada` e rodar `payment-receipts-smoke.sql` | C/E |
 | R3 | RPCs anônimas do catálogo (`avaliar_pedido`, `informar_pagamento_pedido`, `acompanhar_pedido_catalogo`) protegidas por código de 10 caracteres | Funções concedidas a `anon`; não verificada a entropia do código nem limite de tentativas | Revisar geração de `codigo_curto` e política de limite de requisições | G |
 | R4 | `registrar_erro` aceita chamadas anônimas | Mitigado no desenho: deduplicação por hora, teto de 200 novas linhas/hora, retenção de 30 dias | Confirmar o teto no teste `plataforma-uso-smoke.sql` | G |
-| R5 | Sete funções `SECURITY DEFINER` sem referência a tenant no corpo ainda não conferidas | `_entrar_na_equipe`, `_limite_plano_pedidos`, `_limite_plano_produtos`, `limitar_proprietario_unico`, `release_owner_claim`, `snapshot_movimento_producao`, `snapshot_producao_evento` — provavelmente funções de gatilho, mas **não confirmado** | Conferir tipo de retorno (`trigger`) e grants | G |
+| R5 | ~~Sete funções `SECURITY DEFINER` sem referência a tenant~~ **Verificado na Etapa G** | Cinco são funções de gatilho que usam `NEW.user_id` (`_limite_plano_pedidos`, `_limite_plano_produtos`, `snapshot_movimento_producao`, `snapshot_producao_evento`) ou a identidade da linha (`limitar_proprietario_unico`, `release_owner_claim`: não chamáveis como RPC). `_entrar_na_equipe` não é executável por usuários (sem EXECUTE para `anon` e `authenticated`) e valida convite, e-mail e vínculo | Consulta somente leitura ao catálogo do banco em 29/10/2026 | G (concluído) |
 | R6 | Backups e restauração | Sem acesso à infraestrutura | Verificar no provedor e testar uma restauração | G/H |
 | R7 | Dependências vulneráveis | Não foi possível rodar auditoria de dependências | `bun audit` ou equivalente no CI | G/H |
 
@@ -175,6 +175,23 @@ Método: leitura das fórmulas de contas a pagar nas telas, consultas somente le
 **C3 resolvido:** a regra do saldo de conta estava copiada em 4 telas e a definição de "conta em aberto" variava (às vezes só o status, às vezes também a data de cancelamento; o total pago somava status diferentes). Agora há uma única definição em `src/lib/financeiro.ts`, com 10 testes, usada por Financeiro, Contas a pagar, Relatórios e Fluxo de caixa. Com os dados atuais os números exibidos não mudam. Fórmulas descritas em `docs/formulas-financeiras.md`.
 
 **Observação:** "Lucro total do período" (contratado) e "Resultado" (realizado) são indicadores diferentes na mesma tela de Relatórios; agora documentados.
+
+### 3.9 Etapa G — multiempresa, permissões e segurança (29/10/2026)
+
+Método: consultas somente leitura ao catálogo do banco de produção, leitura das funções de servidor e das ferramentas MCP.
+
+**C9 — Leitura por IA só era barrada na tela (corrigido).** O recurso "Leitura por IA" do plano era conferido apenas na interface (`useRecurso("ia")`); a função de servidor `extractOrderDraft` exigia login, mas **não conferia o plano nem a situação da assinatura**. Qualquer usuário autenticado, inclusive de uma conta suspensa ou de plano sem IA, podia chamá-la diretamente e gastar créditos de IA da plataforma (e a regra do projeto diz que verificações no frontend não são barreira de segurança). Agora o servidor consulta `minha_assinatura` e recusa quando o plano não inclui IA, a assinatura está suspensa/cancelada, ou o plano não pôde ser verificado. A regra pura é `podeUsarRecurso` (`src/lib/assinatura.ts`), com teste. Contas sem assinatura (antigas) seguem liberadas, como na tela.
+
+**Verificado sem problema**
+- R5 resolvido (ver tabela): as funções `SECURITY DEFINER` restantes são de gatilho ou internas.
+- O cliente administrativo (`supabaseAdmin`) só é usado em `push.functions.ts`, com filtros por pedido/confeitaria e janela de 10 minutos; as ferramentas MCP usam o cliente com RLS do chamador.
+- Papéis (dono, gerente, produção), RLS por confeitaria, bloqueio por acesso/assinatura e catálogo anônimo continuam cobertos pelos testes de banco (`multiempresa-isolation`, `equipe`, `plataforma`, `catalogo*`, `anonimo-sem-acesso`).
+
+**Não verificável nesta sessão (ação do proprietário)**
+- **R6 — backups:** o banco não expõe a configuração de backup e não tenho acesso ao painel do provedor. Não afirmo que existem backups. Antes do piloto: confirmar no painel do Lovable Cloud/Supabase se há backup diário ou recuperação pontual, e **testar uma restauração** em um projeto separado.
+- **R7 — dependências:** os alertas de dependências (Dependabot) estão **desativados** no repositório e não é possível rodar auditoria de pacotes aqui. Recomendação: ativar Dependabot alerts nas configurações do GitHub (sem custo, sem mudança de código).
+- **R3 — códigos curtos:** sem limite de tentativas nas consultas públicas (ver 3.8); decidir se vale um limite antes de muitos clientes.
+- **Isolamento entre confeitarias em produção:** só existe 1 confeitaria em produção; o isolamento é comprovado pelos testes automatizados, não por dados reais de duas contas.
 
 ### 3.8 Etapa F — catálogo público e primeiros passos (29/10/2026)
 
