@@ -6,7 +6,7 @@ export function toCSV(headers: string[], rows: Cell[][]) {
   const esc = (c: Cell) => {
     if (c === null || c === undefined) return "";
     let s = typeof c === "number" ? String(c).replace(".", ",") : typeof c === "boolean" ? (c ? "Sim" : "Não") : String(c);
-    if (typeof c === "string" && /^[\s]*[=+@\-]/.test(s)) s = "'" + s;
+    if (typeof c === "string" && /^[\s]*[=+@-]/.test(s)) s = "'" + s;
     if (/[";\n\r]/.test(s)) s = `"${s.replace(/"/g, '""')}"`;
     return s;
   };

@@ -9,7 +9,7 @@ export default defineTool({
   annotations: { readOnlyHint: true, idempotentHint: true, destructiveHint: false, openWorldHint: false },
   handler: async ({ limite, deslocamento }, ctx) => {
     const db = supabaseForUser(ctx);
-    let query = db.from('produtos').select('id,nome,categoria,rendimento,custo_gas,custo_energia,custo_mao_obra,preco_venda,margem_desejada,modo_preparo,ativo,receita_itens(insumo_id,quantidade,insumos(nome,tipo,unidade,preco_unidade))').order('nome').order('id').range(deslocamento, deslocamento + limite - 1);
+    const query = db.from('produtos').select('id,nome,categoria,rendimento,custo_gas,custo_energia,custo_mao_obra,preco_venda,margem_desejada,modo_preparo,ativo,receita_itens(insumo_id,quantidade,insumos(nome,tipo,unidade,preco_unidade))').order('nome').order('id').range(deslocamento, deslocamento + limite - 1);
     const { data, error } = await query;
     if (error) throw new ToolError('Não foi possível consultar os registros.');
     return { content: [{ type: 'text', text: JSON.stringify({ registros: data ?? [], limite, deslocamento }) }] };

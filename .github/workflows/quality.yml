@@ -17,28 +17,21 @@ jobs:
           bun-version: latest
       # The repository-wide lint currently reports pre-existing formatting violations
       # across unrelated files. Lint the touched application files for code rules,
-      # while deferring the repository-wide Prettier cleanup.
+      # while deferring the repository-wide Prettier cleanup (formatting rules stay off).
       - run: bun install --frozen-lockfile
-      - name: Lint application code (all files; formatting rules off)
+      - name: Lint application code (formatting rules off)
         run: |
           status=0
           bunx eslint src admin/src --rule "prettier/prettier: off" --format json --output-file eslint.json || status=$?
-          node - "$status" <<'JS'
+          # Erros bloqueiam o CI; avisos só aparecem como anotação. A saída vira anotações do GitHub.
+          node - <<'JS'
           const fs = require("fs");
-          const status = process.argv[2];
           let dados = [];
-          try { dados = JSON.parse(fs.readFileSync("eslint.json", "utf8")); } catch (e) { console.log("::error title=Lint sem saída JSON::" + e.message); process.exit(0); }
-          const regras = {}, arquivos = {}; let erros = 0, avisos = 0;
+          try { dados = JSON.parse(fs.readFileSync("eslint.json", "utf8")); } catch (e) { console.log("::error title=Lint sem saída::" + e.message); process.exit(0); }
           for (const f of dados) for (const m of f.messages) {
-            const r = m.ruleId || "(sem regra) " + String(m.message).slice(0, 60);
-            regras[r] = (regras[r] || 0) + 1; arquivos[f.filePath.replace(process.cwd() + "/", "")] = (arquivos[f.filePath.replace(process.cwd() + "/", "")] || 0) + 1;
-            if (m.severity === 2) erros++; else avisos++;
+            const nivel = m.severity === 2 ? "error" : "warning";
+            console.log("::" + nivel + " file=" + f.filePath.replace(process.cwd() + "/", "") + ",line=" + m.line + ",col=" + m.column + "::" + (m.ruleId || "") + " " + m.message);
           }
-          for (const f of dados) for (const m of f.messages) {
-            if (m.severity === 2) console.log("::error file=" + f.filePath.replace(process.cwd() + "/", "") + ",line=" + m.line + ",col=" + m.column + "::" + (m.ruleId || "") + " " + m.message);
-          }
-          const topo = (o, n) => Object.entries(o).sort((a, b) => b[1] - a[1]).slice(0, n).map(([k, v]) => k + "=" + v).join("; ");
-          console.log("::error title=Resumo do lint (status " + status + ")::ERROS=" + erros + " AVISOS=" + avisos + " ARQUIVOS_COM_PROBLEMA=" + Object.keys(arquivos).length + " | REGRAS: " + topo(regras, 25) + " | ARQUIVOS: " + topo(arquivos, 25));
           JS
           exit $status
       # Os erros também viram anotações do GitHub, visíveis na API e no PR sem abrir o log.
