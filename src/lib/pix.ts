@@ -75,7 +75,7 @@ function limparTexto(s: string, max: number) {
   return s
     .normalize("NFD")
     .replace(/[̀-ͯ]/g, "")
-    .replace(/[^A-Za-z0-9 .,\-]/g, " ")
+    .replace(/[^A-Za-z0-9 .,-]/g, " ")
     .replace(/\s+/g, " ")
     .trim()
     .slice(0, max)

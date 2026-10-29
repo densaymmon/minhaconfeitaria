@@ -1,4 +1,6 @@
 export function oauthReturnPath(value: unknown): string {
+  // Os caracteres de controle são rejeitados de propósito (segurança do caminho de retorno).
+  // eslint-disable-next-line no-control-regex
   if (typeof value !== 'string' || !value.startsWith('/') || value.startsWith('//') || /[\\\u0000-\u001f\u007f]/.test(value)) return '/';
   const origin = 'https://app.invalid';
   try {

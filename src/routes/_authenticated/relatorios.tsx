@@ -9,6 +9,7 @@ import { calcularRecebimentoPedido, recebimentoLegadoPendente, ratearVendaETaxas
 import { medida } from "@/lib/ingredient-cost";
 import { brl, dataBR, hojeISO, mesISO, num } from "@/lib/format";
 import { baixarCSV } from "@/lib/csv";
+import { contaEmAberto, saldoConta, somaSaldos } from "@/lib/financeiro";
 import { PageHeader, Field, Stat, Row, Empty } from "@/components/app/ui";
 import { Input } from "@/components/ui/input";
 import { Button } from "@/components/ui/button";
@@ -110,17 +111,15 @@ function RelatoriosConteudo({ initialSearch, embedded = false }: { initialSearch
   const { data: pagamentosContasPagar } = useSuspenseQuery(appQueries.contasPagarPagamentosQ);
   const { data: estornosContasPagar } = useSuspenseQuery(appQueries.contasPagarEstornosQ);
   const intervaloValido = inicio <= fim;
-  const contasAbertas = contasPagar.filter((c) => !c.cancelada_em && ["pendente", "parcial"].includes(c.status));
-  const saldoContasAbertas = contasAbertas.reduce((s, c) => s + Math.max(0, Number(c.valor) - Number(c.valor_pago)), 0);
-  const saldoContasVencidas = contasAbertas
-    .filter((c) => c.data_vencimento < hojeISO())
-    .reduce((s, c) => s + Math.max(0, Number(c.valor) - Number(c.valor_pago)), 0);
+  const contasAbertas = contasPagar.filter(contaEmAberto);
+  const saldoContasAbertas = somaSaldos(contasAbertas);
+  const saldoContasVencidas = somaSaldos(contasAbertas.filter((c) => c.data_vencimento < hojeISO()));
   const dataLimiteContas = new Date(hojeISO() + "T00:00:00");
   dataLimiteContas.setDate(dataLimiteContas.getDate() + 7);
   const dataLimiteContasISO = dataLimiteContas.getFullYear() + "-" + String(dataLimiteContas.getMonth() + 1).padStart(2, "0") + "-" + String(dataLimiteContas.getDate()).padStart(2, "0");
-  const saldoContasProximos7Dias = contasAbertas
-    .filter((c) => c.data_vencimento >= hojeISO() && c.data_vencimento <= dataLimiteContasISO)
-    .reduce((s, c) => s + Math.max(0, Number(c.valor) - Number(c.valor_pago)), 0);
+  const saldoContasProximos7Dias = somaSaldos(
+    contasAbertas.filter((c) => c.data_vencimento >= hojeISO() && c.data_vencimento <= dataLimiteContasISO),
+  );
   const insumosPorId = useMemo(
     () => new Map(insumos.map((i) => [i.id, { ...i, preco_unidade: Number(i.preco_unidade) }])),
     [insumos],
@@ -212,7 +211,7 @@ function RelatoriosConteudo({ initialSearch, embedded = false }: { initialSearch
       if (conta.cancelada_em || conta.status === "cancelado" || !conta.compra_id) return false;
       const compra = comprasPorId.get(conta.compra_id);
       if (!compra || compra.cancelada_em || compra.forma_pagamento_compra !== "credito") return false;
-      if (Math.max(0, Number(conta.valor) - Number(conta.valor_pago)) <= 0.009) return false;
+      if (saldoConta(conta) <= 0.009) return false;
       return filtroFormaCompra === "todas" || compra.forma_pagamento_compra === filtroFormaCompra;
     });
 
@@ -259,7 +258,7 @@ function RelatoriosConteudo({ initialSearch, embedded = false }: { initialSearch
       ? b.data_vencimento.localeCompare(a.data_vencimento)
       : ordenacaoCompras === "quantidade"
         ? (Number(b.valor) || 0) - (Number(a.valor) || 0)
-        : (Math.max(0, Number(b.valor) - Number(b.valor_pago))) - (Math.max(0, Number(a.valor) - Number(a.valor_pago))));
+        : (saldoConta(b)) - (saldoConta(a)));
   }, [contasPagar, compras, comprasPorId, filtroFormaCompra, ordenacaoCompras]);
   const parcelasFuturasPorMes = useMemo(() => {
     const hoje = hojeISO();
@@ -270,12 +269,12 @@ function RelatoriosConteudo({ initialSearch, embedded = false }: { initialSearch
       // Débito, Pix e dinheiro são pagamentos à vista e não entram em vencimentos futuros.
       if (compra.forma_pagamento_compra !== "credito") return false;
       if (filtroFormaCompra !== "todas" && (compra.forma_pagamento_compra || "não informado") !== filtroFormaCompra) return false;
-      return conta.data_vencimento >= hoje && Math.max(0, Number(conta.valor) - Number(conta.valor_pago)) > 0.009;
+      return conta.data_vencimento >= hoje && saldoConta(conta) > 0.009;
     });
     const grupos = new Map<string, { mes: string; total: number; parcelas: typeof abertas }>();
     for (const conta of abertas) {
       const mes = conta.data_vencimento.slice(0, 7);
-      const saldo = Math.max(0, Number(conta.valor) - Number(conta.valor_pago));
+      const saldo = saldoConta(conta);
       const grupo = grupos.get(mes);
       if (grupo) { grupo.total += saldo; grupo.parcelas.push(conta); }
       else grupos.set(mes, { mes, total: saldo, parcelas: [conta] });
@@ -292,10 +291,10 @@ function RelatoriosConteudo({ initialSearch, embedded = false }: { initialSearch
     if (!compra || compra.cancelada_em) return false;
     if (compra.forma_pagamento_compra !== "credito") return false;
     if (filtroFormaCompra !== "todas" && (compra.forma_pagamento_compra || "não informado") !== filtroFormaCompra) return false;
-    return Math.max(0, Number(conta.valor) - Number(conta.valor_pago)) > 0.009;
+    return saldoConta(conta) > 0.009;
   }), [contasPagar, comprasPorId, filtroFormaCompra]);
   const totalParcelasFuturas = parcelasFuturasPorMes.reduce((s, grupo) => s + grupo.total, 0);
-  const totalParcelasVencidas = parcelasCompraVencidas.reduce((s, conta) => s + Math.max(0, Number(conta.valor) - Number(conta.valor_pago)), 0);
+  const totalParcelasVencidas = parcelasCompraVencidas.reduce((s, conta) => s + saldoConta(conta), 0);
   const totalComprasFiltradas = comprasFiltradasForma.reduce((s, c) => s + Math.max(0, Number(c.total) || 0), 0);
   const gastosPorInsumo = useMemo(() => {
     const idsComprasValidas = new Set(comprasFiltradasForma.map((compra) => compra.id));
@@ -506,7 +505,7 @@ function RelatoriosConteudo({ initialSearch, embedded = false }: { initialSearch
         contasPagar.filter((c) => filtroStatusConta === "todas" ? !c.cancelada_em : filtroStatusConta === "cancelado" ? !!c.cancelada_em || c.status === "cancelado" : !c.cancelada_em && c.status === filtroStatusConta).map((c) => [
           dataBR(c.data_vencimento), c.descricao, c.fornecedor || "", c.status,
           Number(c.valor) || 0, Number(c.valor_pago) || 0,
-          Math.max(0, Number(c.valor) - Number(c.valor_pago)),
+          saldoConta(c),
         ]),
       );
       return;
@@ -651,7 +650,7 @@ function RelatoriosConteudo({ initialSearch, embedded = false }: { initialSearch
               ? <Empty>Nenhuma conta em aberto.</Empty>
               : contasAbertas.slice().sort((a, b) => a.data_vencimento.localeCompare(b.data_vencimento)).map((conta) => (
                 <div key={conta.id} className="flex items-start justify-between gap-3 rounded-lg border p-3 text-sm">
-                  <div className="min-w-0"><p className="font-medium">{conta.descricao}</p><p className="text-xs text-muted-foreground">{conta.fornecedor || "Fornecedor não informado"} · Vencimento {dataBR(conta.data_vencimento)}</p><p className="text-xs text-muted-foreground">Pago: {brl(Number(conta.valor_pago) || 0)} · Saldo: {brl(Math.max(0, Number(conta.valor) - Number(conta.valor_pago)))}</p></div>
+                  <div className="min-w-0"><p className="font-medium">{conta.descricao}</p><p className="text-xs text-muted-foreground">{conta.fornecedor || "Fornecedor não informado"} · Vencimento {dataBR(conta.data_vencimento)}</p><p className="text-xs text-muted-foreground">Pago: {brl(Number(conta.valor_pago) || 0)} · Saldo: {brl(saldoConta(conta))}</p></div>
                   <b className="shrink-0">{brl(Number(conta.valor) || 0)}</b>
                 </div>
               )))}
@@ -894,7 +893,7 @@ function RelatoriosConteudo({ initialSearch, embedded = false }: { initialSearch
             <div className="divide-y">
               {[...parcelasCompraVencidas].sort((a, b) => a.data_vencimento.localeCompare(b.data_vencimento)).map((conta) => {
                 const compra = conta.compra_id ? comprasPorId.get(conta.compra_id) : undefined;
-                const saldo = Math.max(0, Number(conta.valor) - Number(conta.valor_pago));
+                const saldo = saldoConta(conta);
                 return <div key={conta.id} className="flex items-start justify-between gap-3 py-3 text-sm"><div className="min-w-0"><p className="font-medium">{conta.descricao}</p><p className="text-xs text-muted-foreground">{compra?.local_compra?.trim() || conta.fornecedor || "Local não informado"} · Venceu em {dataBR(conta.data_vencimento)}</p><p className="text-xs text-muted-foreground">Pago: {brl(Number(conta.valor_pago) || 0)} · Pendente: {brl(saldo)}</p></div><b className="shrink-0">{brl(saldo)}</b></div>;
               })}
             </div>
@@ -905,7 +904,7 @@ function RelatoriosConteudo({ initialSearch, embedded = false }: { initialSearch
               <div className="divide-y border-t">
                 {grupo.parcelas.map((conta) => {
                   const compra = conta.compra_id ? comprasPorId.get(conta.compra_id) : undefined;
-                  const saldo = Math.max(0, Number(conta.valor) - Number(conta.valor_pago));
+                  const saldo = saldoConta(conta);
                   return <div key={conta.id} className="flex items-start justify-between gap-3 py-3 text-sm"><div className="min-w-0"><p className="font-medium">{conta.descricao}</p><p className="text-xs text-muted-foreground">{compra?.local_compra?.trim() || conta.fornecedor || "Local não informado"} · Vencimento {dataBR(conta.data_vencimento)}</p><p className="text-xs text-muted-foreground">Valor original: {brl(Number(conta.valor) || 0)} · Pago: {brl(Number(conta.valor_pago) || 0)}</p></div><b className="shrink-0">{brl(saldo)}</b></div>;
                 })}
               </div>
@@ -917,7 +916,7 @@ function RelatoriosConteudo({ initialSearch, embedded = false }: { initialSearch
           {!parcelasComprasNoPeriodo.length ? <Empty>Nenhuma parcela de compra encontrada no período de vencimento.</Empty> : <div className="divide-y">
             {parcelasComprasNoPeriodo.map((conta) => {
               const compra = conta.compra_id ? comprasPorId.get(conta.compra_id) : undefined;
-              const saldo = Math.max(0, Number(conta.valor) - Number(conta.valor_pago));
+              const saldo = saldoConta(conta);
               return <div key={conta.id} className="py-3"><div className="flex items-start justify-between gap-3"><div className="min-w-0"><p className="font-medium">{conta.descricao}</p><p className="text-xs text-muted-foreground">{compra?.local_compra?.trim() || conta.fornecedor || "Local não informado"} · Vencimento {dataBR(conta.data_vencimento)}</p><p className="text-xs text-muted-foreground">Pago: {brl(Number(conta.valor_pago) || 0)} · Pendente: {brl(saldo)} · {conta.status}</p></div><b className="shrink-0">{brl(Number(conta.valor) || 0)}</b></div></div>;
             })}
           </div>}
@@ -959,7 +958,7 @@ function RelatoriosConteudo({ initialSearch, embedded = false }: { initialSearch
                         : c.status === "pendente" ? "Pendente" : c.status;
                       return (
                         <div key={c.id} className="flex items-start justify-between gap-3 py-3 text-sm">
-                          <div className="min-w-0"><p className="font-medium">{c.descricao}</p><p className="text-xs text-muted-foreground">{c.fornecedor || "Fornecedor não informado"} · Vencimento {dataBR(c.data_vencimento)} · {statusExibido}</p><p className="text-xs text-muted-foreground">Pago: {brl(Number(c.valor_pago) || 0)} · Saldo: {brl(Math.max(0, Number(c.valor) - Number(c.valor_pago)))}</p></div>
+                          <div className="min-w-0"><p className="font-medium">{c.descricao}</p><p className="text-xs text-muted-foreground">{c.fornecedor || "Fornecedor não informado"} · Vencimento {dataBR(c.data_vencimento)} · {statusExibido}</p><p className="text-xs text-muted-foreground">Pago: {brl(Number(c.valor_pago) || 0)} · Saldo: {brl(saldoConta(c))}</p></div>
                           <b className="shrink-0">{brl(Number(c.valor) || 0)}</b>
                         </div>
                       );
