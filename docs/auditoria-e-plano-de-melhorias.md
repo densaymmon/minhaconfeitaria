@@ -150,6 +150,21 @@ Método: leitura do código (`pedidos.$id.tsx`, `queries.ts`, `calc.ts`), leitur
 - Entregas sem produção registrada (22 itens de pedidos entregues com receita): impacto no estoque a avaliar na Etapa D.
 - Não existe fluxo de estorno/devolução de recebimento de pedido; a correção é feita editando o recebimento.
 
+### 3.8 Etapa F — catálogo público e primeiros passos (29/10/2026)
+
+Método: consultas somente leitura em produção (privilégios, políticas, funções chamáveis por visitante anônimo) e leitura das funções do catálogo. Nada foi alterado em produção.
+
+**Verificado em produção**
+- O visitante anônimo (papel `anon`) tem privilégio de tabela em 14 tabelas, mas **todas têm RLS ligada e a única política aplicável a anônimos é `planos_leitura`** (preços dos planos, público de propósito). Teste dinâmico (papel `anon`, transação desfeita): 0 linhas em pedidos, clientes, produtos, configurações e `owner_claim`; 3 linhas em planos.
+- Funções chamáveis por anônimo: 45. As de catálogo e pedido são `SECURITY DEFINER` com `search_path` fixo e devolvem só dados do pedido consultado, sem custo, receita ou outros clientes. `release_owner_claim` e `limitar_proprietario_unico` são funções de gatilho (não são chamáveis como RPC).
+- Código curto do pedido (`pedidos.codigo_curto`): 10 caracteres de um alfabeto de 31, cerca de 49 bits, gerado a partir de UUID aleatório; o link longo usa UUID (122 bits). **Sem limite de tentativas** nas consultas públicas: o risco de adivinhação é baixo com poucos pedidos, mas cresce com a escala (acompanhar na Etapa G). O código mostra nome (primeiro), itens, endereço de entrega e Pix da confeitaria do pedido consultado.
+- `progresso_fidelidade` permite a um visitante saber quantos pedidos um telefone informado tem naquela confeitaria (módulo N). É o recurso de fidelidade; risco baixo, registrar para decisão de produto.
+- Primeiros passos: 6 passos coerentes e já testados (`primeiros-passos.test.ts`). Em produção: 1 confeitaria, 1 catálogo no ar, 2 pedidos de catálogo em 43, 9 produtos no catálogo, 8 deles sem foto.
+
+**Proteção nova:** `tests/db/anonimo-sem-acesso-smoke.sql` falha se alguma tabela do schema `public` ficar sem RLS, se surgir política para anônimo além de `planos_leitura`, ou se o anônimo conseguir ler linhas de qualquer tabela (verificado por mutação: tabela sem RLS, política vazando e leitura efetiva fazem o teste falhar).
+
+**Recomendação (não aplicada, precisa de autorização):** revogar os privilégios de tabela do papel `anon`, deixando só a RLS e as funções públicas, como defesa em profundidade. Hoje a segurança depende apenas da RLS estar correta (está).
+
 ## 4. Pontos fortes confirmados
 
 - RLS por tenant em todas as tabelas, políticas RESTRICTIVE para papel e acesso, e 88 instruções `REVOKE ALL ON FUNCTION` nas migrations.
