@@ -45,6 +45,17 @@ export function temRecurso(a: MinhaAssinatura | null | undefined, recurso: Recur
   return a.plano.recursos.includes(recurso);
 }
 
+/**
+ * Regra aplicada também no servidor (a tela escondendo o botão não é uma barreira de segurança):
+ * o recurso precisa estar no plano e a assinatura não pode estar suspensa ou cancelada.
+ * Contas sem assinatura (antigas) continuam liberadas, como em `temRecurso`.
+ */
+export function podeUsarRecurso(a: MinhaAssinatura | null | undefined, recurso: Recurso) {
+  if (!a) return true;
+  if (a.situacao === "suspensa" || a.situacao === "cancelada") return false;
+  return temRecurso(a, recurso);
+}
+
 /** Recurso exigido por cada página do sistema. */
 export function recursoDaPagina(caminho: string): Recurso | null {
   if (/^\/(financeiro|despesas|contas-pagar|relatorios|resumo-mes|fluxo-caixa)(\/|$)/.test(caminho)) return "financeiro";

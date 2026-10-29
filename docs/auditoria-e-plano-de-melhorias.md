@@ -57,7 +57,9 @@ Legenda de status: **Confirmado** (há evidência no código/CI) · **A verifica
 - **Status:** aceito como decisão de negócio; risco residual conhecido.
 - **Risco da mudança:** baixo. **Testes:** abrir PR de teste em rascunho e confirmar que não é mesclado.
 
-#### C2 — O lint do CI cobre apenas 12 de ~195 arquivos
+#### C2 — O lint do CI cobre apenas 12 de ~195 arquivos (**resolvido na Etapa H, 29/10/2026**)
+- **Resolução:** medição no CI mostrou só 6 erros e 22 avisos em todo o código (a estimativa inicial de "violações de formatação" referia-se apenas ao Prettier, que segue desligado). Os 6 erros foram corrigidos sem mudar comportamento e o passo do CI agora roda `eslint src admin/src` em todos os arquivos, com erros bloqueando e avisos (16 `react-refresh/only-export-components` em componentes de UI e 6 `react-hooks/exhaustive-deps`) apenas informados. O arquivo gerado `previewAuthStorage.ts` ("Do not edit") é ignorado. A formatação com Prettier continua adiada.
+- **Texto original da avaliação:**
 - **Gravidade:** média
 - **Impacto:** erros de código e de hooks em ~94% dos arquivos de `src/` e `admin/` não bloqueiam o CI. O próprio workflow registra em comentário que o lint do repositório inteiro acusa violações de formatação preexistentes e que a limpeza foi adiada.
 - **Arquivos:** `.github/workflows/quality.yml` (passo *Lint changed application files*).
@@ -108,7 +110,7 @@ Legenda de status: **Confirmado** (há evidência no código/CI) · **A verifica
 | R2 | Duas fontes de recebimento do pedido (`valor_entrada` legado e `pedido_pagamentos`) | O relatório consolida via `calcularRecebimentoPedido`; falta confirmar que nenhuma tela lê só um dos lados | Revisar usos de `valor_entrada` e rodar `payment-receipts-smoke.sql` | C/E |
 | R3 | RPCs anônimas do catálogo (`avaliar_pedido`, `informar_pagamento_pedido`, `acompanhar_pedido_catalogo`) protegidas por código de 10 caracteres | Funções concedidas a `anon`; não verificada a entropia do código nem limite de tentativas | Revisar geração de `codigo_curto` e política de limite de requisições | G |
 | R4 | `registrar_erro` aceita chamadas anônimas | Mitigado no desenho: deduplicação por hora, teto de 200 novas linhas/hora, retenção de 30 dias | Confirmar o teto no teste `plataforma-uso-smoke.sql` | G |
-| R5 | Sete funções `SECURITY DEFINER` sem referência a tenant no corpo ainda não conferidas | `_entrar_na_equipe`, `_limite_plano_pedidos`, `_limite_plano_produtos`, `limitar_proprietario_unico`, `release_owner_claim`, `snapshot_movimento_producao`, `snapshot_producao_evento` — provavelmente funções de gatilho, mas **não confirmado** | Conferir tipo de retorno (`trigger`) e grants | G |
+| R5 | ~~Sete funções `SECURITY DEFINER` sem referência a tenant~~ **Verificado na Etapa G** | Cinco são funções de gatilho que usam `NEW.user_id` (`_limite_plano_pedidos`, `_limite_plano_produtos`, `snapshot_movimento_producao`, `snapshot_producao_evento`) ou a identidade da linha (`limitar_proprietario_unico`, `release_owner_claim`: não chamáveis como RPC). `_entrar_na_equipe` não é executável por usuários (sem EXECUTE para `anon` e `authenticated`) e valida convite, e-mail e vínculo | Consulta somente leitura ao catálogo do banco em 29/10/2026 | G (concluído) |
 | R6 | Backups e restauração | Sem acesso à infraestrutura | Verificar no provedor e testar uma restauração | G/H |
 | R7 | Dependências vulneráveis | Não foi possível rodar auditoria de dependências | `bun audit` ou equivalente no CI | G/H |
 
@@ -141,7 +143,7 @@ Método: leitura do código (`pedidos.$id.tsx`, `queries.ts`, `calc.ts`), leitur
 
 **Dados de produção (43 pedidos):** 0 divergências entre `valor_entrada` e a soma de `pedido_pagamentos` (20 pedidos com recebimentos detalhados); 0 pedidos pagos acima do total; 0 cancelados com dinheiro registrado. 10 pedidos antigos estão marcados como quitados sem valor registrado (legado, sem linhas de pagamento): não foram alterados.
 
-**Confirmado e corrigido (C8):** `salvar_pedido`, ao editar, gravava `valor_entrada` e `saldo_quitado` vindos do navegador. Com um recebimento feito em outro aparelho, um salvamento com tela desatualizada zerava o valor pago do pedido enquanto o histórico mantinha o recebimento (reproduzido no banco local: pagamentos R$ 50, pedido R$ 0). A tela se protege usando o cache, mas isso não é uma garantia. Correção na migration `0047_salvar_pedido_preservar_recebimentos.sql` (preserva os dois campos quando o pedido já tem linhas em `pedido_pagamentos`) e teste `tests/db/salvar-pedido-recebimentos-smoke.sql`, que falha sem a migration e passa com ela. **A migration só vale em produção depois de aplicada pelo procedimento manual de migrations, com autorização do proprietário.**
+**Confirmado e corrigido (C8):** `salvar_pedido`, ao editar, gravava `valor_entrada` e `saldo_quitado` vindos do navegador. Com um recebimento feito em outro aparelho, um salvamento com tela desatualizada zerava o valor pago do pedido enquanto o histórico mantinha o recebimento (reproduzido no banco local: pagamentos R$ 50, pedido R$ 0). A tela se protege usando o cache, mas isso não é uma garantia. Correção na migration `0047_salvar_pedido_preservar_recebimentos.sql` (preserva os dois campos quando o pedido já tem linhas em `pedido_pagamentos`) e teste `tests/db/salvar-pedido-recebimentos-smoke.sql`, que falha sem a migration e passa com ela. **Aplicada em produção em 29/10/2026 com autorização do proprietário** (troca apenas do corpo da função; definição conferida por hash contra a do banco de teste; reversão: reaplicar a definição da migration `0011`).
 
 **Observações sem correção nesta etapa (decisão ou etapa futura):**
 - Não há regra central de transição de status: o status é gravado diretamente em cinco pontos do código. Sem incidente nos dados; avaliar uma regra única com testes numa etapa posterior.
@@ -149,6 +151,64 @@ Método: leitura do código (`pedidos.$id.tsx`, `queries.ts`, `calc.ts`), leitur
 - `pedidos.numero` é uma sequência global (não por confeitaria): números têm lacunas (1, 26, 32) e uma confeitaria vê saltos por causa de outras. Cosmético; relevante para o piloto com várias confeitarias.
 - Entregas sem produção registrada (22 itens de pedidos entregues com receita): impacto no estoque a avaliar na Etapa D.
 - Não existe fluxo de estorno/devolução de recebimento de pedido; a correção é feita editando o recebimento.
+
+### 3.6 Etapa D — produtos, receitas, custos e estoque (29/10/2026)
+
+Método: consultas somente leitura em produção e leitura das funções `_custo_base_produto` / `_custo_unitario_produto`. A única alteração de dados foi a autorizada nos pedidos nº 11 e nº 13, descrita abaixo.
+
+**Confirmado correto**
+- A fórmula de custo está certa: o baguete de calabresa com queijo custa R$ 15,41 por unidade (insumos da receita R$ 61,64 ÷ rendimento 4), recalculado à mão e igual ao valor do banco.
+- Nenhuma receita tem unidade incompatível com a do insumo (o que faria o insumo ser ignorado no custo); nenhum insumo usado em receita está sem preço; todo produto tem receita e preço de venda acima do custo.
+- Estoque: nenhum insumo com saldo negativo; movimentos de compra, produção e inventário coerentes entre si.
+
+**Pontos de atenção (decisão do proprietário, nada foi alterado)**
+- **Custos gravados defasados:** 14 itens de pedidos têm custo gravado mais de 30% abaixo do custo atual (12 em pedidos entregues e 2 em pedidos ainda "recebido", nº 11 e nº 13, com entrega em 30/10). Exemplo: baguete de calabresa, R$ 5,49 gravado contra R$ 15,41 atual. Os custos gravados são retratos e não devem ser recalculados em massa (regra do projeto); a causa provável é receita ou preços diferentes na época do pedido, mas o histórico de alterações não permite confirmar. **Atualizado em 29/10/2026, com autorização do proprietário:** os 2 itens dos pedidos nº 11 e nº 13 (ainda "recebido", sem produção) passaram a usar o custo atual (R$ 15,21 e R$ 15,41); os 12 itens de pedidos entregues continuam com o custo gravado.
+- **Custos de gás, energia e mão de obra estão zerados em todos os produtos**, então as margens exibidas (26% a 91%) consideram só os insumos. Decisão do proprietário em 29/10/2026: não preencher agora.
+- **Estoque só baixa quando a produção é registrada:** 22 itens de pedidos entregues não têm produção registrada, portanto nunca consumiram insumos e o saldo de estoque fica superestimado. Não é defeito de código; é processo de uso.
+
+**Teste novo:** `tests/db/custos-receitas-smoke.sql` cobre a conversão de unidades, o rendimento, os custos extras e a regra de que o custo gravado no pedido não muda quando o preço do insumo muda (verificado também por mutação: o teste falha se o esperado for alterado).
+
+### 3.7 Etapa E — financeiro (29/10/2026)
+
+Método: leitura das fórmulas de contas a pagar nas telas, consultas somente leitura de consistência em produção e mirror dos testes novos em Node (o Vitest roda no CI).
+
+**Dados de produção (27 contas a pagar):** status e data de cancelamento coerentes (6 canceladas, 5 pagas, 16 pendentes); nenhuma conta paga incompleta, nenhuma pendente com pagamento, nenhuma vencida. O valor pago de todas as contas confere com pagamentos − estornos (as duas contas aparentemente divergentes têm estorno registrado).
+
+**C3 resolvido:** a regra do saldo de conta estava copiada em 4 telas e a definição de "conta em aberto" variava (às vezes só o status, às vezes também a data de cancelamento; o total pago somava status diferentes). Agora há uma única definição em `src/lib/financeiro.ts`, com 10 testes, usada por Financeiro, Contas a pagar, Relatórios e Fluxo de caixa. Com os dados atuais os números exibidos não mudam. Fórmulas descritas em `docs/formulas-financeiras.md`.
+
+**Observação:** "Lucro total do período" (contratado) e "Resultado" (realizado) são indicadores diferentes na mesma tela de Relatórios; agora documentados.
+
+### 3.9 Etapa G — multiempresa, permissões e segurança (29/10/2026)
+
+Método: consultas somente leitura ao catálogo do banco de produção, leitura das funções de servidor e das ferramentas MCP.
+
+**C9 — Leitura por IA só era barrada na tela (corrigido).** O recurso "Leitura por IA" do plano era conferido apenas na interface (`useRecurso("ia")`); a função de servidor `extractOrderDraft` exigia login, mas **não conferia o plano nem a situação da assinatura**. Qualquer usuário autenticado, inclusive de uma conta suspensa ou de plano sem IA, podia chamá-la diretamente e gastar créditos de IA da plataforma (e a regra do projeto diz que verificações no frontend não são barreira de segurança). Agora o servidor consulta `minha_assinatura` e recusa quando o plano não inclui IA, a assinatura está suspensa/cancelada, ou o plano não pôde ser verificado. A regra pura é `podeUsarRecurso` (`src/lib/assinatura.ts`), com teste. Contas sem assinatura (antigas) seguem liberadas, como na tela.
+
+**Verificado sem problema**
+- R5 resolvido (ver tabela): as funções `SECURITY DEFINER` restantes são de gatilho ou internas.
+- O cliente administrativo (`supabaseAdmin`) só é usado em `push.functions.ts`, com filtros por pedido/confeitaria e janela de 10 minutos; as ferramentas MCP usam o cliente com RLS do chamador.
+- Papéis (dono, gerente, produção), RLS por confeitaria, bloqueio por acesso/assinatura e catálogo anônimo continuam cobertos pelos testes de banco (`multiempresa-isolation`, `equipe`, `plataforma`, `catalogo*`, `anonimo-sem-acesso`).
+
+**Não verificável nesta sessão (ação do proprietário)**
+- **R6 — backups:** o banco não expõe a configuração de backup e não tenho acesso ao painel do provedor. Não afirmo que existem backups. Antes do piloto: confirmar no painel do Lovable Cloud/Supabase se há backup diário ou recuperação pontual, e **testar uma restauração** em um projeto separado.
+- **R7 — dependências:** os alertas de dependências (Dependabot) estão **desativados** no repositório e não é possível rodar auditoria de pacotes aqui. Recomendação: ativar Dependabot alerts nas configurações do GitHub (sem custo, sem mudança de código).
+- **R3 — códigos curtos:** sem limite de tentativas nas consultas públicas (ver 3.8); decidir se vale um limite antes de muitos clientes.
+- **Isolamento entre confeitarias em produção:** só existe 1 confeitaria em produção; o isolamento é comprovado pelos testes automatizados, não por dados reais de duas contas.
+
+### 3.8 Etapa F — catálogo público e primeiros passos (29/10/2026)
+
+Método: consultas somente leitura em produção (privilégios, políticas, funções chamáveis por visitante anônimo) e leitura das funções do catálogo. Nada foi alterado em produção.
+
+**Verificado em produção**
+- O visitante anônimo (papel `anon`) tem privilégio de tabela em 14 tabelas, mas **todas têm RLS ligada e a única política aplicável a anônimos é `planos_leitura`** (preços dos planos, público de propósito). Teste dinâmico (papel `anon`, transação desfeita): 0 linhas em pedidos, clientes, produtos, configurações e `owner_claim`; 3 linhas em planos.
+- Funções chamáveis por anônimo: 49. As de catálogo e pedido são `SECURITY DEFINER` com `search_path` fixo e devolvem só dados do pedido consultado, sem custo, receita ou outros clientes. `release_owner_claim` e `limitar_proprietario_unico` são funções de gatilho (não são chamáveis como RPC).
+- Código curto do pedido (`pedidos.codigo_curto`): 10 caracteres de um alfabeto de 31, cerca de 49 bits, gerado a partir de UUID aleatório; o link longo usa UUID (122 bits). **Sem limite de tentativas** nas consultas públicas: o risco de adivinhação é baixo com poucos pedidos, mas cresce com a escala (acompanhar na Etapa G). O código mostra nome (primeiro), itens, endereço de entrega e Pix da confeitaria do pedido consultado.
+- `progresso_fidelidade` permite a um visitante saber quantos pedidos um telefone informado tem naquela confeitaria (módulo N). É o recurso de fidelidade; risco baixo, registrar para decisão de produto.
+- Primeiros passos: 6 passos coerentes e já testados (`primeiros-passos.test.ts`). Em produção: 1 confeitaria, 1 catálogo no ar, 2 pedidos de catálogo em 43, 9 produtos no catálogo, 8 deles sem foto.
+
+**Proteção nova:** `tests/db/anonimo-sem-acesso-smoke.sql` falha se alguma tabela do schema `public` ficar sem RLS, se surgir política para anônimo além de `planos_leitura`, ou se o anônimo conseguir ler linhas de qualquer tabela (verificado por mutação: tabela sem RLS, política vazando e leitura efetiva fazem o teste falhar).
+
+**Recomendação (não aplicada, precisa de autorização):** revogar os privilégios de tabela do papel `anon`, deixando só a RLS e as funções públicas, como defesa em profundidade. Hoje a segurança depende apenas da RLS estar correta (está).
 
 ## 4. Pontos fortes confirmados
 

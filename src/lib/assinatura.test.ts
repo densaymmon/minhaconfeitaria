@@ -1,5 +1,5 @@
 import { describe, expect, it } from "vitest";
-import { avisoAssinatura, diasEntre, mensagemPlano, planoComRecurso, recursoDaPagina, temRecurso, type MinhaAssinatura, type Plano } from "./assinatura";
+import { avisoAssinatura, diasEntre, mensagemPlano, planoComRecurso, podeUsarRecurso, recursoDaPagina, temRecurso, type MinhaAssinatura, type Plano } from "./assinatura";
 
 const base: MinhaAssinatura = {
   plano: { id: "essencial", nome: "Essencial", recursos: [], limite_pedidos_mes: 60, limite_produtos: 30, preco_mensal: 29.9, preco_anual: 299 },
@@ -24,6 +24,15 @@ describe("plano da confeitaria", () => {
     expect(temRecurso(null, "catalogo")).toBe(true);
     expect(temRecurso(base, "catalogo")).toBe(false);
     expect(temRecurso({ ...base, plano: { ...base.plano, recursos: ["catalogo"] } }, "catalogo")).toBe(true);
+  });
+  it("o servidor só libera o recurso com plano que o inclui e assinatura não bloqueada", () => {
+    const comIa = { ...base, plano: { ...base.plano, recursos: ["ia"] } };
+    expect(podeUsarRecurso(null, "ia")).toBe(true);
+    expect(podeUsarRecurso(base, "ia")).toBe(false);
+    expect(podeUsarRecurso(comIa, "ia")).toBe(true);
+    expect(podeUsarRecurso({ ...comIa, situacao: "atrasada" }, "ia")).toBe(true);
+    expect(podeUsarRecurso({ ...comIa, situacao: "suspensa" }, "ia")).toBe(false);
+    expect(podeUsarRecurso({ ...comIa, situacao: "cancelada" }, "ia")).toBe(false);
   });
   it("sabe qual recurso cada página exige", () => {
     expect(recursoDaPagina("/financeiro")).toBe("financeiro");
