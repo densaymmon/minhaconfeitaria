@@ -3,6 +3,7 @@ import { createFileRoute, Link, useNavigate } from "@tanstack/react-router";
 import { useQuery, useQueryClient, useSuspenseQuery } from "@tanstack/react-query";
 import { useState } from "react";
 import { componentesDoKit } from "@/lib/lista-producao";
+import { lerDuplicar } from "@/lib/produto-duplicar";
 import { toast } from "sonner";
 import { Plus, Trash2 } from "lucide-react";
 import { apagarArquivosMidia, enviarMidiaProduto } from "@/lib/foto-catalogo";
@@ -22,7 +23,7 @@ import { Switch } from "@/components/ui/switch";
 import { RecursoBloqueado, useRecurso } from "@/components/app/plano";
 
 export const Route = createFileRoute("/_authenticated/produtos/$id")({
- validateSearch: (search: Record<string, unknown>) => ({ duplicar: search["duplicar"] === "1" }),
+ validateSearch: (search: Record<string, unknown>) => ({ duplicar: lerDuplicar(search["duplicar"]) }),
  loader: async ({ context, params }) => { await Promise.all([context.queryClient.ensureQueryData(appQueries.produtosQ),context.queryClient.ensureQueryData(appQueries.insumosQ),context.queryClient.ensureQueryData(appQueries.midiasProdutoQ(params.id))]); },
  errorComponent: ({error}) => <p role="alert" className="py-8 text-destructive">{error instanceof Error ? error.message : "Não foi possível carregar os registros."}</p>,
  notFoundComponent: () => <p>Registro não encontrado.</p>,
