@@ -12,11 +12,11 @@ A auditoria desta etapa foi **estática**: leitura do código, das migrations, d
 
 | Verificação | Situação | Motivo |
 |---|---|---|
-| Instalação de dependências | Não executada | O `bun.lock` contém 217 URLs de tarball de um registry privado (`pkg.dev`), bloqueado pela política de rede desta sessão; o DNS direto do npmjs também não resolve. |
+| Instalação de dependências | Não executada | O `bun.lock` contém 217 URLs de tarball do cache de npm do Lovable (`pkg.dev`), bloqueado pela política de rede desta sessão; o DNS direto do npmjs também não resolve. |
 | Typecheck, lint, testes unitários, build | Não executados localmente | Dependem da instalação acima. A evidência disponível é o CI do GitHub na `main` (workflow *Quality checks* com sucesso nas execuções mais recentes). |
 | Smoke tests SQL (`tests/db/*.sql`) | Não executados localmente | Não há servidor PostgreSQL nesta sessão (apenas o cliente `psql`). Rodam no CI. |
 | Backups e restauração | Não verificado | Sem acesso à configuração do projeto de banco. |
-| Estado real do banco de produção | Não verificado | Nenhum acesso ao banco foi usado nesta etapa. |
+| Estado real do banco de produção | Parcial | Em 29/10/2026 foi usada a consulta somente leitura de pedidos (nenhum dado alterado; nomes e telefones de clientes não constam neste documento). Esquema, políticas e backups continuam sem verificação. |
 
 **Cobertura desta etapa:**
 
@@ -52,8 +52,9 @@ Legenda de status: **Confirmado** (há evidência no código/CI) · **A verifica
 - **Impacto:** qualquer PR não-rascunho cujo CI passe é mesclado com *squash* na `main` e sincronizado com o Lovable, sem revisão humana. Conflita com a regra do projeto de não mesclar automaticamente. O histórico confirma o uso: os PRs #189 a #208 foram mesclados em sequência.
 - **Arquivos:** `.github/workflows/auto-merge-verified-prs.yml`
 - **Causa:** automação intencional (`gh pr merge --squash` após `gh pr checks --watch`). O workflow ignora PRs em rascunho.
-- **Correção recomendada:** decisão do proprietário — manter, exigir um rótulo/aprovação explícita antes do merge ou desativar. **Não alterado nesta etapa** (automação de processo e decisão de negócio).
-- **Mitigação aplicada:** os PRs desta auditoria são abertos como **rascunho**, que o workflow não mescla.
+- **Decisão do proprietário (29/10/2026):** **manter** o merge automático. O workflow não foi alterado.
+- **Consequência prática:** todo PR não-rascunho com CI verde é mesclado e sincronizado com o Lovable. Por isso, os PRs deste trabalho são abertos como **rascunho** e só passam a "pronto para revisão" depois da revisão do diff e dos testes; nesse momento o merge acontece sozinho.
+- **Status:** aceito como decisão de negócio; risco residual conhecido.
 - **Risco da mudança:** baixo. **Testes:** abrir PR de teste em rascunho e confirmar que não é mesclado.
 
 #### C2 — O lint do CI cobre apenas 12 de ~195 arquivos
@@ -91,17 +92,18 @@ Legenda de status: **Confirmado** (há evidência no código/CI) · **A verifica
 - **Impacto:** `format.ts` (moeda/datas), `csv.ts`/`exportar-dados.ts` (exportações) e `whatsapp-pedido.ts` (mensagens) afetam o que o cliente vê; os demais têm risco menor.
 - **Correção recomendada:** testes para formatação, CSV e mensagens de WhatsApp na etapa que tocar cada um.
 
-#### C7 — Lockfile dependente de registry privado
-- **Gravidade:** média (reprodutibilidade), sem falha no CI atual
-- **Impacto:** o `bun.lock` aponta 217 pacotes para um registry `pkg.dev`. O CI do GitHub instala normalmente, mas um ambiente sem acesso a esse registry não consegue instalar dependências (foi o caso desta sessão).
-- **Correção recomendada:** confirmar com o proprietário a origem do registry e, se for um espelho do npm, regenerar o lockfile com o registry público. Não alterado (mexe em cadeia de suprimentos).
-- **Risco da mudança:** médio. **Testes:** `bun install --frozen-lockfile`, build e testes em ambiente limpo.
+#### C7 — Lockfile aponta para o cache de npm do Lovable
+- **Gravidade:** baixa (reprodutibilidade fora do Lovable/GitHub), sem falha no CI atual
+- **Evidência:** 217 dos 813 pacotes do `bun.lock` têm URL de tarball em `europe-west4-npm.pkg.dev/lovable-core-prod/sandbox-npm-cache` (1 em `europe-west1`); os demais usam o registry padrão. Todos os 813 têm hash de integridade `sha512`. A origem é o cache de npm do ambiente do Lovable, não um registry privado de terceiros.
+- **Impacto:** não afeta o sistema em execução (banco, site publicado, dados). Só muda de onde o `bun install` baixa os arquivos. Ambientes sem acesso a esse host (como a sessão desta auditoria) não conseguem instalar dependências; o CI do GitHub instala normalmente.
+- **Trocar pelo npm público:** tecnicamente possível (os hashes de integridade validam o conteúdo), mas **não recomendado agora**: o ambiente do Lovable tende a reescrever o lockfile com o cache dele, gerando conflitos e ruído nos PRs, e não há como validar a troca nesta sessão. Fica como melhoria opcional, a validar no GitHub Actions.
+- **Status:** rebaixado de média para baixa; nenhuma alteração planejada.
 
 ### 3.2 A verificar
 
 | ID | Risco | Evidência atual | Como verificar | Etapa |
 |---|---|---|---|---|
-| R1 | Vocabulário de status de pedido possivelmente inconsistente entre camadas | O `CHECK` original (`0000`) lista `recebido, confirmado, em_producao, pronto, entregue, cancelado`; o código e funções posteriores usam também `finalizado` e `perdido`, e há migrations em `supabase/migrations` chamadas `allow_pedido_finalizado_status` e `allow_pedido_pronto_status` | Ler o `CHECK` vigente em produção (somente leitura) e comparar com os testes SQL | C |
+| R1 | Vocabulário de status de pedido possivelmente inconsistente entre camadas | O `CHECK` original (`0000`) lista `recebido, confirmado, em_producao, pronto, entregue, cancelado`; o código e funções posteriores usam também `finalizado` e `perdido`, e há migrations em `supabase/migrations` chamadas `allow_pedido_finalizado_status` e `allow_pedido_pronto_status` | **Parcialmente verificado em 29/10/2026** por leitura dos pedidos: dos 43 pedidos com entrega entre 2025 e 2026, 33 estão `entregue`, 7 `recebido` e 3 `cancelado`; `finalizado`, `perdido`, `pronto`, `confirmado` e `em_producao` não aparecem. Os dados em uso estão todos dentro do vocabulário original. Falta ler o `CHECK` vigente no banco (a ferramenta de consulta não expõe o esquema) e comparar com os testes SQL | C |
 | R2 | Duas fontes de recebimento do pedido (`valor_entrada` legado e `pedido_pagamentos`) | O relatório consolida via `calcularRecebimentoPedido`; falta confirmar que nenhuma tela lê só um dos lados | Revisar usos de `valor_entrada` e rodar `payment-receipts-smoke.sql` | C/E |
 | R3 | RPCs anônimas do catálogo (`avaliar_pedido`, `informar_pagamento_pedido`, `acompanhar_pedido_catalogo`) protegidas por código de 10 caracteres | Funções concedidas a `anon`; não verificada a entropia do código nem limite de tentativas | Revisar geração de `codigo_curto` e política de limite de requisições | G |
 | R4 | `registrar_erro` aceita chamadas anônimas | Mitigado no desenho: deduplicação por hora, teto de 200 novas linhas/hora, retenção de 30 dias | Confirmar o teto no teste `plataforma-uso-smoke.sql` | G |
@@ -120,6 +122,16 @@ Legenda de status: **Confirmado** (há evidência no código/CI) · **A verifica
 | Parcelas de conta a pagar duplicáveis ao repetir a solicitação | **Protegido:** índice único de número de parcela, `operacao_id` único por usuário, lock advisório e `FOR UPDATE`; há teste de concorrência | `20261025140000_contas_pagar_parcelamento_manual.sql`, `docs/deploy/contas-pagar-rpcs.sql`, `tests/db/contas-pagar-concurrency.sh` |
 | Funções auxiliares expostas via RPC | `_plano_tem`, `_situacao_atual`, `_assinatura_liberada` e `_validar_componentes` têm `REVOKE` de `PUBLIC`, `anon` e `authenticated`; `plataforma_publica` é pública por desenho | Migrations `0039` e `0044` |
 
+### 3.4 Observações dos dados de produção (leitura somente)
+
+Fonte: consulta de pedidos com entrega de 01/01/2025 a 31/12/2026 (43 registros, resultado completo, sem paginação adicional). Contagens feitas manualmente sobre o retorno; devem ser reconfirmadas na Etapa C com consulta SQL.
+
+- **Custo zero em itens antigos (confirmado):** 9 itens em 7 pedidos `entregue` têm `custo_unitario = 0`. É o item já registrado no `roadmap.md` ("correção assistida de itens antigos com custo zero", aguardando confirmação do proprietário). Impacto: o lucro desses pedidos aparece superestimado. **Nenhum dado foi corrigido.**
+- **Itens entregues sem produção registrada (a verificar):** vários itens de pedidos `entregue` têm `quantidade_produzida = 0`. Pode ser legítimo (produto pronto/congelado) ou indicar que a produção não foi registrada, o que afetaria o estoque. Verificar na Etapa C e D antes de qualquer conclusão.
+- **Pagamento (não é defeito):** há pedidos `entregue` com `valor_entrada` igual ao total e `saldo_quitado = false`. `calcularRecebimentoPedido` (`src/lib/calc.ts`) calcula `saldo = venda − recebido`, então o saldo é zero. Conferido.
+- **Duas fórmulas de "recebido" (a verificar, R2):** `totaisPedido` ignora o histórico de pagamentos e `calcularRecebimentoPedido` o considera. Falta confirmar qual tela usa cada uma.
+- **Numeração com lacunas:** os números 1, 26 e 32 não aparecem no período consultado (podem estar fora do período ou ter sido excluídos). Verificar na Etapa C como a exclusão de pedidos é tratada.
+
 ## 4. Pontos fortes confirmados
 
 - RLS por tenant em todas as tabelas, políticas RESTRICTIVE para papel e acesso, e 88 instruções `REVOKE ALL ON FUNCTION` nas migrations.
@@ -131,7 +143,7 @@ Legenda de status: **Confirmado** (há evidência no código/CI) · **A verifica
 
 ## 5. Plano priorizado
 
-Nenhum risco **crítico** de segurança ou perda de dados foi confirmado nesta etapa, então a ordem sugerida é mantida. O item C1 deve ser decidido **antes** de qualquer PR com código.
+Nenhum risco **crítico** de segurança ou perda de dados foi confirmado nesta etapa, então a ordem sugerida é mantida. O item C1 foi decidido (manter o merge automático); PRs com código ficam em rascunho até a revisão.
 
 | Etapa | Escopo | Itens desta auditoria |
 |---|---|---|
@@ -146,13 +158,18 @@ Nenhum risco **crítico** de segurança ou perda de dados foi confirmado nesta e
 
 ## 6. Decisões que dependem do proprietário
 
-1. **Merge automático (C1):** manter, exigir aprovação explícita ou desativar?
-2. **Registry do lockfile (C7):** de onde vem o `pkg.dev` e pode ser trocado pelo registry público?
-3. **Acesso somente leitura ao banco** para verificar R1 e R6, sem alterar dados.
+Decididas em 29/10/2026:
+1. **Merge automático (C1):** mantido.
+2. **Registry do lockfile (C7):** sem alteração (origem identificada; ver C7).
+3. **Acesso somente leitura ao banco:** autorizado, apenas para consulta, sem alterar dados.
+
+Em aberto:
+4. **Custos zerados em pedidos antigos:** corrigir com confirmação item a item, ou manter o histórico como está?
+5. **Backups (R6):** verificar na configuração do projeto de banco, que as ferramentas de consulta não expõem.
 
 ## 7. Requisitos mínimos para o piloto (rascunho, a ser refinado na Etapa H)
 
-- Fechar C1 e C2, e conferir R1, R3 e R5.
+- Fechar C2, e conferir R1 (esquema), R3 e R5.
 - Backup verificado e teste de restauração (R6).
 - Fórmulas financeiras documentadas e testadas (C3).
 - Onboarding e catálogo validados com uma confeitaria nova, sem dados reais misturados.
