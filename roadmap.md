@@ -121,3 +121,8 @@
 - [x] Agenda da semana; lista de compras com embalagens e custo; entregas do dia com rota; etiquetas com validade e alergênicos.
 - [x] Alerta de margem no Hoje; fluxo de caixa por semana; meta do mês; histórico de quem fez o quê.
 - [x] Métricas de uso e risco de cancelamento no painel de administração; monitoramento de erros; primeiros passos guiados.
+
+## Auditoria e preparação comercial — Etapa B (navegação)
+- [x] Menu "Mais" agrupado em Dia a dia, Produtos e insumos, Financeiro e Equipe e configurações, sem remover nenhuma tela.
+- [x] Lista de links em um só lugar (`src/lib/navegacao.ts`), usada pela gaveta do menu e pela página `/mais` (antes eram duas cópias).
+- [x] Teste garante que nenhuma tela do menu anterior some, que não há duplicatas nem link sem rota e que o papel Produção continua sem ver dinheiro, compras, catálogo e configurações.

@@ -1,10 +1,11 @@
 import { createFileRoute, Link, Outlet, redirect, useNavigate, useRouterState } from "@tanstack/react-router";
 import { Suspense, useEffect, useRef, useState } from "react";
 import { toast } from "sonner";
-import { Store, BookOpen, UsersRound, CalendarDays, Truck, ShoppingBasket, Tag, TrendingUp, History, CakeSlice, ChartNoAxesCombined, ChefHat, ChevronRight, ClipboardList, LayoutDashboard, LogOut, Menu, Package, Settings, ShoppingCart, Users, Wallet, X } from "lucide-react";
+import { UsersRound, CakeSlice, ChefHat, ClipboardList, LayoutDashboard, LogOut, Menu, Users, X } from "lucide-react";
 import { useQuery, useQueryClient } from "@tanstack/react-query";
 import { avancarPedidosDoDia, confeitariaQ, ehAdminQ, meuPapelQ, minhaAssinaturaQ } from "@/lib/queries";
 import { NOME_PAPEL, paginaPermitidaAoPapel, recursoDaPagina, temRecurso } from "@/lib/assinatura";
+import { gruposDoMenu } from "@/lib/navegacao";
 import { AvisoAssinatura, RecursoBloqueado, TelaAssinaturaSuspensa, TelaContaAdmin } from "@/components/app/plano";
 import { TERMOS_VERSAO } from "@/lib/termos";
 import { AceiteTermos, TelaBloqueada, TelaPendente } from "@/components/app/acesso-conta";
@@ -30,28 +31,6 @@ const nav = [
   { to: "/pedidos", label: "Pedidos", icon: ClipboardList },
   { to: "/producao", label: "Produção", icon: ChefHat },
   { to: "/clientes", label: "Clientes", icon: Users },
-] as const;
-
-const maisLinks = [
-  { to: "/agenda", label: "Agenda da semana", icon: CalendarDays },
-  { to: "/entregas", label: "Entregas do dia", icon: Truck },
-  { to: "/lista-compras", label: "Lista de compras", icon: ShoppingBasket },
-  { to: "/etiquetas", label: "Etiquetas", icon: Tag },
-  { to: "/produtos", label: "Produtos e receitas", icon: BookOpen },
-  { to: "/catalogo", label: "Catálogo online", icon: Store },
-  { to: "/financeiro", label: "Financeiro", icon: Wallet },
-  { to: "/resumo-mes", label: "Resumo do mês", icon: ChartNoAxesCombined },
-  { to: "/fluxo-caixa", label: "Fluxo de caixa", icon: TrendingUp },
-  { to: "/historico", label: "Histórico", icon: History },
-  { to: "/configuracoes", label: "Configurações", icon: Settings },
-  { to: "/equipe", label: "Equipe", icon: UsersRound },
-] as const;
-
-const comprasLinks = [
-  { secao: "compras", label: "Compras de insumos", icon: Package, description: "Cadastrar e consultar compras" },
-  { secao: "gastos", label: "Gastos e histórico de compras", icon: ShoppingCart, description: "Consultar gastos por período e compras registradas" },
-  { secao: "integracao", label: "Conferência de integração", icon: ChartNoAxesCombined, description: "Conferir compras, financeiro e alertas" },
-  { secao: "estoque", label: "Controle de estoque", icon: Package, description: "Saldo atual e contagem física" },
 ] as const;
 
 function Layout() {
@@ -80,8 +59,7 @@ function Layout() {
   const recursoPagina = recursoDaPagina(pathname);
   const recursoBloqueado = recursoPagina && !temRecurso(assinatura, recursoPagina) ? recursoPagina : null;
   const bloqueadoPeloPapel = !paginaPermitidaAoPapel(pathname, papel);
-  const linksGestao = maisLinks.filter((l) => paginaPermitidaAoPapel(l.to, papel));
-  const verCompras = paginaPermitidaAoPapel("/compras", papel);
+  const grupos = gruposDoMenu(papel);
 
   useEffect(() => {
     if (!maisAberto) return;
@@ -134,28 +112,25 @@ function Layout() {
             </Link>
           ))}
         </div>
-        <div className="mt-6">
-          <p className="mb-2 px-3 text-xs font-semibold uppercase tracking-wider text-muted-foreground">Gestão</p>
-          <div className="space-y-1">
-            {linksGestao.map(({ to, label, icon: Icon }) => (
-              <Link key={to} to={to} onClick={close} className={linkClass(false)} activeProps={{ className: linkClass(true) }}>
-                <Icon className="size-5 shrink-0" />
-                <span>{label}</span>
-              </Link>
-            ))}
+        {grupos.map((grupo) => (
+          <div key={grupo.id} className="mt-6">
+            <p className="mb-2 px-3 text-xs font-semibold uppercase tracking-wider text-muted-foreground">{grupo.titulo}</p>
+            <div className="space-y-1">
+              {grupo.links.map(({ to, label, icon: Icon }) => (
+                <Link key={to} to={to} onClick={close} className={linkClass(false)} activeProps={{ className: linkClass(true) }}>
+                  <Icon className="size-5 shrink-0" />
+                  <span>{label}</span>
+                </Link>
+              ))}
+              {grupo.compras.map(({ secao, label, icon: Icon }) => (
+                <Link key={secao} to="/compras" search={{ secao }} onClick={close} className={linkClass(false)}>
+                  <Icon className="size-5 shrink-0" />
+                  <span>{label}</span>
+                </Link>
+              ))}
+            </div>
           </div>
-        </div>
-        {verCompras && <div className="mt-6">
-          <p className="mb-2 px-3 text-xs font-semibold uppercase tracking-wider text-muted-foreground">Compras e estoque</p>
-          <div className="space-y-1">
-            {comprasLinks.map(({ secao, label, icon: Icon }) => (
-              <Link key={secao} to="/compras" search={{ secao }} onClick={close} className={linkClass(false)}>
-                <Icon className="size-5 shrink-0" />
-                <span>{label}</span>
-              </Link>
-            ))}
-          </div>
-        </div>}
+        ))}
       </>
     );
   }
