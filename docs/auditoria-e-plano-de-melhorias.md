@@ -73,12 +73,13 @@ Legenda de status: **Confirmado** (há evidência no código/CI) · **A verifica
 - **Correção recomendada:** extrair para `src/lib/financeiro.ts` funções puras (saldo de conta, total a pagar, vencido, recebido, a receber), cobrir com testes e documentar a fórmula de cada indicador. Etapa E.
 - **Risco da mudança:** médio (números que o usuário já vê). **Testes:** testes unitários com casos de cancelamento, pagamento parcial, estorno e período; comparar valores antes/depois em dados de teste.
 
-#### C4 — Navegação já cobre Hoje/Pedidos/Produção/Clientes, mas o menu "Mais" é uma lista longa e sem grupos
-- **Gravidade:** média (UX)
-- **Impacto:** a barra principal já segue a estrutura desejada. O menu "Mais" reúne 12 entradas soltas (agenda, entregas, lista de compras, etiquetas, produtos e receitas, catálogo, financeiro, resumo do mês, fluxo de caixa, histórico, configurações, equipe) mais 4 atalhos de compras/estoque. Financeiro, Resumo do mês e Fluxo de caixa aparecem como entradas separadas, e a rota `/relatorios` não aparece no menu (a confirmar na Etapa B se é alcançada só por atalhos do painel).
-- **Arquivos:** `src/routes/_authenticated/route.tsx`.
-- **Correção recomendada:** agrupar "Mais" em seções (Produtos e insumos · Financeiro · Gestão · Conta) sem criar menus paralelos e sem remover funções. Etapa B.
-- **Risco da mudança:** baixo. **Testes:** navegação por teclado e celular, nenhum link perdido (comparar lista de rotas antes/depois).
+#### C4 — Menu "Mais" é uma lista longa e sem grupos, mantida em duas cópias
+- **Gravidade:** média (UX e manutenção)
+- **Impacto:** a barra principal já segue a estrutura desejada (Hoje, Pedidos, Produção, Clientes). O menu "Mais" reunia 12 entradas soltas mais 4 atalhos de compras/estoque, sob os títulos "Gestão" e "Compras e estoque". A mesma lista existia em **duas cópias independentes**: a gaveta do layout (`route.tsx`) e a página `/mais` (`mais.tsx`), destino de "voltar" de cerca de 17 telas. Uma tela nova precisava ser incluída nos dois lugares.
+- **Correção da avaliação inicial:** a primeira versão deste item dizia que a rota `/relatorios` não aparecia no menu e sugeria uma lacuna no Financeiro. Isso estava impreciso: a página Financeiro **já tem** as abas Visão geral, Lançar despesas, Movimentações e Relatórios (`financeiro.tsx`, que incorpora Despesas, Contas a pagar e Relatórios). Não há menu financeiro paralelo a corrigir. Branches antigas com nomes parecidos (`feat/mais-menu-lateral-deslizante`, `feat/financeiro-menu-integrado`) já foram mescladas e não foram duplicadas.
+- **Arquivos:** `src/routes/_authenticated/route.tsx`, `src/routes/_authenticated/mais.tsx`.
+- **Correção aplicada na Etapa B (PR #210):** fonte única em `src/lib/navegacao.ts`, quatro grupos (Dia a dia · Produtos e insumos · Financeiro · Equipe e configurações), sem remover nenhuma tela, com teste que impede que telas sumam, se repitam ou apontem para rotas inexistentes.
+- **Risco da mudança:** baixo/médio. **Validação:** CI do PR (tipos, lint dos arquivos listados, testes, build); a aparência em celular e desktop não foi verificada em navegador.
 
 #### C5 — Código ilegível e arquivos muito grandes
 - **Gravidade:** baixa (manutenção)
@@ -126,7 +127,9 @@ Legenda de status: **Confirmado** (há evidência no código/CI) · **A verifica
 
 Fonte: consulta de pedidos com entrega de 01/01/2025 a 31/12/2026 (43 registros, resultado completo, sem paginação adicional). Contagens feitas manualmente sobre o retorno; devem ser reconfirmadas na Etapa C com consulta SQL.
 
-- **Custo zero em itens antigos (confirmado):** 9 itens em 7 pedidos `entregue` têm `custo_unitario = 0`. É o item já registrado no `roadmap.md` ("correção assistida de itens antigos com custo zero", aguardando confirmação do proprietário). Impacto: o lucro desses pedidos aparece superestimado. **Nenhum dado foi corrigido.**
+- **Custo zero em itens antigos (confirmado):** 9 itens em 7 pedidos `entregue` têm `custo_unitario = 0`. É o item já registrado no `roadmap.md` ("correção assistida de itens antigos com custo zero", aguardando confirmação do proprietário). Impacto: o lucro desses pedidos aparecia superestimado.
+  - **Corrigido em 29/10/2026, a pedido do proprietário:** os 9 itens receberam o custo atual calculado pela função do banco `_custo_unitario_produto` (baguete de calabresa com queijo R$ 15,411; baguete de calabresa com queijo e catupiry R$ 18,9217; baguete com frango e catupiry R$ 18,132; pão caseiro R$ 1,9256). A atualização foi restrita a esses 9 itens (por identificador) e só onde o custo gravado era zero. Nenhum outro item, pedido, pagamento ou estoque foi tocado; os triggers de `pedido_itens` não disparam ao alterar só `custo_unitario`. O custo dos 7 pedidos aumentou em cerca de R$ 152,29. Para desfazer, basta voltar o `custo_unitario` desses 9 itens para 0. Depois da correção, não restam itens com custo zero (54 itens com custo).
+  - A função existente `recalcular_custos_historicos()` **não foi usada**: ela recalcula todos os itens do usuário a partir da receita atual e alteraria o histórico inteiro.
 - **Itens entregues sem produção registrada (a verificar):** vários itens de pedidos `entregue` têm `quantidade_produzida = 0`. Pode ser legítimo (produto pronto/congelado) ou indicar que a produção não foi registrada, o que afetaria o estoque. Verificar na Etapa C e D antes de qualquer conclusão.
 - **Pagamento (não é defeito):** há pedidos `entregue` com `valor_entrada` igual ao total e `saldo_quitado = false`. `calcularRecebimentoPedido` (`src/lib/calc.ts`) calcula `saldo = venda − recebido`, então o saldo é zero. Conferido.
 - **Duas fórmulas de "recebido" (a verificar, R2):** `totaisPedido` ignora o histórico de pagamentos e `calcularRecebimentoPedido` o considera. Falta confirmar qual tela usa cada uma.
