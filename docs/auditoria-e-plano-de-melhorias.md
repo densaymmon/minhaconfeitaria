@@ -181,13 +181,16 @@ Decididas em 29/10/2026:
 2. **Registry do lockfile (C7):** sem alteração (origem identificada; ver C7).
 3. **Acesso somente leitura ao banco:** autorizado, apenas para consulta, sem alterar dados.
 
+Decididas depois:
+4. **Custos zerados em pedidos antigos:** corrigidos em 9 itens de pedidos entregues e atualizados os pedidos nº 11 e nº 13, com autorização.
+5. **Custos de gás, energia e mão de obra:** não preencher agora.
+6. **Aplicar a migration `0047` em produção:** autorizado e feito em 29/10/2026.
+
 Em aberto:
-4. **Custos zerados em pedidos antigos:** corrigir com confirmação item a item, ou manter o histórico como está?
-5. **Backups (R6):** verificar na configuração do projeto de banco, que as ferramentas de consulta não expõem.
+7. **Backups (R6):** verificar no painel do provedor (as ferramentas de consulta não expõem) e testar uma restauração.
+8. **Dependabot:** ativar os alertas nas configurações do GitHub.
+9. **Revogar privilégios de tabela do papel anônimo** (defesa em profundidade, sem efeito visível): aguardando autorização.
 
-## 7. Requisitos mínimos para o piloto (rascunho, a ser refinado na Etapa H)
+## 7. Requisitos mínimos para o piloto
 
-- Fechar C2, e conferir R1 (esquema), R3 e R5.
-- Backup verificado e teste de restauração (R6).
-- Fórmulas financeiras documentadas e testadas (C3).
-- Onboarding e catálogo validados com uma confeitaria nova, sem dados reais misturados.
+Consolidados em `docs/avaliacao-comercial-e-piloto.md` (riscos, essencial antes do piloto, o que pode esperar, critérios de escolha e indicadores).
