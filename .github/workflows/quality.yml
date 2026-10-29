@@ -34,6 +34,9 @@ jobs:
             regras[r] = (regras[r] || 0) + 1; arquivos[f.filePath.replace(process.cwd() + "/", "")] = (arquivos[f.filePath.replace(process.cwd() + "/", "")] || 0) + 1;
             if (m.severity === 2) erros++; else avisos++;
           }
+          for (const f of dados) for (const m of f.messages) {
+            if (m.severity === 2) console.log("::error file=" + f.filePath.replace(process.cwd() + "/", "") + ",line=" + m.line + ",col=" + m.column + "::" + (m.ruleId || "") + " " + m.message);
+          }
           const topo = (o, n) => Object.entries(o).sort((a, b) => b[1] - a[1]).slice(0, n).map(([k, v]) => k + "=" + v).join("; ");
           console.log("::error title=Resumo do lint (status " + status + ")::ERROS=" + erros + " AVISOS=" + avisos + " ARQUIVOS_COM_PROBLEMA=" + Object.keys(arquivos).length + " | REGRAS: " + topo(regras, 25) + " | ARQUIVOS: " + topo(arquivos, 25));
           JS
