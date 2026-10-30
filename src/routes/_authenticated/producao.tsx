@@ -5,7 +5,7 @@ import { useMemo, useState } from "react";
 import { alterarItem, alterarPedido, criarFila, otimista } from "@/lib/cache-pedidos";
 import type { Pedido } from "@/lib/queries";
 import { toast } from "sonner";
-import { Minus, Plus, CheckCircle2, Search, List, Layers, SlidersHorizontal, Clock3, AlertTriangle, Pencil, Download, MessageCircle, ShoppingBasket } from "lucide-react";
+import { Minus, Plus, CheckCircle2, Search, List, Layers, SlidersHorizontal, Clock3, AlertTriangle, Pencil, Download, MessageCircle, ShoppingBasket, Package } from "lucide-react";
 import { useQuery, useQueryClient, useSuspenseQuery } from "@tanstack/react-query";
 import { formatarQuantidade, ingredientesNecessarios, intervaloPeriodo, periodoAtual, type PeriodoRapido } from "@/lib/lista-producao";
 import { avisoProntoWhatsApp } from "@/lib/whatsapp-pedido";
@@ -19,6 +19,7 @@ import { Textarea } from "@/components/ui/textarea";
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/ui/dialog";
 import { cn } from "@/lib/utils";
 import { baixarCSV } from "@/lib/csv";
+import { EstoquePronto } from "@/components/app/estoque-pronto";
 
 export const Route = createFileRoute("/_authenticated/producao")({
   loader: async ({ context }) => {
@@ -54,7 +55,7 @@ const STATUS_LABELS: Record<string, string> = {
 const STATUS_ATIVOS = ["recebido", "confirmado", "em_producao", "pronto"];
 
 type Filtro = "fila" | "todos" | "a_produzir" | "em_producao" | "prontos" | "atrasados" | "finalizados";
-type Visualizacao = "pedidos" | "produtos";
+type Visualizacao = "pedidos" | "produtos" | "pronto";
 
 function prazoDoPedido(p: PedidoCalc) {
   // Sem horário definido, considera o fim do dia para não sinalizar atraso indevidamente.
@@ -287,7 +288,8 @@ function Producao() {
           const { error } = await supabase.rpc("ajustar_producao", { pedido_item_id: itemId, quantidade_resultado: v, evento_id: crypto.randomUUID() });
           if (error) throw new Error(error.message);
         }),
-        [["estoque"]],
+        // Reduzir a produção de um item que veio do estoque pronto devolve as unidades a ele.
+        [["estoque"], ["estoque-pronto"]],
         () => fila.pendentes() === 0,
       );
     } catch (e) {
@@ -469,6 +471,7 @@ function Producao() {
       </div>
 
       <Card className="mb-4 space-y-3 p-3">
+        {visualizacao !== "pronto" && <>
         <div className="grid grid-cols-4 gap-1 rounded-lg bg-muted p-1" role="group" aria-label="Período de entrega">
           {([["hoje", "Hoje"], ["amanha", "Amanhã"], ["semana", "7 dias"], ["tudo", "Tudo"]] as const).map(([valor, rotulo]) => (
             <button key={valor} type="button" onClick={() => escolherPeriodo(valor)} aria-pressed={periodo === valor}
@@ -507,11 +510,15 @@ function Producao() {
           ))}
         </div>
 
-        <div className="flex flex-wrap items-center justify-between gap-2 border-t pt-3">
-          <button type="button" onClick={() => setMostrarDatas((v) => !v)} className="inline-flex items-center gap-2 text-sm font-medium text-muted-foreground hover:text-foreground" aria-expanded={mostrarDatas}>
-            <SlidersHorizontal className="size-4" />
-            {mostrarDatas ? "Ocultar período" : "Filtrar por data"}
-          </button>
+        </>}
+
+        <div className={cn("flex flex-wrap items-center justify-between gap-2", visualizacao !== "pronto" && "border-t pt-3")}>
+          {visualizacao !== "pronto" ? (
+            <button type="button" onClick={() => setMostrarDatas((v) => !v)} className="inline-flex items-center gap-2 text-sm font-medium text-muted-foreground hover:text-foreground" aria-expanded={mostrarDatas}>
+              <SlidersHorizontal className="size-4" />
+              {mostrarDatas ? "Ocultar período" : "Filtrar por data"}
+            </button>
+          ) : <span className="text-sm font-medium text-muted-foreground">Produtos prontos, sem pedido</span>}
           <div className="inline-flex rounded-lg border p-1">
             <button type="button" onClick={() => setVisualizacao("pedidos")} className={cn("inline-flex items-center gap-1.5 rounded-md px-2.5 py-1.5 text-sm", visualizacao === "pedidos" ? "bg-primary text-primary-foreground" : "text-muted-foreground")} aria-pressed={visualizacao === "pedidos"}>
               <List className="size-4" /> Pedidos
@@ -519,10 +526,13 @@ function Producao() {
             <button type="button" onClick={() => setVisualizacao("produtos")} className={cn("inline-flex items-center gap-1.5 rounded-md px-2.5 py-1.5 text-sm", visualizacao === "produtos" ? "bg-primary text-primary-foreground" : "text-muted-foreground")} aria-pressed={visualizacao === "produtos"}>
               <Layers className="size-4" /> Por produto
             </button>
+            <button type="button" onClick={() => setVisualizacao("pronto")} className={cn("inline-flex items-center gap-1.5 rounded-md px-2.5 py-1.5 text-sm", visualizacao === "pronto" ? "bg-primary text-primary-foreground" : "text-muted-foreground")} aria-pressed={visualizacao === "pronto"}>
+              <Package className="size-4" /> Estoque
+            </button>
           </div>
         </div>
 
-        {mostrarDatas && (
+        {visualizacao !== "pronto" && mostrarDatas && (
           <div className="grid grid-cols-1 gap-3 border-t pt-3 sm:grid-cols-2">
             <label className="space-y-1 text-sm">
               <span className="font-medium">Entrega a partir de</span>
@@ -541,7 +551,9 @@ function Producao() {
         )}
       </Card>
 
-      {visualizacao === "produtos" ? (
+      {visualizacao === "pronto" ? (
+        <EstoquePronto />
+      ) : visualizacao === "produtos" ? (
         <div className="space-y-2">
           <div className="mb-3 flex flex-wrap items-center justify-between gap-2">
             <div>
@@ -717,6 +729,7 @@ function Producao() {
                                 <div className="font-medium leading-snug">{i.descricao}</div>
                                 <div className="mt-0.5 text-xs text-muted-foreground">
                                   {num(f)} / {num(q)} produzidos{falta > 0 ? ` · faltam ${num(falta)}` : " · concluído"}
+                                  {Number(i.quantidade_do_estoque) > 0 && <span className="font-medium text-primary"> · {num(Number(i.quantidade_do_estoque), 3)} do estoque pronto</span>}
                                 </div>
                               </div>
                               {itemAtivo && (

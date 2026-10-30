@@ -24,6 +24,8 @@ export type CompraItem = Tables<"compra_itens">;
 export type ContaPagar = Tables<"contas_pagar">;
 export type ContaPagarPagamento = Tables<"contas_pagar_pagamentos">;
 export type ContaPagarEstorno = Tables<"contas_pagar_estornos">;
+export type ProdutoPronto = Tables<"produtos_prontos">;
+export type MovimentoPronto = Tables<"produtos_prontos_movimentos">;
 
 
 async function must<T>(p: PromiseLike<{ data: T | null; error: { message: string } | null }>): Promise<T> {
@@ -45,6 +47,37 @@ export const insumosQ = queryOptions({
 export const produtosQ = queryOptions({
   queryKey: ["produtos"],
   queryFn: () => must<Produto[]>(supabase.from("produtos").select("*, receita_itens(*)").order("nome")),
+});
+
+/** Falta de tabela (migração 0049 ainda não aplicada): a tela segue funcionando sem estoque pronto. */
+const semTabela = (e: { code?: string; message: string }, tabela: string) =>
+  e.code === "PGRST205" || e.code === "42P01" || e.message.includes(tabela);
+
+/** Unidades prontas (não vendidas) por produto. Vazio antes da migração 0049. */
+export const produtosProntosQ = queryOptions({
+  queryKey: ["estoque-pronto"],
+  queryFn: async (): Promise<ProdutoPronto[]> => {
+    const { data, error } = await supabase.from("produtos_prontos").select("*").gt("quantidade", 0);
+    if (error) {
+      if (semTabela(error, "produtos_prontos")) return [];
+      throw new Error(error.message);
+    }
+    return data ?? [];
+  },
+});
+
+/** Últimos movimentos do estoque pronto, do mais recente ao mais antigo. */
+export const movimentosProntosQ = queryOptions({
+  queryKey: ["estoque-pronto", "movimentos"],
+  queryFn: async (): Promise<MovimentoPronto[]> => {
+    const { data, error } = await supabase.from("produtos_prontos_movimentos").select("*")
+      .order("created_at", { ascending: false }).limit(60);
+    if (error) {
+      if (semTabela(error, "produtos_prontos_movimentos")) return [];
+      throw new Error(error.message);
+    }
+    return data ?? [];
+  },
 });
 
 export const pedidoPagamentosQ = queryOptions({
