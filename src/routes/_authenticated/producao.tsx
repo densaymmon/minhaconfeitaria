@@ -394,7 +394,14 @@ function Producao() {
 
   return (
     <>
-      <PageHeader title="Produção" subtitle={`${contagens.fila} pedido(s) na fila ativa${contagens.atrasados ? ` · ${contagens.atrasados} atrasado(s)` : ""}`} action={<Button asChild size="sm"><Link to="/pedidos"><Plus className="size-4" /> Novo pedido</Link></Button>} />
+      <PageHeader title="Produção" subtitle={`${contagens.fila} pedido(s) na fila ativa${contagens.atrasados ? ` · ${contagens.atrasados} atrasado(s)` : ""}`} action={
+        <div className="flex flex-wrap justify-end gap-2">
+          <Button type="button" size="sm" variant={visualizacao === "pronto" ? "default" : "outline"} aria-pressed={visualizacao === "pronto"} onClick={() => setVisualizacao(visualizacao === "pronto" ? "pedidos" : "pronto")}>
+            <Package className="size-4" /> Estoque pronto
+          </Button>
+          <Button asChild size="sm"><Link to="/pedidos"><Plus className="size-4" /> Novo pedido</Link></Button>
+        </div>
+      } />
 
       <Dialog open={!!pedidoAberto} onOpenChange={(open) => {
         if (!open && editandoPedido && !confirm("Descartar as alterações não salvas?")) return;
