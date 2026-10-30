@@ -1,148 +1,82 @@
-# Minhaconfeitaria
+# Doce Gestão
 
-Crie um sistema web completo de gestão para minha confeitaria artesanal, em português brasileiro, com visual profissional, simples, moderno e otimizado para celular Android.
+Sistema web de gestão para confeitarias: pedidos, produção, receitas e custos, estoque e compras, financeiro, clientes, catálogo online com Pix e notificações. Em português do Brasil, pensado para uso no celular.
 
+O repositório contém dois aplicativos:
 
+| Aplicativo | Onde fica | O que é |
+|---|---|---|
+| Sistema da confeitaria | raiz (`src/`) | App usado pelas confeitarias e pelo catálogo público dos clientes |
+| Painel de administração da plataforma | `admin/` | Site separado (Vite estático, publicado no GitHub Pages) para quem vende o sistema: empresas, planos, assinaturas e erros |
 
-O sistema deve ter os seguintes módulos:
+Endereço atual em produção: https://minhaconfeitaria.lovable.app (domínio próprio ainda não configurado; ver `docs/checklist-lancamento-comercial.md`).
 
+## Tecnologias
 
+- TanStack Start + TanStack Router e Query, React 19, TypeScript, Tailwind CSS 4, componentes shadcn/ui.
+- Banco e autenticação: Supabase (PostgreSQL com RLS), hospedado no Lovable Cloud.
+- Migrações SQL em `drizzle/migrations/` (arquivos numerados, ver `docs/operacao/migracoes.md`).
+- Testes: Vitest (`src/**/*.test.ts`) e testes de fumaça em SQL (`tests/db/`).
+- Gerenciador de pacotes: Bun (`bun.lock`).
+- O projeto é sincronizado com o Lovable: o que entra em `main` aparece no editor deles.
 
-1. Painel inicial
+## Como rodar localmente
 
-
-
-- Total de pedidos do dia e do mês.
-
-- Pedidos aguardando produção, em produção, prontos e entregues.
-
-- Faturamento, custos e lucro do mês.
-
-- Próximas entregas.
-
-
-
-2. Cadastro de clientes
-
-
-
-- Nome, telefone, endereço e observações.
-
-- Histórico de pedidos e valores comprados.
-
-
-
-3. Gestão de pedidos
-
-
-
-- Número automático do pedido.
-
-- Cliente, produtos, quantidades, valores e data de entrega.
-
-- Valor de entrada, saldo restante e forma de pagamento.
-
-- Status: recebido, confirmado, em produção, pronto, entregue e cancelado.
-
-- Campo para observações e personalizações.
-
-- Possibilidade de editar e localizar pedidos.
-
-
-
-4. Controle de produção
-
-
-
-- Lista dos pedidos que precisam ser produzidos.
-
-- Agenda organizada por data de entrega.
-
-- Identificação dos pedidos atrasados.
-
-- Controle de quantidade produzida e pendente.
-
-
-
-5. Cadastro de produtos e receitas
-
-
-
-- Bolos caseiros, pães caseiros, pão italiano, baguetes recheadas e outros produtos.
-
-- Ingredientes, quantidades e rendimento de cada receita.
-
-- Custo dos ingredientes, embalagens, gás, energia e mão de obra.
-
-- Possibilidade de atualizar os preços dos insumos.
-
-
-
-6. Precificação e lucro
-
-
-
-- Calcular automaticamente o custo de cada receita e produto.
-
-- Permitir informar o preço de venda e a margem de lucro desejada.
-
-- Calcular o lucro bruto e estimar o lucro líquido por pedido, descontando os custos e as taxas cadastradas.
-
-- Mostrar o custo total, o valor vendido e o lucro de cada encomenda.
-
-
-
-7. Relatórios financeiros
-
-
-
-- Vendas por período e por produto.
-
-- Despesas, recebimentos e valores a receber.
-
-- Lucro por pedido e resultado mensal.
-
-- Separar dinheiro recebido de lucro efetivamente obtido.
-
-
-
-Requisitos técnicos:
-
-
-
-- Interface em português e moeda brasileira (R$).
-
-- Banco de dados persistente, para que os registros não desapareçam ao fechar o aplicativo.
-
-- Login protegido para uso exclusivo do proprietário.
-
-- Dados relacionados entre clientes, pedidos, produtos e receitas.
-
-- Permitir exportar os registros para CSV ou Excel.
-
-- Criar e testar as funções, não apenas desenhar as telas.
-
-- Priorizar recursos gratuitos e informar claramente qualquer limitação ou cobrança antes de ativar serviços pagos.
-
-This project was built with [Lovable](https://lovable.dev).
-
-**Live app**: https://minhaconfeitaria.lovable.app
-
-## Build with Lovable
-
-Continue developing this project in the [Lovable editor](https://lovable.dev/projects/c2b2cdb7-59d4-4ac1-afc0-f3b8cdffb2cc).
-
-- **Ship faster**: describe what you want to build and Lovable handles the code.
-- **Stay in sync**: every change made in Lovable is committed straight to this repository.
-- **Full ownership**: this code is yours. Push to `main` on GitHub and your changes sync back into Lovable, ready for your next prompt.
-
-## Development
-
-Prefer working locally? You need Node.js and npm — [install with nvm](https://github.com/nvm-sh/nvm#installing-and-updating).
+Requisitos: [Bun](https://bun.sh) e um projeto Supabase de **desenvolvimento** (nunca use o de produção).
 
 ```sh
-git clone <this-repository-url>
-cd <repository-name>
-npm i
-npm run dev
+bun install
+cp .env.example .env     # preencha com os dados do projeto de desenvolvimento
+bun run dev
 ```
+
+## Comandos
+
+| Comando | Para quê |
+|---|---|
+| `bun run dev` | Servidor de desenvolvimento |
+| `bun run build` | Build de produção do sistema |
+| `bunx vite build --config admin/vite.config.ts` | Build do painel de administração |
+| `bun run test` | Testes unitários (Vitest) |
+| `bun run lint` | Lint (ESLint) |
+| `bunx tsc --noEmit` | Checagem de tipos |
+| `bun run format` | Formata o código (Prettier) |
+
+O CI (`.github/workflows/quality.yml`) roda lint, tipos, testes, build dos dois aplicativos e, em um PostgreSQL descartável, aplica todas as migrações e executa os testes de `tests/db/`. Um PR só é mesclado automaticamente depois que todos os checks passam.
+
+## Estrutura
+
+```
+src/routes/            Telas e rotas (privadas em _authenticated/, catálogo público em $slug, c.$slug, p.$codigo)
+src/components/        Componentes (app/ = do sistema, ui/ = base shadcn)
+src/lib/               Regras de negócio puras e testadas (custos, financeiro, gestão, catálogo, planos…)
+src/integrations/      Cliente Supabase e middlewares de autenticação
+admin/                 Painel de administração da plataforma
+drizzle/migrations/    Migrações do banco (fonte usada pelo CI)
+supabase/migrations/   Migrações antigas aplicadas por outro caminho (histórico)
+tests/db/              Testes de fumaça em SQL (isolamento, catálogo, financeiro, estoque…)
+docs/                  Documentação (índice abaixo)
+```
+
+## Documentação
+
+- `docs/arquitetura.md` — visão geral, modelo multiempresa, segurança e decisões importantes.
+- `docs/operacao/` — procedimentos: backup e restauração, migrações, resposta a incidentes.
+- `docs/checklist-lancamento-comercial.md` — o que falta para vender, com responsável e situação.
+- `docs/avaliacao-comercial-e-piloto.md` — avaliação de prontidão e critérios do piloto.
+- `docs/auditoria-e-plano-de-melhorias.md` — auditoria técnica (etapas A–H).
+- `docs/formulas-financeiras.md` — fórmulas de contas a pagar.
+- `docs/deploy/` — guias de implantação de migrações específicas.
+- `AGENTS.md` — regras de desenvolvimento do projeto (também seguidas por ferramentas de IA).
+- `SECURITY.md` — como reportar vulnerabilidades.
+- `CHANGELOG.md` — histórico de mudanças.
+
+## Regras que não podem ser quebradas
+
+As principais estão em `AGENTS.md`. Em resumo: toda tabela tem RLS por confeitaria; o visitante anônimo nunca lê tabelas (só funções específicas do catálogo); preços e custos do catálogo são calculados no servidor; recebimentos só mudam por funções próprias; custos gravados em pedidos antigos nunca são recalculados. Os testes de `tests/db/` garantem essas regras e devem continuar passando.
+
+## Contribuindo
+
+1. Crie um branch a partir de `main` (não reescreva histórico já publicado: o repositório é sincronizado com o Lovable).
+2. Faça a mudança com testes. Mudança de banco = nova migração numerada + teste em `tests/db/` quando tocar em regra de dados.
+3. Abra um PR. O CI precisa passar. Não coloque segredos no repositório.
