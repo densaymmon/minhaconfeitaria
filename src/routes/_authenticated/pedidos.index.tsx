@@ -18,6 +18,8 @@ import { alterarPedido, otimista } from "@/lib/cache-pedidos";
 import { cn } from "@/lib/utils";
 import { avisoProntoWhatsApp, confirmacaoWhatsApp, precisaAvisarPronto, precisaConfirmar } from "@/lib/whatsapp-pedido";
 import type { PedidoCalc } from "@/lib/hooks";
+import { DialogRecebimentoPedido, DialogStatusPedido } from "@/components/app/acoes-rapidas-pedido";
+import { podeAlterarStatus, saldoParaReceber } from "@/lib/acoes-rapidas-pedido";
 
 const STATUS_ATIVOS = ["recebido", "confirmado", "em_producao", "pronto"];
 
@@ -129,6 +131,11 @@ function Pedidos() {
   const [busca, setBusca] = useState("");
   const [clienteEmEdicao, setClienteEmEdicao] = useState<Cliente | undefined>(undefined);
   const [dialogClienteAberto, setDialogClienteAberto] = useState(false);
+  // Ações rápidas no card: guardamos só o id e buscamos o pedido na lista, que se atualiza sozinha.
+  const [statusAbertoId, setStatusAbertoId] = useState<string | null>(null);
+  const [recebimentoAberto, setRecebimentoAberto] = useState<{ id: string; aposEntrega: boolean } | null>(null);
+  const pedidoStatusAberto = statusAbertoId ? pedidos.find((x) => x.id === statusAbertoId) : undefined;
+  const pedidoRecebimentoAberto = recebimentoAberto ? pedidos.find((x) => x.id === recebimentoAberto.id) : undefined;
   const [clienteFiltro, setClienteFiltro] = useState("");
   const [filtroRecorrencia, setFiltroRecorrencia] = useState<"todos" | "recorrentes" | "nao_recorrentes">("todos");
   const clientesDisponiveis = useMemo(() => {
@@ -471,7 +478,17 @@ function Pedidos() {
                       )}
                       {infoRecorrencia && <span className="inline-flex items-center gap-1 rounded-full border border-primary/40 bg-primary/10 px-2 py-1 text-xs font-bold text-primary"><Repeat className="size-3" /> Recorrente</span>}
                       <PagamentoBadge status={p.status} venda={p.t.venda} recebido={p.t.recebido} saldo={p.t.saldo} />
-                      <StatusBadge status={p.status} />
+                      {podeAlterarStatus(p.status) ? (
+                        <button
+                          type="button"
+                          onClick={(e) => { e.stopPropagation(); setStatusAbertoId(p.id); }}
+                          aria-label={`Alterar o status do pedido #${p.numero} (atual: ${statusLabel(p.status)})`}
+                          className="inline-flex items-center gap-0.5 rounded-full focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring"
+                        >
+                          <StatusBadge status={p.status} />
+                          <ChevronDown className="size-3.5 text-muted-foreground" aria-hidden />
+                        </button>
+                      ) : <StatusBadge status={p.status} />}
                     </div>
                   </div>
                   {infoRecorrencia && <div className="mt-1 flex flex-wrap items-center gap-x-2 gap-y-1 text-xs font-medium text-primary">
@@ -499,6 +516,11 @@ function Pedidos() {
                     <div className="mt-1 rounded-lg bg-warning/15 px-2 py-1 text-xs font-medium text-warning-foreground">Cliente avisou que pagou por Pix. Confira e confirme o pagamento.</div>
                   )}
                   <div className="mt-3 flex flex-wrap gap-2 border-t pt-3">
+                    {p.status !== "cancelado" && saldoParaReceber(p.t.saldo) > 0 && (
+                      <Button type="button" size="sm" variant={p.pagamento_informado_em ? "default" : "outline"} onClick={(e) => { e.stopPropagation(); setRecebimentoAberto({ id: p.id, aposEntrega: false }); }}>
+                        <Wallet className="size-4" /> {p.pagamento_informado_em ? "Confirmar pagamento" : `Receber ${brl(saldoParaReceber(p.t.saldo))}`}
+                      </Button>
+                    )}
                     {podeEmitirRecibo && (
                       <Button type="button" size="sm" variant="outline" onClick={async (e) => {
                         e.stopPropagation();
@@ -539,6 +561,22 @@ function Pedidos() {
             );
           })}
         </div>
+      )}
+      {pedidoStatusAberto && (
+        <DialogStatusPedido
+          key={pedidoStatusAberto.id}
+          pedido={pedidoStatusAberto}
+          onClose={() => setStatusAbertoId(null)}
+          onEntregue={(entregue) => setRecebimentoAberto({ id: entregue.id, aposEntrega: true })}
+        />
+      )}
+      {pedidoRecebimentoAberto && recebimentoAberto && (
+        <DialogRecebimentoPedido
+          key={`${pedidoRecebimentoAberto.id}-${recebimentoAberto.aposEntrega ? "entrega" : "receber"}`}
+          pedido={pedidoRecebimentoAberto}
+          aposEntrega={recebimentoAberto.aposEntrega}
+          onClose={() => setRecebimentoAberto(null)}
+        />
       )}
       {clienteEmEdicao && (
         <ClienteDialog
