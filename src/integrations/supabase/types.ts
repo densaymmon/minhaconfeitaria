@@ -1057,6 +1057,7 @@ export type Database = {
           preco_unitario: number
           produto_id: string | null
           quantidade: number
+          quantidade_do_estoque: number
           quantidade_produzida: number
           user_id: string
         }
@@ -1068,6 +1069,7 @@ export type Database = {
           preco_unitario?: number
           produto_id?: string | null
           quantidade?: number
+          quantidade_do_estoque?: number
           quantidade_produzida?: number
           user_id?: string
         }
@@ -1079,6 +1081,7 @@ export type Database = {
           preco_unitario?: number
           produto_id?: string | null
           quantidade?: number
+          quantidade_do_estoque?: number
           quantidade_produzida?: number
           user_id?: string
         }
@@ -1603,6 +1606,83 @@ export type Database = {
         }
         Relationships: []
       }
+      produtos_prontos: {
+        Row: {
+          produto_id: string
+          quantidade: number
+          updated_at: string
+          user_id: string
+        }
+        Insert: {
+          produto_id: string
+          quantidade?: number
+          updated_at?: string
+          user_id?: string
+        }
+        Update: {
+          produto_id?: string
+          quantidade?: number
+          updated_at?: string
+          user_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "produtos_prontos_produto_id_fkey"
+            columns: ["produto_id"]
+            isOneToOne: false
+            referencedRelation: "produtos"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      produtos_prontos_movimentos: {
+        Row: {
+          created_at: string
+          evento_id: string
+          id: string
+          observacao: string | null
+          pedido_id: string | null
+          pedido_item_id: string | null
+          pedido_numero: number | null
+          produto_id: string
+          produto_nome: string
+          quantidade_delta: number
+          reverte_evento_id: string | null
+          tipo: string
+          user_id: string
+        }
+        Insert: {
+          created_at?: string
+          evento_id: string
+          id?: string
+          observacao?: string | null
+          pedido_id?: string | null
+          pedido_item_id?: string | null
+          pedido_numero?: number | null
+          produto_id: string
+          produto_nome: string
+          quantidade_delta: number
+          reverte_evento_id?: string | null
+          tipo: string
+          user_id?: string
+        }
+        Update: {
+          created_at?: string
+          evento_id?: string
+          id?: string
+          observacao?: string | null
+          pedido_id?: string | null
+          pedido_item_id?: string | null
+          pedido_numero?: number | null
+          produto_id?: string
+          produto_nome?: string
+          quantidade_delta?: number
+          reverte_evento_id?: string | null
+          tipo?: string
+          user_id?: string
+        }
+        Relationships: []
+      }
       receita_itens: {
         Row: {
           id: string
@@ -1824,6 +1904,19 @@ export type Database = {
         }
         Returns: number
       }
+      descartar_estoque_pronto: {
+        Args: {
+          p_evento_id: string
+          p_observacao?: string
+          p_produto_id: string
+          p_quantidade: number
+        }
+        Returns: number
+      }
+      desfazer_producao_estoque: {
+        Args: { p_evento_id: string; p_producao_evento_id: string }
+        Returns: number
+      }
       cancelar_compra: {
         Args: { evento_id: string; registro_id: string }
         Returns: boolean
@@ -1935,6 +2028,15 @@ export type Database = {
         }
         Returns: string
       }
+      registrar_producao_estoque: {
+        Args: {
+          p_evento_id: string
+          p_observacao?: string
+          p_produto_id: string
+          p_quantidade: number
+        }
+        Returns: number
+      }
       saldo_estoque: {
         Args: never
         Returns: {
@@ -1964,6 +2066,10 @@ export type Database = {
       salvar_produto: {
         Args: { itens: Json; payload: Json; registro_id?: string }
         Returns: string
+      }
+      usar_estoque_pronto_item: {
+        Args: { p_item_id: string }
+        Returns: number
       }
     }
     Enums: {

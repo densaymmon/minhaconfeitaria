@@ -4,6 +4,9 @@ Formato inspirado em [Keep a Changelog](https://keepachangelog.com/pt-BR/). As e
 
 ## [Não lançado]
 
+### Adicionado
+- Estoque de produtos prontos (migração 0049): registrar produção que não saiu em pedido (baixa os insumos), descartar, desfazer e usar essas unidades em pedidos. Pedidos do catálogo usam o estoque pronto automaticamente; no pedido manual a pessoa escolhe por item. Cancelar o pedido ou reduzir a produção devolve as unidades. Veja `docs/controle-estoque/ESTOQUE_PRONTO.md`.
+
 ### Documentação
 - README técnico, `.env.example`, `SECURITY.md`, `docs/arquitetura.md`, procedimentos de operação (`docs/operacao/`) e checklist de lançamento comercial.
 

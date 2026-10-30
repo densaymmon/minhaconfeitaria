@@ -6,17 +6,18 @@ import { useRecurso } from "@/components/app/plano";
 import type { OrderDraft } from "@/lib/order-draft";
 import * as appQueries from "@/lib/queries";
 import { createFileRoute, Link, useNavigate } from "@tanstack/react-router";
-import { useQueryClient, useSuspenseQuery } from "@tanstack/react-query";
-import { useEffect, useRef, useState, type FormEvent } from "react";
+import { useQuery, useQueryClient, useSuspenseQuery } from "@tanstack/react-query";
+import { useEffect, useMemo, useRef, useState, type FormEvent } from "react";
 import { toast } from "sonner";
 import { CalendarClock, Copy, MessageCircle, Plus, Repeat, Trash2 } from "lucide-react";
 import { supabase } from "@/integrations/supabase/client";
-import { clientesQ, configQ, pedidosHistoricoQ, type Pedido, type PedidoPagamento } from "@/lib/queries";
+import { clientesQ, configQ, pedidosHistoricoQ, produtosProntosQ, type Pedido, type PedidoPagamento } from "@/lib/queries";
+import { disponivelParaLinha, mapaProntos, planejarUsoEstoque } from "@/lib/estoque-pronto";
 import { alterarPedido, otimista } from "@/lib/cache-pedidos";
 import { useCustos, usePedidosCalc } from "@/lib/hooks";
 import { avisoProntoWhatsApp, confirmacaoWhatsApp, precisaConfirmar } from "@/lib/whatsapp-pedido";
 import { alertaMargem, totaisPedido } from "@/lib/calc";
-import { FORMAS, brl, dataBR, hojeISO, parseNum, statusLabel } from "@/lib/format";
+import { FORMAS, brl, dataBR, hojeISO, num, parseNum, statusLabel } from "@/lib/format";
 import { Card, Field, NativeSelect, PagamentoBadge, PageHeader, Row } from "@/components/app/ui";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -49,6 +50,10 @@ type Item = {
   preco_unitario: string;
   custo_unitario: number;
   quantidade_produzida: number;
+  /** Pedido manual: a pessoa escolheu usar produtos já prontos (estoque pronto) neste item. */
+  usar_estoque?: boolean;
+  /** Quanto deste item já veio do estoque pronto (só leitura). */
+  quantidade_do_estoque?: number;
 };
 
 function PedidoForm() {
@@ -90,8 +95,15 @@ function PedidoForm() {
         preco_unitario: String(i.preco_unitario),
         custo_unitario: Number(i.custo_unitario),
         quantidade_produzida: Number(i.quantidade_produzida),
+        quantidade_do_estoque: Number(i.quantidade_do_estoque ?? 0),
       })) ?? [],
   );
+  // Produtos já prontos (sobras de produção): o pedido manual pode usá-los em vez de produzir de novo.
+  const { data: prontos = [] } = useQuery(produtosProntosQ);
+  const saldoPronto = useMemo(() => mapaProntos(prontos), [prontos]);
+  // Só pedidos ainda sem produção e em andamento podem retirar do estoque pronto (o servidor confere de novo).
+  const podeUsarEstoquePronto = !temProducaoRegistrada && ["recebido", "confirmado", "em_producao"].includes(f.status);
+  const itensParaEstoque = itens.map((x) => ({ produto_id: x.produto_id, quantidade: parseNum(x.quantidade), usar_estoque: Boolean(x.usar_estoque) }));
   const [salvando, setSalvando] = useState(false);
   const [pagamentos, setPagamentos] = useState<PedidoPagamento[]>([]);
   const [valorPagoAlterado, setValorPagoAlterado] = useState(false);
@@ -238,6 +250,7 @@ function PedidoForm() {
         preco_unitario: String(i.preco_unitario),
         custo_unitario: Number(i.custo_unitario),
         quantidade_produzida: Number(i.quantidade_produzida),
+        quantidade_do_estoque: Number(i.quantidade_do_estoque ?? 0),
       })) ?? [],
     );
     // "Repetir pedido": /pedidos/novo?repetir=<id> pré-preenche cliente e itens de um pedido anterior,
@@ -295,8 +308,9 @@ function PedidoForm() {
 
   function escolherProduto(i: number, pid: string) {
     const p = produtos.find((x) => x.id === pid);
-    if (!p) return setItem(i, { produto_id: null });
+    if (!p) return setItem(i, { produto_id: null, usar_estoque: false });
     setItem(i, {
+      usar_estoque: false,
       produto_id: p.id,
       descricao: p.nome,
       preco_unitario: String(p.preco_venda),
@@ -493,6 +507,7 @@ function PedidoForm() {
         taxa_entrega: parseNum(f.taxa_entrega),
         observacoes: f.observacoes.trim() || null,
       };
+      const usoEstoque = podeUsarEstoquePronto ? planejarUsoEstoque(itens.map((i) => ({ produto_id: i.produto_id, quantidade: parseNum(i.quantidade), usar_estoque: Boolean(i.usar_estoque) })), saldoPronto) : [];
       const { data: pedidoSalvoId, error } = await supabase.rpc("salvar_pedido", {
         payload: novo && parseNum(f.valor_entrada) > 0 ? { ...payload, valor_entrada: 0, saldo_quitado: false } : payload,
         itens: itens.map((i) => ({
@@ -504,6 +519,8 @@ function PedidoForm() {
           // A coluna é NOT NULL: novos itens começam com zero produzido;
           // na edição, preserva a quantidade já registrada.
           quantidade_produzida: Number.isFinite(i.quantidade_produzida) ? i.quantidade_produzida : 0,
+          // O servidor retira do estoque pronto só o que existir, na ordem dos itens.
+          ...(podeUsarEstoquePronto && i.usar_estoque ? { usar_estoque: true } : {}),
         })),
         ...(existente ? { registro_id: existente.id } : {}),      });
       if (error) throw error;
@@ -522,8 +539,9 @@ function PedidoForm() {
           return;
         }
       }
-      await qc.invalidateQueries({ queryKey: ["pedidos"] });
-      toast.success(novo ? "Pedido criado!" : "Pedido atualizado!");
+      await Promise.all([qc.invalidateQueries({ queryKey: ["pedidos"] }), qc.invalidateQueries({ queryKey: ["estoque-pronto"] })]);
+      const unidadesDoEstoque = usoEstoque.reduce((total, uso) => total + uso, 0);
+      toast.success(`${novo ? "Pedido criado!" : "Pedido atualizado!"}${unidadesDoEstoque > 0 ? " Os produtos prontos em estoque foram reservados para este pedido." : ""}`);
       navigate({ to: "/pedidos", search: { filtro: undefined, dataInicial: undefined, dataFinal: undefined } });
     } catch (e) {
       toast.error((e as Error).message);
@@ -557,6 +575,8 @@ function PedidoForm() {
     } catch (e) {
       return void toast.error(`Não foi possível cancelar o pedido: ${e instanceof Error ? e.message : "tente novamente."}`);
     }
+    // Cancelar devolve ao estoque pronto o que o pedido tinha retirado dele.
+    void qc.invalidateQueries({ queryKey: ["estoque-pronto"] });
     toast.success(`Pedido #${existente.numero} cancelado. O histórico foi preservado.`);
     navigate({ to: "/pedidos", search: { filtro: undefined, dataInicial: undefined, dataFinal: undefined } });
   }
@@ -808,8 +828,32 @@ function PedidoForm() {
                 </Field>
               </div>
               <div className="text-right text-xs text-muted-foreground">
+                {Number(it.quantidade_do_estoque) > 0 && <span className="mr-2 font-medium text-primary">{num(Number(it.quantidade_do_estoque), 3)} do estoque pronto</span>}
                 Total {brl(parseNum(it.quantidade) * parseNum(it.preco_unitario))}
               </div>
+              {podeUsarEstoquePronto && it.produto_id && (() => {
+                const disponivel = disponivelParaLinha(itensParaEstoque, i, saldoPronto);
+                if (disponivel <= 0 && !it.usar_estoque) return null;
+                const qtd = parseNum(it.quantidade);
+                const usar = Math.max(0, Math.min(qtd, disponivel));
+                return (
+                  <label className="flex items-start gap-2 rounded-lg border border-primary/30 bg-primary/5 p-2.5 text-sm">
+                    <input type="checkbox" className="mt-0.5 size-5 shrink-0 accent-primary" checked={Boolean(it.usar_estoque)} onChange={(e) => setItem(i, { usar_estoque: e.target.checked })} />
+                    <span>
+                      <b>Usar do estoque pronto</b> ({num(disponivel, 3)} disponível)
+                      <span className="block text-xs text-muted-foreground">
+                        {!it.usar_estoque
+                          ? "Desmarcado: o item será produzido normalmente."
+                          : usar <= 0
+                            ? "Sem unidades prontas para este item: será produzido normalmente."
+                            : usar >= qtd
+                              ? "O item inteiro sai do estoque pronto. Nada a produzir: os insumos já foram descontados quando você registrou a produção."
+                              : `${num(usar, 3)} saem do estoque pronto e ${num(qtd - usar, 3)} ficam para produzir.`}
+                      </span>
+                    </span>
+                  </label>
+                );
+              })()}
               <AvisoPrecoItem item={it} margemDesejada={Number(produtos.find((p) => p.id === it.produto_id)?.margem_desejada ?? 0)} />
             </div>
           ))}
