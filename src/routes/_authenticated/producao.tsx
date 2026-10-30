@@ -399,7 +399,7 @@ function Producao() {
           <Button type="button" size="sm" variant={visualizacao === "pronto" ? "default" : "outline"} aria-pressed={visualizacao === "pronto"} onClick={() => setVisualizacao(visualizacao === "pronto" ? "pedidos" : "pronto")}>
             <Package className="size-4" /> Estoque pronto
           </Button>
-          <Button asChild size="sm"><Link to="/pedidos"><Plus className="size-4" /> Novo pedido</Link></Button>
+          <Button asChild size="sm"><Link to="/pedidos/$id" params={{ id: "novo" }}><Plus className="size-4" /> Novo pedido</Link></Button>
         </div>
       } />
 
@@ -661,7 +661,7 @@ function Producao() {
           {busca.trim() || filtro !== "fila" || dataInicial || dataFinal ? (
             <Button className="mt-3" variant="outline" onClick={() => { setBusca(""); setFiltro("fila"); setDataInicial(""); setDataFinal(""); }}>Limpar filtros</Button>
           ) : (
-            <Button asChild className="mt-3"><Link to="/pedidos"><Plus className="size-4" /> Criar pedido</Link></Button>
+            <Button asChild className="mt-3"><Link to="/pedidos/$id" params={{ id: "novo" }}><Plus className="size-4" /> Criar pedido</Link></Button>
           )}
         </Card>
       ) : (
