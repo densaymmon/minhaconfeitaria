@@ -27,7 +27,8 @@ export function PageHeader({
           <ArrowLeft className="size-4" />
         </Link>
       )}
-      <div className="min-w-0 flex-1">
+      {/* Largura mínima: se os botões não couberem ao lado, vão para a linha de baixo em vez de cortar o título. */}
+      <div className="min-w-[10rem] flex-1">
         <h1 className="truncate text-2xl font-semibold">{title}</h1>
         {subtitle && <p className="text-sm text-muted-foreground">{subtitle}</p>}
       </div>
