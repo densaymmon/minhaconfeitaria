@@ -7,7 +7,7 @@ import { contasPagarQ, despesasQ } from "@/lib/queries";
 import { brl, dataBR, hojeISO } from "@/lib/format";
 import { contaEmAberto, saldoConta } from "@/lib/financeiro";
 import { PageHeader, Empty } from "@/components/app/ui";
-import { SaudeDoMes } from "@/components/app/saude-financeira";
+import { AlertasFinanceiros, SaudeDoMes } from "@/components/app/saude-financeira";
 import { Button } from "@/components/ui/button";
 import { Despesas } from "./despesas";
 import { ContasPagar } from "./contas-pagar";
@@ -55,7 +55,8 @@ function Financeiro() {
   const proximasContas = [...contasAbertas]
     .sort((a, b) => a.data_vencimento.localeCompare(b.data_vencimento))
     .slice(0, 5);
-  const despesasRecentes = despesasOrdenadas.slice(0, 5);
+  // Despesas já repetidas para meses futuros não entram em "recentes".
+  const despesasRecentes = despesasOrdenadas.filter((despesa) => despesa.data <= hoje).slice(0, 5);
 
   return (
     <>
@@ -99,6 +100,7 @@ function Financeiro() {
         </section>
       ) : aba === "resumo" ? (
         <>
+          <AlertasFinanceiros contas={contas} onVerContas={() => { setTipoMovimentacao("contas"); setAba("movimentacoes"); }} />
           <SaudeDoMes contas={contas} despesas={despesas} />
 
           <section className="mb-7 rounded-xl border p-4">

@@ -5,6 +5,7 @@
 
 import { contaEmAberto, saldoConta, type ContaFinanceira } from "./financeiro";
 import { somarDiasISO } from "./gestao";
+import { ehRetirada } from "./despesas-recorrentes";
 import { custoProporcional, type Embalagem } from "./ingredient-cost";
 import { deslocarMes, resumoDoMes, variacao, type DespesaMes, type PedidoMes, type ResumoMes } from "./resumo-mes";
 
@@ -141,12 +142,19 @@ export type SaudeDoMes = {
   aReceber: number;
   margemBruta: number;
   contas: ResumoContasPagar;
+  /** Retirada do dono no mês (categoria "Retirada do dono"); já está dentro das despesas do resumo. */
+  retiradas: number;
+  /** Despesas do mês sem a retirada do dono. */
+  despesasOperacionais: number;
+  /** Resultado antes da retirada: o que o negócio gerou. O resultado do resumo é o que sobra depois dela. */
+  lucroAntesRetirada: number;
 };
 
 export function saudeDoMes({ pedidos, despesas, contas, mes, hoje }: EntradaSaude): SaudeDoMes {
   const resumo = resumoDoMes(pedidos, despesas, mes);
   const anterior = resumoDoMes(pedidos, despesas, deslocarMes(mes, -1));
   const { recebido, aReceber } = recebimentoDoMes(pedidos, mes);
+  const retiradas = r2(despesas.filter((d) => d.data.startsWith(mes) && ehRetirada(d.categoria)).reduce((s, d) => s + n(d.valor), 0));
   return {
     mes,
     resumo,
@@ -156,5 +164,8 @@ export function saudeDoMes({ pedidos, despesas, contas, mes, hoje }: EntradaSaud
     aReceber,
     margemBruta: margemBruta(resumo.vendas, resumo.custoProdutos),
     contas: contasPagarEmFoco(contas, hoje),
+    retiradas,
+    despesasOperacionais: r2(resumo.despesas - retiradas),
+    lucroAntesRetirada: r2(resumo.resultado + retiradas),
   };
 }
