@@ -4,11 +4,12 @@ import { createFileRoute, Link, useNavigate } from "@tanstack/react-router";
 import { useEffect, useMemo, useState } from "react";
 import { useQueryClient, useSuspenseQuery } from "@tanstack/react-query";
 import { toast } from "sonner";
-import { ArrowLeftRight, CalendarClock, ChevronDown, Download, MessageCircle, Plus, ReceiptText, Repeat, Search, SlidersHorizontal, Wallet } from "lucide-react";
+import { ArrowLeftRight, CalendarClock, ChevronDown, Download, Plus, Repeat, Search, SlidersHorizontal, Wallet } from "lucide-react";
 import { usePedidosCalc } from "@/lib/hooks";
 import { supabase } from "@/integrations/supabase/client";
 import { STATUS, brl, dataBR, formaLabel, hojeISO, statusLabel } from "@/lib/format";
 import { baixarCSV } from "@/lib/csv";
+import { IconeWhatsApp } from "@/components/app/icone-whatsapp";
 import { Card, PagamentoBadge, PageHeader, StatusBadge } from "@/components/app/ui";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -433,25 +434,15 @@ function Pedidos() {
               "Obrigado pela preferência! 💛",
             ].join("\n");
             const podeEmitirRecibo = ["pronto", "entregue", "finalizado"].includes(p.status);
-            // Pedido já entregue com saldo em aberto: o botão de WhatsApp vira cobrança.
-            const deveCobrar = ["entregue", "finalizado"].includes(p.status) && p.t.saldo > 0.009;
-            const textoCobranca = [
-              `Olá ${p.clientes?.nome ?? ""}! Tudo bem?`,
-              `Passando para lembrar do saldo do pedido #${p.numero} (entregue em ${dataBR(p.data_entrega)}).`,
-              `Valor em aberto: ${brl(p.t.saldo)}`,
-              ...(config.pix_chave?.trim() ? [`Chave Pix: ${config.pix_chave.trim()}`] : []),
-              "",
-              "Obrigado! 💛",
-            ].join("\n");
             const confirmar = precisaConfirmar(p);
             const pronto = p.status === "pronto";
             const avisar = precisaAvisarPronto(p);
             const resumo = confirmacaoWhatsApp(p, opcoesMensagem);
             const aviso = pronto ? avisoProntoWhatsApp(p, opcoesMensagem) : null;
-            // Pronto: aviso com retirada/entrega, saldo e Pix. Entregue: recibo ou cobrança. Em aberto: resumo do pedido.
-            const textoWhats = deveCobrar ? textoCobranca : pronto ? aviso?.texto ?? "" : confirmar ? resumo?.texto ?? "" : podeEmitirRecibo ? textoRecibo : resumo?.texto ?? "";
+            // Pronto: aviso com retirada/entrega, saldo e Pix. Entregue: recibo (traz o saldo restante e o Pix). Em aberto: resumo do pedido.
+            const textoWhats = pronto ? aviso?.texto ?? "" : confirmar ? resumo?.texto ?? "" : podeEmitirRecibo ? textoRecibo : resumo?.texto ?? "";
             const hrefWhats = telefoneWhatsApp ? `https://wa.me/${telefoneWhatsApp}?text=${encodeURIComponent(textoWhats)}` : null;
-            const rotuloWhats = deveCobrar ? `Cobrar ${brl(p.t.saldo)}` : pronto ? (avisar ? "Avisar que está pronto" : "Avisar de novo") : confirmar ? "Confirmar no WhatsApp" : podeEmitirRecibo ? "Enviar recibo" : "Enviar pedido no WhatsApp";
+            const rotuloWhats = pronto ? (avisar ? "Avisar que está pronto" : "Avisar de novo") : confirmar ? "Confirmar no WhatsApp" : podeEmitirRecibo ? "Enviar recibo" : "Enviar pedido no WhatsApp";
             return (
               <Card
                 key={p.id}
@@ -519,23 +510,10 @@ function Pedidos() {
                         <ArrowLeftRight className="size-4" /> Alterar status
                       </Button>
                     )}
-                    {podeEmitirRecibo && (
-                      <Button type="button" size="sm" variant="outline" className={BOTAO_ACAO} onClick={async (e) => {
-                        e.stopPropagation();
-                        try {
-                          await navigator.clipboard.writeText(textoRecibo);
-                          toast.success("Recibo copiado. Você já pode colá-lo na conversa com o cliente.");
-                        } catch {
-                          toast.error("Não foi possível copiar o recibo neste dispositivo.");
-                        }
-                      }}>
-                        <ReceiptText className="size-4" /> Copiar recibo
-                      </Button>
-                    )}
                     {hrefWhats ? (
                       <Button asChild size="sm" variant={confirmar || avisar ? "default" : "outline"} className={BOTAO_ACAO}>
                         <a href={hrefWhats} target="_blank" rel="noopener noreferrer" onClick={(e) => { e.stopPropagation(); if (pronto) void marcarAvisoPronto(p); else if (confirmar) void marcarConfirmacao(p); }}>
-                          <MessageCircle className="size-4" /> {rotuloWhats}
+                          <IconeWhatsApp className="size-4" /> {rotuloWhats}
                         </a>
                       </Button>
                     ) : (
@@ -549,7 +527,7 @@ function Pedidos() {
                           toast.error("Este pedido não tem um cliente cadastrado.");
                         }
                       }}>
-                        <MessageCircle className="size-4" /> Cadastrar WhatsApp do cliente
+                        <IconeWhatsApp className="size-4" /> Cadastrar WhatsApp do cliente
                       </Button>
                     )}
                     {p.aviso_pronto_enviado_em && pronto ? <span className="col-span-2 text-center text-xs text-success">✓ Cliente avisado</span>
