@@ -4,9 +4,10 @@ import { useSuspenseQuery } from "@tanstack/react-query";
 import { useMemo, useState } from "react";
 import { CalendarClock, CircleAlert, Receipt, ShoppingCart } from "lucide-react";
 import { contasPagarQ, despesasQ } from "@/lib/queries";
-import { brl, dataBR, hojeISO, mesISO } from "@/lib/format";
-import { contaEmAberto, resumoContas, saldoConta } from "@/lib/financeiro";
-import { PageHeader, Stat, Empty } from "@/components/app/ui";
+import { brl, dataBR, hojeISO } from "@/lib/format";
+import { contaEmAberto, saldoConta } from "@/lib/financeiro";
+import { PageHeader, Empty } from "@/components/app/ui";
+import { SaudeDoMes } from "@/components/app/saude-financeira";
 import { Button } from "@/components/ui/button";
 import { Despesas } from "./despesas";
 import { ContasPagar } from "./contas-pagar";
@@ -23,6 +24,11 @@ export const Route = createFileRoute("/_authenticated/financeiro")({
       context.queryClient.ensureQueryData(appQueries.comprasQ),
       context.queryClient.ensureQueryData(appQueries.insumosQ),
       context.queryClient.ensureQueryData(appQueries.compraItensQ),
+      // Saúde do mês: vendas, custos e estoque.
+      context.queryClient.ensureQueryData(appQueries.pedidosHistoricoQ),
+      context.queryClient.ensureQueryData(appQueries.configQ),
+      context.queryClient.ensureQueryData(appQueries.pedidoPagamentosQ),
+      context.queryClient.ensureQueryData(appQueries.produtosQ),
     ]);
   },
   errorComponent: ({ error }) => (
@@ -44,11 +50,7 @@ function Financeiro() {
   const [tipoLancamento, setTipoLancamento] = useState<TipoLancamento>("compra");
   const [tipoMovimentacao, setTipoMovimentacao] = useState<TipoMovimentacao>("despesas");
   const hoje = hojeISO();
-  const inicioMes = mesISO() + "-01";
   const contasAbertas = contas.filter(contaEmAberto);
-  const { aberto: saldoAberto, vencido: saldoVencido, pago: totalPago } = resumoContas(contas, hoje);
-  const despesasMes = despesas.filter((despesa) => despesa.data >= inicioMes && despesa.data <= hoje);
-  const totalDespesasMes = despesasMes.reduce((total, despesa) => total + Math.max(0, Number(despesa.valor) || 0), 0);
   const despesasOrdenadas = useMemo(() => [...despesas].sort((a, b) => b.data.localeCompare(a.data)), [despesas]);
   const proximasContas = [...contasAbertas]
     .sort((a, b) => a.data_vencimento.localeCompare(b.data_vencimento))
@@ -59,15 +61,8 @@ function Financeiro() {
     <>
       <PageHeader title="Financeiro" back="/mais" />
       <p className="mb-5 text-sm text-muted-foreground">
-        Cadastre e acompanhe os gastos da confeitaria em um só lugar. Escolha o tipo de lançamento abaixo: compra de insumos movimenta o estoque; despesa registra um gasto operacional; conta a pagar controla uma obrigação futura ou parcelas do cartão.
+        Veja como está o mês e lance compras, despesas e contas a pagar em um só lugar.
       </p>
-
-      <div className="mb-5 grid grid-cols-2 gap-3">
-        <Stat label="Saldo a pagar" value={brl(saldoAberto)} />
-        <Stat label="Contas vencidas" value={brl(saldoVencido)} tone={saldoVencido > 0 ? "danger" : "default"} />
-        <Stat label="Total pago em contas" value={brl(totalPago)} tone="primary" />
-        <Stat label="Despesas deste mês" value={brl(totalDespesasMes)} />
-      </div>
 
       <div className="mb-5 grid grid-cols-2 gap-2 sm:grid-cols-4" role="group" aria-label="Navegação do financeiro">
         <Button type="button" size="sm" variant={aba === "resumo" ? "default" : "outline"} onClick={() => setAba("resumo")} aria-pressed={aba === "resumo"}>Visão geral</Button>
@@ -104,6 +99,8 @@ function Financeiro() {
         </section>
       ) : aba === "resumo" ? (
         <>
+          <SaudeDoMes contas={contas} despesas={despesas} />
+
           <section className="mb-7 rounded-xl border p-4">
             <h2 className="mb-1 font-semibold">O que você precisa fazer?</h2>
             <p className="mb-3 text-sm text-muted-foreground">

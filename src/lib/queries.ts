@@ -66,6 +66,16 @@ export const produtosProntosQ = queryOptions({
   },
 });
 
+/** Saldo de cada insumo no controle de estoque (unidade-base g, ml ou un). Mesma chave usada em Compras. */
+export const saldoEstoqueQ = queryOptions({
+  queryKey: ["estoque"],
+  queryFn: async () => {
+    const { data, error } = await supabase.rpc("saldo_estoque");
+    if (error) throw new Error(error.message);
+    return data ?? [];
+  },
+});
+
 /** Últimos movimentos do estoque pronto, do mais recente ao mais antigo. */
 export const movimentosProntosQ = queryOptions({
   queryKey: ["estoque-pronto", "movimentos"],

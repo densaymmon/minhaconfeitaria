@@ -147,14 +147,7 @@ export function Compras({ embedded = false, initialSection = "compras" }: { embe
   const { data: compras } = useSuspenseQuery(appQueries.comprasQ);
   const { data: itens } = useSuspenseQuery(appQueries.compraItensQ);
   const { data: contasPagar } = useSuspenseQuery(appQueries.contasPagarQ);
-  const { data: estoque = [], isLoading: carregandoEstoque, error: erroEstoque, refetch: recarregarEstoque } = useQuery({
-    queryKey: ["estoque"],
-    queryFn: async () => {
-      const { data, error } = await supabase.rpc("saldo_estoque");
-      if (error) throw new Error(error.message);
-      return data ?? [];
-    },
-  });
+  const { data: estoque = [], isLoading: carregandoEstoque, error: erroEstoque, refetch: recarregarEstoque } = useQuery(appQueries.saldoEstoqueQ);
   const { data: pedidos = [] } = useQuery(appQueries.pedidosHistoricoQ);
   const { data: produtos = [] } = useQuery(appQueries.produtosQ);
   const qc = useQueryClient();

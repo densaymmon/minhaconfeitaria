@@ -5,6 +5,7 @@ Formato inspirado em [Keep a Changelog](https://keepachangelog.com/pt-BR/). As e
 ## [Não lançado]
 
 ### Adicionado
+- Financeiro → Visão geral: bloco "Saúde do mês" com seletor de mês: vendido (recebido e a receber), custo de produção e margem bruta, resultado do mês (todos os pedidos não cancelados, pela data de entrega, com comparação com o mês anterior), contas a pagar (em aberto, vencidas e a vencer em 7 dias) e valor em estoque ao custo (insumos + produtos prontos). Regras em `src/lib/saude-financeira.ts`. Substitui os quatro cartões antigos do topo.
 - Compras: na lista de insumos de cada item há a opção "+ Adicionar novo insumo", que abre o cadastro sem sair da compra e já seleciona o insumo criado.
 - Lista de pedidos: trocar o status com o botão "Alterar status" (com a regra da Produção para "Pronto") e registrar recebimento total ou parcial com o botão "Pagamento", sem abrir o pedido. Ao marcar como entregue com saldo em aberto, oferece o recebimento. Regras em `src/lib/acoes-rapidas-pedido.ts`.
 - Estoque de produtos prontos (migração 0049): registrar produção que não saiu em pedido (baixa os insumos), descartar, desfazer e usar essas unidades em pedidos. Pedidos do catálogo usam o estoque pronto automaticamente; no pedido manual a pessoa escolhe por item. Cancelar o pedido ou reduzir a produção devolve as unidades. Veja `docs/controle-estoque/ESTOQUE_PRONTO.md`.
