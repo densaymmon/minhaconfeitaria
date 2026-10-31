@@ -30,7 +30,12 @@ function parseCampoDecimal(valor: string): number {
   return Number.isFinite(numero) ? numero : NaN;
 }
 
-export function IngredientForm({ insumo, onDone }: { insumo?: Insumo; onDone?: () => void }) {
+export function IngredientForm({ insumo, onDone, onSaved }: {
+  insumo?: Insumo;
+  onDone?: () => void;
+  /** Chamado só ao criar um insumo novo, depois de salvo, com o id e a unidade da embalagem. */
+  onSaved?: (criado: { id: string; unidade_embalagem: string }) => void;
+}) {
   const qc = useQueryClient();
   const [f, setF] = useState({ nome: insumo?.nome ?? "", tipo: insumo?.tipo ?? "ingrediente", preco: String(insumo?.preco_embalagem ?? insumo?.preco_unidade ?? ""), quantidade: String(insumo?.quantidade_embalagem ?? "1"), unidade: insumo?.unidade_embalagem ?? insumo?.unidade ?? "kg", alergenos: insumo?.alergenos ?? "" });
   const [busy, setBusy] = useState(false);
@@ -44,14 +49,22 @@ export function IngredientForm({ insumo, onDone }: { insumo?: Insumo; onDone?: (
     setBusy(true);
     const payload = { nome: f.nome.trim(), tipo: f.tipo, preco_embalagem: preco, quantidade_embalagem: quantidade, unidade_embalagem: f.unidade, alergenos: f.alergenos.trim().slice(0, 120) || null, ...(insumo ? {} : { unidade: f.unidade }) };
     try {
-      const { error } = insumo ? await supabase.from("insumos").update(payload).eq("id", insumo.id) : await supabase.from("insumos").insert(payload);
-      if (error) throw error;
+      let criadoId: string | null = null;
+      if (insumo) {
+        const { error } = await supabase.from("insumos").update(payload).eq("id", insumo.id);
+        if (error) throw error;
+      } else {
+        const { data, error } = await supabase.from("insumos").insert(payload).select("id").single();
+        if (error) throw error;
+        criadoId = data.id;
+      }
       await Promise.all([qc.invalidateQueries({ queryKey: ["insumos"] }), qc.invalidateQueries({ queryKey: ["produtos"] })]);
       if (!insumo) setF({ nome: "", tipo: "ingrediente", preco: "", quantidade: "1", unidade: "kg", alergenos: "" });
       // Preço mudou: os produtos que usam o ingrediente podem ter ficado com margem baixa.
       toast.success(insumo ? "Ingrediente atualizado; custos das receitas recalculados." : "Insumo adicionado!", insumo && Number(insumo.preco_embalagem) !== preco
         ? { description: "Confira se algum produto ficou com margem baixa.", action: { label: "Ver produtos", onClick: () => { window.location.assign("/produtos"); } } }
         : undefined);
+      if (criadoId) onSaved?.({ id: criadoId, unidade_embalagem: payload.unidade_embalagem });
       onDone?.();
     } catch (e) { toast.error(e instanceof Error ? e.message : "Não foi possível salvar o ingrediente."); }
     finally { setBusy(false); }

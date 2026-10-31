@@ -15,6 +15,8 @@ import {
   AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle,
 } from "@/components/ui/alert-dialog";
 import { DOCUMENT_ACCEPT, parseInvoiceXml, possibleDuplicate, reviewDocument, validateDocumentFile, type PurchaseDocument } from "@/lib/purchase-document";
+import { IngredientForm } from "@/components/app/ingredient-form";
+import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle } from "@/components/ui/dialog";
 import { PurchaseDocumentReview } from "@/components/app/purchase-document-review";
 import { readPurchaseDocumentLocally } from "@/lib/purchase-document-ocr";
 
@@ -52,6 +54,8 @@ function ComprasPage() {
 
 const MEDIDAS_COMPRA = ["g", "kg", "L", "ml", "un"] as const;
 type Linha = { compraItemId?: string; insumo_id: string; quantidade: string; unidade: string; preco: string };
+/** Valor da opção "Adicionar novo insumo" na lista de insumos; nunca é guardado na linha. */
+const NOVO_INSUMO = "__novo_insumo__";
 const linhaVazia = (): Linha => ({ insumo_id: "", quantidade: "", unidade: "un", preco: "" });
 
 // Nunca permita que valores numéricos inválidos vindos do banco apareçam como "NaN"
@@ -160,6 +164,8 @@ export function Compras({ embedded = false, initialSection = "compras" }: { embe
   const [numeroParcelasCompra, setNumeroParcelasCompra] = useState("1");
   const [primeiroVencimentoCompra, setPrimeiroVencimentoCompra] = useState(hojeISO());
   const [linhas, setLinhas] = useState<Linha[]>([linhaVazia()]);
+  // Linha da compra para a qual o novo insumo está sendo cadastrado (null = diálogo fechado).
+  const [novoInsumoLinha, setNovoInsumoLinha] = useState<number | null>(null);
   const [busy, setBusy] = useState(false);
   const eventoSalvarRef = useRef<{ assinatura: string; id: string } | null>(null);
   const [inventarioFisico, setInventarioFisico] = useState<Record<string, string>>({});
@@ -204,10 +210,13 @@ export function Compras({ embedded = false, initialSection = "compras" }: { embe
   }, [compras, mesGastos]);
 
   // Only the four measures the owner asked for, and only those that match the insumo's package.
+  const unidadesDaEmbalagem = (unidadeEmbalagem: string) => {
+    const opcoes = medidasCompativeis(unidadeEmbalagem).filter((u) => (MEDIDAS_COMPRA as readonly string[]).includes(u));
+    return opcoes.length ? opcoes : [...MEDIDAS_COMPRA];
+  };
   const unidadesPara = (insumoId: string) => {
     const ins = insumos.find((i) => i.id === insumoId);
-    const opcoes = medidasCompativeis(ins?.unidade_embalagem ?? ins?.unidade ?? "un").filter((u) => (MEDIDAS_COMPRA as readonly string[]).includes(u));
-    return opcoes.length ? opcoes : [...MEDIDAS_COMPRA];
+    return unidadesDaEmbalagem(ins?.unidade_embalagem ?? ins?.unidade ?? "un");
   };
 
   const calculadas = linhas.map((l) => {
@@ -413,7 +422,7 @@ export function Compras({ embedded = false, initialSection = "compras" }: { embe
   }, [itensNoPeriodo, insumos]);
 
   function escolherInsumo(index: number, id: string) {
-    const ins = insumos.find((i) => i.id === id);
+    if (id === NOVO_INSUMO) { setNovoInsumoLinha(index); return; }
     const unidade = unidadesPara(id)[0] ?? "un";
     setLinhas((s) => s.map((l, j) => (j === index ? { ...l, insumo_id: id, unidade, preco: "" } : l)));
   }
@@ -987,6 +996,7 @@ export function Compras({ embedded = false, initialSection = "compras" }: { embe
               <Field label="Insumo">
                 <select required value={l.insumo_id} onChange={(e) => escolherInsumo(index, e.target.value)} className="h-11 w-full rounded-md border border-input bg-background px-3 text-sm">
                   <option value="">Selecione um insumo</option>
+                  <option value={NOVO_INSUMO}>+ Adicionar novo insumo</option>
                   {insumos.filter((i) => i.ativo !== false || i.id === l.insumo_id).map((i) => <option key={i.id} value={i.id}>{i.nome}{i.ativo === false ? " (inativo — histórico)" : ""}</option>)}
                 </select>
               </Field>
@@ -1019,7 +1029,7 @@ export function Compras({ embedded = false, initialSection = "compras" }: { embe
         </div>
         <Button disabled={busy || !insumos.length} className="h-11 w-full">{busy ? "Salvando compra..." : editandoCompraId ? "Salvar alterações" : "Salvar compra"}</Button>
         {editandoCompraId && <Button type="button" variant="outline" className="h-11 w-full" onClick={() => { setEditandoCompraId(null); setData(hojeISO()); setLocalCompra(""); setFormaPagamentoCompra("pix"); setNumeroParcelasCompra("1"); setPrimeiroVencimentoCompra(hojeISO()); setLinhas([linhaVazia()]); }}>Cancelar edição</Button>}
-        {!insumos.length && <p className="text-sm text-muted-foreground">Cadastre primeiro os insumos em Produtos e receitas.</p>}
+        {!insumos.length && <p className="text-sm text-muted-foreground">Nenhum insumo cadastrado ainda. Escolha “+ Adicionar novo insumo” na lista acima para cadastrar o primeiro sem sair da compra.</p>}
       </form>
       </>}
 
@@ -1165,6 +1175,24 @@ export function Compras({ embedded = false, initialSection = "compras" }: { embe
           </AlertDialogFooter>
         </AlertDialogContent>
       </AlertDialog>
+      {/* Fora do <form> da compra: eventos de submit de um portal subiriam até ele. */}
+      <Dialog open={novoInsumoLinha !== null} onOpenChange={(aberto) => { if (!aberto) setNovoInsumoLinha(null); }}>
+        <DialogContent className="max-h-[90dvh] max-w-md overflow-y-auto">
+          <DialogHeader>
+            <DialogTitle>Adicionar novo insumo</DialogTitle>
+            <DialogDescription>Cadastre o insumo e ele já será escolhido neste item da compra.</DialogDescription>
+          </DialogHeader>
+          <IngredientForm
+            onSaved={({ id, unidade_embalagem }) => {
+              const unidade = unidadesDaEmbalagem(unidade_embalagem)[0] ?? "un";
+              const indice = novoInsumoLinha;
+              if (indice === null) return;
+              setLinhas((s) => s.map((l, j) => (j === indice ? { ...l, insumo_id: id, unidade, preco: "" } : l)));
+            }}
+            onDone={() => setNovoInsumoLinha(null)}
+          />
+        </DialogContent>
+      </Dialog>
     </>
   );
 }
