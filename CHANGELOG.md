@@ -5,7 +5,8 @@ Formato inspirado em [Keep a Changelog](https://keepachangelog.com/pt-BR/). As e
 ## [Não lançado]
 
 ### Adicionado
-- Lista de pedidos: trocar o status tocando no selo (com a regra da Produção para "Pronto") e registrar recebimento total ou parcial com o botão "Receber R$ X" / "Confirmar pagamento", sem abrir o pedido. Ao marcar como entregue com saldo em aberto, oferece o recebimento. Regras em `src/lib/acoes-rapidas-pedido.ts`.
+- Compras: na lista de insumos de cada item há a opção "+ Adicionar novo insumo", que abre o cadastro sem sair da compra e já seleciona o insumo criado.
+- Lista de pedidos: trocar o status com o botão "Alterar status" (com a regra da Produção para "Pronto") e registrar recebimento total ou parcial com o botão "Pagamento", sem abrir o pedido. Ao marcar como entregue com saldo em aberto, oferece o recebimento. Regras em `src/lib/acoes-rapidas-pedido.ts`.
 - Estoque de produtos prontos (migração 0049): registrar produção que não saiu em pedido (baixa os insumos), descartar, desfazer e usar essas unidades em pedidos. Pedidos do catálogo usam o estoque pronto automaticamente; no pedido manual a pessoa escolhe por item. Cancelar o pedido ou reduzir a produção devolve as unidades. Veja `docs/controle-estoque/ESTOQUE_PRONTO.md`.
 
 ### Documentação
