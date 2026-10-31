@@ -4,7 +4,7 @@ import { createFileRoute, Link, useNavigate } from "@tanstack/react-router";
 import { useEffect, useMemo, useState } from "react";
 import { useQueryClient, useSuspenseQuery } from "@tanstack/react-query";
 import { toast } from "sonner";
-import { CalendarClock, ChevronDown, Download, MessageCircle, Plus, ReceiptText, Repeat, Search, SlidersHorizontal, Wallet } from "lucide-react";
+import { ArrowLeftRight, CalendarClock, ChevronDown, Download, MessageCircle, Plus, ReceiptText, Repeat, Search, SlidersHorizontal, Wallet } from "lucide-react";
 import { usePedidosCalc } from "@/lib/hooks";
 import { supabase } from "@/integrations/supabase/client";
 import { STATUS, brl, dataBR, formaLabel, hojeISO, statusLabel } from "@/lib/format";
@@ -22,6 +22,9 @@ import { DialogRecebimentoPedido, DialogStatusPedido } from "@/components/app/ac
 import { podeAlterarStatus, saldoParaReceber } from "@/lib/acoes-rapidas-pedido";
 
 const STATUS_ATIVOS = ["recebido", "confirmado", "em_producao", "pronto"];
+
+/** Todos os botões de ação do card têm o mesmo tamanho e ficam alinhados em duas colunas. */
+const BOTAO_ACAO = "h-auto min-h-10 w-full justify-center whitespace-normal px-2 py-1.5 text-center text-xs leading-tight";
 
 export const Route = createFileRoute("/_authenticated/pedidos/")({
  validateSearch: (search: Record<string, unknown>): { filtro?: string | undefined; dataInicial?: string | undefined; dataFinal?: string | undefined; dataReferencia?: "recebimento" | undefined } => ({
@@ -478,17 +481,7 @@ function Pedidos() {
                       )}
                       {infoRecorrencia && <span className="inline-flex items-center gap-1 rounded-full border border-primary/40 bg-primary/10 px-2 py-1 text-xs font-bold text-primary"><Repeat className="size-3" /> Recorrente</span>}
                       <PagamentoBadge status={p.status} venda={p.t.venda} recebido={p.t.recebido} saldo={p.t.saldo} />
-                      {podeAlterarStatus(p.status) ? (
-                        <button
-                          type="button"
-                          onClick={(e) => { e.stopPropagation(); setStatusAbertoId(p.id); }}
-                          aria-label={`Alterar o status do pedido #${p.numero} (atual: ${statusLabel(p.status)})`}
-                          className="inline-flex items-center gap-0.5 rounded-full focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring"
-                        >
-                          <StatusBadge status={p.status} />
-                          <ChevronDown className="size-3.5 text-muted-foreground" aria-hidden />
-                        </button>
-                      ) : <StatusBadge status={p.status} />}
+                      <StatusBadge status={p.status} />
                     </div>
                   </div>
                   {infoRecorrencia && <div className="mt-1 flex flex-wrap items-center gap-x-2 gap-y-1 text-xs font-medium text-primary">
@@ -515,14 +508,19 @@ function Pedidos() {
                   {p.pagamento_informado_em && p.t.saldo > 0 && p.status !== "cancelado" && (
                     <div className="mt-1 rounded-lg bg-warning/15 px-2 py-1 text-xs font-medium text-warning-foreground">Cliente avisou que pagou por Pix. Confira e confirme o pagamento.</div>
                   )}
-                  <div className="mt-3 flex flex-wrap gap-2 border-t pt-3">
+                  <div className="mt-3 grid grid-cols-2 gap-2 border-t pt-3">
                     {p.status !== "cancelado" && saldoParaReceber(p.t.saldo) > 0 && (
-                      <Button type="button" size="sm" variant={p.pagamento_informado_em ? "default" : "outline"} onClick={(e) => { e.stopPropagation(); setRecebimentoAberto({ id: p.id, aposEntrega: false }); }}>
-                        <Wallet className="size-4" /> {p.pagamento_informado_em ? "Confirmar pagamento" : `Receber ${brl(saldoParaReceber(p.t.saldo))}`}
+                      <Button type="button" size="sm" variant={p.pagamento_informado_em ? "default" : "outline"} className={BOTAO_ACAO} onClick={(e) => { e.stopPropagation(); setRecebimentoAberto({ id: p.id, aposEntrega: false }); }}>
+                        <Wallet className="size-4" /> Pagamento
+                      </Button>
+                    )}
+                    {podeAlterarStatus(p.status) && (
+                      <Button type="button" size="sm" variant="outline" className={BOTAO_ACAO} onClick={(e) => { e.stopPropagation(); setStatusAbertoId(p.id); }}>
+                        <ArrowLeftRight className="size-4" /> Alterar status
                       </Button>
                     )}
                     {podeEmitirRecibo && (
-                      <Button type="button" size="sm" variant="outline" onClick={async (e) => {
+                      <Button type="button" size="sm" variant="outline" className={BOTAO_ACAO} onClick={async (e) => {
                         e.stopPropagation();
                         try {
                           await navigator.clipboard.writeText(textoRecibo);
@@ -535,13 +533,13 @@ function Pedidos() {
                       </Button>
                     )}
                     {hrefWhats ? (
-                      <Button asChild size="sm" variant={confirmar || avisar ? "default" : "outline"}>
+                      <Button asChild size="sm" variant={confirmar || avisar ? "default" : "outline"} className={BOTAO_ACAO}>
                         <a href={hrefWhats} target="_blank" rel="noopener noreferrer" onClick={(e) => { e.stopPropagation(); if (pronto) void marcarAvisoPronto(p); else if (confirmar) void marcarConfirmacao(p); }}>
                           <MessageCircle className="size-4" /> {rotuloWhats}
                         </a>
                       </Button>
                     ) : (
-                      <Button type="button" size="sm" variant="outline" onClick={(e) => {
+                      <Button type="button" size="sm" variant="outline" className={BOTAO_ACAO} onClick={(e) => {
                         e.stopPropagation();
                         const cliente = clientes.find((c) => c.id === p.cliente_id);
                         if (cliente) {
@@ -554,8 +552,8 @@ function Pedidos() {
                         <MessageCircle className="size-4" /> Cadastrar WhatsApp do cliente
                       </Button>
                     )}
-                    {p.aviso_pronto_enviado_em && pronto ? <span className="self-center text-xs text-success">✓ Cliente avisado</span>
-                      : p.origem === "catalogo" && p.confirmacao_enviada_em && <span className="self-center text-xs text-success">✓ Confirmação enviada</span>}
+                    {p.aviso_pronto_enviado_em && pronto ? <span className="col-span-2 text-center text-xs text-success">✓ Cliente avisado</span>
+                      : p.origem === "catalogo" && p.confirmacao_enviada_em && <span className="col-span-2 text-center text-xs text-success">✓ Confirmação enviada</span>}
                   </div>
               </Card>
             );
