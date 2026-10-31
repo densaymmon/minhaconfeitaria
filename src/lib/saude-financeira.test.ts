@@ -61,6 +61,22 @@ describe("saúde do mês", () => {
     expect(r).toEqual({ recebido: 10, aReceber: 0 });
   });
 
+  it("separa a retirada do dono das demais despesas, sem mudar o resultado", () => {
+    const comRetirada = [...despesas, { data: "2026-10-10", valor: 50, categoria: "Retirada do dono" }, { data: "2026-09-10", valor: 999, categoria: "Retirada do dono" }];
+    const s = saudeDoMes({ pedidos, despesas: comRetirada, contas, mes: "2026-10", hoje: "2026-10-30" });
+    expect(s.retiradas).toBe(50);
+    expect(s.despesasOperacionais).toBe(30);
+    expect(s.resumo.despesas).toBe(80);
+    expect(s.resumo.resultado).toBe(100); // 300 − 120 − 80
+    expect(s.lucroAntesRetirada).toBe(150);
+  });
+
+  it("sem retirada, lucro antes da retirada = resultado", () => {
+    const s = saudeDoMes({ pedidos, despesas, contas, mes: "2026-10", hoje: "2026-10-30" });
+    expect(s.retiradas).toBe(0);
+    expect(s.lucroAntesRetirada).toBe(s.resumo.resultado);
+  });
+
   it("margem bruta", () => {
     expect(margemBruta(200, 50)).toBe(75);
     expect(margemBruta(100, 130)).toBe(-30);

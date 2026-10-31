@@ -5,6 +5,8 @@ Formato inspirado em [Keep a Changelog](https://keepachangelog.com/pt-BR/). As e
 ## [Não lançado]
 
 ### Adicionado
+- Financeiro → Visão geral: faixa "Pontos de atenção" (contas vencidas ou que vencem hoje, pedidos entregues sem receber, insumos com saldo negativo, produtos com margem baixa, cada um com atalho para resolver) e a meta de vendas do mês no mês atual. Regras em `src/lib/alertas-financeiros.ts`.
+- Despesas: "Repetir todo mês" (3, 6 ou 12 meses) lança uma despesa por mês de uma vez, e a categoria "Retirada do dono", mostrada à parte no resultado do mês ("Lucro antes da retirada"). Regras em `src/lib/despesas-recorrentes.ts`.
 - Financeiro → Visão geral: bloco "Saúde do mês" com seletor de mês: vendido (recebido e a receber), custo de produção e margem bruta, resultado do mês (todos os pedidos não cancelados, pela data de entrega, com comparação com o mês anterior), contas a pagar (em aberto, vencidas e a vencer em 7 dias) e valor em estoque ao custo (insumos + produtos prontos). Regras em `src/lib/saude-financeira.ts`. Substitui os quatro cartões antigos do topo.
 - Compras: na lista de insumos de cada item há a opção "+ Adicionar novo insumo", que abre o cadastro sem sair da compra e já seleciona o insumo criado.
 - Lista de pedidos: trocar o status com o botão "Alterar status" (com a regra da Produção para "Pronto") e registrar recebimento total ou parcial com o botão "Pagamento", sem abrir o pedido. Ao marcar como entregue com saldo em aberto, oferece o recebimento. Regras em `src/lib/acoes-rapidas-pedido.ts`.

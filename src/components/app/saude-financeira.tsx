@@ -1,13 +1,15 @@
 import { Link } from "@tanstack/react-router";
 import { useQuery } from "@tanstack/react-query";
 import { useMemo, useState } from "react";
-import { ArrowDownRight, ArrowUpRight, ChevronLeft, ChevronRight, Minus } from "lucide-react";
+import { AlertTriangle, ArrowDownRight, ArrowUpRight, ChevronLeft, ChevronRight, CircleAlert, CircleCheck, Minus } from "lucide-react";
 import { produtosProntosQ, saldoEstoqueQ, type ContaPagar } from "@/lib/queries";
 import { useCustos, usePedidosCalc } from "@/lib/hooks";
 import { brl, hojeISO, mesISO, num } from "@/lib/format";
 import { deslocarMes, nomeMes } from "@/lib/resumo-mes";
+import { alertasFinanceiros, contasQueVencemHoje, contasVencidas, entreguesComSaldo, insumosComSaldoNegativo, produtosComMargemBaixa, type AlertaFinanceiro } from "@/lib/alertas-financeiros";
 import { saudeDoMes, valorEstoqueInsumos, valorEstoquePronto } from "@/lib/saude-financeira";
 import { Card } from "@/components/app/ui";
+import { MetaDoMes } from "@/components/app/painel-gestao";
 import { Button } from "@/components/ui/button";
 import { cn } from "@/lib/utils";
 
@@ -92,8 +94,15 @@ export function SaudeDoMes({ contas, despesas }: { contas: ContaPagar[]; despesa
           <Variacao valor={saude.variacaoResultado} mes={mes} />
           <div className="mt-2 space-y-0.5 text-xs text-muted-foreground">
             <div className="flex justify-between gap-2"><span>Taxas e impostos</span><span className="tabular-nums">{brl(resumo.taxas)}</span></div>
-            <div className="flex justify-between gap-2"><span>Despesas</span><span className="tabular-nums">{brl(resumo.despesas)}</span></div>
+            <div className="flex justify-between gap-2"><span>Despesas</span><span className="tabular-nums">{brl(saude.despesasOperacionais)}</span></div>
+            {saude.retiradas > 0 && (
+              <>
+                <div className="flex justify-between gap-2"><span>Retirada do dono</span><span className="tabular-nums">{brl(saude.retiradas)}</span></div>
+                <div className="flex justify-between gap-2 border-t pt-0.5 font-medium text-foreground"><span>Lucro antes da retirada</span><span className="tabular-nums">{brl(saude.lucroAntesRetirada)}</span></div>
+              </>
+            )}
           </div>
+          {saude.retiradas > 0 && <p className="mt-1 text-xs text-muted-foreground">O resultado é o que sobra depois da retirada.</p>}
         </Card>
 
         <Card className={cn("p-4", pagar.vencido > 0 && "ring-1 ring-destructive/30")}>
@@ -134,10 +143,67 @@ export function SaudeDoMes({ contas, despesas }: { contas: ContaPagar[]; despesa
         </Card>
       </div>
 
+      {ehAtual && <div className="mt-3"><MetaDoMes vendido={resumo.vendas} /></div>}
+
       <p className="mt-3 text-xs text-muted-foreground">
         O resultado considera todos os pedidos não cancelados do mês, pela data de entrega (inclusive os ainda não entregues): vendas − custo dos produtos − taxas − despesas. Compras de insumos não entram, porque o custo dos produtos já as representa.{" "}
         <Link to="/resumo-mes" className="font-medium text-primary underline underline-offset-4">Ver resumo completo</Link>
       </p>
     </section>
+  );
+}
+
+const ICONE_ALERTA = { erro: CircleAlert, aviso: AlertTriangle } as const;
+
+/**
+ * Faixa de atenção no topo do Financeiro: contas vencidas ou que vencem hoje, pedidos entregues
+ * sem receber, insumos com saldo negativo e produtos com margem baixa. Só lê; cada alerta leva
+ * à tela onde o problema se resolve.
+ */
+export function AlertasFinanceiros({ contas, onVerContas }: { contas: ContaPagar[]; onVerContas: () => void }) {
+  const pedidos = usePedidosCalc("historico");
+  const { produtos, custo } = useCustos();
+  const { data: saldos } = useQuery(saldoEstoqueQ);
+  const hoje = hojeISO();
+
+  const alertas = useMemo(() => alertasFinanceiros({
+    vencidas: contasVencidas(contas, hoje),
+    hoje: contasQueVencemHoje(contas, hoje),
+    aReceber: entreguesComSaldo(pedidos),
+    insumosNegativos: insumosComSaldoNegativo(saldos ?? []),
+    margem: produtosComMargemBaixa(produtos, custo),
+  }), [contas, hoje, pedidos, saldos, produtos, custo]);
+
+  if (!alertas.length) {
+    return (
+      <p className="mb-4 flex items-center gap-2 rounded-xl border border-success/30 bg-success/10 px-3 py-2 text-sm text-success">
+        <CircleCheck className="size-4 shrink-0" /> Tudo em dia: sem contas vencidas, saldos a cobrar ou margens baixas.
+      </p>
+    );
+  }
+  return (
+    <ul className="mb-4 space-y-2" aria-label="Pontos de atenção">
+      {alertas.map((a) => <AlertaLinha key={a.id} alerta={a} onVerContas={onVerContas} />)}
+    </ul>
+  );
+}
+
+function AlertaLinha({ alerta, onVerContas }: { alerta: AlertaFinanceiro; onVerContas: () => void }) {
+  const Icone = ICONE_ALERTA[alerta.nivel];
+  const classeLink = "shrink-0 text-sm font-medium text-primary underline underline-offset-4";
+  return (
+    <li className={cn("flex items-center gap-2 rounded-xl border px-3 py-2 text-sm", alerta.nivel === "erro" ? "border-destructive/40 bg-destructive/5" : "border-warning/40 bg-warning/10")}>
+      <Icone className={cn("size-4 shrink-0", alerta.nivel === "erro" ? "text-destructive" : "text-warning-foreground")} aria-hidden />
+      <span className="min-w-0 flex-1">{alerta.texto}</span>
+      {alerta.id === "contas_vencidas" || alerta.id === "contas_hoje" ? (
+        <button type="button" className={classeLink} onClick={onVerContas}>Ver contas</button>
+      ) : alerta.id === "pedidos_a_receber" ? (
+        <Link to="/pedidos" search={{ filtro: "a_receber", dataInicial: undefined, dataFinal: undefined }} className={classeLink}>Ver pedidos</Link>
+      ) : alerta.id === "estoque_negativo" ? (
+        <Link to="/compras" search={{ secao: "estoque" }} className={classeLink}>Contar estoque</Link>
+      ) : (
+        <Link to="/produtos" className={classeLink}>Ver produtos</Link>
+      )}
+    </li>
   );
 }
