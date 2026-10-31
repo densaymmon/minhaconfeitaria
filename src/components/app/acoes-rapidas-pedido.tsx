@@ -138,8 +138,8 @@ export function DialogRecebimentoPedido({ pedido, aposEntrega = false, onClose }
       ]);
       const restante = saldoParaReceber(saldo - valorNumerico);
       toast.success(restante > 0
-        ? `Recebimento de ${brl(valorNumerico)} registrado. Ainda faltam ${brl(restante)}.`
-        : `Recebimento de ${brl(valorNumerico)} registrado. Pedido #${pedido.numero} quitado.`);
+        ? `Pagamento de ${brl(valorNumerico)} registrado. Ainda faltam ${brl(restante)}.`
+        : `Pagamento de ${brl(valorNumerico)} registrado. Pedido #${pedido.numero} quitado.`);
       onClose();
     } catch (e) {
       toast.error(`Não foi possível registrar o recebimento: ${e instanceof Error ? e.message : "tente novamente."}`);
@@ -153,7 +153,7 @@ export function DialogRecebimentoPedido({ pedido, aposEntrega = false, onClose }
     <Dialog open onOpenChange={(aberto) => { if (!aberto && !salvando) onClose(); }}>
       <DialogContent className="max-h-[90dvh] max-w-sm overflow-y-auto">
         <DialogHeader>
-          <DialogTitle>{pedido.pagamento_informado_em ? "Confirmar pagamento" : "Registrar recebimento"}</DialogTitle>
+          <DialogTitle>{pedido.pagamento_informado_em ? "Confirmar pagamento" : "Registrar pagamento"}</DialogTitle>
           <DialogDescription>{tituloPedido(pedido)}</DialogDescription>
         </DialogHeader>
         <div className="space-y-3">
