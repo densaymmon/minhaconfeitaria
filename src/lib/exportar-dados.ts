@@ -5,7 +5,7 @@ import { baixarCSV } from "@/lib/csv";
 export const TABELAS_EXPORTADAS = [
   "confeitarias", "configuracoes", "clientes", "produtos", "receita_itens", "produto_midias", "insumos",
   "pedidos", "pedido_itens", "pedido_pagamentos", "pedidos_recorrentes", "pedidos_recorrentes_ocorrencias",
-  "despesas", "compras", "compra_itens", "contas_pagar", "contas_pagar_pagamentos", "estoque_movimentos",
+  "despesas", "despesas_recorrentes", "compras", "compra_itens", "contas_pagar", "contas_pagar_pagamentos", "estoque_movimentos",
   "assinaturas", "assinatura_pagamentos",
 ] as const;
 

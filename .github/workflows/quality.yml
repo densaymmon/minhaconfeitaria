@@ -119,6 +119,8 @@ jobs:
         run: psql "$DATABASE_URL" -v ON_ERROR_STOP=1 -f tests/db/plataforma-uso-smoke.sql
       - name: Smoke-test ready-product stock (produce, use in orders, return, discard, undo)
         run: psql "$DATABASE_URL" -v ON_ERROR_STOP=1 -f tests/db/estoque-pronto-smoke.sql
+      - name: Smoke-test automatic monthly fixed expenses
+        run: psql "$DATABASE_URL" -v ON_ERROR_STOP=1 -f tests/db/despesas-recorrentes-smoke.sql
       - name: Create isolated database for migration-history repair test
         run: psql "$DATABASE_URL" -v ON_ERROR_STOP=1 -c "CREATE DATABASE confeitaria_reconcile_test"
       - name: Simulate the deployed schema with an incomplete Drizzle history
