@@ -9,6 +9,7 @@ import { calcularRecebimentoPedido, recebimentoLegadoPendente, ratearVendaETaxas
 import { medida } from "@/lib/ingredient-cost";
 import { brl, dataBR, hojeISO, mesISO, num } from "@/lib/format";
 import { baixarCSV } from "@/lib/csv";
+import { resultadoDoPeriodo } from "@/lib/saude-financeira";
 import { contaEmAberto, saldoConta, somaSaldos } from "@/lib/financeiro";
 import { PageHeader, Field, Stat, Row, Empty } from "@/components/app/ui";
 import { Input } from "@/components/ui/input";
@@ -430,25 +431,22 @@ function RelatoriosConteudo({ initialSearch, embedded = false }: { initialSearch
     recebido: s.recebido + p.t.recebido,
     saldo: s.saldo + p.t.saldo,
   }), { venda: 0, recebido: 0, saldo: 0 });
-  const realizado = entregues.reduce((s, p) => ({
-    venda: s.venda + p.t.venda,
-    custo: s.custo + p.t.custo,
-    taxas: s.taxas + p.t.taxas,
-  }), { venda: 0, custo: 0, taxas: 0 });
-  // O resumo considera todos os pedidos não cancelados do período e subtrai
-  // custos registrados nos itens, taxas estimadas e despesas lançadas.
-  // Compras e contas a pagar são indicadores informativos, não são subtraídos
-  // novamente para evitar duplicar insumos já contabilizados no custo da produção.
-  const custosProducaoPeriodo = lista.reduce((s, p) => s + Math.max(0, Number(p.t.custo) || 0), 0);
-  const taxasPeriodo = lista.reduce((s, p) => s + Math.max(0, Number(p.t.taxas) || 0), 0);
-  const lucroTotalPeriodo = contratado.venda - custosProducaoPeriodo - taxasPeriodo - gastos;
-  const lucroBruto = realizado.venda - realizado.custo;
-  const margemBruta = realizado.venda > 0 ? (lucroBruto / realizado.venda) * 100 : 0;
-  const resultado = lucroBruto - realizado.taxas - gastos;
+  // Um único resultado em todo o sistema: todos os pedidos não cancelados do período (inclusive os
+  // ainda não entregues) menos as despesas, como no Financeiro e no Resumo do mês. Compras e contas a
+  // pagar são indicadores informativos e não são subtraídos de novo, para não duplicar insumos
+  // já contabilizados no custo da produção.
+  const periodo = resultadoDoPeriodo(lista, gastos);
+  const custosProducaoPeriodo = periodo.custo;
+  const taxasPeriodo = periodo.taxas;
+  const lucroBruto = periodo.lucroBruto;
+  const margemBruta = periodo.margemBruta;
+  const resultado = periodo.resultado;
+  const lucroTotalPeriodo = resultado;
+  const vendasEntregues = entregues.reduce((s, p) => s + Math.max(0, Number(p.t.venda) || 0), 0);
 
   const porProduto = useMemo(() => {
     const m = new Map<string, { qtd: number; venda: number; custo: number; taxas: number; lucro: number; nome: string }>();
-    for (const pedido of entregues) {
+    for (const pedido of lista) {
       const subtotal = pedido.pedido_itens.reduce((s, item) => s + Number(item.quantidade) * Number(item.preco_unitario), 0);
       for (const item of pedido.pedido_itens) {
         const vendaItem = Number(item.quantidade) * Number(item.preco_unitario);
@@ -465,7 +463,7 @@ function RelatoriosConteudo({ initialSearch, embedded = false }: { initialSearch
       }
     }
     return [...m.values()].sort((a, b) => b.lucro - a.lucro);
-  }, [entregues]);
+  }, [lista]);
 
   function exportar() {
     const sufixo = inicio + "-" + fim;
@@ -475,7 +473,7 @@ function RelatoriosConteudo({ initialSearch, embedded = false }: { initialSearch
         ["Compra de insumos", totalComprasInsumos],
         ["Contas a pagar", saldoContasAbertas],
         ["A receber de pedidos futuros", saldoPedidosFuturosAReceber],
-        ["Lucro total estimado", lucroTotalPeriodo],
+        ["Resultado do período", lucroTotalPeriodo],
       ]);
       return;
     }
@@ -597,7 +595,7 @@ function RelatoriosConteudo({ initialSearch, embedded = false }: { initialSearch
           <Stat label="Contas a pagar" value={brl(saldoContasAbertas)} tone={saldoContasAbertas > 0 ? "danger" : "default"} />
         </button>
         <button type="button" onClick={() => setResumoAtivo("lucro")} aria-label="Ver composição do lucro estimado" className="w-full rounded-xl text-left focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring">
-          <Stat label="Lucro total estimado" value={brl(lucroTotalPeriodo)} tone={lucroTotalPeriodo >= 0 ? "success" : "danger"} />
+          <Stat label="Resultado do período" value={brl(lucroTotalPeriodo)} tone={lucroTotalPeriodo >= 0 ? "success" : "danger"} />
         </button>
       </div>
       <section className="mb-6 rounded-xl border p-4">
@@ -763,16 +761,17 @@ function RelatoriosConteudo({ initialSearch, embedded = false }: { initialSearch
       </section>
       </>}
       {categoriaRelatorio === "vendas" && <section className="mb-6 border-y py-4">
-        <h2 className="mb-2 text-lg font-semibold">Resultado dos pedidos entregues</h2>
-        <Row label="Vendas dos pedidos entregues" value={brl(realizado.venda)} />
-        <Row label="Custo estimado dos produtos" value={brl(realizado.custo)} />
+        <h2 className="mb-2 text-lg font-semibold">Resultado do período</h2>
+        <Row label="Vendas dos pedidos do período" value={brl(periodo.vendas)} />
+        <Row label="Dessas, já entregues" value={brl(vendasEntregues)} />
+        <Row label="Custo estimado dos produtos" value={brl(periodo.custo)} />
         <Row label="Lucro bruto estimado" value={brl(lucroBruto)} strong />
         <Row label="Margem bruta estimada" value={String(margemBruta.toLocaleString("pt-BR", { maximumFractionDigits: 1 })) + "%"} />
-        <Row label="Taxas e impostos estimados" value={brl(realizado.taxas)} />
+        <Row label="Taxas e impostos estimados" value={brl(periodo.taxas)} />
         <Row label="Despesas registradas no período" value={brl(gastos)} />
-        <Row label="Resultado estimado após despesas" value={brl(resultado)} strong />
+        <Row label="Resultado do período (após despesas)" value={brl(resultado)} strong />
         <p className="mt-3 text-xs text-muted-foreground">
-          
+          Considera todos os pedidos não cancelados do período, inclusive os ainda não entregues, como o Financeiro e o Resumo do mês. Compras de insumos não são subtraídas de novo: o custo dos produtos já as representa.
         </p>
       </section>}
 

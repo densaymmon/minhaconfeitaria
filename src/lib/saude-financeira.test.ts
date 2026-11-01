@@ -1,5 +1,5 @@
 import { describe, expect, it } from "vitest";
-import { contasPagarEmFoco, margemBruta, recebimentoDoMes, saudeDoMes, valorEstoqueInsumos, valorEstoquePronto, type InsumoComPreco } from "./saude-financeira";
+import { contasPagarEmFoco, margemBruta, resultadoDoPeriodo, recebimentoDoMes, saudeDoMes, valorEstoqueInsumos, valorEstoquePronto, type InsumoComPreco } from "./saude-financeira";
 import type { PedidoMes } from "./resumo-mes";
 import type { ContaFinanceira } from "./financeiro";
 
@@ -166,5 +166,29 @@ describe("valor do estoque de produtos prontos", () => {
 
   it("vazio", () => {
     expect(valorEstoquePronto([], custos)).toEqual({ total: 0, unidades: 0, semCusto: 0 });
+  });
+});
+
+describe("resultado de um período qualquer", () => {
+  const ped = [pedido("2026-10-05", "entregue", 100, 40, 100, 3), pedido("2026-10-20", "recebido", 200, 80, 50, 6)];
+
+  it("vendas − custo − taxas − despesas, com todos os pedidos informados", () => {
+    expect(resultadoDoPeriodo(ped, 30)).toEqual({ vendas: 300, custo: 120, taxas: 9, despesas: 30, lucroBruto: 180, margemBruta: 60, resultado: 141, pedidos: 2 });
+  });
+
+  it("período sem pedidos: só as despesas pesam e a margem é zero", () => {
+    expect(resultadoDoPeriodo([], 25)).toMatchObject({ vendas: 0, margemBruta: 0, resultado: -25, pedidos: 0 });
+  });
+
+  it("é a mesma conta do Resumo do mês e do Financeiro", () => {
+    const comTaxas = [pedido("2026-10-05", "entregue", 100, 40, 100, 3), pedido("2026-10-20", "recebido", 200, 80, 50, 6), pedido("2026-10-21", "cancelado", 500, 1, 0, 25)];
+    const s = saudeDoMes({ pedidos: comTaxas, despesas: [{ data: "2026-10-02", valor: 30 }], contas: [], mes: "2026-10", hoje: "2026-10-30" });
+    const r = resultadoDoPeriodo(comTaxas.filter((p) => p.status !== "cancelado"), 30);
+    expect(r.resultado).toBe(s.resumo.resultado);
+    expect(r.margemBruta).toBe(s.margemBruta);
+  });
+
+  it("valores negativos ou inválidos não inflam o resultado", () => {
+    expect(resultadoDoPeriodo([{ t: { venda: -10, custo: Number.NaN, taxas: 0 } }], -5)).toMatchObject({ vendas: 0, custo: 0, despesas: 0, resultado: 0 });
   });
 });
