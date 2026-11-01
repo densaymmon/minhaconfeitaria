@@ -734,6 +734,7 @@ export type Database = {
           data: string
           descricao: string
           id: string
+          recorrente_id: string | null
           user_id: string
           valor: number
         }
@@ -743,6 +744,7 @@ export type Database = {
           data?: string
           descricao: string
           id?: string
+          recorrente_id?: string | null
           user_id?: string
           valor?: number
         }
@@ -752,6 +754,54 @@ export type Database = {
           data?: string
           descricao?: string
           id?: string
+          recorrente_id?: string | null
+          user_id?: string
+          valor?: number
+        }
+        Relationships: [
+          {
+            foreignKeyName: "despesas_recorrente_id_fkey"
+            columns: ["recorrente_id"]
+            isOneToOne: false
+            referencedRelation: "despesas_recorrentes"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      despesas_recorrentes: {
+        Row: {
+          categoria: string
+          created_at: string
+          descricao: string
+          fim: string | null
+          gerado_ate: string | null
+          id: string
+          inicio: string
+          updated_at: string
+          user_id: string
+          valor: number
+        }
+        Insert: {
+          categoria?: string
+          created_at?: string
+          descricao: string
+          fim?: string | null
+          gerado_ate?: string | null
+          id?: string
+          inicio: string
+          updated_at?: string
+          user_id?: string
+          valor: number
+        }
+        Update: {
+          categoria?: string
+          created_at?: string
+          descricao?: string
+          fim?: string | null
+          gerado_ate?: string | null
+          id?: string
+          inicio?: string
+          updated_at?: string
           user_id?: string
           valor?: number
         }
@@ -1969,6 +2019,7 @@ export type Database = {
         Args: { p_insumo_id: string }
         Returns: undefined
       }
+      gerar_despesas_recorrentes: { Args: { p_hoje: string }; Returns: number }
       medida_base: { Args: { u: string }; Returns: string }
       medida_fator: { Args: { u: string }; Returns: number }
       recalcular_custos_historicos: { Args: never; Returns: number }

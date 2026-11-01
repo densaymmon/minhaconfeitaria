@@ -8,6 +8,7 @@ import { brl, dataBR, hojeISO } from "@/lib/format";
 import { contaEmAberto, saldoConta } from "@/lib/financeiro";
 import { PageHeader, Empty } from "@/components/app/ui";
 import { AlertasFinanceiros, SaudeDoMes } from "@/components/app/saude-financeira";
+import { useGerarDespesasRecorrentes } from "@/components/app/despesas-fixas";
 import { Button } from "@/components/ui/button";
 import { Despesas } from "./despesas";
 import { ContasPagar } from "./contas-pagar";
@@ -46,6 +47,8 @@ type TipoLancamento = "compra" | "despesa" | "conta";
 function Financeiro() {
   const { data: contas } = useSuspenseQuery(contasPagarQ);
   const { data: despesas } = useSuspenseQuery(despesasQ);
+  // Lança as despesas fixas vencidas (aluguel etc.) antes de mostrar o resultado do mês.
+  useGerarDespesasRecorrentes();
   const [aba, setAba] = useState<AbaFinanceiro>("resumo");
   const [tipoLancamento, setTipoLancamento] = useState<TipoLancamento>("compra");
   const [tipoMovimentacao, setTipoMovimentacao] = useState<TipoMovimentacao>("despesas");
