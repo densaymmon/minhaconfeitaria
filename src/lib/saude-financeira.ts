@@ -30,6 +30,32 @@ export function margemBruta(vendas: number, custo: number): number {
   return vendas > 0 ? Math.round(((vendas - custo) / vendas) * 1000) / 10 : 0;
 }
 
+// Resultado de um período qualquer ----------------------------------------------------------
+
+export type ResultadoPeriodo = { vendas: number; custo: number; taxas: number; despesas: number; lucroBruto: number; margemBruta: number; resultado: number; pedidos: number };
+
+/**
+ * Resultado de um conjunto de pedidos já filtrado (não cancelados, do período) menos as despesas
+ * do mesmo período. É a mesma conta do Resumo do mês e do Financeiro: um único "lucro" em todo o sistema.
+ */
+export function resultadoDoPeriodo(pedidos: { t: { venda: number; custo: number; taxas: number } }[], despesas: number): ResultadoPeriodo {
+  const vendas = pedidos.reduce((s, p) => s + Math.max(0, n(p.t.venda)), 0);
+  const custo = pedidos.reduce((s, p) => s + Math.max(0, n(p.t.custo)), 0);
+  const taxas = pedidos.reduce((s, p) => s + Math.max(0, n(p.t.taxas)), 0);
+  const gastos = Math.max(0, n(despesas));
+  const lucroBruto = vendas - custo;
+  return {
+    vendas: r2(vendas),
+    custo: r2(custo),
+    taxas: r2(taxas),
+    despesas: r2(gastos),
+    lucroBruto: r2(lucroBruto),
+    margemBruta: margemBruta(vendas, custo),
+    resultado: r2(lucroBruto - taxas - gastos),
+    pedidos: pedidos.length,
+  };
+}
+
 // Contas a pagar --------------------------------------------------------------------------
 
 export type ResumoContasPagar = {

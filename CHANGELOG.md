@@ -4,6 +4,9 @@ Formato inspirado em [Keep a Changelog](https://keepachangelog.com/pt-BR/). As e
 
 ## [Não lançado]
 
+### Alterado
+- Relatórios: um único resultado em todo o sistema. "Lucro total estimado" e "Resultado dos pedidos entregues" viraram "Resultado do período" (todos os pedidos não cancelados do período, menos as despesas), igual ao Financeiro e ao Resumo do mês; a rentabilidade por produto passa a usar os mesmos pedidos. Regra em `resultadoDoPeriodo` (`src/lib/saude-financeira.ts`).
+
 ### Adicionado
 - Financeiro → Visão geral: faixa "Pontos de atenção" (contas vencidas ou que vencem hoje, pedidos entregues sem receber, insumos com saldo negativo, produtos com margem baixa, cada um com atalho para resolver) e a meta de vendas do mês no mês atual. Regras em `src/lib/alertas-financeiros.ts`.
 - Despesas: "Repetir todo mês" (3, 6 ou 12 meses) lança uma despesa por mês de uma vez, e a categoria "Retirada do dono", mostrada à parte no resultado do mês ("Lucro antes da retirada"). Regras em `src/lib/despesas-recorrentes.ts`.
