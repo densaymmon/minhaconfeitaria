@@ -24,6 +24,7 @@ export type CompraItem = Tables<"compra_itens">;
 export type ContaPagar = Tables<"contas_pagar">;
 export type ContaPagarPagamento = Tables<"contas_pagar_pagamentos">;
 export type ContaPagarEstorno = Tables<"contas_pagar_estornos">;
+export type DespesaRecorrente = Tables<"despesas_recorrentes">;
 export type ProdutoPronto = Tables<"produtos_prontos">;
 export type MovimentoPronto = Tables<"produtos_prontos_movimentos">;
 
@@ -72,6 +73,22 @@ export const saldoEstoqueQ = queryOptions({
   queryFn: async () => {
     const { data, error } = await supabase.rpc("saldo_estoque");
     if (error) throw new Error(error.message);
+    return data ?? [];
+  },
+});
+
+/**
+ * Despesas fixas mensais (migração 0050). `null` quando a tabela ainda não existe no banco: o app
+ * esconde a opção "automático" em vez de dar erro.
+ */
+export const despesasRecorrentesQ = queryOptions({
+  queryKey: ["despesas-recorrentes"],
+  queryFn: async (): Promise<DespesaRecorrente[] | null> => {
+    const { data, error } = await supabase.from("despesas_recorrentes").select("*").order("created_at", { ascending: true });
+    if (error) {
+      if (semTabela(error, "despesas_recorrentes")) return null;
+      throw new Error(error.message);
+    }
     return data ?? [];
   },
 });
