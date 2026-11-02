@@ -124,7 +124,7 @@ describe("mensagem de confirmação no WhatsApp", () => {
     pix: "pix@casaldobolo.com",
     link: "https://doce.app/p/abcdefgh23",
   };
-  it("inclui itens, total, data, endereço, Pix e link de acompanhamento", () => {
+  it("inclui itens, total, data, endereço e só a chave Pix, sem link", () => {
     const m = mensagemConfirmacaoPedido(base);
     expect(m).toMatch(/^Olá, Maria! Recebemos seu pedido #43 na O Casal do Bolo/);
     expect(m).toContain("• 2× Bolo de cenoura — R$\u00a050,00");
@@ -132,15 +132,16 @@ describe("mensagem de confirmação no WhatsApp", () => {
     expect(m).toContain("*Total: R$\u00a060,00*");
     expect(m).toContain("Entrega sexta-feira, 30/10 às 15:00");
     expect(m).toContain("Endereço: Rua das Flores, 10");
-    expect(m).toContain("Chave: pix@casaldobolo.com");
-    expect(m).toContain("Acompanhe o andamento: https://doce.app/p/abcdefgh23");
+    expect(m).toContain("Chave Pix: pix@casaldobolo.com");
+    expect(m).not.toContain("Acompanhe");
+    expect(m).not.toContain("https://");
   });
   it("mostra pagamento confirmado quando já está pago e omite o que não existe", () => {
     const m = mensagemConfirmacaoPedido({ ...base, pago: 60, cliente: null, tipoEntrega: "retirada", endereco: null, horaEntrega: null, taxaEntrega: 0, total: 50, link: null });
     expect(m).toMatch(/^Olá! Recebemos/);
     expect(m).toContain("Retirada sexta-feira, 30/10");
     expect(m).toContain("Pagamento confirmado");
-    expect(m).not.toContain("Chave:");
+    expect(m).not.toContain("Chave Pix:");
     expect(m).not.toContain("Acompanhe");
   });
 });
@@ -171,7 +172,7 @@ describe("mensagem do cliente para a confeitaria", () => {
   });
 });
 
-describe("aviso de pedido pronto e Pix copia e cola", () => {
+describe("aviso de pedido pronto com a chave Pix", () => {
   const base = {
     loja: "O Casal do Bolo",
     cliente: "Maria Souza",
@@ -186,24 +187,26 @@ describe("aviso de pedido pronto e Pix copia e cola", () => {
     tipoEntrega: "retirada" as const,
     endereco: "Rua A, 1",
     pix: "pix@loja.com",
-    pixCopiaECola: "00020126CODIGO6304ABCD",
     link: "https://doce.app/p/abcdefgh23",
   };
-  it("avisa que está pronto, com retirada, saldo e Pix copia e cola", () => {
+  it("avisa que está pronto, com retirada, saldo e só a chave Pix", () => {
     const m = mensagemPedidoPronto(base);
     expect(m).toMatch(/^Olá, Maria! Seu pedido #45 da O Casal do Bolo está pronto!/);
     expect(m).toContain("Pode retirar a partir das 15:00 em: Rua A, 1.");
     expect(m).toContain("Pagamento por Pix: R$\u00a015,00");
-    expect(m).toContain("Pix copia e cola (já com o valor):\n00020126CODIGO6304ABCD");
-    expect(m).toContain("Acompanhe: https://doce.app/p/abcdefgh23");
+    expect(m).toContain("Chave Pix: pix@loja.com");
+    expect(m).not.toContain("copia e cola");
+    expect(m).not.toContain("https://");
   });
   it("sem saldo não fala de pagamento; entrega avisa a saída", () => {
     const m = mensagemPedidoPronto({ ...base, pago: 25, tipoEntrega: "entrega", endereco: "Rua B, 2" });
     expect(m).toContain("Já vamos sair para a entrega em: Rua B, 2.");
     expect(m).not.toContain("Pix");
   });
-  it("a confirmação também leva o Pix copia e cola", () => {
-    expect(mensagemConfirmacaoPedido(base)).toContain("Pix copia e cola (já com o valor):\n00020126CODIGO6304ABCD");
+  it("a confirmação também leva só a chave Pix, sem copia e cola", () => {
+    const m = mensagemConfirmacaoPedido(base);
+    expect(m).toContain("Chave Pix: pix@loja.com");
+    expect(m).not.toContain("copia e cola");
   });
 });
 

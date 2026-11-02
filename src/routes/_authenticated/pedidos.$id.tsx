@@ -615,7 +615,7 @@ function PedidoForm() {
         return (
           <div className="mb-4 space-y-2 rounded-xl border border-success/40 bg-success/10 p-3 text-sm">
             <p className="font-semibold">Pedido pronto 🎉</p>
-            <p className="text-muted-foreground">Avise o cliente com a mensagem pronta: {existente.tipo_entrega === "entrega" ? "saída para entrega" : "retirada"}, valor em aberto com Pix copia e cola e link de acompanhamento.</p>
+            <p className="text-muted-foreground">Avise o cliente com a mensagem pronta: {existente.tipo_entrega === "entrega" ? "saída para entrega" : "retirada"}, valor em aberto e chave Pix.</p>
             <div className="flex flex-wrap items-center gap-2">
               {aviso ? (
                 <Button asChild size="sm" variant={existente.aviso_pronto_enviado_em ? "outline" : "default"}>
