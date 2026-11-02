@@ -377,8 +377,6 @@ export type DadosConfirmacao = {
   tipoEntrega: "retirada" | "entrega" | null;
   endereco: string | null;
   pix: string | null;
-  /** Código "Pix copia e cola" com o valor em aberto (opcional). */
-  pixCopiaECola?: string | null;
   link: string | null;
   /** Sinal para confirmar (0 = sem sinal). */
   sinal?: number;
@@ -391,13 +389,10 @@ const dataMsg = (iso: string) => {
   return new Intl.DateTimeFormat("pt-BR", { weekday: "long", day: "2-digit", month: "2-digit", timeZone: "UTC" }).format(data);
 };
 
-function linhasPagamento(d: Pick<DadosConfirmacao, "pix" | "pixCopiaECola">, falta: number) {
-  if (!d.pix && !d.pixCopiaECola) return [`Falta pagar: ${brlMsg(falta)}`];
-  return [
-    `Pagamento por Pix: ${brlMsg(falta)}`,
-    ...(d.pix ? [`Chave: ${d.pix}`] : []),
-    ...(d.pixCopiaECola ? ["Pix copia e cola (já com o valor):", d.pixCopiaECola] : []),
-  ];
+/** Pagamento nas mensagens ao cliente: só o valor e o número da chave Pix (sem copia e cola nem links). */
+function linhasPagamento(d: Pick<DadosConfirmacao, "pix">, falta: number) {
+  if (!d.pix) return [`Falta pagar: ${brlMsg(falta)}`];
+  return [`Pagamento por Pix: ${brlMsg(falta)}`, `Chave Pix: ${d.pix}`];
 }
 
 /** Mensagem que a confeitaria envia ao cliente confirmando o pedido do catálogo. */
@@ -417,7 +412,6 @@ export function mensagemConfirmacaoPedido(d: DadosConfirmacao) {
     ...(falta > 0
       ? ["", ...(Number(d.sinal ?? 0) > d.pago ? [`Para confirmar, o sinal é de ${brlMsg(Number(d.sinal) - d.pago)} (o restante até a entrega).`] : []), ...linhasPagamento(d, falta)]
       : ["", "Pagamento confirmado ✅"]),
-    ...(d.link ? ["", `Acompanhe o andamento: ${d.link}`] : []),
     "",
     "Qualquer dúvida, é só responder esta mensagem.",
   ].join("\n");
@@ -452,7 +446,6 @@ export function mensagemPedidoPronto(d: DadosConfirmacao) {
       ? `🚚 Já vamos sair para a entrega${d.endereco ? ` em: ${d.endereco}` : ""}.`
       : `🏠 Pode retirar${d.horaEntrega ? ` a partir das ${d.horaEntrega}` : ""}${d.endereco ? ` em: ${d.endereco}` : ""}.`,
     ...(falta > 0 ? ["", ...linhasPagamento(d, falta)] : []),
-    ...(d.link ? ["", `Acompanhe: ${d.link}`] : []),
     "",
     "Obrigado pela preferência! 💛",
   ].join("\n");

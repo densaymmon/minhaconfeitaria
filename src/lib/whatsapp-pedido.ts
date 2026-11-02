@@ -1,6 +1,5 @@
 import type { PedidoCalc } from "./hooks";
-import { linkPedido, linkWhatsApp, mensagemConfirmacaoPedido, mensagemPedidoPronto, type DadosConfirmacao } from "./catalogo";
-import { pixCopiaECola, tipoChaveValido } from "./pix";
+import { linkWhatsApp, mensagemConfirmacaoPedido, mensagemPedidoPronto, type DadosConfirmacao } from "./catalogo";
 
 export type OpcoesMensagemPedido = {
   loja: string;
@@ -11,7 +10,7 @@ export type OpcoesMensagemPedido = {
   origem: string;
 };
 
-/** Dados comuns às mensagens do pedido, com o Pix copia e cola do valor em aberto. */
+/** Dados comuns às mensagens do pedido. O pagamento sai só com o número da chave Pix, sem copia e cola nem link. */
 export function dadosMensagemPedido(p: PedidoCalc, opcoes: OpcoesMensagemPedido): DadosConfirmacao {
   const tipo = p.tipo_entrega === "entrega" ? "entrega" : p.tipo_entrega === "retirada" ? "retirada" : null;
   const falta = Math.max(0, Math.round((p.t.venda - p.t.recebido) * 100) / 100);
@@ -30,10 +29,7 @@ export function dadosMensagemPedido(p: PedidoCalc, opcoes: OpcoesMensagemPedido)
     tipoEntrega: tipo,
     endereco: tipo === "entrega" ? p.endereco_entrega : opcoes.enderecoRetirada,
     pix,
-    pixCopiaECola: pix && falta > 0
-      ? pixCopiaECola({ chave: pix, tipoChave: tipoChaveValido(opcoes.pixTipo), nome: opcoes.loja, cidade: opcoes.cidade, valor: falta, identificador: `PEDIDO${p.numero}` })
-      : null,
-    link: linkPedido(opcoes.origem, { curto: p.codigo_curto, longo: p.codigo_publico }),
+    link: null,
     sinal: Number(p.sinal_valor ?? 0) || 0,
   };
 }
