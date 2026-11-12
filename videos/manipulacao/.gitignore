@@ -2,5 +2,5 @@
 renders/
 node_modules/
 *.tmp.wav
-# WAV da narração: o repositório guarda a versão .m4a
+# WAV temporário da narração
 assets/voz/*.wav

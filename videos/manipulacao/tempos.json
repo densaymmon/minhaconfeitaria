@@ -19,7 +19,7 @@
         "fim": 17.505
       }
     },
-    "voz": "assets/voz/gancho.wav"
+    "voz": "assets/voz/gancho.m4a"
   },
   "assinatura": {
     "duracao": 3.0,
@@ -66,7 +66,7 @@
         "fim": 42.427
       }
     },
-    "voz": "assets/voz/intro.wav"
+    "voz": "assets/voz/intro.m4a"
   },
   "sinal1": {
     "duracao": 55.965,
@@ -108,7 +108,7 @@
         "fim": 54.565
       }
     },
-    "voz": "assets/voz/sinal1.wav"
+    "voz": "assets/voz/sinal1.m4a"
   },
   "sinal2": {
     "duracao": 61.76,
@@ -146,7 +146,7 @@
         "fim": 60.36
       }
     },
-    "voz": "assets/voz/sinal2.wav"
+    "voz": "assets/voz/sinal2.m4a"
   },
   "sinal3": {
     "duracao": 51.837,
@@ -188,7 +188,7 @@
         "fim": 50.437
       }
     },
-    "voz": "assets/voz/sinal3.wav"
+    "voz": "assets/voz/sinal3.m4a"
   },
   "retencao": {
     "duracao": 23.861,
@@ -218,7 +218,7 @@
         "fim": 22.461
       }
     },
-    "voz": "assets/voz/retencao.wav"
+    "voz": "assets/voz/retencao.m4a"
   },
   "sinal4": {
     "duracao": 73.064,
@@ -268,7 +268,7 @@
         "fim": 71.664
       }
     },
-    "voz": "assets/voz/sinal4.wav"
+    "voz": "assets/voz/sinal4.m4a"
   },
   "sinal5": {
     "duracao": 45.476,
@@ -302,7 +302,7 @@
         "fim": 44.076
       }
     },
-    "voz": "assets/voz/sinal5.wav"
+    "voz": "assets/voz/sinal5.m4a"
   },
   "sinal6": {
     "duracao": 48.335,
@@ -340,7 +340,7 @@
         "fim": 46.935
       }
     },
-    "voz": "assets/voz/sinal6.wav"
+    "voz": "assets/voz/sinal6.m4a"
   },
   "sinal7": {
     "duracao": 60.528,
@@ -378,7 +378,7 @@
         "fim": 59.128
       }
     },
-    "voz": "assets/voz/sinal7.wav"
+    "voz": "assets/voz/sinal7.m4a"
   },
   "conexao": {
     "duracao": 25.603,
@@ -400,7 +400,7 @@
         "fim": 24.203
       }
     },
-    "voz": "assets/voz/conexao.wav"
+    "voz": "assets/voz/conexao.m4a"
   },
   "cuidado": {
     "duracao": 31.229,
@@ -422,7 +422,7 @@
         "fim": 29.829
       }
     },
-    "voz": "assets/voz/cuidado.wav"
+    "voz": "assets/voz/cuidado.m4a"
   },
   "cta": {
     "duracao": 23.815,
@@ -444,6 +444,6 @@
         "fim": 22.415
       }
     },
-    "voz": "assets/voz/cta.wav"
+    "voz": "assets/voz/cta.m4a"
   }
 }
