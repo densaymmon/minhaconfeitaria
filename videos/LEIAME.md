@@ -25,6 +25,12 @@ Skills recém-instaladas só aparecem numa sessão nova do Claude Code.
 - `compositions/titulo.html`: a cena do título animado.
 - `../exportados/meu-primeiro-video.mp4`: o vídeo renderizado.
 
+## Projetos
+
+- `videos/` (esta pasta): o teste "Meu primeiro vídeo".
+- `videos/manipulacao/`: o vídeo piloto "Sinais de manipulação emocional", em 6 partes, com voz
+  local (Kokoro) e trilha sintetizada. Veja `videos/manipulacao/LEIAME.md`.
+
 ## Comandos
 
 ```bash

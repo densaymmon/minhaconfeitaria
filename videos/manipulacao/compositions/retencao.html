@@ -1,0 +1,101 @@
+<template>
+  <style>
+    @font-face { font-family: "Bebas Neue"; src: url("assets/fonts/bebas-neue.woff2") format("woff2"); font-weight: 400; }
+    @font-face { font-family: "Cormorant Garamond"; src: url("assets/fonts/cormorant-garamond-italic.woff2") format("woff2"); font-style: italic; font-weight: 500; }
+    #root { position: absolute; inset: 0; overflow: hidden; background: #0B0B0F; font-family: "Inter", sans-serif; }
+    #retencao-cena, #retencao-cena > svg, #retencao-motivo { position: absolute; inset: 0; }
+    #retencao-luz { position: absolute; left: 50%; top: 40%; width: 1500px; height: 1100px; margin: -550px 0 0 -750px;
+      background: radial-gradient(ellipse at center, rgba(201,162,39,0.13) 0%, rgba(201,162,39,0.04) 40%, rgba(201,162,39,0) 70%); }
+    #retencao-preto { position: absolute; inset: 0; background: #000; pointer-events: none; }
+    .assinatura-canto { position: absolute; left: 96px; bottom: 72px; width: 56px; height: 4px; background: #C9A227; opacity: 0.85; }
+    .titulo-sinal { position: absolute; inset: 0; display: flex; flex-direction: column; align-items: center; justify-content: center; text-align: center; }
+    .titulo-sinal .num { font-family: "Bebas Neue"; font-size: 64px; letter-spacing: 0.3em; color: #C9A227; }
+    .titulo-sinal .nome { font-family: "Bebas Neue"; font-size: 190px; line-height: 0.95; letter-spacing: 0.02em; color: #E8E6E1; max-width: 1500px; }
+    .tag { position: absolute; left: 192px; top: 118px; font-family: "Bebas Neue"; font-size: 40px; letter-spacing: 0.12em; color: #8A8D98; }
+    .tag b { color: #C9A227; font-weight: 400; }
+    .cue { position: absolute; inset: 0; display: flex; align-items: flex-end; justify-content: center; padding-bottom: 130px; }
+    .cue::before { content: ""; position: absolute; left: 0; right: 0; bottom: 0; height: 420px; background: linear-gradient(to top, rgba(11,11,15,0.92), rgba(11,11,15,0)); }
+    .cue-in { position: relative; max-width: 1500px; text-align: center; color: #E8E6E1; }
+    .cue em { font-style: normal; color: #C9A227; }
+    .cue-frase .cue-in { font-weight: 600; font-size: 60px; line-height: 1.2; letter-spacing: -0.01em; }
+    .cue-titulo .cue-in { font-family: "Bebas Neue"; font-size: 170px; line-height: 1; letter-spacing: 0.03em; }
+    .cue-citacao .cue-in { font-family: "Cormorant Garamond"; font-style: italic; font-weight: 500; font-size: 92px; line-height: 1.1; }
+    .cue-lista .lista-titulo { font-family: "Bebas Neue"; font-size: 84px; letter-spacing: 0.04em; margin-bottom: 22px; }
+    .cue-lista .lista { display: flex; gap: 56px; justify-content: center; font-weight: 600; font-size: 40px; color: #E8E6E1; }
+    .cue-lista .lista span::before { content: ""; display: inline-block; width: 12px; height: 12px; border-radius: 6px; background: #C9A227; margin-right: 14px; vertical-align: middle; }
+    .cue-cvv { padding-bottom: 150px; }
+    .cue-cvv .cvv-linha1 { font-family: "Bebas Neue"; font-size: 140px; line-height: 1; letter-spacing: 0.04em; }
+    .cue-cvv .cvv-linha2 { font-size: 40px; font-weight: 500; color: #8A8D98; margin-top: 10px; }
+    .cue-cvv .cvv-linha3 { font-size: 52px; font-weight: 600; margin-top: 16px; }
+    .cue-comentario .cue-in { display: flex; align-items: center; gap: 28px; font-weight: 600; font-size: 56px; }
+    .fonte { position: absolute; inset: 0; pointer-events: none; }
+    .fonte-in { position: absolute; right: 192px; top: 118px; width: 600px; padding: 30px 36px; background: #1C1D24; border-left: 5px solid #C9A227; border-radius: 6px; }
+    .fonte-autor { font-family: "Cormorant Garamond"; font-style: italic; font-weight: 500; font-size: 48px; line-height: 1.1; color: #E8E6E1; }
+    .fonte-ano { font-weight: 700; font-size: 30px; letter-spacing: 0.08em; color: #C9A227; margin-top: 10px; }
+    .fonte-revista { font-weight: 500; font-size: 30px; line-height: 1.35; color: #8A8D98; margin-top: 6px; }
+    .nevoa { position: absolute; border-radius: 50%; background: radial-gradient(ellipse at center, rgba(138,141,152,0.09) 0%, rgba(138,141,152,0.03) 45%, rgba(138,141,152,0) 70%); }
+    .logo { position: absolute; inset: 0; display: flex; flex-direction: column; align-items: center; justify-content: center; gap: 26px; }
+    .logo span { font-family: "Bebas Neue"; font-size: 150px; letter-spacing: 0.14em; color: #E8E6E1; text-shadow: 0 0 40px rgba(201,162,39,0.35); }
+    .logo i { display: block; width: 260px; height: 5px; background: #C9A227; }
+    .logo.cta { justify-content: flex-start; padding-top: 220px; }
+  </style>
+  <div id="root" data-composition-id="retencao" data-width="1920" data-height="1080">
+    <div id="retencao-cena">
+      <div id="retencao-luz"></div>
+      <svg viewBox="0 0 1920 1080" width="1920" height="1080"><circle id="retencao-po0" cx="302" cy="879" r="4.1" fill="#E8E6E1" opacity="0.28"/><circle id="retencao-po1" cx="1190" cy="1027" r="2.6" fill="#E8E6E1" opacity="0.20"/><circle id="retencao-po2" cx="1228" cy="700" r="1.6" fill="#E8E6E1" opacity="0.16"/><circle id="retencao-po3" cx="1558" cy="1026" r="3.0" fill="#E8E6E1" opacity="0.19"/><circle id="retencao-po4" cx="1335" cy="89" r="1.9" fill="#E8E6E1" opacity="0.29"/><circle id="retencao-po5" cx="1638" cy="349" r="1.6" fill="#E8E6E1" opacity="0.23"/><circle id="retencao-po6" cx="397" cy="451" r="3.6" fill="#E8E6E1" opacity="0.27"/><circle id="retencao-po7" cx="1304" cy="970" r="2.5" fill="#E8E6E1" opacity="0.21"/><circle id="retencao-po8" cx="664" cy="472" r="2.9" fill="#E8E6E1" opacity="0.17"/><circle id="retencao-po9" cx="1339" cy="419" r="2.7" fill="#E8E6E1" opacity="0.23"/><circle id="retencao-po10" cx="513" cy="853" r="1.8" fill="#E8E6E1" opacity="0.26"/><circle id="retencao-po11" cx="1325" cy="1063" r="2.7" fill="#E8E6E1" opacity="0.28"/><circle id="retencao-po12" cx="838" cy="881" r="2.9" fill="#E8E6E1" opacity="0.13"/><circle id="retencao-po13" cx="1194" cy="767" r="2.9" fill="#E8E6E1" opacity="0.23"/><circle id="retencao-po14" cx="1904" cy="133" r="1.6" fill="#E8E6E1" opacity="0.14"/><circle id="retencao-po15" cx="27" cy="253" r="2.9" fill="#E8E6E1" opacity="0.26"/><circle id="retencao-po16" cx="222" cy="402" r="2.9" fill="#E8E6E1" opacity="0.19"/><circle id="retencao-po17" cx="226" cy="642" r="4.2" fill="#E8E6E1" opacity="0.25"/><circle id="retencao-po18" cx="662" cy="531" r="2.2" fill="#E8E6E1" opacity="0.09"/><circle id="retencao-po19" cx="1473" cy="1001" r="4.2" fill="#E8E6E1" opacity="0.10"/><circle id="retencao-po20" cx="1027" cy="288" r="3.3" fill="#E8E6E1" opacity="0.14"/><circle id="retencao-po21" cx="388" cy="255" r="3.9" fill="#E8E6E1" opacity="0.29"/><circle id="retencao-po22" cx="888" cy="839" r="1.6" fill="#E8E6E1" opacity="0.17"/><circle id="retencao-po23" cx="594" cy="792" r="3.9" fill="#E8E6E1" opacity="0.19"/><circle id="retencao-po24" cx="1517" cy="453" r="1.6" fill="#E8E6E1" opacity="0.28"/><circle id="retencao-po25" cx="262" cy="734" r="3.3" fill="#E8E6E1" opacity="0.25"/></svg>
+      <div id="retencao-motivo">
+        <svg viewBox="0 0 1920 1080" width="1920" height="1080">
+    <defs><radialGradient id="retencao-ponto"><stop offset="0%" stop-color="#C9A227" stop-opacity="0.9"/><stop offset="100%" stop-color="#C9A227" stop-opacity="0"/></radialGradient></defs>
+    <g id="retencao-labirinto"><path d="M416,758H1504V182M416,182h64M416,182v64M480,182h64M544,182h64M608,182h64M608,182v64M672,182h64M736,182h64M800,182h64M864,182h64M928,182h64M992,182h64M1056,182h64M1120,182h64M1184,182h64M1248,182h64M1312,182h64M1376,182h64M1440,182h64M416,246v64M480,246h64M480,246v64M544,246h64M608,246v64M672,246h64M736,246h64M800,246h64M800,246v64M864,246h64M928,246h64M992,246h64M1056,246v64M1120,246v64M1184,246h64M1248,246h64M1312,246h64M1312,246v64M1376,246h64M416,310v64M480,310v64M544,310v64M672,310h64M672,310v64M736,310h64M864,310h64M864,310v64M928,310h64M992,310v64M1056,310v64M1120,310h64M1120,310v64M1184,310h64M1248,310v64M1312,310h64M1376,310v64M1440,310h64M416,374v64M480,374v64M544,374h64M608,374h64M608,374v64M672,374v64M736,374h64M736,374v64M800,374h64M928,374h64M1056,374h64M1184,374v64M1248,374v64M1312,374v64M1376,374h64M1376,374v64M416,438v64M480,438h64M544,438v64M672,438v64M736,438h64M800,438h64M800,438v64M864,438h64M928,438h64M928,438v64M992,438h64M992,438v64M1056,438h64M1120,438h64M1184,438v64M1248,438h64M1312,438v64M1376,438v64M1440,438h64M1440,438v64M416,502v64M480,502v64M544,502h64M608,502v64M672,502h64M672,502v64M736,502v64M864,502v64M928,502v64M992,502v64M1056,502h64M1120,502v64M1184,502h64M1248,502v64M1376,502v64M416,566v64M480,566v64M544,566h64M672,566v64M736,566h64M800,566h64M864,566v64M928,566v64M992,566h64M1056,566v64M1120,566h64M1184,566v64M1248,566h64M1248,566v64M1312,566h64M1376,566h64M1376,566v64M416,630v64M480,630h64M480,630v64M544,630h64M608,630h64M608,630v64M672,630h64M736,630h64M864,630v64M928,630h64M992,630v64M1056,630h64M1120,630v64M1184,630h64M1184,630v64M1312,630v64M1376,630v64M1440,630h64M416,694v64M544,694v64M608,694h64M736,694h64M736,694v64M864,694h64M928,694v64M992,694h64M1120,694v64M1248,694h64M1312,694v64M1376,694h64" stroke="#8A8D98" stroke-width="5" stroke-linecap="square" fill="none" opacity="0.55"/>
+      <circle id="retencao-halo" cx="960" cy="470" r="90" fill="url(#retencao-ponto)"/>
+      <circle cx="960" cy="470" r="9" fill="#f6dc8a"/></g>
+        </svg>
+        
+      </div>
+      
+      <div class="assinatura-canto"></div>
+      <div id="retencao-t0" class="clip cue cue-frase" data-start="6.427" data-duration="9" data-track-index="2"><div class="cue-in">Os próximos são mais difíceis de ver…</div></div>
+      
+      <div id="retencao-preto"></div>
+    </div>
+  </div>
+  <script>
+    window.__timelines = window.__timelines || {};
+    const tl = gsap.timeline({ paused: true });
+    tl.fromTo("#retencao-luz", { x: -120, opacity: 0.7 }, { x: 120, opacity: 1, duration: 23.861, ease: "sine.inOut" }, 0);
+    tl.fromTo("#retencao-motivo", { scale: 1 }, { scale: 1.04, duration: 23.861, ease: "none" }, 0);
+    tl.fromTo("#retencao-po0", { y: 0, x: 0 }, { y: -30, x: -20, duration: 23.861, ease: "none" }, 0);
+    tl.fromTo("#retencao-po1", { y: 0, x: 0 }, { y: -67, x: 3, duration: 23.861, ease: "none" }, 0);
+    tl.fromTo("#retencao-po2", { y: 0, x: 0 }, { y: -44, x: -14, duration: 23.861, ease: "none" }, 0);
+    tl.fromTo("#retencao-po3", { y: 0, x: 0 }, { y: -81, x: 9, duration: 23.861, ease: "none" }, 0);
+    tl.fromTo("#retencao-po4", { y: 0, x: 0 }, { y: -58, x: -8, duration: 23.861, ease: "none" }, 0);
+    tl.fromTo("#retencao-po5", { y: 0, x: 0 }, { y: -35, x: 15, duration: 23.861, ease: "none" }, 0);
+    tl.fromTo("#retencao-po6", { y: 0, x: 0 }, { y: -72, x: -2, duration: 23.861, ease: "none" }, 0);
+    tl.fromTo("#retencao-po7", { y: 0, x: 0 }, { y: -49, x: -19, duration: 23.861, ease: "none" }, 0);
+    tl.fromTo("#retencao-po8", { y: 0, x: 0 }, { y: -86, x: 4, duration: 23.861, ease: "none" }, 0);
+    tl.fromTo("#retencao-po9", { y: 0, x: 0 }, { y: -63, x: -13, duration: 23.861, ease: "none" }, 0);
+    tl.fromTo("#retencao-po10", { y: 0, x: 0 }, { y: -40, x: 10, duration: 23.861, ease: "none" }, 0);
+    tl.fromTo("#retencao-po11", { y: 0, x: 0 }, { y: -77, x: -7, duration: 23.861, ease: "none" }, 0);
+    tl.fromTo("#retencao-po12", { y: 0, x: 0 }, { y: -54, x: 16, duration: 23.861, ease: "none" }, 0);
+    tl.fromTo("#retencao-po13", { y: 0, x: 0 }, { y: -31, x: -1, duration: 23.861, ease: "none" }, 0);
+    tl.fromTo("#retencao-po14", { y: 0, x: 0 }, { y: -68, x: -18, duration: 23.861, ease: "none" }, 0);
+    tl.fromTo("#retencao-po15", { y: 0, x: 0 }, { y: -45, x: 5, duration: 23.861, ease: "none" }, 0);
+    tl.fromTo("#retencao-po16", { y: 0, x: 0 }, { y: -82, x: -12, duration: 23.861, ease: "none" }, 0);
+    tl.fromTo("#retencao-po17", { y: 0, x: 0 }, { y: -59, x: 11, duration: 23.861, ease: "none" }, 0);
+    tl.fromTo("#retencao-po18", { y: 0, x: 0 }, { y: -36, x: -6, duration: 23.861, ease: "none" }, 0);
+    tl.fromTo("#retencao-po19", { y: 0, x: 0 }, { y: -73, x: 17, duration: 23.861, ease: "none" }, 0);
+    tl.fromTo("#retencao-po20", { y: 0, x: 0 }, { y: -50, x: 0, duration: 23.861, ease: "none" }, 0);
+    tl.fromTo("#retencao-po21", { y: 0, x: 0 }, { y: -87, x: -17, duration: 23.861, ease: "none" }, 0);
+    tl.fromTo("#retencao-po22", { y: 0, x: 0 }, { y: -64, x: 6, duration: 23.861, ease: "none" }, 0);
+    tl.fromTo("#retencao-po23", { y: 0, x: 0 }, { y: -41, x: -11, duration: 23.861, ease: "none" }, 0);
+    tl.fromTo("#retencao-po24", { y: 0, x: 0 }, { y: -78, x: 12, duration: 23.861, ease: "none" }, 0);
+    tl.fromTo("#retencao-po25", { y: 0, x: 0 }, { y: -55, x: -5, duration: 23.861, ease: "none" }, 0);
+    tl.fromTo("#retencao-labirinto", { scale: 3.4, svgOrigin: "960 470" }, { scale: 1, svgOrigin: "960 470", duration: 22.861, ease: "power1.inOut" }, 0);
+    tl.fromTo("#retencao-halo", { scale: 0.8, svgOrigin: "960 470" }, { scale: 1.25, svgOrigin: "960 470", duration: 1.6, ease: "sine.inOut", repeat: 13, yoyo: true }, 0);
+    tl.fromTo("#retencao-t0 .cue-in", { opacity: 0, y: 18, filter: "blur(10px)" }, { opacity: 1, y: 0, filter: "blur(0px)", duration: 0.8, ease: "power3.out" }, 6.427);
+    tl.to("#retencao-t0 .cue-in", { opacity: 0, filter: "blur(6px)", duration: 0.4, ease: "power2.in" }, 15.007);
+    tl.fromTo("#retencao-preto", { opacity: 1 }, { opacity: 0, duration: 0.6, ease: "power1.out" }, 0);
+    tl.to("#retencao-preto", { opacity: 1, duration: 0.5, ease: "power1.in" }, 23.261);
+    window.__timelines["retencao"] = tl;
+  </script>
+</template>

@@ -1,0 +1,119 @@
+<template>
+  <style>
+    @font-face { font-family: "Bebas Neue"; src: url("assets/fonts/bebas-neue.woff2") format("woff2"); font-weight: 400; }
+    @font-face { font-family: "Cormorant Garamond"; src: url("assets/fonts/cormorant-garamond-italic.woff2") format("woff2"); font-style: italic; font-weight: 500; }
+    #root { position: absolute; inset: 0; overflow: hidden; background: #0B0B0F; font-family: "Inter", sans-serif; }
+    #intro-cena, #intro-cena > svg, #intro-motivo { position: absolute; inset: 0; }
+    #intro-luz { position: absolute; left: 50%; top: 40%; width: 1500px; height: 1100px; margin: -550px 0 0 -750px;
+      background: radial-gradient(ellipse at center, rgba(201,162,39,0.13) 0%, rgba(201,162,39,0.04) 40%, rgba(201,162,39,0) 70%); }
+    #intro-preto { position: absolute; inset: 0; background: #000; pointer-events: none; }
+    .assinatura-canto { position: absolute; left: 96px; bottom: 72px; width: 56px; height: 4px; background: #C9A227; opacity: 0.85; }
+    .titulo-sinal { position: absolute; inset: 0; display: flex; flex-direction: column; align-items: center; justify-content: center; text-align: center; }
+    .titulo-sinal .num { font-family: "Bebas Neue"; font-size: 64px; letter-spacing: 0.3em; color: #C9A227; }
+    .titulo-sinal .nome { font-family: "Bebas Neue"; font-size: 190px; line-height: 0.95; letter-spacing: 0.02em; color: #E8E6E1; max-width: 1500px; }
+    .tag { position: absolute; left: 192px; top: 118px; font-family: "Bebas Neue"; font-size: 40px; letter-spacing: 0.12em; color: #8A8D98; }
+    .tag b { color: #C9A227; font-weight: 400; }
+    .cue { position: absolute; inset: 0; display: flex; align-items: flex-end; justify-content: center; padding-bottom: 130px; }
+    .cue::before { content: ""; position: absolute; left: 0; right: 0; bottom: 0; height: 420px; background: linear-gradient(to top, rgba(11,11,15,0.92), rgba(11,11,15,0)); }
+    .cue-in { position: relative; max-width: 1500px; text-align: center; color: #E8E6E1; }
+    .cue em { font-style: normal; color: #C9A227; }
+    .cue-frase .cue-in { font-weight: 600; font-size: 60px; line-height: 1.2; letter-spacing: -0.01em; }
+    .cue-titulo .cue-in { font-family: "Bebas Neue"; font-size: 170px; line-height: 1; letter-spacing: 0.03em; }
+    .cue-citacao .cue-in { font-family: "Cormorant Garamond"; font-style: italic; font-weight: 500; font-size: 92px; line-height: 1.1; }
+    .cue-lista .lista-titulo { font-family: "Bebas Neue"; font-size: 84px; letter-spacing: 0.04em; margin-bottom: 22px; }
+    .cue-lista .lista { display: flex; gap: 56px; justify-content: center; font-weight: 600; font-size: 40px; color: #E8E6E1; }
+    .cue-lista .lista span::before { content: ""; display: inline-block; width: 12px; height: 12px; border-radius: 6px; background: #C9A227; margin-right: 14px; vertical-align: middle; }
+    .cue-cvv { padding-bottom: 150px; }
+    .cue-cvv .cvv-linha1 { font-family: "Bebas Neue"; font-size: 140px; line-height: 1; letter-spacing: 0.04em; }
+    .cue-cvv .cvv-linha2 { font-size: 40px; font-weight: 500; color: #8A8D98; margin-top: 10px; }
+    .cue-cvv .cvv-linha3 { font-size: 52px; font-weight: 600; margin-top: 16px; }
+    .cue-comentario .cue-in { display: flex; align-items: center; gap: 28px; font-weight: 600; font-size: 56px; }
+    .fonte { position: absolute; inset: 0; pointer-events: none; }
+    .fonte-in { position: absolute; right: 192px; top: 118px; width: 600px; padding: 30px 36px; background: #1C1D24; border-left: 5px solid #C9A227; border-radius: 6px; }
+    .fonte-autor { font-family: "Cormorant Garamond"; font-style: italic; font-weight: 500; font-size: 48px; line-height: 1.1; color: #E8E6E1; }
+    .fonte-ano { font-weight: 700; font-size: 30px; letter-spacing: 0.08em; color: #C9A227; margin-top: 10px; }
+    .fonte-revista { font-weight: 500; font-size: 30px; line-height: 1.35; color: #8A8D98; margin-top: 6px; }
+    .nevoa { position: absolute; border-radius: 50%; background: radial-gradient(ellipse at center, rgba(138,141,152,0.09) 0%, rgba(138,141,152,0.03) 45%, rgba(138,141,152,0) 70%); }
+    .logo { position: absolute; inset: 0; display: flex; flex-direction: column; align-items: center; justify-content: center; gap: 26px; }
+    .logo span { font-family: "Bebas Neue"; font-size: 150px; letter-spacing: 0.14em; color: #E8E6E1; text-shadow: 0 0 40px rgba(201,162,39,0.35); }
+    .logo i { display: block; width: 260px; height: 5px; background: #C9A227; }
+    .logo.cta { justify-content: flex-start; padding-top: 220px; }
+  </style>
+  <div id="root" data-composition-id="intro" data-width="1920" data-height="1080">
+    <div id="intro-cena">
+      <div id="intro-luz"></div>
+      <svg viewBox="0 0 1920 1080" width="1920" height="1080"><circle id="intro-po0" cx="1140" cy="1050" r="2.9" fill="#E8E6E1" opacity="0.22"/><circle id="intro-po1" cx="1148" cy="376" r="3.5" fill="#E8E6E1" opacity="0.11"/><circle id="intro-po2" cx="1581" cy="605" r="3.4" fill="#E8E6E1" opacity="0.10"/><circle id="intro-po3" cx="1806" cy="107" r="3.1" fill="#E8E6E1" opacity="0.24"/><circle id="intro-po4" cx="870" cy="194" r="3.2" fill="#E8E6E1" opacity="0.18"/><circle id="intro-po5" cx="992" cy="1029" r="2.0" fill="#E8E6E1" opacity="0.22"/><circle id="intro-po6" cx="110" cy="896" r="3.3" fill="#E8E6E1" opacity="0.10"/><circle id="intro-po7" cx="15" cy="1053" r="4.1" fill="#E8E6E1" opacity="0.09"/><circle id="intro-po8" cx="1748" cy="232" r="3.0" fill="#E8E6E1" opacity="0.18"/><circle id="intro-po9" cx="1644" cy="179" r="4.4" fill="#E8E6E1" opacity="0.24"/><circle id="intro-po10" cx="636" cy="139" r="3.0" fill="#E8E6E1" opacity="0.08"/><circle id="intro-po11" cx="307" cy="400" r="3.1" fill="#E8E6E1" opacity="0.26"/><circle id="intro-po12" cx="1032" cy="350" r="3.1" fill="#E8E6E1" opacity="0.21"/><circle id="intro-po13" cx="640" cy="260" r="4.4" fill="#E8E6E1" opacity="0.24"/><circle id="intro-po14" cx="984" cy="1000" r="4.2" fill="#E8E6E1" opacity="0.24"/><circle id="intro-po15" cx="1000" cy="663" r="4.4" fill="#E8E6E1" opacity="0.13"/><circle id="intro-po16" cx="445" cy="973" r="3.6" fill="#E8E6E1" opacity="0.25"/><circle id="intro-po17" cx="1431" cy="196" r="3.2" fill="#E8E6E1" opacity="0.24"/><circle id="intro-po18" cx="1148" cy="1051" r="3.1" fill="#E8E6E1" opacity="0.15"/><circle id="intro-po19" cx="64" cy="636" r="3.1" fill="#E8E6E1" opacity="0.10"/><circle id="intro-po20" cx="1606" cy="295" r="2.9" fill="#E8E6E1" opacity="0.16"/><circle id="intro-po21" cx="1613" cy="202" r="4.0" fill="#E8E6E1" opacity="0.09"/><circle id="intro-po22" cx="503" cy="617" r="3.8" fill="#E8E6E1" opacity="0.21"/><circle id="intro-po23" cx="370" cy="307" r="2.6" fill="#E8E6E1" opacity="0.24"/><circle id="intro-po24" cx="1164" cy="300" r="3.9" fill="#E8E6E1" opacity="0.27"/><circle id="intro-po25" cx="1696" cy="680" r="4.2" fill="#E8E6E1" opacity="0.28"/></svg>
+      <div id="intro-motivo">
+        <svg viewBox="0 0 1920 1080" width="1920" height="1080"><defs><radialGradient id="intro-contraluz"><stop offset="0%" stop-color="#C9A227" stop-opacity="0.22"/><stop offset="100%" stop-color="#C9A227" stop-opacity="0"/></radialGradient></defs>
+      <ellipse cx="960" cy="560" rx="300" ry="360" fill="url(#intro-contraluz)"/>
+      <g id="intro-boneco"><line id="intro-f0" x1="960" y1="-40" x2="960" y2="331" stroke="#8A8D98" stroke-width="1.6" opacity="0.55" stroke-dasharray="1200" stroke-dashoffset="1200"/>
+        <circle id="intro-b0" cx="960" cy="0" r="3.5" fill="#C9A227" opacity="0"/><line id="intro-f1" x1="863.8" y1="-40" x2="863.8" y2="635.2" stroke="#8A8D98" stroke-width="1.6" opacity="0.55" stroke-dasharray="1200" stroke-dashoffset="1200"/>
+        <circle id="intro-b1" cx="863.8" cy="0" r="3.5" fill="#C9A227" opacity="0"/><line id="intro-f2" x1="1056.2" y1="-40" x2="1056.2" y2="635.2" stroke="#8A8D98" stroke-width="1.6" opacity="0.55" stroke-dasharray="1200" stroke-dashoffset="1200"/>
+        <circle id="intro-b2" cx="1056.2" cy="0" r="3.5" fill="#C9A227" opacity="0"/><line id="intro-f3" x1="931.4" y1="-40" x2="931.4" y2="708" stroke="#8A8D98" stroke-width="1.6" opacity="0.55" stroke-dasharray="1200" stroke-dashoffset="1200"/>
+        <circle id="intro-b3" cx="931.4" cy="0" r="3.5" fill="#C9A227" opacity="0"/><line id="intro-f4" x1="988.6" y1="-40" x2="988.6" y2="708" stroke="#8A8D98" stroke-width="1.6" opacity="0.55" stroke-dasharray="1200" stroke-dashoffset="1200"/>
+        <circle id="intro-b4" cx="988.6" cy="0" r="3.5" fill="#C9A227" opacity="0"/><g  transform="translate(960 760) scale(1.3)">
+      <circle cx="0" cy="-292" r="38" fill="#131419" stroke="#4a4536" stroke-width="2"/>
+      <path d="M-62,-238 Q0,-262 62,-238 L74,-96 L52,-96 L44,-150 L40,-60 L34,0 L10,0 L0,-118 L-10,0 L-34,0 L-40,-60 L-44,-150 L-52,-96 L-74,-96 Z" fill="#131419" stroke="#4a4536" stroke-width="2"/>
+    </g></g>
+        </svg>
+        
+      </div>
+      
+      <div class="assinatura-canto"></div>
+      <div id="intro-t0" class="clip cue cue-titulo" data-start="16.053" data-duration="9" data-track-index="2"><div class="cue-in">7 sinais</div></div>
+      <div id="intro-t1" class="clip cue cue-frase" data-start="37.097" data-duration="6.13" data-track-index="2"><div class="cue-in">O que importa é o <em>PADRÃO</em></div></div>
+      
+      <div id="intro-preto"></div>
+    </div>
+  </div>
+  <script>
+    window.__timelines = window.__timelines || {};
+    const tl = gsap.timeline({ paused: true });
+    tl.fromTo("#intro-luz", { x: -120, opacity: 0.7 }, { x: 120, opacity: 1, duration: 43.827, ease: "sine.inOut" }, 0);
+    tl.fromTo("#intro-motivo", { scale: 1 }, { scale: 1.04, duration: 43.827, ease: "none" }, 0);
+    tl.fromTo("#intro-po0", { y: 0, x: 0 }, { y: -30, x: -20, duration: 43.827, ease: "none" }, 0);
+    tl.fromTo("#intro-po1", { y: 0, x: 0 }, { y: -67, x: 3, duration: 43.827, ease: "none" }, 0);
+    tl.fromTo("#intro-po2", { y: 0, x: 0 }, { y: -44, x: -14, duration: 43.827, ease: "none" }, 0);
+    tl.fromTo("#intro-po3", { y: 0, x: 0 }, { y: -81, x: 9, duration: 43.827, ease: "none" }, 0);
+    tl.fromTo("#intro-po4", { y: 0, x: 0 }, { y: -58, x: -8, duration: 43.827, ease: "none" }, 0);
+    tl.fromTo("#intro-po5", { y: 0, x: 0 }, { y: -35, x: 15, duration: 43.827, ease: "none" }, 0);
+    tl.fromTo("#intro-po6", { y: 0, x: 0 }, { y: -72, x: -2, duration: 43.827, ease: "none" }, 0);
+    tl.fromTo("#intro-po7", { y: 0, x: 0 }, { y: -49, x: -19, duration: 43.827, ease: "none" }, 0);
+    tl.fromTo("#intro-po8", { y: 0, x: 0 }, { y: -86, x: 4, duration: 43.827, ease: "none" }, 0);
+    tl.fromTo("#intro-po9", { y: 0, x: 0 }, { y: -63, x: -13, duration: 43.827, ease: "none" }, 0);
+    tl.fromTo("#intro-po10", { y: 0, x: 0 }, { y: -40, x: 10, duration: 43.827, ease: "none" }, 0);
+    tl.fromTo("#intro-po11", { y: 0, x: 0 }, { y: -77, x: -7, duration: 43.827, ease: "none" }, 0);
+    tl.fromTo("#intro-po12", { y: 0, x: 0 }, { y: -54, x: 16, duration: 43.827, ease: "none" }, 0);
+    tl.fromTo("#intro-po13", { y: 0, x: 0 }, { y: -31, x: -1, duration: 43.827, ease: "none" }, 0);
+    tl.fromTo("#intro-po14", { y: 0, x: 0 }, { y: -68, x: -18, duration: 43.827, ease: "none" }, 0);
+    tl.fromTo("#intro-po15", { y: 0, x: 0 }, { y: -45, x: 5, duration: 43.827, ease: "none" }, 0);
+    tl.fromTo("#intro-po16", { y: 0, x: 0 }, { y: -82, x: -12, duration: 43.827, ease: "none" }, 0);
+    tl.fromTo("#intro-po17", { y: 0, x: 0 }, { y: -59, x: 11, duration: 43.827, ease: "none" }, 0);
+    tl.fromTo("#intro-po18", { y: 0, x: 0 }, { y: -36, x: -6, duration: 43.827, ease: "none" }, 0);
+    tl.fromTo("#intro-po19", { y: 0, x: 0 }, { y: -73, x: 17, duration: 43.827, ease: "none" }, 0);
+    tl.fromTo("#intro-po20", { y: 0, x: 0 }, { y: -50, x: 0, duration: 43.827, ease: "none" }, 0);
+    tl.fromTo("#intro-po21", { y: 0, x: 0 }, { y: -87, x: -17, duration: 43.827, ease: "none" }, 0);
+    tl.fromTo("#intro-po22", { y: 0, x: 0 }, { y: -64, x: 6, duration: 43.827, ease: "none" }, 0);
+    tl.fromTo("#intro-po23", { y: 0, x: 0 }, { y: -41, x: -11, duration: 43.827, ease: "none" }, 0);
+    tl.fromTo("#intro-po24", { y: 0, x: 0 }, { y: -78, x: 12, duration: 43.827, ease: "none" }, 0);
+    tl.fromTo("#intro-po25", { y: 0, x: 0 }, { y: -55, x: -5, duration: 43.827, ease: "none" }, 0);
+    tl.fromTo("#intro-boneco", { rotation: -1.4, svgOrigin: "960 -200" }, { rotation: 1.4, svgOrigin: "960 -200", duration: 2.6, ease: "sine.inOut", repeat: 15, yoyo: true }, 0);
+    tl.to("#intro-f0", { strokeDashoffset: 0, duration: 2.2, ease: "power2.inOut" }, 0.4);
+    tl.fromTo("#intro-b0", { opacity: 0, attr: { cy: 0 } }, { opacity: 0.9, attr: { cy: 331 }, duration: 3.2, ease: "sine.in", repeat: 5, repeatDelay: 2.8 }, 2.8);
+    tl.to("#intro-f1", { strokeDashoffset: 0, duration: 2.2, ease: "power2.inOut" }, 0.65);
+    tl.fromTo("#intro-b1", { opacity: 0, attr: { cy: 0 } }, { opacity: 0.9, attr: { cy: 635.2 }, duration: 3.2, ease: "sine.in", repeat: 5, repeatDelay: 2.8 }, 3.5);
+    tl.to("#intro-f2", { strokeDashoffset: 0, duration: 2.2, ease: "power2.inOut" }, 0.9);
+    tl.fromTo("#intro-b2", { opacity: 0, attr: { cy: 0 } }, { opacity: 0.9, attr: { cy: 635.2 }, duration: 3.2, ease: "sine.in", repeat: 5, repeatDelay: 2.8 }, 4.2);
+    tl.to("#intro-f3", { strokeDashoffset: 0, duration: 2.2, ease: "power2.inOut" }, 1.15);
+    tl.fromTo("#intro-b3", { opacity: 0, attr: { cy: 0 } }, { opacity: 0.9, attr: { cy: 708 }, duration: 3.2, ease: "sine.in", repeat: 5, repeatDelay: 2.8 }, 4.9);
+    tl.to("#intro-f4", { strokeDashoffset: 0, duration: 2.2, ease: "power2.inOut" }, 1.4);
+    tl.fromTo("#intro-b4", { opacity: 0, attr: { cy: 0 } }, { opacity: 0.9, attr: { cy: 708 }, duration: 3.2, ease: "sine.in", repeat: 5, repeatDelay: 2.8 }, 5.6);
+    tl.fromTo("#intro-t0 .cue-in", { opacity: 0, y: 18, filter: "blur(10px)" }, { opacity: 1, y: 0, filter: "blur(0px)", duration: 0.8, ease: "power3.out" }, 16.053);
+    tl.to("#intro-t0 .cue-in", { opacity: 0, filter: "blur(6px)", duration: 0.4, ease: "power2.in" }, 24.633);
+    tl.fromTo("#intro-t1 .cue-in", { opacity: 0, y: 18, filter: "blur(10px)" }, { opacity: 1, y: 0, filter: "blur(0px)", duration: 0.8, ease: "power3.out" }, 37.097);
+    tl.to("#intro-t1 .cue-in", { opacity: 0, filter: "blur(6px)", duration: 0.4, ease: "power2.in" }, 42.807);
+    tl.fromTo("#intro-preto", { opacity: 1 }, { opacity: 0, duration: 0.6, ease: "power1.out" }, 0);
+    tl.to("#intro-preto", { opacity: 1, duration: 0.5, ease: "power1.in" }, 43.227);
+    window.__timelines["intro"] = tl;
+  </script>
+</template>

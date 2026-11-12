@@ -1,0 +1,126 @@
+<template>
+  <style>
+    @font-face { font-family: "Bebas Neue"; src: url("assets/fonts/bebas-neue.woff2") format("woff2"); font-weight: 400; }
+    @font-face { font-family: "Cormorant Garamond"; src: url("assets/fonts/cormorant-garamond-italic.woff2") format("woff2"); font-style: italic; font-weight: 500; }
+    #root { position: absolute; inset: 0; overflow: hidden; background: #0B0B0F; font-family: "Inter", sans-serif; }
+    #sinal3-cena, #sinal3-cena > svg, #sinal3-motivo { position: absolute; inset: 0; }
+    #sinal3-luz { position: absolute; left: 50%; top: 40%; width: 1500px; height: 1100px; margin: -550px 0 0 -750px;
+      background: radial-gradient(ellipse at center, rgba(201,162,39,0.13) 0%, rgba(201,162,39,0.04) 40%, rgba(201,162,39,0) 70%); }
+    #sinal3-preto { position: absolute; inset: 0; background: #000; pointer-events: none; }
+    .assinatura-canto { position: absolute; left: 96px; bottom: 72px; width: 56px; height: 4px; background: #C9A227; opacity: 0.85; }
+    .titulo-sinal { position: absolute; inset: 0; display: flex; flex-direction: column; align-items: center; justify-content: center; text-align: center; }
+    .titulo-sinal .num { font-family: "Bebas Neue"; font-size: 64px; letter-spacing: 0.3em; color: #C9A227; }
+    .titulo-sinal .nome { font-family: "Bebas Neue"; font-size: 190px; line-height: 0.95; letter-spacing: 0.02em; color: #E8E6E1; max-width: 1500px; }
+    .tag { position: absolute; left: 192px; top: 118px; font-family: "Bebas Neue"; font-size: 40px; letter-spacing: 0.12em; color: #8A8D98; }
+    .tag b { color: #C9A227; font-weight: 400; }
+    .cue { position: absolute; inset: 0; display: flex; align-items: flex-end; justify-content: center; padding-bottom: 130px; }
+    .cue::before { content: ""; position: absolute; left: 0; right: 0; bottom: 0; height: 420px; background: linear-gradient(to top, rgba(11,11,15,0.92), rgba(11,11,15,0)); }
+    .cue-in { position: relative; max-width: 1500px; text-align: center; color: #E8E6E1; }
+    .cue em { font-style: normal; color: #C9A227; }
+    .cue-frase .cue-in { font-weight: 600; font-size: 60px; line-height: 1.2; letter-spacing: -0.01em; }
+    .cue-titulo .cue-in { font-family: "Bebas Neue"; font-size: 170px; line-height: 1; letter-spacing: 0.03em; }
+    .cue-citacao .cue-in { font-family: "Cormorant Garamond"; font-style: italic; font-weight: 500; font-size: 92px; line-height: 1.1; }
+    .cue-lista .lista-titulo { font-family: "Bebas Neue"; font-size: 84px; letter-spacing: 0.04em; margin-bottom: 22px; }
+    .cue-lista .lista { display: flex; gap: 56px; justify-content: center; font-weight: 600; font-size: 40px; color: #E8E6E1; }
+    .cue-lista .lista span::before { content: ""; display: inline-block; width: 12px; height: 12px; border-radius: 6px; background: #C9A227; margin-right: 14px; vertical-align: middle; }
+    .cue-cvv { padding-bottom: 150px; }
+    .cue-cvv .cvv-linha1 { font-family: "Bebas Neue"; font-size: 140px; line-height: 1; letter-spacing: 0.04em; }
+    .cue-cvv .cvv-linha2 { font-size: 40px; font-weight: 500; color: #8A8D98; margin-top: 10px; }
+    .cue-cvv .cvv-linha3 { font-size: 52px; font-weight: 600; margin-top: 16px; }
+    .cue-comentario .cue-in { display: flex; align-items: center; gap: 28px; font-weight: 600; font-size: 56px; }
+    .fonte { position: absolute; inset: 0; pointer-events: none; }
+    .fonte-in { position: absolute; right: 192px; top: 118px; width: 600px; padding: 30px 36px; background: #1C1D24; border-left: 5px solid #C9A227; border-radius: 6px; }
+    .fonte-autor { font-family: "Cormorant Garamond"; font-style: italic; font-weight: 500; font-size: 48px; line-height: 1.1; color: #E8E6E1; }
+    .fonte-ano { font-weight: 700; font-size: 30px; letter-spacing: 0.08em; color: #C9A227; margin-top: 10px; }
+    .fonte-revista { font-weight: 500; font-size: 30px; line-height: 1.35; color: #8A8D98; margin-top: 6px; }
+    .nevoa { position: absolute; border-radius: 50%; background: radial-gradient(ellipse at center, rgba(138,141,152,0.09) 0%, rgba(138,141,152,0.03) 45%, rgba(138,141,152,0) 70%); }
+    .logo { position: absolute; inset: 0; display: flex; flex-direction: column; align-items: center; justify-content: center; gap: 26px; }
+    .logo span { font-family: "Bebas Neue"; font-size: 150px; letter-spacing: 0.14em; color: #E8E6E1; text-shadow: 0 0 40px rgba(201,162,39,0.35); }
+    .logo i { display: block; width: 260px; height: 5px; background: #C9A227; }
+    .logo.cta { justify-content: flex-start; padding-top: 220px; }
+  </style>
+  <div id="root" data-composition-id="sinal3" data-width="1920" data-height="1080">
+    <div id="sinal3-cena">
+      <div id="sinal3-luz"></div>
+      <svg viewBox="0 0 1920 1080" width="1920" height="1080"><circle id="sinal3-po0" cx="1432" cy="874" r="3.7" fill="#E8E6E1" opacity="0.09"/><circle id="sinal3-po1" cx="784" cy="958" r="3.0" fill="#E8E6E1" opacity="0.25"/><circle id="sinal3-po2" cx="1557" cy="299" r="3.4" fill="#E8E6E1" opacity="0.20"/><circle id="sinal3-po3" cx="871" cy="629" r="3.7" fill="#E8E6E1" opacity="0.09"/><circle id="sinal3-po4" cx="1535" cy="961" r="1.6" fill="#E8E6E1" opacity="0.29"/><circle id="sinal3-po5" cx="1793" cy="927" r="1.7" fill="#E8E6E1" opacity="0.27"/><circle id="sinal3-po6" cx="817" cy="726" r="3.7" fill="#E8E6E1" opacity="0.14"/><circle id="sinal3-po7" cx="125" cy="544" r="3.1" fill="#E8E6E1" opacity="0.23"/><circle id="sinal3-po8" cx="689" cy="655" r="1.9" fill="#E8E6E1" opacity="0.09"/><circle id="sinal3-po9" cx="1707" cy="175" r="4.1" fill="#E8E6E1" opacity="0.13"/><circle id="sinal3-po10" cx="41" cy="244" r="3.3" fill="#E8E6E1" opacity="0.18"/><circle id="sinal3-po11" cx="1740" cy="400" r="2.6" fill="#E8E6E1" opacity="0.28"/><circle id="sinal3-po12" cx="344" cy="547" r="2.5" fill="#E8E6E1" opacity="0.28"/><circle id="sinal3-po13" cx="700" cy="458" r="4.4" fill="#E8E6E1" opacity="0.14"/><circle id="sinal3-po14" cx="1137" cy="313" r="1.5" fill="#E8E6E1" opacity="0.22"/><circle id="sinal3-po15" cx="40" cy="427" r="2.8" fill="#E8E6E1" opacity="0.14"/><circle id="sinal3-po16" cx="808" cy="173" r="2.2" fill="#E8E6E1" opacity="0.11"/><circle id="sinal3-po17" cx="190" cy="613" r="2.8" fill="#E8E6E1" opacity="0.14"/><circle id="sinal3-po18" cx="561" cy="289" r="3.0" fill="#E8E6E1" opacity="0.12"/><circle id="sinal3-po19" cx="1337" cy="139" r="4.3" fill="#E8E6E1" opacity="0.23"/><circle id="sinal3-po20" cx="398" cy="1012" r="4.0" fill="#E8E6E1" opacity="0.26"/><circle id="sinal3-po21" cx="1050" cy="588" r="1.8" fill="#E8E6E1" opacity="0.19"/><circle id="sinal3-po22" cx="927" cy="183" r="3.3" fill="#E8E6E1" opacity="0.28"/><circle id="sinal3-po23" cx="574" cy="147" r="2.7" fill="#E8E6E1" opacity="0.15"/><circle id="sinal3-po24" cx="1116" cy="156" r="3.5" fill="#E8E6E1" opacity="0.26"/><circle id="sinal3-po25" cx="699" cy="308" r="3.0" fill="#E8E6E1" opacity="0.15"/></svg>
+      <div id="sinal3-motivo">
+        <svg viewBox="0 0 1920 1080" width="1920" height="1080">
+    <defs>
+      <linearGradient id="sinal3-fresta" x1="0" x2="1"><stop offset="0%" stop-color="#f0c75e"/><stop offset="100%" stop-color="#C9A227"/></linearGradient>
+      <linearGradient id="sinal3-chao" x1="0" y1="0" x2="0" y2="1"><stop offset="0%" stop-color="#C9A227" stop-opacity="0.45"/><stop offset="100%" stop-color="#C9A227" stop-opacity="0"/></linearGradient>
+    </defs>
+    <line x1="0" y1="760" x2="1920" y2="760" stroke="#2A2B33" stroke-width="2"/>
+    <g id="sinal3-luz"><polygon id="sinal3-cunha" points="1032,760 1100,760 1500,1080 860,1080" fill="url(#sinal3-chao)"/>
+      <rect id="sinal3-vao" x="1032" y="200" width="68" height="560" fill="url(#sinal3-fresta)"/></g>
+    <rect x="820" y="190" width="290" height="580" fill="none" stroke="#2c2d35" stroke-width="10"/>
+    <polygon id="sinal3-porta" points="826,196 1032,206 1032,754 826,764" fill="#141519" stroke="#24252c" stroke-width="2"/>
+    <circle cx="1010" cy="490" r="9" fill="#5a4a22"/>
+    <path id="sinal3-sombra" d="M1060,1080 Q1090,960 1120,900 L1180,900 Q1200,860 1240,860 L1260,900 L1300,1080 Z" fill="#0B0B0F" opacity="0.85"/>
+    <path id="sinal3-mao" d="M930,520 Q960,486 994,494 L1002,506 Q980,514 972,530 Q950,548 930,540 Z" fill="#0c0d11" stroke="#2c2d35" stroke-width="2" opacity="0"/>
+    <g  transform="translate(520 760) scale(0.95)">
+      <circle cx="0" cy="-292" r="38" fill="#0f1014" stroke="#2A2B33" stroke-width="2"/>
+      <path d="M-62,-238 Q0,-262 62,-238 L74,-96 L52,-96 L44,-150 L40,-60 L34,0 L10,0 L0,-118 L-10,0 L-34,0 L-40,-60 L-44,-150 L-52,-96 L-74,-96 Z" fill="#0f1014" stroke="#2A2B33" stroke-width="2"/>
+    </g>
+        </svg>
+        
+      </div>
+      <div id="sinal3-titulo" class="titulo-sinal"><div class="num">Sinal 3</div><div class="nome">Culpa como ferramenta</div></div>
+      <div id="sinal3-tag" class="tag"><b>3</b> · Culpa como ferramenta</div>
+      <div class="assinatura-canto"></div>
+      <div id="sinal3-t0" class="clip cue cue-citacao" data-start="7.661" data-duration="9" data-track-index="2"><div class="cue-in">“Vai lá… eu fico sozinho mesmo.”</div></div>
+      <div id="sinal3-fonte0" class="clip fonte" data-start="17.176" data-duration="4" data-track-index="3"><div class="fonte-in"><div class="fonte-autor">Baumeister, Stillwell &amp; Heatherton</div><div class="fonte-ano">1994</div><div class="fonte-revista">Psychological Bulletin, 115(2)</div></div></div>
+      <div id="sinal3-preto"></div>
+    </div>
+  </div>
+  <script>
+    window.__timelines = window.__timelines || {};
+    const tl = gsap.timeline({ paused: true });
+    tl.fromTo("#sinal3-luz", { x: -120, opacity: 0.7 }, { x: 120, opacity: 1, duration: 51.837, ease: "sine.inOut" }, 0);
+    tl.fromTo("#sinal3-motivo", { scale: 1 }, { scale: 1.04, duration: 51.837, ease: "none" }, 0);
+    tl.fromTo("#sinal3-po0", { y: 0, x: 0 }, { y: -30, x: -20, duration: 51.837, ease: "none" }, 0);
+    tl.fromTo("#sinal3-po1", { y: 0, x: 0 }, { y: -67, x: 3, duration: 51.837, ease: "none" }, 0);
+    tl.fromTo("#sinal3-po2", { y: 0, x: 0 }, { y: -44, x: -14, duration: 51.837, ease: "none" }, 0);
+    tl.fromTo("#sinal3-po3", { y: 0, x: 0 }, { y: -81, x: 9, duration: 51.837, ease: "none" }, 0);
+    tl.fromTo("#sinal3-po4", { y: 0, x: 0 }, { y: -58, x: -8, duration: 51.837, ease: "none" }, 0);
+    tl.fromTo("#sinal3-po5", { y: 0, x: 0 }, { y: -35, x: 15, duration: 51.837, ease: "none" }, 0);
+    tl.fromTo("#sinal3-po6", { y: 0, x: 0 }, { y: -72, x: -2, duration: 51.837, ease: "none" }, 0);
+    tl.fromTo("#sinal3-po7", { y: 0, x: 0 }, { y: -49, x: -19, duration: 51.837, ease: "none" }, 0);
+    tl.fromTo("#sinal3-po8", { y: 0, x: 0 }, { y: -86, x: 4, duration: 51.837, ease: "none" }, 0);
+    tl.fromTo("#sinal3-po9", { y: 0, x: 0 }, { y: -63, x: -13, duration: 51.837, ease: "none" }, 0);
+    tl.fromTo("#sinal3-po10", { y: 0, x: 0 }, { y: -40, x: 10, duration: 51.837, ease: "none" }, 0);
+    tl.fromTo("#sinal3-po11", { y: 0, x: 0 }, { y: -77, x: -7, duration: 51.837, ease: "none" }, 0);
+    tl.fromTo("#sinal3-po12", { y: 0, x: 0 }, { y: -54, x: 16, duration: 51.837, ease: "none" }, 0);
+    tl.fromTo("#sinal3-po13", { y: 0, x: 0 }, { y: -31, x: -1, duration: 51.837, ease: "none" }, 0);
+    tl.fromTo("#sinal3-po14", { y: 0, x: 0 }, { y: -68, x: -18, duration: 51.837, ease: "none" }, 0);
+    tl.fromTo("#sinal3-po15", { y: 0, x: 0 }, { y: -45, x: 5, duration: 51.837, ease: "none" }, 0);
+    tl.fromTo("#sinal3-po16", { y: 0, x: 0 }, { y: -82, x: -12, duration: 51.837, ease: "none" }, 0);
+    tl.fromTo("#sinal3-po17", { y: 0, x: 0 }, { y: -59, x: 11, duration: 51.837, ease: "none" }, 0);
+    tl.fromTo("#sinal3-po18", { y: 0, x: 0 }, { y: -36, x: -6, duration: 51.837, ease: "none" }, 0);
+    tl.fromTo("#sinal3-po19", { y: 0, x: 0 }, { y: -73, x: 17, duration: 51.837, ease: "none" }, 0);
+    tl.fromTo("#sinal3-po20", { y: 0, x: 0 }, { y: -50, x: 0, duration: 51.837, ease: "none" }, 0);
+    tl.fromTo("#sinal3-po21", { y: 0, x: 0 }, { y: -87, x: -17, duration: 51.837, ease: "none" }, 0);
+    tl.fromTo("#sinal3-po22", { y: 0, x: 0 }, { y: -64, x: 6, duration: 51.837, ease: "none" }, 0);
+    tl.fromTo("#sinal3-po23", { y: 0, x: 0 }, { y: -41, x: -11, duration: 51.837, ease: "none" }, 0);
+    tl.fromTo("#sinal3-po24", { y: 0, x: 0 }, { y: -78, x: 12, duration: 51.837, ease: "none" }, 0);
+    tl.fromTo("#sinal3-po25", { y: 0, x: 0 }, { y: -55, x: -5, duration: 51.837, ease: "none" }, 0);
+    tl.fromTo("#sinal3-titulo", { opacity: 0.4, filter: "blur(10px)", y: 20 }, { opacity: 1, filter: "blur(0px)", y: 0, duration: 1.0, ease: "power3.out" }, 0);
+    tl.to("#sinal3-titulo", { opacity: 0, y: -30, filter: "blur(8px)", duration: 0.7, ease: "power2.in" }, 4.461);
+    tl.fromTo("#sinal3-tag", { opacity: 0, x: -20 }, { opacity: 1, x: 0, duration: 0.6, ease: "power2.out" }, 4.961);
+    tl.fromTo("#sinal3-motivo", { opacity: 0 }, { opacity: 1, duration: 1.2, ease: "power1.out" }, 4.761);
+    tl.fromTo("#sinal3-vao", { scaleX: 0.35, svgOrigin: "1032 480" }, { scaleX: 1, svgOrigin: "1032 480", duration: 2.2, ease: "power2.out" }, 5.461);
+    tl.fromTo("#sinal3-cunha", { opacity: 0.4 }, { opacity: 1, duration: 2.2 }, 5.461);
+    tl.fromTo("#sinal3-mao", { opacity: 0, x: -60 }, { opacity: 1, x: 0, duration: 1.4, ease: "power2.out" }, 6.661);
+    tl.to("#sinal3-mao", { x: -20, duration: 0.5, ease: "sine.inOut", repeat: 3, yoyo: true }, 8.261);
+    tl.to("#sinal3-mao", { x: -90, opacity: 0, duration: 1.2, ease: "power2.in" }, 14.084);
+    tl.to("#sinal3-vao", { scaleX: 0.5, svgOrigin: "1032 480", duration: 1.6, ease: "power2.inOut" }, 14.484);
+    tl.to("#sinal3-cunha", { opacity: 0.5, duration: 1.6 }, 14.484);
+    tl.fromTo("#sinal3-sombra", { scaleY: 0.9, svgOrigin: "1180 1080" }, { scaleY: 1.06, svgOrigin: "1180 1080", duration: 51.837, ease: "none" }, 0);
+    tl.fromTo("#sinal3-t0 .cue-in", { opacity: 0, y: 18, filter: "blur(10px)" }, { opacity: 1, y: 0, filter: "blur(0px)", duration: 0.8, ease: "power3.out" }, 7.661);
+    tl.to("#sinal3-t0 .cue-in", { opacity: 0, filter: "blur(6px)", duration: 0.4, ease: "power2.in" }, 16.241);
+    tl.fromTo("#sinal3-fonte0 .fonte-in", { opacity: 0, x: 30 }, { opacity: 1, x: 0, duration: 0.6, ease: "power3.out" }, 17.176);
+    tl.to("#sinal3-fonte0 .fonte-in", { opacity: 0, x: 20, duration: 0.4, ease: "power2.in" }, 20.726);
+    tl.set("#sinal3-preto", { opacity: 0 }, 0);
+    tl.to("#sinal3-preto", { opacity: 1, duration: 0.5, ease: "power1.in" }, 51.237);
+    window.__timelines["sinal3"] = tl;
+  </script>
+</template>

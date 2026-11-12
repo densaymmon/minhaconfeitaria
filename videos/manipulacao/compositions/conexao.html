@@ -1,0 +1,112 @@
+<template>
+  <style>
+    @font-face { font-family: "Bebas Neue"; src: url("assets/fonts/bebas-neue.woff2") format("woff2"); font-weight: 400; }
+    @font-face { font-family: "Cormorant Garamond"; src: url("assets/fonts/cormorant-garamond-italic.woff2") format("woff2"); font-style: italic; font-weight: 500; }
+    #root { position: absolute; inset: 0; overflow: hidden; background: #0B0B0F; font-family: "Inter", sans-serif; }
+    #conexao-cena, #conexao-cena > svg, #conexao-motivo { position: absolute; inset: 0; }
+    #conexao-luz { position: absolute; left: 50%; top: 40%; width: 1500px; height: 1100px; margin: -550px 0 0 -750px;
+      background: radial-gradient(ellipse at center, rgba(201,162,39,0.13) 0%, rgba(201,162,39,0.04) 40%, rgba(201,162,39,0) 70%); }
+    #conexao-preto { position: absolute; inset: 0; background: #000; pointer-events: none; }
+    .assinatura-canto { position: absolute; left: 96px; bottom: 72px; width: 56px; height: 4px; background: #C9A227; opacity: 0.85; }
+    .titulo-sinal { position: absolute; inset: 0; display: flex; flex-direction: column; align-items: center; justify-content: center; text-align: center; }
+    .titulo-sinal .num { font-family: "Bebas Neue"; font-size: 64px; letter-spacing: 0.3em; color: #C9A227; }
+    .titulo-sinal .nome { font-family: "Bebas Neue"; font-size: 190px; line-height: 0.95; letter-spacing: 0.02em; color: #E8E6E1; max-width: 1500px; }
+    .tag { position: absolute; left: 192px; top: 118px; font-family: "Bebas Neue"; font-size: 40px; letter-spacing: 0.12em; color: #8A8D98; }
+    .tag b { color: #C9A227; font-weight: 400; }
+    .cue { position: absolute; inset: 0; display: flex; align-items: flex-end; justify-content: center; padding-bottom: 130px; }
+    .cue::before { content: ""; position: absolute; left: 0; right: 0; bottom: 0; height: 420px; background: linear-gradient(to top, rgba(11,11,15,0.92), rgba(11,11,15,0)); }
+    .cue-in { position: relative; max-width: 1500px; text-align: center; color: #E8E6E1; }
+    .cue em { font-style: normal; color: #C9A227; }
+    .cue-frase .cue-in { font-weight: 600; font-size: 60px; line-height: 1.2; letter-spacing: -0.01em; }
+    .cue-titulo .cue-in { font-family: "Bebas Neue"; font-size: 170px; line-height: 1; letter-spacing: 0.03em; }
+    .cue-citacao .cue-in { font-family: "Cormorant Garamond"; font-style: italic; font-weight: 500; font-size: 92px; line-height: 1.1; }
+    .cue-lista .lista-titulo { font-family: "Bebas Neue"; font-size: 84px; letter-spacing: 0.04em; margin-bottom: 22px; }
+    .cue-lista .lista { display: flex; gap: 56px; justify-content: center; font-weight: 600; font-size: 40px; color: #E8E6E1; }
+    .cue-lista .lista span::before { content: ""; display: inline-block; width: 12px; height: 12px; border-radius: 6px; background: #C9A227; margin-right: 14px; vertical-align: middle; }
+    .cue-cvv { padding-bottom: 150px; }
+    .cue-cvv .cvv-linha1 { font-family: "Bebas Neue"; font-size: 140px; line-height: 1; letter-spacing: 0.04em; }
+    .cue-cvv .cvv-linha2 { font-size: 40px; font-weight: 500; color: #8A8D98; margin-top: 10px; }
+    .cue-cvv .cvv-linha3 { font-size: 52px; font-weight: 600; margin-top: 16px; }
+    .cue-comentario .cue-in { display: flex; align-items: center; gap: 28px; font-weight: 600; font-size: 56px; }
+    .fonte { position: absolute; inset: 0; pointer-events: none; }
+    .fonte-in { position: absolute; right: 192px; top: 118px; width: 600px; padding: 30px 36px; background: #1C1D24; border-left: 5px solid #C9A227; border-radius: 6px; }
+    .fonte-autor { font-family: "Cormorant Garamond"; font-style: italic; font-weight: 500; font-size: 48px; line-height: 1.1; color: #E8E6E1; }
+    .fonte-ano { font-weight: 700; font-size: 30px; letter-spacing: 0.08em; color: #C9A227; margin-top: 10px; }
+    .fonte-revista { font-weight: 500; font-size: 30px; line-height: 1.35; color: #8A8D98; margin-top: 6px; }
+    .nevoa { position: absolute; border-radius: 50%; background: radial-gradient(ellipse at center, rgba(138,141,152,0.09) 0%, rgba(138,141,152,0.03) 45%, rgba(138,141,152,0) 70%); }
+    .logo { position: absolute; inset: 0; display: flex; flex-direction: column; align-items: center; justify-content: center; gap: 26px; }
+    .logo span { font-family: "Bebas Neue"; font-size: 150px; letter-spacing: 0.14em; color: #E8E6E1; text-shadow: 0 0 40px rgba(201,162,39,0.35); }
+    .logo i { display: block; width: 260px; height: 5px; background: #C9A227; }
+    .logo.cta { justify-content: flex-start; padding-top: 220px; }
+  </style>
+  <div id="root" data-composition-id="conexao" data-width="1920" data-height="1080">
+    <div id="conexao-cena">
+      <div id="conexao-luz"></div>
+      <svg viewBox="0 0 1920 1080" width="1920" height="1080"><circle id="conexao-po0" cx="360" cy="819" r="2.2" fill="#E8E6E1" opacity="0.21"/><circle id="conexao-po1" cx="1309" cy="291" r="2.4" fill="#E8E6E1" opacity="0.29"/><circle id="conexao-po2" cx="1789" cy="281" r="4.3" fill="#E8E6E1" opacity="0.23"/><circle id="conexao-po3" cx="1326" cy="1017" r="4.1" fill="#E8E6E1" opacity="0.23"/><circle id="conexao-po4" cx="1398" cy="887" r="4.2" fill="#E8E6E1" opacity="0.21"/><circle id="conexao-po5" cx="1451" cy="316" r="2.8" fill="#E8E6E1" opacity="0.11"/><circle id="conexao-po6" cx="35" cy="690" r="4.0" fill="#E8E6E1" opacity="0.28"/><circle id="conexao-po7" cx="1502" cy="381" r="3.3" fill="#E8E6E1" opacity="0.18"/><circle id="conexao-po8" cx="1112" cy="823" r="3.0" fill="#E8E6E1" opacity="0.20"/><circle id="conexao-po9" cx="271" cy="678" r="2.5" fill="#E8E6E1" opacity="0.12"/><circle id="conexao-po10" cx="417" cy="832" r="1.6" fill="#E8E6E1" opacity="0.25"/><circle id="conexao-po11" cx="63" cy="875" r="2.7" fill="#E8E6E1" opacity="0.16"/><circle id="conexao-po12" cx="1892" cy="922" r="3.2" fill="#E8E6E1" opacity="0.21"/><circle id="conexao-po13" cx="1042" cy="678" r="4.3" fill="#E8E6E1" opacity="0.17"/><circle id="conexao-po14" cx="1892" cy="390" r="3.7" fill="#E8E6E1" opacity="0.17"/><circle id="conexao-po15" cx="878" cy="501" r="2.3" fill="#E8E6E1" opacity="0.23"/><circle id="conexao-po16" cx="1137" cy="123" r="4.4" fill="#E8E6E1" opacity="0.12"/><circle id="conexao-po17" cx="994" cy="22" r="3.0" fill="#E8E6E1" opacity="0.23"/><circle id="conexao-po18" cx="1692" cy="438" r="1.6" fill="#E8E6E1" opacity="0.12"/><circle id="conexao-po19" cx="910" cy="1054" r="2.2" fill="#E8E6E1" opacity="0.13"/><circle id="conexao-po20" cx="1027" cy="653" r="2.0" fill="#E8E6E1" opacity="0.16"/><circle id="conexao-po21" cx="147" cy="855" r="2.9" fill="#E8E6E1" opacity="0.19"/><circle id="conexao-po22" cx="497" cy="500" r="2.4" fill="#E8E6E1" opacity="0.27"/><circle id="conexao-po23" cx="1741" cy="373" r="2.8" fill="#E8E6E1" opacity="0.11"/><circle id="conexao-po24" cx="1836" cy="111" r="4.0" fill="#E8E6E1" opacity="0.19"/><circle id="conexao-po25" cx="633" cy="469" r="2.5" fill="#E8E6E1" opacity="0.08"/></svg>
+      <div id="conexao-motivo">
+        <svg viewBox="0 0 1920 1080" width="1920" height="1080">
+    <defs><radialGradient id="conexao-luz"><stop offset="0%" stop-color="#E8E6E1" stop-opacity="0.22"/><stop offset="100%" stop-color="#E8E6E1" stop-opacity="0"/></radialGradient></defs>
+    <circle id="conexao-luzsuave" cx="960" cy="440" r="760" fill="url(#conexao-luz)" opacity="0"/>
+    <path id="conexao-fioe" d="M480,440 L1040,440" stroke="#8A8D98" stroke-width="2.5" fill="none" stroke-dasharray="700" stroke-dashoffset="700"/>
+    <path id="conexao-fiod" d="M1040,440 L1440,440" stroke="#8A8D98" stroke-width="2.5" fill="none" stroke-dasharray="700" stroke-dashoffset="700"/>
+    <g id="conexao-i0" opacity="0"><circle cx="480" cy="440" r="52" fill="#0B0B0F" stroke="#8A8D98" stroke-width="2.5"/><path d="M480,456 C450,436 462,412 480,428 C498,412 510,436 480,456 Z" fill="#C9A227"/></g><g id="conexao-i1" opacity="0"><circle cx="640" cy="440" r="52" fill="#0B0B0F" stroke="#8A8D98" stroke-width="2.5"/><path d="M640,416 Q656,440 640,462 Q624,440 640,416 Z" fill="#C9A227"/></g><g id="conexao-i2" opacity="0"><circle cx="800" cy="440" r="52" fill="#0B0B0F" stroke="#8A8D98" stroke-width="2.5"/><rect x="784" y="416" width="32" height="48" fill="none" stroke="#C9A227" stroke-width="4"/><rect x="806" y="420" width="6" height="40" fill="#C9A227"/></g><g id="conexao-i3" opacity="0"><circle cx="960" cy="440" r="52" fill="#0B0B0F" stroke="#8A8D98" stroke-width="2.5"/><rect x="941" y="422" width="10" height="36" rx="3" fill="#C9A227"/><rect x="955" y="422" width="10" height="36" rx="3" fill="#C9A227"/><rect x="969" y="422" width="10" height="36" rx="3" fill="#C9A227"/></g><g id="conexao-i4" opacity="0"><circle cx="1120" cy="440" r="52" fill="#0B0B0F" stroke="#8A8D98" stroke-width="2.5"/><polygon points="1120,418 1098,456 1142,456" fill="none" stroke="#C9A227" stroke-width="4"/></g><g id="conexao-i5" opacity="0"><circle cx="1280" cy="440" r="52" fill="#0B0B0F" stroke="#8A8D98" stroke-width="2.5"/><line x1="1256" y1="458" x2="1304" y2="458" stroke="#C9A227" stroke-width="4"/><line x1="1272" y1="458" x2="1272" y2="418" stroke="#C9A227" stroke-width="4"/><path d="M1272,418 L1298,428 L1272,438 Z" fill="#C9A227"/></g><g id="conexao-i6" opacity="0"><circle cx="1440" cy="440" r="52" fill="#0B0B0F" stroke="#8A8D98" stroke-width="2.5"/><path d="M1418,424 h44 v26 h-28 l-12,10 v-10 h-4 Z" fill="none" stroke="#C9A227" stroke-width="4"/><circle cx="1431" cy="437" r="3" fill="#C9A227"/><circle cx="1440" cy="437" r="3" fill="#C9A227"/><circle cx="1449" cy="437" r="3" fill="#C9A227"/></g>
+        </svg>
+        
+      </div>
+      
+      <div class="assinatura-canto"></div>
+      <div id="conexao-t0" class="clip cue cue-frase" data-start="22.133" data-duration="2.87" data-track-index="2"><div class="cue-in">Não é um gesto. <em>É um padrão.</em></div></div>
+      
+      <div id="conexao-preto"></div>
+    </div>
+  </div>
+  <script>
+    window.__timelines = window.__timelines || {};
+    const tl = gsap.timeline({ paused: true });
+    tl.fromTo("#conexao-luz", { x: -120, opacity: 0.7 }, { x: 120, opacity: 1, duration: 25.603, ease: "sine.inOut" }, 0);
+    tl.fromTo("#conexao-motivo", { scale: 1 }, { scale: 1.04, duration: 25.603, ease: "none" }, 0);
+    tl.fromTo("#conexao-po0", { y: 0, x: 0 }, { y: -30, x: -20, duration: 25.603, ease: "none" }, 0);
+    tl.fromTo("#conexao-po1", { y: 0, x: 0 }, { y: -67, x: 3, duration: 25.603, ease: "none" }, 0);
+    tl.fromTo("#conexao-po2", { y: 0, x: 0 }, { y: -44, x: -14, duration: 25.603, ease: "none" }, 0);
+    tl.fromTo("#conexao-po3", { y: 0, x: 0 }, { y: -81, x: 9, duration: 25.603, ease: "none" }, 0);
+    tl.fromTo("#conexao-po4", { y: 0, x: 0 }, { y: -58, x: -8, duration: 25.603, ease: "none" }, 0);
+    tl.fromTo("#conexao-po5", { y: 0, x: 0 }, { y: -35, x: 15, duration: 25.603, ease: "none" }, 0);
+    tl.fromTo("#conexao-po6", { y: 0, x: 0 }, { y: -72, x: -2, duration: 25.603, ease: "none" }, 0);
+    tl.fromTo("#conexao-po7", { y: 0, x: 0 }, { y: -49, x: -19, duration: 25.603, ease: "none" }, 0);
+    tl.fromTo("#conexao-po8", { y: 0, x: 0 }, { y: -86, x: 4, duration: 25.603, ease: "none" }, 0);
+    tl.fromTo("#conexao-po9", { y: 0, x: 0 }, { y: -63, x: -13, duration: 25.603, ease: "none" }, 0);
+    tl.fromTo("#conexao-po10", { y: 0, x: 0 }, { y: -40, x: 10, duration: 25.603, ease: "none" }, 0);
+    tl.fromTo("#conexao-po11", { y: 0, x: 0 }, { y: -77, x: -7, duration: 25.603, ease: "none" }, 0);
+    tl.fromTo("#conexao-po12", { y: 0, x: 0 }, { y: -54, x: 16, duration: 25.603, ease: "none" }, 0);
+    tl.fromTo("#conexao-po13", { y: 0, x: 0 }, { y: -31, x: -1, duration: 25.603, ease: "none" }, 0);
+    tl.fromTo("#conexao-po14", { y: 0, x: 0 }, { y: -68, x: -18, duration: 25.603, ease: "none" }, 0);
+    tl.fromTo("#conexao-po15", { y: 0, x: 0 }, { y: -45, x: 5, duration: 25.603, ease: "none" }, 0);
+    tl.fromTo("#conexao-po16", { y: 0, x: 0 }, { y: -82, x: -12, duration: 25.603, ease: "none" }, 0);
+    tl.fromTo("#conexao-po17", { y: 0, x: 0 }, { y: -59, x: 11, duration: 25.603, ease: "none" }, 0);
+    tl.fromTo("#conexao-po18", { y: 0, x: 0 }, { y: -36, x: -6, duration: 25.603, ease: "none" }, 0);
+    tl.fromTo("#conexao-po19", { y: 0, x: 0 }, { y: -73, x: 17, duration: 25.603, ease: "none" }, 0);
+    tl.fromTo("#conexao-po20", { y: 0, x: 0 }, { y: -50, x: 0, duration: 25.603, ease: "none" }, 0);
+    tl.fromTo("#conexao-po21", { y: 0, x: 0 }, { y: -87, x: -17, duration: 25.603, ease: "none" }, 0);
+    tl.fromTo("#conexao-po22", { y: 0, x: 0 }, { y: -64, x: 6, duration: 25.603, ease: "none" }, 0);
+    tl.fromTo("#conexao-po23", { y: 0, x: 0 }, { y: -41, x: -11, duration: 25.603, ease: "none" }, 0);
+    tl.fromTo("#conexao-po24", { y: 0, x: 0 }, { y: -78, x: 12, duration: 25.603, ease: "none" }, 0);
+    tl.fromTo("#conexao-po25", { y: 0, x: 0 }, { y: -55, x: -5, duration: 25.603, ease: "none" }, 0);
+    tl.fromTo("#conexao-i0", { opacity: 0, y: 24 }, { opacity: 1, y: 0, duration: 0.6, ease: "power2.out" }, 0.5);
+    tl.fromTo("#conexao-i1", { opacity: 0, y: 24 }, { opacity: 1, y: 0, duration: 0.6, ease: "power2.out" }, 0.85);
+    tl.fromTo("#conexao-i2", { opacity: 0, y: 24 }, { opacity: 1, y: 0, duration: 0.6, ease: "power2.out" }, 1.2);
+    tl.fromTo("#conexao-i3", { opacity: 0, y: 24 }, { opacity: 1, y: 0, duration: 0.6, ease: "power2.out" }, 1.55);
+    tl.fromTo("#conexao-i4", { opacity: 0, y: 24 }, { opacity: 1, y: 0, duration: 0.6, ease: "power2.out" }, 1.9);
+    tl.fromTo("#conexao-i5", { opacity: 0, y: 24 }, { opacity: 1, y: 0, duration: 0.6, ease: "power2.out" }, 2.25);
+    tl.fromTo("#conexao-i6", { opacity: 0, y: 24 }, { opacity: 1, y: 0, duration: 0.6, ease: "power2.out" }, 2.6);
+    tl.to("#conexao-fioe", { strokeDashoffset: 0, duration: 1.6, ease: "power2.inOut" }, 4.736);
+    tl.to("#conexao-fiod", { strokeDashoffset: 0, duration: 1.6, ease: "power2.inOut" }, 5.736);
+    tl.to("#conexao-fioe", { rotation: 6, svgOrigin: "480 440", opacity: 0, duration: 1.4, ease: "power2.in" }, 15.703);
+    tl.to("#conexao-fiod", { rotation: -6, svgOrigin: "1440 440", opacity: 0, duration: 1.4, ease: "power2.in" }, 15.703);
+    tl.fromTo("#conexao-luzsuave", { opacity: 0 }, { opacity: 1, duration: 3, ease: "sine.inOut" }, 16.503);
+    tl.fromTo("#conexao-t0 .cue-in", { opacity: 0, y: 18, filter: "blur(10px)" }, { opacity: 1, y: 0, filter: "blur(0px)", duration: 0.8, ease: "power3.out" }, 22.133);
+    tl.to("#conexao-t0 .cue-in", { opacity: 0, filter: "blur(6px)", duration: 0.4, ease: "power2.in" }, 24.583);
+    tl.set("#conexao-preto", { opacity: 0 }, 0);
+    tl.to("#conexao-preto", { opacity: 1, duration: 0.5, ease: "power1.in" }, 25.003);
+    window.__timelines["conexao"] = tl;
+  </script>
+</template>

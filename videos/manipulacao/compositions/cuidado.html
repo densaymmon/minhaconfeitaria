@@ -1,0 +1,119 @@
+<template>
+  <style>
+    @font-face { font-family: "Bebas Neue"; src: url("assets/fonts/bebas-neue.woff2") format("woff2"); font-weight: 400; }
+    @font-face { font-family: "Cormorant Garamond"; src: url("assets/fonts/cormorant-garamond-italic.woff2") format("woff2"); font-style: italic; font-weight: 500; }
+    #root { position: absolute; inset: 0; overflow: hidden; background: #0B0B0F; font-family: "Inter", sans-serif; }
+    #cuidado-cena, #cuidado-cena > svg, #cuidado-motivo { position: absolute; inset: 0; }
+    #cuidado-luz { position: absolute; left: 50%; top: 40%; width: 1500px; height: 1100px; margin: -550px 0 0 -750px;
+      background: radial-gradient(ellipse at center, rgba(201,162,39,0.13) 0%, rgba(201,162,39,0.04) 40%, rgba(201,162,39,0) 70%); }
+    #cuidado-preto { position: absolute; inset: 0; background: #000; pointer-events: none; }
+    .assinatura-canto { position: absolute; left: 96px; bottom: 72px; width: 56px; height: 4px; background: #C9A227; opacity: 0.85; }
+    .titulo-sinal { position: absolute; inset: 0; display: flex; flex-direction: column; align-items: center; justify-content: center; text-align: center; }
+    .titulo-sinal .num { font-family: "Bebas Neue"; font-size: 64px; letter-spacing: 0.3em; color: #C9A227; }
+    .titulo-sinal .nome { font-family: "Bebas Neue"; font-size: 190px; line-height: 0.95; letter-spacing: 0.02em; color: #E8E6E1; max-width: 1500px; }
+    .tag { position: absolute; left: 192px; top: 118px; font-family: "Bebas Neue"; font-size: 40px; letter-spacing: 0.12em; color: #8A8D98; }
+    .tag b { color: #C9A227; font-weight: 400; }
+    .cue { position: absolute; inset: 0; display: flex; align-items: flex-end; justify-content: center; padding-bottom: 130px; }
+    .cue::before { content: ""; position: absolute; left: 0; right: 0; bottom: 0; height: 420px; background: linear-gradient(to top, rgba(11,11,15,0.92), rgba(11,11,15,0)); }
+    .cue-in { position: relative; max-width: 1500px; text-align: center; color: #E8E6E1; }
+    .cue em { font-style: normal; color: #C9A227; }
+    .cue-frase .cue-in { font-weight: 600; font-size: 60px; line-height: 1.2; letter-spacing: -0.01em; }
+    .cue-titulo .cue-in { font-family: "Bebas Neue"; font-size: 170px; line-height: 1; letter-spacing: 0.03em; }
+    .cue-citacao .cue-in { font-family: "Cormorant Garamond"; font-style: italic; font-weight: 500; font-size: 92px; line-height: 1.1; }
+    .cue-lista .lista-titulo { font-family: "Bebas Neue"; font-size: 84px; letter-spacing: 0.04em; margin-bottom: 22px; }
+    .cue-lista .lista { display: flex; gap: 56px; justify-content: center; font-weight: 600; font-size: 40px; color: #E8E6E1; }
+    .cue-lista .lista span::before { content: ""; display: inline-block; width: 12px; height: 12px; border-radius: 6px; background: #C9A227; margin-right: 14px; vertical-align: middle; }
+    .cue-cvv { padding-bottom: 150px; }
+    .cue-cvv .cvv-linha1 { font-family: "Bebas Neue"; font-size: 140px; line-height: 1; letter-spacing: 0.04em; }
+    .cue-cvv .cvv-linha2 { font-size: 40px; font-weight: 500; color: #8A8D98; margin-top: 10px; }
+    .cue-cvv .cvv-linha3 { font-size: 52px; font-weight: 600; margin-top: 16px; }
+    .cue-comentario .cue-in { display: flex; align-items: center; gap: 28px; font-weight: 600; font-size: 56px; }
+    .fonte { position: absolute; inset: 0; pointer-events: none; }
+    .fonte-in { position: absolute; right: 192px; top: 118px; width: 600px; padding: 30px 36px; background: #1C1D24; border-left: 5px solid #C9A227; border-radius: 6px; }
+    .fonte-autor { font-family: "Cormorant Garamond"; font-style: italic; font-weight: 500; font-size: 48px; line-height: 1.1; color: #E8E6E1; }
+    .fonte-ano { font-weight: 700; font-size: 30px; letter-spacing: 0.08em; color: #C9A227; margin-top: 10px; }
+    .fonte-revista { font-weight: 500; font-size: 30px; line-height: 1.35; color: #8A8D98; margin-top: 6px; }
+    .nevoa { position: absolute; border-radius: 50%; background: radial-gradient(ellipse at center, rgba(138,141,152,0.09) 0%, rgba(138,141,152,0.03) 45%, rgba(138,141,152,0) 70%); }
+    .logo { position: absolute; inset: 0; display: flex; flex-direction: column; align-items: center; justify-content: center; gap: 26px; }
+    .logo span { font-family: "Bebas Neue"; font-size: 150px; letter-spacing: 0.14em; color: #E8E6E1; text-shadow: 0 0 40px rgba(201,162,39,0.35); }
+    .logo i { display: block; width: 260px; height: 5px; background: #C9A227; }
+    .logo.cta { justify-content: flex-start; padding-top: 220px; }
+  </style>
+  <div id="root" data-composition-id="cuidado" data-width="1920" data-height="1080">
+    <div id="cuidado-cena">
+      <div id="cuidado-luz"></div>
+      <svg viewBox="0 0 1920 1080" width="1920" height="1080"><circle id="cuidado-po0" cx="164" cy="1071" r="3.4" fill="#E8E6E1" opacity="0.20"/><circle id="cuidado-po1" cx="904" cy="152" r="2.8" fill="#E8E6E1" opacity="0.08"/><circle id="cuidado-po2" cx="364" cy="632" r="2.5" fill="#E8E6E1" opacity="0.14"/><circle id="cuidado-po3" cx="1583" cy="349" r="1.8" fill="#E8E6E1" opacity="0.27"/><circle id="cuidado-po4" cx="251" cy="112" r="2.4" fill="#E8E6E1" opacity="0.25"/><circle id="cuidado-po5" cx="4" cy="602" r="2.0" fill="#E8E6E1" opacity="0.08"/><circle id="cuidado-po6" cx="296" cy="709" r="2.8" fill="#E8E6E1" opacity="0.25"/><circle id="cuidado-po7" cx="185" cy="967" r="3.6" fill="#E8E6E1" opacity="0.22"/><circle id="cuidado-po8" cx="1429" cy="911" r="1.5" fill="#E8E6E1" opacity="0.29"/><circle id="cuidado-po9" cx="1442" cy="15" r="2.7" fill="#E8E6E1" opacity="0.28"/><circle id="cuidado-po10" cx="747" cy="428" r="3.1" fill="#E8E6E1" opacity="0.08"/><circle id="cuidado-po11" cx="824" cy="638" r="2.8" fill="#E8E6E1" opacity="0.20"/><circle id="cuidado-po12" cx="587" cy="468" r="4.1" fill="#E8E6E1" opacity="0.23"/><circle id="cuidado-po13" cx="535" cy="983" r="3.3" fill="#E8E6E1" opacity="0.14"/><circle id="cuidado-po14" cx="1697" cy="769" r="3.4" fill="#E8E6E1" opacity="0.16"/><circle id="cuidado-po15" cx="1099" cy="526" r="3.0" fill="#E8E6E1" opacity="0.23"/><circle id="cuidado-po16" cx="1123" cy="975" r="2.3" fill="#E8E6E1" opacity="0.09"/><circle id="cuidado-po17" cx="668" cy="77" r="1.9" fill="#E8E6E1" opacity="0.20"/><circle id="cuidado-po18" cx="1256" cy="972" r="4.0" fill="#E8E6E1" opacity="0.22"/><circle id="cuidado-po19" cx="1577" cy="174" r="2.6" fill="#E8E6E1" opacity="0.15"/><circle id="cuidado-po20" cx="934" cy="433" r="4.4" fill="#E8E6E1" opacity="0.14"/><circle id="cuidado-po21" cx="594" cy="454" r="2.7" fill="#E8E6E1" opacity="0.19"/><circle id="cuidado-po22" cx="1208" cy="626" r="3.6" fill="#E8E6E1" opacity="0.13"/><circle id="cuidado-po23" cx="1560" cy="820" r="2.9" fill="#E8E6E1" opacity="0.29"/><circle id="cuidado-po24" cx="1817" cy="606" r="3.2" fill="#E8E6E1" opacity="0.23"/><circle id="cuidado-po25" cx="432" cy="898" r="3.7" fill="#E8E6E1" opacity="0.17"/></svg>
+      <div id="cuidado-motivo">
+        <svg viewBox="0 0 1920 1080" width="1920" height="1080">
+    <defs>
+      <linearGradient id="cuidado-aurora" x1="0" y1="0" x2="0" y2="1"><stop offset="0%" stop-color="#1b2030"/><stop offset="60%" stop-color="#6a4a2a"/><stop offset="100%" stop-color="#e2b65a"/></linearGradient>
+      <radialGradient id="cuidado-sol"><stop offset="0%" stop-color="#fbe3a0" stop-opacity="0.95"/><stop offset="100%" stop-color="#fbe3a0" stop-opacity="0"/></radialGradient>
+      <clipPath id="cuidado-vidro"><rect x="700" y="160" width="520" height="560"/></clipPath>
+      <linearGradient id="cuidado-chao" x1="0" y1="0" x2="0" y2="1"><stop offset="0%" stop-color="#C9A227" stop-opacity="0.25"/><stop offset="100%" stop-color="#C9A227" stop-opacity="0"/></linearGradient>
+    </defs>
+    <g id="cuidado-janela">
+      <polygon id="cuidado-feixe" points="700,720 1220,720 1500,1080 420,1080" fill="url(#cuidado-chao)" opacity="0"/>
+      <g clip-path="url(#cuidado-vidro)">
+        <rect x="700" y="160" width="520" height="560" fill="#0e1018"/>
+        <rect id="cuidado-ceu" x="700" y="160" width="520" height="560" fill="url(#cuidado-aurora)" opacity="0"/>
+        <circle id="cuidado-astro" cx="960" cy="860" r="220" fill="url(#cuidado-sol)"/>
+        <path d="M700,640 Q820,600 930,632 T1220,620 L1220,720 L700,720 Z" fill="#0b0c10"/>
+      </g>
+      <rect x="700" y="160" width="520" height="560" fill="none" stroke="#3a3b44" stroke-width="12"/>
+      <polygon id="cuidado-folhae" points="706,166 960,166 960,714 706,714" fill="#15161b" stroke="#3a3b44" stroke-width="6"/>
+      <polygon id="cuidado-folhad" points="960,166 1214,166 1214,714 960,714" fill="#15161b" stroke="#3a3b44" stroke-width="6"/>
+    </g>
+        </svg>
+        
+      </div>
+      
+      <div class="assinatura-canto"></div>
+      <div id="cuidado-t0" class="clip cue cue-cvv" data-start="13.793" data-duration="16.836" data-track-index="2"><div class="cue-in"><div class="cvv-linha1">CVV · ligue <em>188</em></div><div class="cvv-linha2">gratuito, 24 horas, com sigilo</div><div class="cvv-linha3">cvv.org.br</div></div></div>
+      
+      <div id="cuidado-preto"></div>
+    </div>
+  </div>
+  <script>
+    window.__timelines = window.__timelines || {};
+    const tl = gsap.timeline({ paused: true });
+    tl.fromTo("#cuidado-luz", { x: -120, opacity: 0.7 }, { x: 120, opacity: 1, duration: 31.229, ease: "sine.inOut" }, 0);
+    tl.fromTo("#cuidado-motivo", { scale: 1 }, { scale: 1.04, duration: 31.229, ease: "none" }, 0);
+    tl.fromTo("#cuidado-po0", { y: 0, x: 0 }, { y: -30, x: -20, duration: 31.229, ease: "none" }, 0);
+    tl.fromTo("#cuidado-po1", { y: 0, x: 0 }, { y: -67, x: 3, duration: 31.229, ease: "none" }, 0);
+    tl.fromTo("#cuidado-po2", { y: 0, x: 0 }, { y: -44, x: -14, duration: 31.229, ease: "none" }, 0);
+    tl.fromTo("#cuidado-po3", { y: 0, x: 0 }, { y: -81, x: 9, duration: 31.229, ease: "none" }, 0);
+    tl.fromTo("#cuidado-po4", { y: 0, x: 0 }, { y: -58, x: -8, duration: 31.229, ease: "none" }, 0);
+    tl.fromTo("#cuidado-po5", { y: 0, x: 0 }, { y: -35, x: 15, duration: 31.229, ease: "none" }, 0);
+    tl.fromTo("#cuidado-po6", { y: 0, x: 0 }, { y: -72, x: -2, duration: 31.229, ease: "none" }, 0);
+    tl.fromTo("#cuidado-po7", { y: 0, x: 0 }, { y: -49, x: -19, duration: 31.229, ease: "none" }, 0);
+    tl.fromTo("#cuidado-po8", { y: 0, x: 0 }, { y: -86, x: 4, duration: 31.229, ease: "none" }, 0);
+    tl.fromTo("#cuidado-po9", { y: 0, x: 0 }, { y: -63, x: -13, duration: 31.229, ease: "none" }, 0);
+    tl.fromTo("#cuidado-po10", { y: 0, x: 0 }, { y: -40, x: 10, duration: 31.229, ease: "none" }, 0);
+    tl.fromTo("#cuidado-po11", { y: 0, x: 0 }, { y: -77, x: -7, duration: 31.229, ease: "none" }, 0);
+    tl.fromTo("#cuidado-po12", { y: 0, x: 0 }, { y: -54, x: 16, duration: 31.229, ease: "none" }, 0);
+    tl.fromTo("#cuidado-po13", { y: 0, x: 0 }, { y: -31, x: -1, duration: 31.229, ease: "none" }, 0);
+    tl.fromTo("#cuidado-po14", { y: 0, x: 0 }, { y: -68, x: -18, duration: 31.229, ease: "none" }, 0);
+    tl.fromTo("#cuidado-po15", { y: 0, x: 0 }, { y: -45, x: 5, duration: 31.229, ease: "none" }, 0);
+    tl.fromTo("#cuidado-po16", { y: 0, x: 0 }, { y: -82, x: -12, duration: 31.229, ease: "none" }, 0);
+    tl.fromTo("#cuidado-po17", { y: 0, x: 0 }, { y: -59, x: 11, duration: 31.229, ease: "none" }, 0);
+    tl.fromTo("#cuidado-po18", { y: 0, x: 0 }, { y: -36, x: -6, duration: 31.229, ease: "none" }, 0);
+    tl.fromTo("#cuidado-po19", { y: 0, x: 0 }, { y: -73, x: 17, duration: 31.229, ease: "none" }, 0);
+    tl.fromTo("#cuidado-po20", { y: 0, x: 0 }, { y: -50, x: 0, duration: 31.229, ease: "none" }, 0);
+    tl.fromTo("#cuidado-po21", { y: 0, x: 0 }, { y: -87, x: -17, duration: 31.229, ease: "none" }, 0);
+    tl.fromTo("#cuidado-po22", { y: 0, x: 0 }, { y: -64, x: 6, duration: 31.229, ease: "none" }, 0);
+    tl.fromTo("#cuidado-po23", { y: 0, x: 0 }, { y: -41, x: -11, duration: 31.229, ease: "none" }, 0);
+    tl.fromTo("#cuidado-po24", { y: 0, x: 0 }, { y: -78, x: 12, duration: 31.229, ease: "none" }, 0);
+    tl.fromTo("#cuidado-po25", { y: 0, x: 0 }, { y: -55, x: -5, duration: 31.229, ease: "none" }, 0);
+    tl.to("#cuidado-folhae", { scaleX: 0.12, svgOrigin: "706 440", duration: 3.2, ease: "power2.inOut" }, 1.2);
+    tl.to("#cuidado-folhad", { scaleX: 0.12, svgOrigin: "1214 440", duration: 3.2, ease: "power2.inOut" }, 1.4);
+    tl.fromTo("#cuidado-ceu", { opacity: 0 }, { opacity: 1, duration: 21.86, ease: "sine.inOut" }, 2);
+    tl.fromTo("#cuidado-astro", { y: 0 }, { y: -260, duration: 29.229, ease: "sine.out" }, 2);
+    tl.fromTo("#cuidado-feixe", { opacity: 0 }, { opacity: 1, duration: 4 }, 3);
+    tl.to("#cuidado-janela", { scale: 0.62, y: -150, svgOrigin: "960 440", duration: 1.4, ease: "power3.inOut" }, 12.993);
+    tl.fromTo("#cuidado-t0 .cue-in", { opacity: 0, y: 18, filter: "blur(10px)" }, { opacity: 1, y: 0, filter: "blur(0px)", duration: 0.8, ease: "power3.out" }, 13.793);
+    tl.to("#cuidado-t0 .cue-in", { opacity: 0, filter: "blur(6px)", duration: 0.4, ease: "power2.in" }, 30.209);
+    tl.fromTo("#cuidado-preto", { opacity: 1 }, { opacity: 0, duration: 0.6, ease: "power1.out" }, 0);
+    tl.to("#cuidado-preto", { opacity: 1, duration: 0.5, ease: "power1.in" }, 30.629);
+    window.__timelines["cuidado"] = tl;
+  </script>
+</template>

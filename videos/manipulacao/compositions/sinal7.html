@@ -1,0 +1,142 @@
+<template>
+  <style>
+    @font-face { font-family: "Bebas Neue"; src: url("assets/fonts/bebas-neue.woff2") format("woff2"); font-weight: 400; }
+    @font-face { font-family: "Cormorant Garamond"; src: url("assets/fonts/cormorant-garamond-italic.woff2") format("woff2"); font-style: italic; font-weight: 500; }
+    #root { position: absolute; inset: 0; overflow: hidden; background: #0B0B0F; font-family: "Inter", sans-serif; }
+    #sinal7-cena, #sinal7-cena > svg, #sinal7-motivo { position: absolute; inset: 0; }
+    #sinal7-luz { position: absolute; left: 50%; top: 40%; width: 1500px; height: 1100px; margin: -550px 0 0 -750px;
+      background: radial-gradient(ellipse at center, rgba(201,162,39,0.13) 0%, rgba(201,162,39,0.04) 40%, rgba(201,162,39,0) 70%); }
+    #sinal7-preto { position: absolute; inset: 0; background: #000; pointer-events: none; }
+    .assinatura-canto { position: absolute; left: 96px; bottom: 72px; width: 56px; height: 4px; background: #C9A227; opacity: 0.85; }
+    .titulo-sinal { position: absolute; inset: 0; display: flex; flex-direction: column; align-items: center; justify-content: center; text-align: center; }
+    .titulo-sinal .num { font-family: "Bebas Neue"; font-size: 64px; letter-spacing: 0.3em; color: #C9A227; }
+    .titulo-sinal .nome { font-family: "Bebas Neue"; font-size: 190px; line-height: 0.95; letter-spacing: 0.02em; color: #E8E6E1; max-width: 1500px; }
+    .tag { position: absolute; left: 192px; top: 118px; font-family: "Bebas Neue"; font-size: 40px; letter-spacing: 0.12em; color: #8A8D98; }
+    .tag b { color: #C9A227; font-weight: 400; }
+    .cue { position: absolute; inset: 0; display: flex; align-items: flex-end; justify-content: center; padding-bottom: 130px; }
+    .cue::before { content: ""; position: absolute; left: 0; right: 0; bottom: 0; height: 420px; background: linear-gradient(to top, rgba(11,11,15,0.92), rgba(11,11,15,0)); }
+    .cue-in { position: relative; max-width: 1500px; text-align: center; color: #E8E6E1; }
+    .cue em { font-style: normal; color: #C9A227; }
+    .cue-frase .cue-in { font-weight: 600; font-size: 60px; line-height: 1.2; letter-spacing: -0.01em; }
+    .cue-titulo .cue-in { font-family: "Bebas Neue"; font-size: 170px; line-height: 1; letter-spacing: 0.03em; }
+    .cue-citacao .cue-in { font-family: "Cormorant Garamond"; font-style: italic; font-weight: 500; font-size: 92px; line-height: 1.1; }
+    .cue-lista .lista-titulo { font-family: "Bebas Neue"; font-size: 84px; letter-spacing: 0.04em; margin-bottom: 22px; }
+    .cue-lista .lista { display: flex; gap: 56px; justify-content: center; font-weight: 600; font-size: 40px; color: #E8E6E1; }
+    .cue-lista .lista span::before { content: ""; display: inline-block; width: 12px; height: 12px; border-radius: 6px; background: #C9A227; margin-right: 14px; vertical-align: middle; }
+    .cue-cvv { padding-bottom: 150px; }
+    .cue-cvv .cvv-linha1 { font-family: "Bebas Neue"; font-size: 140px; line-height: 1; letter-spacing: 0.04em; }
+    .cue-cvv .cvv-linha2 { font-size: 40px; font-weight: 500; color: #8A8D98; margin-top: 10px; }
+    .cue-cvv .cvv-linha3 { font-size: 52px; font-weight: 600; margin-top: 16px; }
+    .cue-comentario .cue-in { display: flex; align-items: center; gap: 28px; font-weight: 600; font-size: 56px; }
+    .fonte { position: absolute; inset: 0; pointer-events: none; }
+    .fonte-in { position: absolute; right: 192px; top: 118px; width: 600px; padding: 30px 36px; background: #1C1D24; border-left: 5px solid #C9A227; border-radius: 6px; }
+    .fonte-autor { font-family: "Cormorant Garamond"; font-style: italic; font-weight: 500; font-size: 48px; line-height: 1.1; color: #E8E6E1; }
+    .fonte-ano { font-weight: 700; font-size: 30px; letter-spacing: 0.08em; color: #C9A227; margin-top: 10px; }
+    .fonte-revista { font-weight: 500; font-size: 30px; line-height: 1.35; color: #8A8D98; margin-top: 6px; }
+    .nevoa { position: absolute; border-radius: 50%; background: radial-gradient(ellipse at center, rgba(138,141,152,0.09) 0%, rgba(138,141,152,0.03) 45%, rgba(138,141,152,0) 70%); }
+    .logo { position: absolute; inset: 0; display: flex; flex-direction: column; align-items: center; justify-content: center; gap: 26px; }
+    .logo span { font-family: "Bebas Neue"; font-size: 150px; letter-spacing: 0.14em; color: #E8E6E1; text-shadow: 0 0 40px rgba(201,162,39,0.35); }
+    .logo i { display: block; width: 260px; height: 5px; background: #C9A227; }
+    .logo.cta { justify-content: flex-start; padding-top: 220px; }
+  </style>
+  <div id="root" data-composition-id="sinal7" data-width="1920" data-height="1080">
+    <div id="sinal7-cena">
+      <div id="sinal7-luz"></div>
+      <svg viewBox="0 0 1920 1080" width="1920" height="1080"><circle id="sinal7-po0" cx="109" cy="509" r="2.7" fill="#E8E6E1" opacity="0.14"/><circle id="sinal7-po1" cx="1702" cy="43" r="1.5" fill="#E8E6E1" opacity="0.09"/><circle id="sinal7-po2" cx="419" cy="918" r="2.9" fill="#E8E6E1" opacity="0.18"/><circle id="sinal7-po3" cx="188" cy="143" r="3.2" fill="#E8E6E1" opacity="0.16"/><circle id="sinal7-po4" cx="1902" cy="710" r="3.1" fill="#E8E6E1" opacity="0.29"/><circle id="sinal7-po5" cx="957" cy="1064" r="2.6" fill="#E8E6E1" opacity="0.19"/><circle id="sinal7-po6" cx="1498" cy="435" r="2.5" fill="#E8E6E1" opacity="0.13"/><circle id="sinal7-po7" cx="1812" cy="478" r="2.6" fill="#E8E6E1" opacity="0.17"/><circle id="sinal7-po8" cx="1595" cy="303" r="2.9" fill="#E8E6E1" opacity="0.12"/><circle id="sinal7-po9" cx="785" cy="240" r="3.4" fill="#E8E6E1" opacity="0.24"/><circle id="sinal7-po10" cx="567" cy="6" r="4.4" fill="#E8E6E1" opacity="0.29"/><circle id="sinal7-po11" cx="435" cy="768" r="3.5" fill="#E8E6E1" opacity="0.16"/><circle id="sinal7-po12" cx="205" cy="159" r="3.7" fill="#E8E6E1" opacity="0.16"/><circle id="sinal7-po13" cx="1387" cy="670" r="4.1" fill="#E8E6E1" opacity="0.19"/><circle id="sinal7-po14" cx="33" cy="203" r="3.0" fill="#E8E6E1" opacity="0.09"/><circle id="sinal7-po15" cx="668" cy="309" r="4.2" fill="#E8E6E1" opacity="0.23"/><circle id="sinal7-po16" cx="1039" cy="297" r="2.5" fill="#E8E6E1" opacity="0.13"/><circle id="sinal7-po17" cx="1314" cy="867" r="2.8" fill="#E8E6E1" opacity="0.24"/><circle id="sinal7-po18" cx="1653" cy="746" r="4.3" fill="#E8E6E1" opacity="0.10"/><circle id="sinal7-po19" cx="1605" cy="650" r="3.0" fill="#E8E6E1" opacity="0.24"/><circle id="sinal7-po20" cx="206" cy="840" r="3.1" fill="#E8E6E1" opacity="0.27"/><circle id="sinal7-po21" cx="262" cy="1075" r="2.1" fill="#E8E6E1" opacity="0.22"/><circle id="sinal7-po22" cx="1200" cy="885" r="2.1" fill="#E8E6E1" opacity="0.09"/><circle id="sinal7-po23" cx="790" cy="672" r="2.6" fill="#E8E6E1" opacity="0.20"/><circle id="sinal7-po24" cx="778" cy="933" r="3.8" fill="#E8E6E1" opacity="0.19"/><circle id="sinal7-po25" cx="197" cy="475" r="1.5" fill="#E8E6E1" opacity="0.17"/></svg>
+      <div id="sinal7-motivo">
+        <svg viewBox="0 0 1920 1080" width="1920" height="1080">
+    <path d="M520,700 Q520,520 600,520 L1460,520 Q1540,520 1540,700 L1540,820 L520,820 Z" fill="#111217" stroke="#2A2B33" stroke-width="2"/>
+    <path d="M600,690 Q900,670 1200,700 M520,740 Q980,720 1400,760" stroke="#1d1e25" stroke-width="3" fill="none"/>
+    <g id="sinal7-celular" transform="translate(-170 60)"><rect x="960" y="200" width="340" height="470" rx="40" fill="#101116" stroke="#34353e" stroke-width="3"/>
+      <rect x="974" y="216" width="312" height="438" rx="30" fill="#17181e"/><g id="sinal7-m0" opacity="0"><rect x="1041" y="296" width="229" height="54" rx="20" fill="#1C1D24" stroke="#C9A227" stroke-width="1.5"/>
+      <text x="1058" y="332" font-family="Inter" font-weight="500" font-size="28" fill="#E8E6E1">Oi, tudo bem?</text>
+      <text x="1270" y="374" text-anchor="end" font-family="Inter" font-weight="500" font-size="18" fill="#8A8D98" data-layout-ignore>Visualizada</text></g><g id="sinal7-m1" opacity="0"><rect x="1011" y="388" width="259" height="54" rx="20" fill="#1C1D24" stroke="#C9A227" stroke-width="1.5"/>
+      <text x="1028" y="424" font-family="Inter" font-weight="500" font-size="28" fill="#E8E6E1">Aconteceu algo?</text>
+      <text x="1270" y="466" text-anchor="end" font-family="Inter" font-weight="500" font-size="18" fill="#8A8D98" data-layout-ignore>Visualizada</text></g><g id="sinal7-m2" opacity="0"><rect x="1056" y="480" width="214" height="54" rx="20" fill="#1C1D24" stroke="#C9A227" stroke-width="1.5"/>
+      <text x="1073" y="516" font-family="Inter" font-weight="500" font-size="28" fill="#E8E6E1">Fala comigo…</text>
+      <text x="1270" y="558" text-anchor="end" font-family="Inter" font-weight="500" font-size="18" fill="#8A8D98" data-layout-ignore>Visualizada</text></g>
+      <g id="sinal7-digitando" opacity="0"><rect x="990" y="600" width="80" height="36" rx="16" fill="#2a2b33"/><circle cx="1012" cy="618" r="5" fill="#8A8D98"/><circle cx="1030" cy="618" r="5" fill="#8A8D98"/><circle cx="1048" cy="618" r="5" fill="#8A8D98"/></g></g>
+    <g id="sinal7-relogio"><circle cx="520" cy="320" r="100" fill="#111217" stroke="#8A8D98" stroke-width="4"/>
+      <line x1="520" y1="232" x2="520" y2="252" stroke="#8A8D98" stroke-width="3" transform="rotate(0 520 320)"/><line x1="520" y1="232" x2="520" y2="242" stroke="#8A8D98" stroke-width="3" transform="rotate(30 520 320)"/><line x1="520" y1="232" x2="520" y2="242" stroke="#8A8D98" stroke-width="3" transform="rotate(60 520 320)"/><line x1="520" y1="232" x2="520" y2="252" stroke="#8A8D98" stroke-width="3" transform="rotate(90 520 320)"/><line x1="520" y1="232" x2="520" y2="242" stroke="#8A8D98" stroke-width="3" transform="rotate(120 520 320)"/><line x1="520" y1="232" x2="520" y2="242" stroke="#8A8D98" stroke-width="3" transform="rotate(150 520 320)"/><line x1="520" y1="232" x2="520" y2="252" stroke="#8A8D98" stroke-width="3" transform="rotate(180 520 320)"/><line x1="520" y1="232" x2="520" y2="242" stroke="#8A8D98" stroke-width="3" transform="rotate(210 520 320)"/><line x1="520" y1="232" x2="520" y2="242" stroke="#8A8D98" stroke-width="3" transform="rotate(240 520 320)"/><line x1="520" y1="232" x2="520" y2="252" stroke="#8A8D98" stroke-width="3" transform="rotate(270 520 320)"/><line x1="520" y1="232" x2="520" y2="242" stroke="#8A8D98" stroke-width="3" transform="rotate(300 520 320)"/><line x1="520" y1="232" x2="520" y2="242" stroke="#8A8D98" stroke-width="3" transform="rotate(330 520 320)"/>
+      <line id="sinal7-hora" x1="520" y1="320" x2="520" y2="268" stroke="#E8E6E1" stroke-width="7" stroke-linecap="round"/>
+      <line id="sinal7-min" x1="520" y1="320" x2="520" y2="244" stroke="#C9A227" stroke-width="4" stroke-linecap="round"/>
+      <circle cx="520" cy="320" r="7" fill="#E8E6E1"/></g>
+    <text id="sinal7-d0" x="520" y="500" text-anchor="middle" font-family="Bebas Neue" font-size="56" letter-spacing="4" fill="#8A8D98" opacity="0">1 dia</text><text id="sinal7-d1" x="520" y="500" text-anchor="middle" font-family="Bebas Neue" font-size="56" letter-spacing="4" fill="#8A8D98" opacity="0">2 dias</text><text id="sinal7-d2" x="520" y="500" text-anchor="middle" font-family="Bebas Neue" font-size="56" letter-spacing="4" fill="#8A8D98" opacity="0">3 dias</text><text id="sinal7-d3" x="520" y="500" text-anchor="middle" font-family="Bebas Neue" font-size="56" letter-spacing="4" fill="#8A8D98" opacity="0">5 dias</text>
+        </svg>
+        
+      </div>
+      <div id="sinal7-titulo" class="titulo-sinal"><div class="num">Sinal 7</div><div class="nome">Tratamento de silêncio</div></div>
+      <div id="sinal7-tag" class="tag"><b>7</b> · Tratamento de silêncio</div>
+      <div class="assinatura-canto"></div>
+      <div id="sinal7-t0" class="clip cue cue-titulo" data-start="17.924" data-duration="8.092" data-track-index="2"><div class="cue-in">Silêncio como punição</div></div>
+      <div id="sinal7-t1" class="clip cue cue-lista" data-start="26.216" data-duration="9" data-track-index="2"><div class="cue-in"><div class="lista-titulo">4 necessidades ameaçadas</div><div class="lista"><span id="sinal7-it0">pertencer</span><span id="sinal7-it1">autoestima</span><span id="sinal7-it2">controle</span><span id="sinal7-it3">existência</span></div></div></div>
+      <div id="sinal7-fonte0" class="clip fonte" data-start="18.324" data-duration="4" data-track-index="3"><div class="fonte-in"><div class="fonte-autor">Williams, K. D.</div><div class="fonte-ano">ostracismo</div><div class="fonte-revista">Purdue University · Advances in Experimental Social Psychology (2009)</div></div></div>
+      <div id="sinal7-fonte1" class="clip fonte" data-start="37.044" data-duration="4" data-track-index="3"><div class="fonte-in"><div class="fonte-autor">Schrodt, Witt &amp; Shimkowski</div><div class="fonte-ano">2014</div><div class="fonte-revista">Communication Monographs, 81(1) · 74 estudos</div></div></div>
+      <div id="sinal7-preto"></div>
+    </div>
+  </div>
+  <script>
+    window.__timelines = window.__timelines || {};
+    const tl = gsap.timeline({ paused: true });
+    tl.fromTo("#sinal7-luz", { x: -120, opacity: 0.7 }, { x: 120, opacity: 1, duration: 60.528, ease: "sine.inOut" }, 0);
+    tl.fromTo("#sinal7-motivo", { scale: 1 }, { scale: 1.04, duration: 60.528, ease: "none" }, 0);
+    tl.fromTo("#sinal7-po0", { y: 0, x: 0 }, { y: -30, x: -20, duration: 60.528, ease: "none" }, 0);
+    tl.fromTo("#sinal7-po1", { y: 0, x: 0 }, { y: -67, x: 3, duration: 60.528, ease: "none" }, 0);
+    tl.fromTo("#sinal7-po2", { y: 0, x: 0 }, { y: -44, x: -14, duration: 60.528, ease: "none" }, 0);
+    tl.fromTo("#sinal7-po3", { y: 0, x: 0 }, { y: -81, x: 9, duration: 60.528, ease: "none" }, 0);
+    tl.fromTo("#sinal7-po4", { y: 0, x: 0 }, { y: -58, x: -8, duration: 60.528, ease: "none" }, 0);
+    tl.fromTo("#sinal7-po5", { y: 0, x: 0 }, { y: -35, x: 15, duration: 60.528, ease: "none" }, 0);
+    tl.fromTo("#sinal7-po6", { y: 0, x: 0 }, { y: -72, x: -2, duration: 60.528, ease: "none" }, 0);
+    tl.fromTo("#sinal7-po7", { y: 0, x: 0 }, { y: -49, x: -19, duration: 60.528, ease: "none" }, 0);
+    tl.fromTo("#sinal7-po8", { y: 0, x: 0 }, { y: -86, x: 4, duration: 60.528, ease: "none" }, 0);
+    tl.fromTo("#sinal7-po9", { y: 0, x: 0 }, { y: -63, x: -13, duration: 60.528, ease: "none" }, 0);
+    tl.fromTo("#sinal7-po10", { y: 0, x: 0 }, { y: -40, x: 10, duration: 60.528, ease: "none" }, 0);
+    tl.fromTo("#sinal7-po11", { y: 0, x: 0 }, { y: -77, x: -7, duration: 60.528, ease: "none" }, 0);
+    tl.fromTo("#sinal7-po12", { y: 0, x: 0 }, { y: -54, x: 16, duration: 60.528, ease: "none" }, 0);
+    tl.fromTo("#sinal7-po13", { y: 0, x: 0 }, { y: -31, x: -1, duration: 60.528, ease: "none" }, 0);
+    tl.fromTo("#sinal7-po14", { y: 0, x: 0 }, { y: -68, x: -18, duration: 60.528, ease: "none" }, 0);
+    tl.fromTo("#sinal7-po15", { y: 0, x: 0 }, { y: -45, x: 5, duration: 60.528, ease: "none" }, 0);
+    tl.fromTo("#sinal7-po16", { y: 0, x: 0 }, { y: -82, x: -12, duration: 60.528, ease: "none" }, 0);
+    tl.fromTo("#sinal7-po17", { y: 0, x: 0 }, { y: -59, x: 11, duration: 60.528, ease: "none" }, 0);
+    tl.fromTo("#sinal7-po18", { y: 0, x: 0 }, { y: -36, x: -6, duration: 60.528, ease: "none" }, 0);
+    tl.fromTo("#sinal7-po19", { y: 0, x: 0 }, { y: -73, x: 17, duration: 60.528, ease: "none" }, 0);
+    tl.fromTo("#sinal7-po20", { y: 0, x: 0 }, { y: -50, x: 0, duration: 60.528, ease: "none" }, 0);
+    tl.fromTo("#sinal7-po21", { y: 0, x: 0 }, { y: -87, x: -17, duration: 60.528, ease: "none" }, 0);
+    tl.fromTo("#sinal7-po22", { y: 0, x: 0 }, { y: -64, x: 6, duration: 60.528, ease: "none" }, 0);
+    tl.fromTo("#sinal7-po23", { y: 0, x: 0 }, { y: -41, x: -11, duration: 60.528, ease: "none" }, 0);
+    tl.fromTo("#sinal7-po24", { y: 0, x: 0 }, { y: -78, x: 12, duration: 60.528, ease: "none" }, 0);
+    tl.fromTo("#sinal7-po25", { y: 0, x: 0 }, { y: -55, x: -5, duration: 60.528, ease: "none" }, 0);
+    tl.fromTo("#sinal7-titulo", { opacity: 0, filter: "blur(10px)", y: 20 }, { opacity: 1, filter: "blur(0px)", y: 0, duration: 1.0, ease: "power3.out" }, 0.3);
+    tl.to("#sinal7-titulo", { opacity: 0, y: -30, filter: "blur(8px)", duration: 0.7, ease: "power2.in" }, 5.549);
+    tl.fromTo("#sinal7-tag", { opacity: 0, x: -20 }, { opacity: 1, x: 0, duration: 0.6, ease: "power2.out" }, 6.049);
+    tl.fromTo("#sinal7-motivo", { opacity: 0 }, { opacity: 1, duration: 1.2, ease: "power1.out" }, 5.849);
+    tl.fromTo("#sinal7-m0", { opacity: 0, y: 20 }, { opacity: 1, y: 0, duration: 0.5, ease: "power2.out" }, 0.8);
+    tl.fromTo("#sinal7-m1", { opacity: 0, y: 20 }, { opacity: 1, y: 0, duration: 0.5, ease: "power2.out" }, 3);
+    tl.fromTo("#sinal7-m2", { opacity: 0, y: 20 }, { opacity: 1, y: 0, duration: 0.5, ease: "power2.out" }, 5.2);
+    tl.fromTo("#sinal7-digitando", { opacity: 0 }, { opacity: 1, duration: 0.3, yoyo: true, repeat: 3, repeatDelay: 0.6 }, 6.649);
+    tl.fromTo("#sinal7-min", { rotation: 0, svgOrigin: "520 320" }, { rotation: 10800, svgOrigin: "520 320", duration: 60.528, ease: "none" }, 0);
+    tl.fromTo("#sinal7-hora", { rotation: 0, svgOrigin: "520 320" }, { rotation: 900, svgOrigin: "520 320", duration: 60.528, ease: "none" }, 0);
+    tl.fromTo("#sinal7-d0", { opacity: 0 }, { opacity: 1, duration: 0.3 }, 10.909);
+    tl.to("#sinal7-d0", { opacity: 0, duration: 0.3 }, 12.309);
+    tl.fromTo("#sinal7-d1", { opacity: 0 }, { opacity: 1, duration: 0.3 }, 12.509);
+    tl.to("#sinal7-d1", { opacity: 0, duration: 0.3 }, 13.909);
+    tl.fromTo("#sinal7-d2", { opacity: 0 }, { opacity: 1, duration: 0.3 }, 14.109);
+    tl.to("#sinal7-d2", { opacity: 0, duration: 0.3 }, 15.509);
+    tl.fromTo("#sinal7-d3", { opacity: 0 }, { opacity: 1, duration: 0.3 }, 15.709);
+    tl.fromTo("#sinal7-t0 .cue-in", { opacity: 0, y: 18, filter: "blur(10px)" }, { opacity: 1, y: 0, filter: "blur(0px)", duration: 0.8, ease: "power3.out" }, 17.924);
+    tl.to("#sinal7-t0 .cue-in", { opacity: 0, filter: "blur(6px)", duration: 0.4, ease: "power2.in" }, 25.596);
+    tl.fromTo("#sinal7-t1 .cue-in", { opacity: 0, y: 18, filter: "blur(10px)" }, { opacity: 1, y: 0, filter: "blur(0px)", duration: 0.8, ease: "power3.out" }, 26.216);
+    tl.fromTo("#sinal7-it0", { opacity: 0, y: 12 }, { opacity: 1, y: 0, duration: 0.5 }, 27.816);
+    tl.fromTo("#sinal7-it1", { opacity: 0, y: 12 }, { opacity: 1, y: 0, duration: 0.5 }, 28.916);
+    tl.fromTo("#sinal7-it2", { opacity: 0, y: 12 }, { opacity: 1, y: 0, duration: 0.5 }, 30.016);
+    tl.fromTo("#sinal7-it3", { opacity: 0, y: 12 }, { opacity: 1, y: 0, duration: 0.5 }, 31.116);
+    tl.to("#sinal7-t1 .cue-in", { opacity: 0, filter: "blur(6px)", duration: 0.4, ease: "power2.in" }, 34.796);
+    tl.fromTo("#sinal7-fonte0 .fonte-in", { opacity: 0, x: 30 }, { opacity: 1, x: 0, duration: 0.6, ease: "power3.out" }, 18.324);
+    tl.to("#sinal7-fonte0 .fonte-in", { opacity: 0, x: 20, duration: 0.4, ease: "power2.in" }, 21.874);
+    tl.fromTo("#sinal7-fonte1 .fonte-in", { opacity: 0, x: 30 }, { opacity: 1, x: 0, duration: 0.6, ease: "power3.out" }, 37.044);
+    tl.to("#sinal7-fonte1 .fonte-in", { opacity: 0, x: 20, duration: 0.4, ease: "power2.in" }, 40.594);
+    tl.fromTo("#sinal7-preto", { opacity: 1 }, { opacity: 0, duration: 0.6, ease: "power1.out" }, 0);
+    tl.to("#sinal7-preto", { opacity: 1, duration: 0.5, ease: "power1.in" }, 59.928);
+    window.__timelines["sinal7"] = tl;
+  </script>
+</template>

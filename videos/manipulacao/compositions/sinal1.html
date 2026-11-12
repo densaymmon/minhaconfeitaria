@@ -1,0 +1,127 @@
+<template>
+  <style>
+    @font-face { font-family: "Bebas Neue"; src: url("assets/fonts/bebas-neue.woff2") format("woff2"); font-weight: 400; }
+    @font-face { font-family: "Cormorant Garamond"; src: url("assets/fonts/cormorant-garamond-italic.woff2") format("woff2"); font-style: italic; font-weight: 500; }
+    #root { position: absolute; inset: 0; overflow: hidden; background: #0B0B0F; font-family: "Inter", sans-serif; }
+    #sinal1-cena, #sinal1-cena > svg, #sinal1-motivo { position: absolute; inset: 0; }
+    #sinal1-luz { position: absolute; left: 50%; top: 40%; width: 1500px; height: 1100px; margin: -550px 0 0 -750px;
+      background: radial-gradient(ellipse at center, rgba(201,162,39,0.13) 0%, rgba(201,162,39,0.04) 40%, rgba(201,162,39,0) 70%); }
+    #sinal1-preto { position: absolute; inset: 0; background: #000; pointer-events: none; }
+    .assinatura-canto { position: absolute; left: 96px; bottom: 72px; width: 56px; height: 4px; background: #C9A227; opacity: 0.85; }
+    .titulo-sinal { position: absolute; inset: 0; display: flex; flex-direction: column; align-items: center; justify-content: center; text-align: center; }
+    .titulo-sinal .num { font-family: "Bebas Neue"; font-size: 64px; letter-spacing: 0.3em; color: #C9A227; }
+    .titulo-sinal .nome { font-family: "Bebas Neue"; font-size: 190px; line-height: 0.95; letter-spacing: 0.02em; color: #E8E6E1; max-width: 1500px; }
+    .tag { position: absolute; left: 192px; top: 118px; font-family: "Bebas Neue"; font-size: 40px; letter-spacing: 0.12em; color: #8A8D98; }
+    .tag b { color: #C9A227; font-weight: 400; }
+    .cue { position: absolute; inset: 0; display: flex; align-items: flex-end; justify-content: center; padding-bottom: 130px; }
+    .cue::before { content: ""; position: absolute; left: 0; right: 0; bottom: 0; height: 420px; background: linear-gradient(to top, rgba(11,11,15,0.92), rgba(11,11,15,0)); }
+    .cue-in { position: relative; max-width: 1500px; text-align: center; color: #E8E6E1; }
+    .cue em { font-style: normal; color: #C9A227; }
+    .cue-frase .cue-in { font-weight: 600; font-size: 60px; line-height: 1.2; letter-spacing: -0.01em; }
+    .cue-titulo .cue-in { font-family: "Bebas Neue"; font-size: 170px; line-height: 1; letter-spacing: 0.03em; }
+    .cue-citacao .cue-in { font-family: "Cormorant Garamond"; font-style: italic; font-weight: 500; font-size: 92px; line-height: 1.1; }
+    .cue-lista .lista-titulo { font-family: "Bebas Neue"; font-size: 84px; letter-spacing: 0.04em; margin-bottom: 22px; }
+    .cue-lista .lista { display: flex; gap: 56px; justify-content: center; font-weight: 600; font-size: 40px; color: #E8E6E1; }
+    .cue-lista .lista span::before { content: ""; display: inline-block; width: 12px; height: 12px; border-radius: 6px; background: #C9A227; margin-right: 14px; vertical-align: middle; }
+    .cue-cvv { padding-bottom: 150px; }
+    .cue-cvv .cvv-linha1 { font-family: "Bebas Neue"; font-size: 140px; line-height: 1; letter-spacing: 0.04em; }
+    .cue-cvv .cvv-linha2 { font-size: 40px; font-weight: 500; color: #8A8D98; margin-top: 10px; }
+    .cue-cvv .cvv-linha3 { font-size: 52px; font-weight: 600; margin-top: 16px; }
+    .cue-comentario .cue-in { display: flex; align-items: center; gap: 28px; font-weight: 600; font-size: 56px; }
+    .fonte { position: absolute; inset: 0; pointer-events: none; }
+    .fonte-in { position: absolute; right: 192px; top: 118px; width: 600px; padding: 30px 36px; background: #1C1D24; border-left: 5px solid #C9A227; border-radius: 6px; }
+    .fonte-autor { font-family: "Cormorant Garamond"; font-style: italic; font-weight: 500; font-size: 48px; line-height: 1.1; color: #E8E6E1; }
+    .fonte-ano { font-weight: 700; font-size: 30px; letter-spacing: 0.08em; color: #C9A227; margin-top: 10px; }
+    .fonte-revista { font-weight: 500; font-size: 30px; line-height: 1.35; color: #8A8D98; margin-top: 6px; }
+    .nevoa { position: absolute; border-radius: 50%; background: radial-gradient(ellipse at center, rgba(138,141,152,0.09) 0%, rgba(138,141,152,0.03) 45%, rgba(138,141,152,0) 70%); }
+    .logo { position: absolute; inset: 0; display: flex; flex-direction: column; align-items: center; justify-content: center; gap: 26px; }
+    .logo span { font-family: "Bebas Neue"; font-size: 150px; letter-spacing: 0.14em; color: #E8E6E1; text-shadow: 0 0 40px rgba(201,162,39,0.35); }
+    .logo i { display: block; width: 260px; height: 5px; background: #C9A227; }
+    .logo.cta { justify-content: flex-start; padding-top: 220px; }
+  </style>
+  <div id="root" data-composition-id="sinal1" data-width="1920" data-height="1080">
+    <div id="sinal1-cena">
+      <div id="sinal1-luz"></div>
+      <svg viewBox="0 0 1920 1080" width="1920" height="1080"><circle id="sinal1-po0" cx="130" cy="221" r="2.9" fill="#E8E6E1" opacity="0.30"/><circle id="sinal1-po1" cx="1324" cy="633" r="2.0" fill="#E8E6E1" opacity="0.23"/><circle id="sinal1-po2" cx="1515" cy="751" r="3.5" fill="#E8E6E1" opacity="0.19"/><circle id="sinal1-po3" cx="1560" cy="700" r="3.6" fill="#E8E6E1" opacity="0.14"/><circle id="sinal1-po4" cx="691" cy="714" r="3.1" fill="#E8E6E1" opacity="0.08"/><circle id="sinal1-po5" cx="528" cy="659" r="1.9" fill="#E8E6E1" opacity="0.09"/><circle id="sinal1-po6" cx="1335" cy="608" r="2.8" fill="#E8E6E1" opacity="0.26"/><circle id="sinal1-po7" cx="1029" cy="1055" r="3.3" fill="#E8E6E1" opacity="0.17"/><circle id="sinal1-po8" cx="800" cy="699" r="3.2" fill="#E8E6E1" opacity="0.22"/><circle id="sinal1-po9" cx="714" cy="247" r="2.9" fill="#E8E6E1" opacity="0.28"/><circle id="sinal1-po10" cx="1659" cy="119" r="3.8" fill="#E8E6E1" opacity="0.08"/><circle id="sinal1-po11" cx="1222" cy="812" r="2.8" fill="#E8E6E1" opacity="0.13"/><circle id="sinal1-po12" cx="1910" cy="87" r="3.2" fill="#E8E6E1" opacity="0.28"/><circle id="sinal1-po13" cx="1121" cy="615" r="1.9" fill="#E8E6E1" opacity="0.30"/><circle id="sinal1-po14" cx="1831" cy="1006" r="2.4" fill="#E8E6E1" opacity="0.14"/><circle id="sinal1-po15" cx="1629" cy="993" r="3.9" fill="#E8E6E1" opacity="0.29"/><circle id="sinal1-po16" cx="526" cy="227" r="4.3" fill="#E8E6E1" opacity="0.12"/><circle id="sinal1-po17" cx="103" cy="202" r="4.0" fill="#E8E6E1" opacity="0.10"/><circle id="sinal1-po18" cx="147" cy="1075" r="3.8" fill="#E8E6E1" opacity="0.11"/><circle id="sinal1-po19" cx="1293" cy="141" r="2.7" fill="#E8E6E1" opacity="0.26"/><circle id="sinal1-po20" cx="0" cy="353" r="3.3" fill="#E8E6E1" opacity="0.18"/><circle id="sinal1-po21" cx="1432" cy="538" r="2.0" fill="#E8E6E1" opacity="0.27"/><circle id="sinal1-po22" cx="221" cy="560" r="1.8" fill="#E8E6E1" opacity="0.25"/><circle id="sinal1-po23" cx="59" cy="75" r="3.2" fill="#E8E6E1" opacity="0.12"/><circle id="sinal1-po24" cx="1747" cy="248" r="1.8" fill="#E8E6E1" opacity="0.10"/><circle id="sinal1-po25" cx="717" cy="1025" r="3.9" fill="#E8E6E1" opacity="0.24"/></svg>
+      <div id="sinal1-motivo">
+        <svg viewBox="0 0 1920 1080" width="1920" height="1080">
+    <g transform="translate(-70 0)"><ellipse cx="960" cy="690" rx="520" ry="110" fill="#C9A227" opacity="0.05"/>
+    <g id="sinal1-celular"><rect x="780" y="600" width="360" height="170" rx="30" fill="#101116" stroke="#34353e" stroke-width="3"/>
+      <rect x="796" y="614" width="328" height="142" rx="20" fill="#1a1b22"/><circle cx="960" cy="685" r="26" fill="none" stroke="#C9A227" stroke-width="3" opacity="0.7"/></g>
+    <g id="sinal1-torre"><g id="sinal1-k0" opacity="0"><rect x="782" y="516" width="340" height="56" rx="14" fill="#1C1D24" stroke="#C9A227" stroke-width="2"/>
+        <circle cx="810" cy="544" r="9" fill="#C9A227"/><rect x="834" y="532" width="160" height="9" rx="4" fill="#8A8D98"/><rect x="834" y="548" width="110" height="7" rx="3" fill="#4a4c57"/></g><g id="sinal1-k1" opacity="0"><rect x="790" y="466" width="340" height="56" rx="14" fill="#1C1D24" stroke="#2A2B33" stroke-width="2"/>
+        <circle cx="818" cy="494" r="9" fill="#C9A227"/><rect x="842" y="482" width="197" height="9" rx="4" fill="#8A8D98"/><rect x="842" y="498" width="163" height="7" rx="3" fill="#4a4c57"/></g><g id="sinal1-k2" opacity="0"><rect x="798" y="416" width="340" height="56" rx="14" fill="#1C1D24" stroke="#2A2B33" stroke-width="2"/>
+        <circle cx="826" cy="444" r="9" fill="#C9A227"/><rect x="850" y="432" width="234" height="9" rx="4" fill="#8A8D98"/><rect x="850" y="448" width="216" height="7" rx="3" fill="#4a4c57"/></g><g id="sinal1-k3" opacity="0"><rect x="782" y="366" width="340" height="56" rx="14" fill="#1C1D24" stroke="#C9A227" stroke-width="2"/>
+        <circle cx="810" cy="394" r="9" fill="#C9A227"/><rect x="834" y="382" width="181" height="9" rx="4" fill="#8A8D98"/><rect x="834" y="398" width="149" height="7" rx="3" fill="#4a4c57"/></g><g id="sinal1-k4" opacity="0"><rect x="790" y="316" width="340" height="56" rx="14" fill="#1C1D24" stroke="#2A2B33" stroke-width="2"/>
+        <circle cx="818" cy="344" r="9" fill="#C9A227"/><rect x="842" y="332" width="218" height="9" rx="4" fill="#8A8D98"/><rect x="842" y="348" width="202" height="7" rx="3" fill="#4a4c57"/></g><g id="sinal1-k5" opacity="0"><rect x="798" y="266" width="340" height="56" rx="14" fill="#1C1D24" stroke="#2A2B33" stroke-width="2"/>
+        <circle cx="826" cy="294" r="9" fill="#C9A227"/><rect x="850" y="282" width="165" height="9" rx="4" fill="#8A8D98"/><rect x="850" y="298" width="135" height="7" rx="3" fill="#4a4c57"/></g><g id="sinal1-k6" opacity="0"><rect x="782" y="216" width="340" height="56" rx="14" fill="#1C1D24" stroke="#C9A227" stroke-width="2"/>
+        <circle cx="810" cy="244" r="9" fill="#C9A227"/><rect x="834" y="232" width="202" height="9" rx="4" fill="#8A8D98"/><rect x="834" y="248" width="188" height="7" rx="3" fill="#4a4c57"/></g><g id="sinal1-k7" opacity="0"><rect x="790" y="166" width="340" height="56" rx="14" fill="#1C1D24" stroke="#2A2B33" stroke-width="2"/>
+        <circle cx="818" cy="194" r="9" fill="#C9A227"/><rect x="842" y="182" width="239" height="9" rx="4" fill="#8A8D98"/><rect x="842" y="198" width="121" height="7" rx="3" fill="#4a4c57"/></g><g id="sinal1-k8" opacity="0"><rect x="798" y="116" width="340" height="56" rx="14" fill="#1C1D24" stroke="#2A2B33" stroke-width="2"/>
+        <circle cx="826" cy="144" r="9" fill="#C9A227"/><rect x="850" y="132" width="186" height="9" rx="4" fill="#8A8D98"/><rect x="850" y="148" width="174" height="7" rx="3" fill="#4a4c57"/></g></g></g>
+        </svg>
+        
+      </div>
+      <div id="sinal1-titulo" class="titulo-sinal"><div class="num">Sinal 1</div><div class="nome">Love bombing</div></div>
+      <div id="sinal1-tag" class="tag"><b>1</b> · Love bombing</div>
+      <div class="assinatura-canto"></div>
+      <div id="sinal1-t0" class="clip cue cue-frase" data-start="48.277" data-duration="7.088" data-track-index="2"><div class="cue-in">Love bombing: <em>intensidade</em> antes da intimidade</div></div>
+      <div id="sinal1-fonte0" class="clip fonte" data-start="22.577" data-duration="4" data-track-index="3"><div class="fonte-in"><div class="fonte-autor">Strutzenberg et al.</div><div class="fonte-ano">2017</div><div class="fonte-revista">Discovery, 18(1) · Universidade do Arkansas · n = 484</div></div></div>
+      <div id="sinal1-preto"></div>
+    </div>
+  </div>
+  <script>
+    window.__timelines = window.__timelines || {};
+    const tl = gsap.timeline({ paused: true });
+    tl.fromTo("#sinal1-luz", { x: -120, opacity: 0.7 }, { x: 120, opacity: 1, duration: 55.965, ease: "sine.inOut" }, 0);
+    tl.fromTo("#sinal1-motivo", { scale: 1 }, { scale: 1.04, duration: 55.965, ease: "none" }, 0);
+    tl.fromTo("#sinal1-po0", { y: 0, x: 0 }, { y: -30, x: -20, duration: 55.965, ease: "none" }, 0);
+    tl.fromTo("#sinal1-po1", { y: 0, x: 0 }, { y: -67, x: 3, duration: 55.965, ease: "none" }, 0);
+    tl.fromTo("#sinal1-po2", { y: 0, x: 0 }, { y: -44, x: -14, duration: 55.965, ease: "none" }, 0);
+    tl.fromTo("#sinal1-po3", { y: 0, x: 0 }, { y: -81, x: 9, duration: 55.965, ease: "none" }, 0);
+    tl.fromTo("#sinal1-po4", { y: 0, x: 0 }, { y: -58, x: -8, duration: 55.965, ease: "none" }, 0);
+    tl.fromTo("#sinal1-po5", { y: 0, x: 0 }, { y: -35, x: 15, duration: 55.965, ease: "none" }, 0);
+    tl.fromTo("#sinal1-po6", { y: 0, x: 0 }, { y: -72, x: -2, duration: 55.965, ease: "none" }, 0);
+    tl.fromTo("#sinal1-po7", { y: 0, x: 0 }, { y: -49, x: -19, duration: 55.965, ease: "none" }, 0);
+    tl.fromTo("#sinal1-po8", { y: 0, x: 0 }, { y: -86, x: 4, duration: 55.965, ease: "none" }, 0);
+    tl.fromTo("#sinal1-po9", { y: 0, x: 0 }, { y: -63, x: -13, duration: 55.965, ease: "none" }, 0);
+    tl.fromTo("#sinal1-po10", { y: 0, x: 0 }, { y: -40, x: 10, duration: 55.965, ease: "none" }, 0);
+    tl.fromTo("#sinal1-po11", { y: 0, x: 0 }, { y: -77, x: -7, duration: 55.965, ease: "none" }, 0);
+    tl.fromTo("#sinal1-po12", { y: 0, x: 0 }, { y: -54, x: 16, duration: 55.965, ease: "none" }, 0);
+    tl.fromTo("#sinal1-po13", { y: 0, x: 0 }, { y: -31, x: -1, duration: 55.965, ease: "none" }, 0);
+    tl.fromTo("#sinal1-po14", { y: 0, x: 0 }, { y: -68, x: -18, duration: 55.965, ease: "none" }, 0);
+    tl.fromTo("#sinal1-po15", { y: 0, x: 0 }, { y: -45, x: 5, duration: 55.965, ease: "none" }, 0);
+    tl.fromTo("#sinal1-po16", { y: 0, x: 0 }, { y: -82, x: -12, duration: 55.965, ease: "none" }, 0);
+    tl.fromTo("#sinal1-po17", { y: 0, x: 0 }, { y: -59, x: 11, duration: 55.965, ease: "none" }, 0);
+    tl.fromTo("#sinal1-po18", { y: 0, x: 0 }, { y: -36, x: -6, duration: 55.965, ease: "none" }, 0);
+    tl.fromTo("#sinal1-po19", { y: 0, x: 0 }, { y: -73, x: 17, duration: 55.965, ease: "none" }, 0);
+    tl.fromTo("#sinal1-po20", { y: 0, x: 0 }, { y: -50, x: 0, duration: 55.965, ease: "none" }, 0);
+    tl.fromTo("#sinal1-po21", { y: 0, x: 0 }, { y: -87, x: -17, duration: 55.965, ease: "none" }, 0);
+    tl.fromTo("#sinal1-po22", { y: 0, x: 0 }, { y: -64, x: 6, duration: 55.965, ease: "none" }, 0);
+    tl.fromTo("#sinal1-po23", { y: 0, x: 0 }, { y: -41, x: -11, duration: 55.965, ease: "none" }, 0);
+    tl.fromTo("#sinal1-po24", { y: 0, x: 0 }, { y: -78, x: 12, duration: 55.965, ease: "none" }, 0);
+    tl.fromTo("#sinal1-po25", { y: 0, x: 0 }, { y: -55, x: -5, duration: 55.965, ease: "none" }, 0);
+    tl.fromTo("#sinal1-titulo", { opacity: 0.4, filter: "blur(10px)", y: 20 }, { opacity: 1, filter: "blur(0px)", y: 0, duration: 1.0, ease: "power3.out" }, 0);
+    tl.to("#sinal1-titulo", { opacity: 0, y: -30, filter: "blur(8px)", duration: 0.7, ease: "power2.in" }, 2.989);
+    tl.fromTo("#sinal1-tag", { opacity: 0, x: -20 }, { opacity: 1, x: 0, duration: 0.6, ease: "power2.out" }, 3.489);
+    tl.fromTo("#sinal1-motivo", { opacity: 0 }, { opacity: 1, duration: 1.2, ease: "power1.out" }, 3.289);
+    tl.fromTo("#sinal1-celular", { x: -3 }, { x: 3, duration: 0.05, repeat: 248, yoyo: true, ease: "none" }, 3.989);
+    tl.fromTo("#sinal1-k0", { opacity: 0, y: -40 }, { opacity: 1, y: 0, duration: 0.35, ease: "back.out(2)" }, 3.989);
+    tl.fromTo("#sinal1-k1", { opacity: 0, y: -40 }, { opacity: 1, y: 0, duration: 0.35, ease: "back.out(2)" }, 5.322);
+    tl.fromTo("#sinal1-k2", { opacity: 0, y: -40 }, { opacity: 1, y: 0, duration: 0.35, ease: "back.out(2)" }, 6.655);
+    tl.fromTo("#sinal1-k3", { opacity: 0, y: -40 }, { opacity: 1, y: 0, duration: 0.35, ease: "back.out(2)" }, 7.987);
+    tl.fromTo("#sinal1-k4", { opacity: 0, y: -40 }, { opacity: 1, y: 0, duration: 0.35, ease: "back.out(2)" }, 9.32);
+    tl.fromTo("#sinal1-k5", { opacity: 0, y: -40 }, { opacity: 1, y: 0, duration: 0.35, ease: "back.out(2)" }, 10.653);
+    tl.fromTo("#sinal1-k6", { opacity: 0, y: -40 }, { opacity: 1, y: 0, duration: 0.35, ease: "back.out(2)" }, 11.986);
+    tl.fromTo("#sinal1-k7", { opacity: 0, y: -40 }, { opacity: 1, y: 0, duration: 0.35, ease: "back.out(2)" }, 13.318);
+    tl.fromTo("#sinal1-k8", { opacity: 0, y: -40 }, { opacity: 1, y: 0, duration: 0.35, ease: "back.out(2)" }, 14.651);
+    tl.fromTo("#sinal1-torre", { rotation: 0, svgOrigin: "960 600" }, { rotation: 1.2, svgOrigin: "960 600", duration: 1.1, ease: "sine.inOut", repeat: 33, yoyo: true }, 17.939);
+    tl.to("#sinal1-torre", { x: -14, duration: 38.026, ease: "sine.in" }, 17.939);
+    tl.fromTo("#sinal1-t0 .cue-in", { opacity: 0, y: 18, filter: "blur(10px)" }, { opacity: 1, y: 0, filter: "blur(0px)", duration: 0.8, ease: "power3.out" }, 48.277);
+    tl.to("#sinal1-t0 .cue-in", { opacity: 0, filter: "blur(6px)", duration: 0.4, ease: "power2.in" }, 54.945);
+    tl.fromTo("#sinal1-fonte0 .fonte-in", { opacity: 0, x: 30 }, { opacity: 1, x: 0, duration: 0.6, ease: "power3.out" }, 22.577);
+    tl.to("#sinal1-fonte0 .fonte-in", { opacity: 0, x: 20, duration: 0.4, ease: "power2.in" }, 26.127);
+    tl.set("#sinal1-preto", { opacity: 0 }, 0);
+    tl.to("#sinal1-preto", { opacity: 1, duration: 0.5, ease: "power1.in" }, 55.365);
+    window.__timelines["sinal1"] = tl;
+  </script>
+</template>

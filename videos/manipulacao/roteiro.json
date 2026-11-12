@@ -1,0 +1,245 @@
+{
+  "titulo": "Sinais de manipulação emocional que quase ninguém nota",
+  "voz": { "id": "pm_alex", "lang": "pt-br", "velocidade": 0.9 },
+  "pausas": { "normal": 0.42, "impacto": 1.0, "inicio": 0.9, "fim": 1.4 },
+  "partes": [
+    { "id": "parte-1", "titulo": "Gancho e introdução", "blocos": ["gancho", "assinatura", "intro"] },
+    { "id": "parte-2", "titulo": "Sinais 1 e 2", "blocos": ["sinal1", "sinal2"] },
+    { "id": "parte-3", "titulo": "Sinal 3 e gancho de retenção", "blocos": ["sinal3", "retencao"] },
+    { "id": "parte-4", "titulo": "Sinais 4 e 5", "blocos": ["sinal4", "sinal5"] },
+    { "id": "parte-5", "titulo": "Sinais 6 e 7", "blocos": ["sinal6", "sinal7"] },
+    { "id": "parte-6", "titulo": "Fechamento, cuidado e chamada", "blocos": ["conexao", "cuidado", "cta"] }
+  ],
+  "blocos": {
+    "gancho": {
+      "nome": "Gancho",
+      "linhas": [
+        { "id": "desculpa", "t": "Se você já pediu desculpas por algo que nem sabe direito o que fez… este vídeo é pra você.", "p": 0.8 },
+        { "t": "Porque a manipulação mais eficiente não grita." },
+        { "id": "sussurra", "t": "Ela sussurra.", "p": 0.9 },
+        { "id": "duvidar", "t": "E faz você duvidar de si mesmo tão devagar que você nem percebe.", "p": 0.6 }
+      ],
+      "textos": [
+        { "em": "desculpa", "atraso": 0.3, "texto": "Desculpa…", "estilo": "celular" },
+        { "em": "duvidar", "atraso": 0.4, "texto": "Por quê?", "estilo": "titulo" }
+      ]
+    },
+    "assinatura": { "nome": "Assinatura", "duracao": 3.0, "linhas": [] },
+    "intro": {
+      "nome": "Introdução",
+      "linhas": [
+        { "t": "Quando pensamos em manipulação, imaginamos um vilão óbvio, alguém que grita, ameaça, controla tudo." },
+        { "t": "Na vida real, quase nunca é assim.", "p": 0.7 },
+        { "t": "Ela aparece em gestos pequenos, repetidos, às vezes até gentis." },
+        { "id": "sete", "t": "Hoje vamos ver sete sinais sutis de manipulação emocional, o que a pesquisa já descobriu sobre cada um, e por que eles funcionam tão bem.", "p": 0.7 },
+        { "id": "aviso", "t": "Antes, um aviso importante: reconhecer um desses comportamentos em alguém não transforma essa pessoa automaticamente num manipulador." },
+        { "t": "Todo mundo erra, todo mundo tem dias ruins." },
+        { "id": "padrao", "t": "O que importa é o padrão.", "p": 0.8 },
+        { "t": "Guarde essa palavra." },
+        { "id": "padrao2", "t": "Padrão.", "p": 1.0 }
+      ],
+      "textos": [
+        { "em": "sete", "atraso": 0.6, "texto": "7 sinais", "estilo": "titulo" },
+        { "em": "padrao", "atraso": 0.2, "texto": "O que importa é o <em>PADRÃO</em>", "estilo": "frase" }
+      ]
+    },
+    "sinal1": {
+      "nome": "Love bombing",
+      "numero": 1,
+      "linhas": [
+        { "t": "Sinal número um: o excesso no começo.", "p": 0.7 },
+        { "t": "Você conhece alguém e, em poucos dias, recebe mensagens o tempo todo, elogios intensos, planos de futuro, 'nunca senti isso por ninguém'." },
+        { "t": "Parece um filme." },
+        { "t": "E é justamente esse o problema.", "p": 0.8 },
+        { "t": "Em inglês, isso ganhou o nome de love bombing, um bombardeio de afeto.", "f": "Em inglês, isso ganhou o nome de lâv bâmin, um bombardeio de afeto." },
+        { "id": "estudo", "t": "Em 2017, pesquisadores da Universidade do Arkansas, liderados por Claire Strutzenberg, fizeram um dos primeiros estudos empíricos sobre o tema, com quatrocentos e oitenta e quatro universitários.", "f": "Em 2017, pesquisadores da Universidade do Árcanssó, liderados por Clér Strútzenberg, fizeram um dos primeiros estudos empíricos sobre o tema, com quatrocentos e oitenta e quatro universitários." },
+        { "t": "Eles encontraram associação entre esse comportamento e traços narcisistas, além de menor autoestima em quem praticava." },
+        { "t": "É uma correlação, não uma sentença.", "p": 0.7 },
+        { "id": "alerta", "t": "Mas o alerta fica: quando a intensidade vem antes da intimidade, vale observar o que acontece quando você diz 'não'.", "p": 0.6 }
+      ],
+      "textos": [
+        { "em": "alerta", "atraso": 1.2, "texto": "Love bombing: <em>intensidade</em> antes da intimidade", "estilo": "frase" }
+      ],
+      "fontes": [
+        { "em": "estudo", "atraso": 0.4, "autor": "Strutzenberg et al.", "ano": "2017", "revista": "Discovery, 18(1) · Universidade do Arkansas · n = 484" }
+      ]
+    },
+    "sinal2": {
+      "nome": "Gaslighting",
+      "numero": 2,
+      "linhas": [
+        { "t": "Sinal número dois: você começa a duvidar da própria memória.", "p": 0.7 },
+        { "id": "frases", "t": "'Eu nunca disse isso.' 'Você está exagerando.' 'Você é sensível demais.'", "p": 0.7 },
+        { "t": "Uma vez, tudo bem." },
+        { "t": "Mas quando vira rotina, você passa a conferir prints, a ensaiar conversas, a pedir para outras pessoas confirmarem o que você viveu." },
+        { "id": "nome", "t": "O nome disso é gaslighting, e vem de uma peça de teatro dos anos trinta, depois adaptada para o cinema, em que um marido convence a esposa de que ela está enlouquecendo.", "f": "O nome disso é guésláitin, e vem de uma peça de teatro dos anos trinta, depois adaptada para o cinema, em que um marido convence a esposa de que ela está enlouquecendo." },
+        { "id": "estudo", "t": "Em 2019, a socióloga Paige Sweet, da Universidade Harvard, publicou um estudo na American Sociological Review mostrando que o gaslighting fica mais forte quando se apoia em desigualdades de poder e em estereótipos, como a ideia de que certas pessoas seriam 'emocionais demais' para confiar em si mesmas.", "f": "Em 2019, a socióloga Pêidj Suít, da Universidade Rárvard, publicou um estudo na Américan Sossiolójical Reviú mostrando que o guésláitin fica mais forte quando se apoia em desigualdades de poder e em estereótipos, como a ideia de que certas pessoas seriam emocionais demais para confiar em si mesmas." },
+        { "t": "O resultado é o que ela descreve como um ambiente 'surreal'.", "p": 0.7 },
+        { "id": "real", "t": "O sinal mais claro: você sai das conversas sem saber mais o que é real.", "p": 0.8 }
+      ],
+      "textos": [
+        { "em": "frases", "atraso": 0.1, "texto": "“Eu nunca disse isso.”", "estilo": "citacao" },
+        { "em": "nome", "atraso": 1.0, "texto": "Gaslighting", "estilo": "titulo" }
+      ],
+      "fontes": [
+        { "em": "estudo", "atraso": 0.4, "autor": "Sweet, P. L.", "ano": "2019", "revista": "American Sociological Review, 84(5)" }
+      ]
+    },
+    "sinal3": {
+      "nome": "Culpa como ferramenta",
+      "numero": 3,
+      "linhas": [
+        { "t": "Sinal número três: a culpa sempre chega antes da conversa.", "p": 0.7 },
+        { "id": "fala", "t": "Você quer sair com os amigos e escuta: 'tudo bem, vai lá, eu fico aqui sozinho mesmo'.", "p": 0.8 },
+        { "t": "Ninguém te proibiu de nada." },
+        { "t": "Mesmo assim, você fica.", "p": 0.9 },
+        { "id": "estudo", "t": "Em 1994, os psicólogos Roy Baumeister, Arlene Stillwell e Todd Heatherton publicaram uma revisão no Psychological Bulletin defendendo que a culpa é uma emoção essencialmente interpessoal.", "f": "Em 1994, os psicólogos Rói Báumaister, Arlíne Stílwel e Tód Rédertôn publicaram uma revisão no Saicolójical Búletin defendendo que a culpa é uma emoção essencialmente interpessoal." },
+        { "t": "Ela existe para proteger relações." },
+        { "t": "E justamente por isso pode ser usada para influenciar: quem se mostra magoado consegue que o outro ceda, sem precisar pedir nada diretamente.", "p": 0.7 },
+        { "t": "Culpa saudável aponta um erro real." },
+        { "t": "Culpa fabricada aparece toda vez que você tenta ter vida própria.", "p": 0.8 }
+      ],
+      "textos": [
+        { "em": "fala", "atraso": 2.2, "texto": "“Vai lá… eu fico sozinho mesmo.”", "estilo": "citacao" }
+      ],
+      "fontes": [
+        { "em": "estudo", "atraso": 0.4, "autor": "Baumeister, Stillwell & Heatherton", "ano": "1994", "revista": "Psychological Bulletin, 115(2)" }
+      ]
+    },
+    "retencao": {
+      "nome": "Gancho de retenção",
+      "linhas": [
+        { "t": "Até aqui, talvez você esteja pensando: 'tá, mas isso é fácil de perceber'." },
+        { "id": "proximos", "t": "Só que os próximos sinais são diferentes.", "p": 0.6 },
+        { "t": "Eles não parecem ataques." },
+        { "t": "Parecem amor, parecem silêncio, parecem cuidado.", "p": 0.8 },
+        { "t": "E o último, o sétimo, é provavelmente o que mais gente vive sem dar nome." },
+        { "t": "Fica até o fim.", "p": 0.8 }
+      ],
+      "textos": [
+        { "em": "proximos", "atraso": 0.2, "texto": "Os próximos são mais difíceis de ver…", "estilo": "frase" }
+      ]
+    },
+    "sinal4": {
+      "nome": "Reforço intermitente",
+      "numero": 4,
+      "linhas": [
+        { "t": "Sinal número quatro: o carinho imprevisível.", "p": 0.7 },
+        { "t": "Num dia, a pessoa é incrível, atenciosa, presente." },
+        { "t": "No outro, fria, distante, como se você não existisse." },
+        { "t": "E você passa a semana tentando descobrir o que fazer para o dia bom voltar.", "p": 0.7 },
+        { "t": "A psicologia comportamental estudou esse mecanismo há décadas." },
+        { "id": "skinner", "t": "Nos anos cinquenta, Charles Ferster e B. F. Skinner mostraram que recompensas dadas de forma imprevisível mantêm um comportamento por mais tempo do que recompensas constantes.", "f": "Nos anos cinquenta, Tchárls Férster e Bí Éf Squíner mostraram que recompensas dadas de forma imprevisível mantêm um comportamento por mais tempo do que recompensas constantes." },
+        { "t": "É a lógica de uma máquina caça-níquel.", "p": 0.7 },
+        { "id": "vinculo", "t": "Nos relacionamentos, os psicólogos Donald Dutton e Susan Painter usaram essa ideia para descrever o que chamaram de vínculo traumático: a alternância entre maus-tratos e afeto pode criar um apego muito forte.", "f": "Nos relacionamentos, os psicólogos Dónald Dâton e Súzan Pêinter usaram essa ideia para descrever o que chamaram de vínculo traumático: a alternância entre maus-tratos e afeto pode criar um apego muito forte." },
+        { "id": "estudo", "t": "Num estudo de 1993 com setenta e cinco mulheres que tinham acabado de sair de relações abusivas, a intermitência dos maus-tratos e a diferença de poder entre os parceiros ajudaram a prever o quanto elas continuavam ligadas ao ex, mesmo meses depois.", "f": "Num estudo de mil novecentos e noventa e três, com setenta e cinco mulheres que tinham acabado de sair de relações abusivas, a intermitência dos maus-tratos e a diferença de poder entre os parceiros ajudaram a prever o quanto elas continuavam ligadas ao ex, mesmo meses depois.", "p": 0.8 },
+        { "t": "Não é fraqueza." },
+        { "t": "É aprendizado.", "p": 0.9 }
+      ],
+      "textos": [
+        { "em": "vinculo", "atraso": 3.5, "texto": "Reforço intermitente <em>→</em> vínculo traumático", "estilo": "frase" }
+      ],
+      "fontes": [
+        { "em": "skinner", "atraso": 0.4, "autor": "Ferster & Skinner", "ano": "1957", "revista": "Schedules of Reinforcement" },
+        { "em": "estudo", "atraso": 0.4, "autor": "Dutton & Painter", "ano": "1993", "revista": "Violence and Victims, 8(2) · n = 75" }
+      ]
+    },
+    "sinal5": {
+      "nome": "Triangulação",
+      "numero": 5,
+      "linhas": [
+        { "t": "Sinal número cinco: sempre existe uma terceira pessoa na conversa.", "p": 0.7 },
+        { "t": "'Minha ex nunca reclamava disso.' 'Até a sua irmã acha que você exagera.' 'Fulano me entende melhor.'", "p": 0.7 },
+        { "t": "De repente, você não está discutindo com uma pessoa." },
+        { "id": "plateia", "t": "Está competindo com uma plateia.", "p": 0.9 },
+        { "id": "bowen", "t": "O psiquiatra Murray Bowen, criador da teoria dos sistemas familiares, descreveu o triângulo como a menor unidade emocional estável: quando a tensão cresce entre duas pessoas, uma terceira é puxada para dentro.", "f": "O psiquiatra Mârei Bóuen, criador da teoria dos sistemas familiares, descreveu o triângulo como a menor unidade emocional estável: quando a tensão cresce entre duas pessoas, uma terceira é puxada para dentro." },
+        { "t": "Isso alivia a tensão, mas não resolve nada, e alguém sempre acaba de fora." },
+        { "t": "Na manipulação, esse terceiro vira uma régua invisível para você nunca se sentir suficiente.", "p": 0.8 }
+      ],
+      "textos": [
+        { "em": "plateia", "atraso": 0.2, "texto": "Triangulação: competindo com uma <em>plateia</em>", "estilo": "frase" }
+      ],
+      "fontes": [
+        { "em": "bowen", "atraso": 0.4, "autor": "Murray Bowen", "ano": "teoria dos sistemas familiares", "revista": "The Bowen Center · “Triangles”" }
+      ]
+    },
+    "sinal6": {
+      "nome": "Metas que se movem",
+      "numero": 6,
+      "linhas": [
+        { "t": "Sinal número seis: a linha de chegada que sempre muda de lugar.", "p": 0.7 },
+        { "t": "Você melhora aquilo que foi criticado e, quando consegue, surge outra exigência." },
+        { "id": "tom", "t": "Respondeu rápido? Agora é o tom. Mudou o tom? Agora é a roupa.", "p": 0.8 },
+        { "t": "Em inglês, chamam isso de moving the goalposts, mover as traves do gol.", "f": "Em inglês, chamam isso de múvin dâ gôulpôusts, mover as traves do gol." },
+        { "t": "Não é um diagnóstico clínico, é uma descrição de comportamento." },
+        { "id": "stark", "t": "Mas ele conversa com algo que o sociólogo Evan Stark descreveu no livro Coercive Control, de 2007: o abuso muitas vezes não é um episódio isolado, e sim um padrão contínuo de controle sobre a vida cotidiana.", "f": "Mas ele conversa com algo que o sociólogo Évan Stárk descreveu no livro Couârssiv Contról, de dois mil e sete: o abuso muitas vezes não é um episódio isolado, e sim um padrão contínuo de controle sobre a vida cotidiana." },
+        { "t": "O efeito é cansativo e silencioso.", "p": 0.7 },
+        { "id": "agradar", "t": "Você para de perguntar 'o que eu quero' e passa a perguntar só 'o que vai agradar'.", "p": 0.9 }
+      ],
+      "textos": [
+        { "em": "tom", "atraso": 0.2, "texto": "A linha de chegada <em>nunca</em> chega", "estilo": "frase" }
+      ],
+      "fontes": [
+        { "em": "stark", "atraso": 0.6, "autor": "Stark, E.", "ano": "2007", "revista": "Coercive Control · Oxford University Press" }
+      ]
+    },
+    "sinal7": {
+      "nome": "Tratamento de silêncio",
+      "numero": 7,
+      "linhas": [
+        { "t": "E o sinal número sete, o mais comum e o menos nomeado: o silêncio como punição.", "p": 0.8 },
+        { "t": "Não é o silêncio de quem precisa de um tempo para se acalmar." },
+        { "t": "É o silêncio que dura dias, que ignora mensagens, que responde com 'nada' quando você pergunta o que houve.", "p": 0.7 },
+        { "id": "williams", "t": "O psicólogo Kipling Williams, da Universidade Purdue, passou anos estudando o ostracismo, o ato de ignorar e excluir alguém.", "f": "O psicólogo Kíplin Uíliams, da Universidade Pârdiu, passou anos estudando o ostracismo, o ato de ignorar e excluir alguém." },
+        { "id": "necessidades", "t": "Segundo o modelo dele, ser ignorado ameaça quatro necessidades básicas: pertencer, ter autoestima, ter controle e sentir que a própria existência importa.", "p": 0.7 },
+        { "id": "meta", "t": "E uma meta-análise de 2014, liderada por Paul Schrodt, reuniu setenta e quatro estudos sobre o padrão em que um parceiro cobra e o outro se fecha, e encontrou associação com menor satisfação e mais problemas de comunicação no relacionamento.", "f": "E uma meta-análise de dois mil e catorze, liderada por Pól Chrôut, reuniu setenta e quatro estudos sobre o padrão em que um parceiro cobra e o outro se fecha, e encontrou associação com menor satisfação e mais problemas de comunicação no relacionamento.", "p": 0.7 },
+        { "t": "O silêncio, usado assim, não é paz.", "p": 0.6 },
+        { "t": "É uma forma de dizer 'você só existe quando eu deixo'.", "p": 1.0 }
+      ],
+      "textos": [
+        { "em": "williams", "atraso": 0.0, "texto": "Silêncio como punição", "estilo": "titulo" },
+        { "em": "necessidades", "atraso": 0.0, "texto": "4 necessidades ameaçadas", "estilo": "lista", "itens": ["pertencer", "autoestima", "controle", "existência"] }
+      ],
+      "fontes": [
+        { "em": "williams", "atraso": 0.4, "autor": "Williams, K. D.", "ano": "ostracismo", "revista": "Purdue University · Advances in Experimental Social Psychology (2009)" },
+        { "em": "meta", "atraso": 0.4, "autor": "Schrodt, Witt & Shimkowski", "ano": "2014", "revista": "Communication Monographs, 81(1) · 74 estudos" }
+      ]
+    },
+    "conexao": {
+      "nome": "Conexão",
+      "linhas": [
+        { "t": "Perceba que nenhum desses sinais, sozinho, prova nada.", "p": 0.7 },
+        { "t": "O que transforma comportamento em manipulação é a repetição, e o efeito que ela deixa em você: confusão, culpa constante, medo de reagir, a sensação de pisar em ovos.", "p": 0.7 },
+        { "t": "Se você se reconheceu em vários deles, a pergunta mais importante não é 'essa pessoa é má?'." },
+        { "id": "pergunta", "t": "É 'como eu me sinto perto dela?'.", "p": 1.0 }
+      ],
+      "textos": [
+        { "em": "pergunta", "atraso": 0.0, "texto": "Não é um gesto. <em>É um padrão.</em>", "estilo": "frase" }
+      ]
+    },
+    "cuidado": {
+      "nome": "Nota de cuidado",
+      "linhas": [
+        { "t": "E se esses padrões fazem parte da sua vida agora, você não precisa lidar com isso sozinho." },
+        { "t": "Conversar com alguém de confiança ou com um psicólogo pode ajudar a colocar as coisas em perspectiva." },
+        { "id": "cvv", "t": "E se você estiver sofrendo emocionalmente, o CVV, Centro de Valorização da Vida, atende de graça, vinte e quatro horas por dia, pelo telefone um, oito, oito, ou pelo chat no site cvv.org.br.", "f": "E se você estiver sofrendo emocionalmente, o cê vê vê, Centro de Valorização da Vida, atende de graça, vinte e quatro horas por dia, pelo telefone um, oito, oito, ou pelo chat no site cê vê vê ponto órg ponto bê érre." },
+        { "t": "Com sigilo, sem julgamento.", "p": 1.6 }
+      ],
+      "textos": [
+        { "em": "cvv", "atraso": 0.0, "texto": "CVV", "estilo": "cvv" }
+      ]
+    },
+    "cta": {
+      "nome": "Chamada para ação",
+      "linhas": [
+        { "t": "Se este vídeo te fez enxergar algo que você sentia, mas não sabia nomear, deixa o seu like, isso ajuda o canal a chegar em mais gente." },
+        { "t": "Se inscreve para entender a psicologia por trás do que você faz sem perceber." },
+        { "id": "pergunta", "t": "E me conta nos comentários: qual desses sinais você acha mais difícil de notar?", "p": 0.6 },
+        { "t": "Até o próximo vídeo.", "p": 1.6 }
+      ],
+      "textos": [
+        { "em": "pergunta", "atraso": 0.3, "texto": "Qual sinal é o mais difícil de notar?", "estilo": "comentario" }
+      ]
+    }
+  }
+}
