@@ -1,0 +1,59 @@
+<!doctype html>
+<html
+  lang="pt-BR"
+  data-composition-variables='[
+    {"id":"titulo","type":"string","label":"Título","default":"Meu primeiro vídeo"},
+    {"id":"chamada","type":"string","label":"Chamada","default":"HyperFrames"},
+    {"id":"fundo","type":"color","label":"Fundo","default":"#fbf3ea"},
+    {"id":"tinta","type":"color","label":"Cor do título","default":"#3b2219"},
+    {"id":"destaque","type":"color","label":"Destaque","default":"#d9667b"}
+  ]'
+>
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=1920, height=1080" />
+    <script src="https://cdn.jsdelivr.net/npm/gsap@3.15.0/dist/gsap.min.js"></script>
+    <style>
+      * {
+        margin: 0;
+        padding: 0;
+        box-sizing: border-box;
+      }
+      html,
+      body {
+        margin: 0;
+        width: 1920px;
+        height: 1080px;
+        overflow: hidden;
+        background: #fbf3ea;
+      }
+    </style>
+  </head>
+  <body>
+    <div
+      id="root"
+      data-composition-id="main"
+      data-start="0"
+      data-duration="5"
+      data-width="1920"
+      data-height="1080"
+    >
+      <div
+        id="titulo"
+        class="clip"
+        data-composition-id="titulo"
+        data-composition-src="compositions/titulo.html"
+        data-start="0"
+        data-duration="5"
+        data-track-index="0"
+        data-track-kind="graphics"
+        data-width="1920"
+        data-height="1080"
+      ></div>
+    </div>
+    <script>
+      window.__timelines = window.__timelines || {};
+      window.__timelines["main"] = gsap.timeline({ paused: true });
+    </script>
+  </body>
+</html>
