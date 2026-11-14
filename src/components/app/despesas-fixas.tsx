@@ -2,7 +2,7 @@ import { useEffect, useRef, useState } from "react";
 import { useQuery, useQueryClient } from "@tanstack/react-query";
 import { toast } from "sonner";
 import { CalendarClock } from "lucide-react";
-import { supabase } from "@/integrations/supabase/client";
+import { supabase } from "@/lib/database-compat";
 import { despesasRecorrentesQ } from "@/lib/queries";
 import { brl, dataBR, hojeISO, parseNum } from "@/lib/format";
 import { diaDaRegra, encerrarRegra, proximoLancamento, regraEncerrada } from "@/lib/despesas-recorrentes";
