@@ -1,4 +1,8 @@
 # Finalização
+## Endereço externo do cardápio
+- [ ] Adicionar endereço opcional, centralizar links e redirecionar páginas antigas sem alterar RPCs de pedidos/catalogo.
+- [ ] Preencher o endereço de casaldobolo-catalogo e verificar links, redirecionamento e testes.
+
 ## Importação de documentos de compras
 - [ ] Reutilizar XML/conferência e gravação de compras para PDF e imagens, com leitura visual real e revisão obrigatória.
 - [ ] Validar arquivos, valores ausentes, associação segura, descontos e prevenção de duplicidade sem migrações.
