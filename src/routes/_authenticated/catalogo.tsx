@@ -6,7 +6,7 @@ import { toast } from "sonner";
 import { CalendarOff, Gift, Star, Wallet, Copy, ExternalLink, ImagePlus, MapPin, Package, Palette, Plus, QrCode, Share2, Sparkles, Store, Ticket, Trash2, X } from "lucide-react";
 import { supabase } from "@/integrations/supabase/client";
 import { brl, parseNum } from "@/lib/format";
-import { DIAS_SEMANA, SLUGS_RESERVADOS, corDoTexto, linkCatalogo as montarLinkCatalogo, normalizarCupom, normalizarHorarios, origemPublica, slugValido, sugerirSlug, validarBairros, type TaxaBairro } from "@/lib/catalogo";
+import { DIAS_SEMANA, SLUGS_RESERVADOS, corDoTexto, enderecoCardapioValido, linkCatalogo as montarLinkCatalogo, normalizarCupom, normalizarHorarios, origemPublica, slugValido, sugerirSlug, validarBairros, type TaxaBairro } from "@/lib/catalogo";
 import { enviarLogo } from "@/lib/foto-catalogo";
 import { dataBR, hojeISO } from "@/lib/format";
 import { Card, Field, PageHeader } from "@/components/app/ui";
@@ -27,7 +27,7 @@ export const Route = createFileRoute("/_authenticated/catalogo")({
     ]);
   },
   errorComponent: ({ error }) => <p role="alert" className="py-8 text-destructive">{error instanceof Error ? error.message : "Não foi possível carregar o catálogo."}</p>,
-  head: () => ({ meta: [{ title: "Catálogo online — Doce Gestão" }, { name: "description", content: "Link, QR Code e configurações do catálogo on-line da confeitaria." }] }),
+  head: () => ({ meta: [{ title: "Catálogo online — Doce Gestão" }, { name: "description", content: "Link, QR Code e configurações do catálogo on-line da confeitaria." }, { property: "og:title", content: "Catálogo online — Doce Gestão" }, { property: "og:description", content: "Endereço e configurações do cardápio da confeitaria." }, { property: "og:type", content: "website" }, { name: "twitter:card", content: "summary" }] }),
   component: CatalogoPage,
 });
 
@@ -38,6 +38,7 @@ function CatalogoPage() {
   const qc = useQueryClient();
   const [cat, setCat] = useState(() => ({
     ativo: confeitaria?.catalogo_ativo ?? false,
+    enderecoProprio: confeitaria?.endereco_cardapio ?? "",
     slug: confeitaria?.slug ?? sugerirSlug(confeitaria?.nome ?? "").replace(/-/g, "").slice(0, 30),
     aviso: confeitaria?.catalogo_aviso ?? "",
     retirada: confeitaria?.aceita_retirada ?? true,
@@ -61,11 +62,12 @@ function CatalogoPage() {
 
   // Id da confeitaria (o mesmo para toda a equipe).
   const donoId = confeitaria.user_id;
-  const salvo = confeitaria.catalogo_ativo && confeitaria.slug ? montarLinkCatalogo(origemPublica(), confeitaria.slug) : "";
-  const link = slugValido(cat.slug) ? montarLinkCatalogo(origemPublica(), cat.slug) : "";
+  const salvo = confeitaria.catalogo_ativo && confeitaria.slug ? montarLinkCatalogo(origemPublica(), confeitaria.slug, confeitaria.endereco_cardapio) : "";
+  const link = slugValido(cat.slug) ? montarLinkCatalogo(origemPublica(), cat.slug, cat.enderecoProprio) : "";
   const slugReservado = SLUGS_RESERVADOS.includes(cat.slug);
   const noCatalogo = produtos.filter((p) => p.no_catalogo && p.ativo && Number(p.preco_venda) > 0).length;
   const alterado =
+    cat.enderecoProprio !== (confeitaria.endereco_cardapio ?? "") ||
     cat.ativo !== confeitaria.catalogo_ativo || cat.slug !== (confeitaria.slug ?? "") || cat.aviso !== (confeitaria.catalogo_aviso ?? "") ||
     cat.retirada !== confeitaria.aceita_retirada || cat.entrega !== confeitaria.aceita_entrega || parseNum(cat.taxa) !== Number(confeitaria.taxa_entrega) ||
     parseNum(cat.minimo) !== Number(confeitaria.pedido_minimo) || cat.enderecoRetirada !== (confeitaria.endereco_retirada ?? "") ||
@@ -80,6 +82,7 @@ function CatalogoPage() {
 
   async function salvar(e: React.FormEvent) {
     e.preventDefault();
+    if (cat.enderecoProprio.trim() && !enderecoCardapioValido(cat.enderecoProprio)) return void toast.error("Informe um endereço completo e válido começando com https://, sem usuário ou senha.");
     const taxa = parseNum(cat.taxa), minimo = parseNum(cat.minimo), limite = cat.limite.trim() ? Math.round(parseNum(cat.limite)) : null;
     if (cat.slug && !slugValido(cat.slug)) return void toast.error(slugReservado ? "Este endereço é usado por uma página do sistema. Escolha outro." : "O endereço deve ter de 3 a 60 letras minúsculas, números ou hífens.");
     if (cat.ativo && !cat.slug) return void toast.error("Defina o endereço do catálogo antes de ativá-lo.");
@@ -96,6 +99,7 @@ function CatalogoPage() {
     if (cat.fidAtiva && (!(fidValor > 0) || (cat.fidTipo === "percentual" && fidValor > 100))) return void toast.error("Informe o desconto da fidelidade.");
     setSalvando(true);
     const { error } = await supabase.from("confeitarias").update({
+      endereco_cardapio: enderecoCardapioValido(cat.enderecoProprio),
       slug: cat.slug || null, catalogo_ativo: cat.ativo, catalogo_aviso: cat.aviso.trim().slice(0, 300) || null,
       aceita_retirada: cat.retirada, aceita_entrega: cat.entrega, taxa_entrega: taxa, pedido_minimo: minimo,
       endereco_retirada: cat.enderecoRetirada.trim().slice(0, 300) || null, limite_pedidos_dia: limite,
@@ -159,6 +163,9 @@ function CatalogoPage() {
             </div>
           </Field>
           {link && link !== salvo && <p className="break-all text-xs text-muted-foreground">Novo link depois de salvar: {link}</p>}
+          <Field label="Endereço do cardápio (site próprio)">
+            <Input type="url" maxLength={2048} value={cat.enderecoProprio} onChange={(e) => setCat({ ...cat, enderecoProprio: e.target.value })} placeholder="https://" className="h-11 bg-card" />
+          </Field>
           <div className="grid grid-cols-1 gap-3 sm:grid-cols-2">
             <label className="flex items-center justify-between rounded-xl border p-3 text-sm font-medium">Retirada na confeitaria<Switch checked={cat.retirada} onCheckedChange={(v) => setCat({ ...cat, retirada: v })} /></label>
             <label className="flex items-center justify-between rounded-xl border p-3 text-sm font-medium">Entrega<Switch checked={cat.entrega} onCheckedChange={(v) => setCat({ ...cat, entrega: v })} /></label>
