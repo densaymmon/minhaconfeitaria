@@ -39,6 +39,7 @@ Mantenha esta tabela atualizada a cada aplicação. Ela é a lista que falta hoj
 
 | Migração | Aplicada em | Por quem | Conferência feita |
 |---|---|---|---|
+| 0050 despesas fixas mensais automáticas | 14/11/2026 | Claude Code (arquivo inteiro, numa transação) | tabela com RLS e 6 políticas, `despesas.recorrente_id` criada, anon sem acesso; `despesas` tinha 0 linhas antes e depois |
 | 0051 endereço próprio do cardápio | 14/11/2026 | Lovable (coluna, restrição, função) + Claude Code (função sem nome fixo) | `endereco_cardapio_publico('casaldobolo-catalogo')` retorna o site |
 | 0047 salvar_pedido preserva recebimentos | out/2026 (etapa C da auditoria) | não registrado | ver `docs/avaliacao-comercial-e-piloto.md` |
 | _demais: preencher a partir do banco (`select * from drizzle.__drizzle_migrations` + conferência de objetos)_ | | | |
