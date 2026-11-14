@@ -5,6 +5,7 @@ import { requireSupabaseAuth } from '@/integrations/supabase/auth-middleware';
 import { normalizeOrderDraft } from './order-draft';
 import { podeUsarRecurso, type MinhaAssinatura } from './assinatura';
 import { createResponsesCall } from './ai/responses.server';
+import { verificarLimite } from './limite-taxa';
 import { APICallError, NoObjectGeneratedError } from 'ai';
 
 export const extractOrderDraft = createServerFn({ method: 'POST' })
@@ -12,6 +13,9 @@ export const extractOrderDraft = createServerFn({ method: 'POST' })
   .inputValidator((input: unknown) => z.object({ mensagem: z.string().trim().min(5).max(6000) }).parse(input))
   .handler(async ({ data, context }) => {
     setResponseHeader('Cache-Control', 'no-store');
+    // Freio contra cliques repetidos e scripts: cada chamada gasta créditos de IA.
+    const limite = verificarLimite(`ia-pedido:${context.userId}`, 20, 10 * 60_000);
+    if (!limite.permitido) return { ok: false as const, error: `Muitas tentativas seguidas. Aguarde ${limite.esperarSegundos} segundos e tente de novo.` };
     // A leitura por IA consome créditos: o plano e a situação da assinatura são conferidos aqui, no servidor.
     const { data: assinatura, error: assinaturaError } = await context.supabase.rpc('minha_assinatura');
     if (assinaturaError) return { ok: false as const, error: 'Não foi possível verificar o seu plano. Tente novamente.' };

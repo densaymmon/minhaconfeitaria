@@ -9,6 +9,7 @@ import { origemPublica } from "@/lib/catalogo";
 import { Field } from "@/components/app/ui";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
+import { validarSenha, SENHA_TAMANHO_MINIMO } from "@/lib/senha";
 
 export const Route = createFileRoute("/convite/$token")({
   ssr: false,
@@ -88,7 +89,8 @@ function Aceite({ token, convite, sessao }: { token: string; convite: Convite; s
 
   async function criarConta(e: React.FormEvent) {
     e.preventDefault();
-    if (senha.length < 8) return setErro("A senha precisa ter pelo menos 8 caracteres.");
+    const erroSenha = validarSenha(senha, convite.email);
+    if (erroSenha) return setErro(erroSenha);
     setOcupado(true);
     setErro(null);
     const { data, error } = await supabase.auth.signUp({
@@ -162,7 +164,7 @@ function Aceite({ token, convite, sessao }: { token: string; convite: Convite; s
         <Field label="E-mail"><Input value={convite.email} readOnly className="h-11 bg-muted" /></Field>
         {modo === "criar" && <Field label="Seu nome"><Input value={nome} maxLength={80} autoComplete="name" onChange={(e) => setNome(e.target.value)} className="h-11" /></Field>}
         <Field label={modo === "criar" ? "Crie uma senha" : "Senha"}>
-          <Input type="password" required minLength={modo === "criar" ? 8 : 1} autoComplete={modo === "criar" ? "new-password" : "current-password"} value={senha} onChange={(e) => setSenha(e.target.value)} className="h-11" />
+          <Input type="password" required minLength={modo === "criar" ? SENHA_TAMANHO_MINIMO : 1} autoComplete={modo === "criar" ? "new-password" : "current-password"} value={senha} onChange={(e) => setSenha(e.target.value)} className="h-11" />
         </Field>
         {erro && <p role="alert" className="rounded-xl bg-destructive/10 p-3 text-sm text-destructive">{erro}</p>}
         <Button className="h-11 w-full" disabled={ocupado}>{ocupado ? "Aguarde…" : modo === "criar" ? "Criar conta e entrar na equipe" : "Entrar e aceitar"}</Button>

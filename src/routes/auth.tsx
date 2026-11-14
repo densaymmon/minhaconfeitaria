@@ -2,6 +2,7 @@ import { createFileRoute, Link } from "@tanstack/react-router";
 import { useQuery } from "@tanstack/react-query";
 import { plataformaPublicaQ } from "@/lib/queries";
 import { TERMOS_VERSAO, contato } from "@/lib/termos";
+import { validarSenha } from "@/lib/senha";
 import { useState } from "react";
 import { toast } from "sonner";
 import { CakeSlice } from "lucide-react";
@@ -61,7 +62,8 @@ function AuthPage() {
       } else if (modo === "criar") {
         if (nomeLoja.trim().length < 2) throw new Error("Informe o nome da confeitaria.");
         if (whatsapp.replace(/\D/g, "").length < 10) throw new Error("Informe o WhatsApp da confeitaria com DDD.");
-        if (senha.length < 8) throw new Error("A senha precisa ter pelo menos 8 caracteres.");
+        const erroSenha = validarSenha(senha, email);
+        if (erroSenha) throw new Error(erroSenha);
         if (!aceite) throw new Error("Para criar a conta, aceite os termos de uso e a política de privacidade.");
         const { data, error } = await supabase.auth.signUp({
           email,

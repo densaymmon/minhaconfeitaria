@@ -17,6 +17,7 @@ import { PaginaPagamentos } from "./paginas/Pagamentos";
 import { PaginaPlanos } from "./paginas/Planos";
 import { PaginaConfiguracoes } from "./paginas/Configuracoes";
 import { PaginaErros } from "./paginas/Erros";
+import { validarSenha, SENHA_TAMANHO_MINIMO } from "@/lib/senha";
 
 const PAGINAS = [
   { id: "resumo", rotulo: "Resumo", icone: LayoutDashboard },
@@ -92,7 +93,8 @@ function Login({ erroLink }: { erroLink: string | null }) {
         const { error } = await supabase.auth.signInWithPassword({ email, password: senha });
         if (error) throw new Error(error.message.includes("Invalid") ? "E-mail ou senha incorretos." : error.message.includes("confirm") ? "Confirme seu e-mail pelo link que enviamos antes de entrar." : error.message);
       } else if (modo === "criar") {
-        if (senha.length < 8) throw new Error("A senha precisa ter pelo menos 8 caracteres.");
+        const erroSenha = validarSenha(senha, email);
+        if (erroSenha) throw new Error(erroSenha);
         const { data, error } = await supabase.auth.signUp({ email, password: senha, options: { emailRedirectTo: `${window.location.origin}${window.location.pathname}` } });
         if (error) throw new Error(error.message.includes("Database error") ? "Este e-mail não está autorizado a administrar a plataforma." : error.message);
         if (!data.session) setAviso("Acesso criado! Abra seu e-mail e clique no link de confirmação. Depois, volte aqui e entre com e-mail e senha.");
@@ -151,7 +153,8 @@ function DefinirSenha({ email, pronto }: { email: string; pronto: () => void }) 
 
   async function salvar(e: React.FormEvent) {
     e.preventDefault();
-    if (senha.length < 8) return void toast.error("Use pelo menos 8 caracteres.");
+    const erroSenha = validarSenha(senha, email);
+    if (erroSenha) return void toast.error(erroSenha);
     if (senha !== confirmar) return void toast.error("As duas senhas não são iguais.");
     setAguarde(true);
     const { error } = await supabase.auth.updateUser({ password: senha });
@@ -171,8 +174,8 @@ function DefinirSenha({ email, pronto }: { email: string; pronto: () => void }) 
           <form onSubmit={salvar} className="space-y-4">
             <h1 className="text-xl font-semibold">Criar nova senha</h1>
             <p className="text-sm text-muted-foreground">Conta: {email}</p>
-            <Campo rotulo="Nova senha" dica="Pelo menos 8 caracteres."><InputSenha required minLength={8} autoComplete="new-password" value={senha} onChange={(e) => setSenha(e.target.value)} className="h-11" /></Campo>
-            <Campo rotulo="Confirme a nova senha"><InputSenha required minLength={8} autoComplete="new-password" value={confirmar} onChange={(e) => setConfirmar(e.target.value)} className="h-11" /></Campo>
+            <Campo rotulo="Nova senha" dica={`Pelo menos ${SENHA_TAMANHO_MINIMO} caracteres.`}><InputSenha required minLength={SENHA_TAMANHO_MINIMO} autoComplete="new-password" value={senha} onChange={(e) => setSenha(e.target.value)} className="h-11" /></Campo>
+            <Campo rotulo="Confirme a nova senha"><InputSenha required minLength={SENHA_TAMANHO_MINIMO} autoComplete="new-password" value={confirmar} onChange={(e) => setConfirmar(e.target.value)} className="h-11" /></Campo>
             {confirmar.length > 0 && confirmar !== senha && <p className="text-sm text-destructive">As senhas ainda não são iguais.</p>}
             <Button type="submit" className="h-11 w-full" disabled={aguarde}>{aguarde ? "Salvando…" : "Salvar nova senha"}</Button>
             <button type="button" className="text-sm text-primary hover:underline" onClick={pronto}>Cancelar</button>

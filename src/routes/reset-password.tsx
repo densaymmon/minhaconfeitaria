@@ -6,6 +6,7 @@ import { URL_PAINEL_ADMIN } from "@/lib/assinatura";
 import { Button } from "@/components/ui/button";
 import { InputSenha } from "@/components/app/input-senha";
 import { Field } from "@/components/app/ui";
+import { validarSenha, SENHA_TAMANHO_MINIMO } from "@/lib/senha";
 
 export const Route = createFileRoute("/reset-password")({
   ssr: false,
@@ -79,7 +80,8 @@ function Reset() {
 
   async function salvar(e: React.FormEvent) {
     e.preventDefault();
-    if (senha.length < 8) return void toast.error("Use pelo menos 8 caracteres.");
+    const erroSenha = validarSenha(senha, email);
+    if (erroSenha) return void toast.error(erroSenha);
     if (senha !== confirmar) return void toast.error("As duas senhas não são iguais.");
     setLoading(true);
     const { error } = await supabase.auth.updateUser({ password: senha });
@@ -120,10 +122,10 @@ function Reset() {
             <h1 className="text-xl font-semibold">Definir nova senha</h1>
             {estado === "verificando" ? <p className="text-sm text-muted-foreground" role="status">Conferindo o link…</p> : email && <p className="text-sm text-muted-foreground">Conta: {email}</p>}
             <Field label="Nova senha">
-              <InputSenha value={senha} onChange={(e) => setSenha(e.target.value)} className="h-11" autoComplete="new-password" minLength={8} required />
+              <InputSenha value={senha} onChange={(e) => setSenha(e.target.value)} className="h-11" autoComplete="new-password" minLength={SENHA_TAMANHO_MINIMO} required />
             </Field>
             <Field label="Confirme a nova senha">
-              <InputSenha value={confirmar} onChange={(e) => setConfirmar(e.target.value)} className="h-11" autoComplete="new-password" minLength={8} required />
+              <InputSenha value={confirmar} onChange={(e) => setConfirmar(e.target.value)} className="h-11" autoComplete="new-password" minLength={SENHA_TAMANHO_MINIMO} required />
             </Field>
             {confirmar.length > 0 && confirmar !== senha && <p className="text-sm text-destructive">As senhas ainda não são iguais.</p>}
             <Button className="h-11 w-full" disabled={loading || estado !== "pronto"}>{loading ? "Salvando…" : "Salvar nova senha"}</Button>
