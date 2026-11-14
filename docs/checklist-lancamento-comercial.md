@@ -27,9 +27,9 @@ Atualizado em 30/10/2026. Complementa `docs/avaliacao-comercial-e-piloto.md`. **
 |---|---|---|---|
 | Termos de uso e política de privacidade publicados | Dev | ✅ | `/termos` e `/privacidade`, responsável configurável |
 | Revisão por advogado | Jurídico | ⬜ | Antes de cadastrar clientes de terceiros |
-| Política já trata controladora/operadora, nuvem possivelmente fora do Brasil, guarda, direitos e contato | Dev | ✅ | Texto em `src/lib/termos.ts` (seções 1 a 7 da política) |
-| Política passa a citar o uso de IA (leitura de documentos e rascunho de pedido enviam conteúdo a um provedor de IA) e as notificações push | Jurídico + Dev | ⬜ | O texto atual não menciona esses dois pontos; aumentar `TERMOS_VERSAO` ao alterar |
-| Prazo concreto de exclusão após o encerramento (hoje: "prazo razoável") | Jurídico | ⬜ | |
+| Política já trata controladora/operadora, nuvem possivelmente fora do Brasil, guarda, direitos e contato | Dev | ✅ | Texto em `src/lib/termos.ts` (11 seções) |
+| Política passa a citar o uso de IA (rascunho de pedido envia o texto a um provedor de IA) e as notificações push | Jurídico + Dev | 🟡 | Texto escrito em 13/11/2026 (`TERMOS_VERSAO` 2026-11-13); falta o advogado revisar. Ver `docs/conformidade-lgpd-consumidor.md` |
+| Prazo concreto de exclusão após o encerramento | Jurídico | 🟡 | Texto diz 30 dias; advogado confirma |
 | Relação controladora/operadora (confeiteira × plataforma) também em contrato | Jurídico | ⬜ | A política descreve os papéis; falta o contrato de assinatura |
 | Contrato/termo de assinatura (cancelamento, devolução de dados, SLA) | Jurídico | ⬜ | |
 | Exportação dos dados pela dona | Dev | ✅ | Cópia completa e planilha |

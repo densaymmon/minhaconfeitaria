@@ -270,7 +270,10 @@ function Loja({ slug, catalogo }: { slug: string; catalogo: Catalogo }) {
             </ul>
           </section>
         )}
-        <p className="py-8 text-center text-xs text-muted-foreground">Pedidos online por Doce Gestão · <Link to="/privacidade" className="underline">Privacidade</Link></p>
+        <footer className="space-y-1 py-8 text-center text-xs text-muted-foreground">
+          <p>Vendido por <strong className="font-medium">{catalogo.nome}</strong>{whatsapp ? <> · <a href={whatsapp} className="underline">Fale pelo WhatsApp</a></> : null}</p>
+          <p>Pedidos online por Doce Gestão · <Link to="/termos" className="underline">Termos</Link> · <Link to="/privacidade" className="underline">Privacidade</Link></p>
+        </footer>
       </main>
 
       <DetalheProduto
@@ -523,6 +526,10 @@ function CamposCliente({ cliente, setCliente }: { cliente: DadosCliente; setClie
       <h2 className="font-semibold">Seus dados</h2>
       <Field label="Nome"><Input required autoComplete="name" maxLength={120} value={cliente.nome} onChange={(e) => setCliente({ ...cliente, nome: e.target.value })} className="h-11" /></Field>
       <Field label="WhatsApp com DDD" hint="Usado só para falar sobre este pedido."><Input required type="tel" inputMode="tel" autoComplete="tel" maxLength={20} placeholder="(19) 99999-9999" value={cliente.telefone} onChange={(e) => setCliente({ ...cliente, telefone: e.target.value })} className="h-11" /></Field>
+      <p className="text-xs text-muted-foreground">
+        A confeitaria usa seus dados (nome, WhatsApp e, se houver, endereço) só para atender este pedido e falar com você sobre ele. Detalhes e seus direitos na{" "}
+        <Link to="/privacidade" target="_blank" className="underline">Política de Privacidade</Link>.
+      </p>
     </section>
   );
 }
