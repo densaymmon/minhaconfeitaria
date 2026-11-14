@@ -218,13 +218,6 @@
       "when": 1792400000004,
       "tag": "0028_corrigir_valor_pago_pedido_com_producao",
       "breakpoints": true
-    },
-    {
-      "idx": 31,
-      "version": "7",
-      "when": 1794661439238,
-      "tag": "0031_endereco_cardapio_proprio",
-      "breakpoints": true
     }
   ]
 }

@@ -94,16 +94,17 @@ describe("utilitários do catálogo", () => {
 });
 
 describe("links curtos e mídias", () => {
-  it("compartilha o site próprio configurado do Casal do Bolo", () => {
-    expect(linkCatalogo("https://minhaconfeitaria.app", "casaldobolo-catalogo", "https://ocasaldobolo.netlify.app")).toBe("https://ocasaldobolo.netlify.app");
+  it("compartilha o site próprio configurado", () => {
+    expect(linkCatalogo("https://minhaconfeitaria.app", "minhaloja", "https://site-da-loja.test")).toBe("https://site-da-loja.test");
   });
   it("campo vazio mantém o link interno", () => {
-    expect(linkCatalogo("https://minhaconfeitaria.app", "casaldobolo-catalogo", "")).toBe("https://minhaconfeitaria.app/casaldobolo-catalogo");
+    expect(linkCatalogo("https://minhaconfeitaria.app", "minhaloja", "")).toBe("https://minhaconfeitaria.app/minhaloja");
   });
-  it("redireciona somente a confeitaria solicitada com endereço preenchido", () => {
-    expect(redirecionamentoCardapio("casaldobolo-catalogo", "https://ocasaldobolo.netlify.app")).toBe("https://ocasaldobolo.netlify.app");
-    expect(redirecionamentoCardapio("outra-confeitaria", "https://ocasaldobolo.netlify.app")).toBeNull();
-    expect(redirecionamentoCardapio("casaldobolo-catalogo", "")).toBeNull();
+  it("redireciona a página antiga só com endereço próprio válido", () => {
+    expect(redirecionamentoCardapio("https://site-da-loja.test")).toBe("https://site-da-loja.test");
+    expect(redirecionamentoCardapio("")).toBeNull();
+    expect(redirecionamentoCardapio(null)).toBeNull();
+    expect(redirecionamentoCardapio("javascript:alert(1)")).toBeNull();
   });
   it("mantém acompanhamento no sistema mesmo com cardápio externo", () => {
     expect(linkPedido("https://minhaconfeitaria.app", { longo: "codigo" })).toBe("https://minhaconfeitaria.app/pedido/codigo");

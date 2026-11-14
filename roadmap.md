@@ -2,7 +2,8 @@
 ## Endereço externo do cardápio
 - [x] Adicionar endereço opcional, centralizar links e redirecionar páginas antigas sem alterar RPCs de pedidos/catalogo.
 - [x] Preencher o endereço de casaldobolo-catalogo; redirecionamentos reais verificados, 287 testes aprovados e build OK.
-- [ ] Conferir copiar/compartilhar com sessão da confeitaria — sessão disponível é administrativa, sem acesso à tela da loja.
+- [x] Migração renumerada para 0051 (idempotente, fora do `_journal.json`), sem nome de confeitaria fixo no código; teste `tests/db/endereco-cardapio-smoke.sql`.
+- [ ] Conferir copiar/compartilhar na conta da confeitaria depois de publicar.
 
 ## Importação de documentos de compras
 - [ ] Reutilizar XML/conferência e gravação de compras para PDF e imagens, com leitura visual real e revisão obrigatória.

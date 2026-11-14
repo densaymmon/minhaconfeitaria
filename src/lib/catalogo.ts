@@ -357,9 +357,9 @@ export function linkCatalogo(origem: string, slug: string, enderecoProprio?: str
   return `${origem.replace(/\/+$/, "")}/${slug}`;
 }
 
-/** Apenas a confeitaria solicitada redireciona sua página antiga. */
-export function redirecionamentoCardapio(slug: string, endereco?: string | null) {
-  return slug === "casaldobolo-catalogo" ? enderecoCardapioValido(endereco) : null;
+/** Página antiga do catálogo: redireciona quando a confeitaria configurou um site próprio válido. */
+export function redirecionamentoCardapio(endereco?: string | null) {
+  return enderecoCardapioValido(endereco);
 }
 
 /** Link curto de acompanhamento (código de 10 letras); o código longo continua funcionando. */
