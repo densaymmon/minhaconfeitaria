@@ -70,6 +70,32 @@ describe("termos", () => {
     expect(politicaPrivacidade(null).length).toBeGreaterThan(5);
     expect(dataVersao(TERMOS_VERSAO)).toMatch(/^\d{2}\/\d{2}\/\d{4}$/);
   });
+  const texto = (secoes: { titulo: string; paragrafos: string[] }[]) => secoes.map((x) => `${x.titulo}\n${x.paragrafos.join("\n")}`).join("\n");
+  it("os termos cobrem preço, cancelamento, reembolso, IA, licença, avaliações e identificação", () => {
+    const t = texto(termosDeUso(p));
+    for (const trecho of ["cancelar a assinatura", "Inteligência artificial", "licença de uso", "avaliações ou depoimentos falsos", "Contato do fornecedor", "teste grátis de 14 dias", "mais 7 dias corridos de tolerância"]) {
+      expect(t).toContain(trecho);
+    }
+  });
+  it("usa os prazos de teste e tolerância configurados", () => {
+    const t = texto(termosDeUso({ ...p, dias_teste: 30, dias_tolerancia: 3 }));
+    expect(t).toContain("teste grátis de 30 dias");
+    expect(t).toContain("mais 3 dias corridos de tolerância");
+  });
+  it("a política cobre bases legais, minimização, cookies, retenção, direitos e incidentes", () => {
+    const t = texto(politicaPrivacidade(p));
+    for (const trecho of ["Base legal", "minimização", "Cookies e armazenamento", "Por quanto tempo", "até 15 dias", "ANPD", "encarregado", "Lovable AI", "Crianças"]) {
+      expect(t).toContain(trecho);
+    }
+  });
+  it("títulos das seções são únicos (usados como chave na página)", () => {
+    for (const secoes of [termosDeUso(p), politicaPrivacidade(p)]) {
+      const titulos = secoes.map((x) => x.titulo);
+      expect(new Set(titulos).size).toBe(titulos.length);
+      const inicios = secoes.flatMap((x) => x.paragrafos.map((q) => q.slice(0, 40)));
+      expect(new Set(inicios).size).toBe(inicios.length);
+    }
+  });
 });
 
 describe("risco de cancelamento", () => {
