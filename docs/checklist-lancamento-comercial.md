@@ -14,8 +14,8 @@ Atualizado em 30/10/2026. Complementa `docs/avaliacao-comercial-e-piloto.md`. **
 | Cópia dos arquivos (fotos) fora do backup do banco | Você | ⬜ | Confirmar se o Storage é coberto |
 | Verificação em duas etapas na conta do proprietário (provedor, GitHub) e do administrador da plataforma | Você | ⬜ | Conta de administrador enxerga todas as empresas |
 | Alertas de dependências vulneráveis (Dependabot) ativos | Você | 🟡 | Arquivo de configuração pronto (#221); falta ligar os alertas nas configurações do GitHub |
-| Limite de tentativas em consultas públicas e na IA | Dev | ⬜ | Risco 5 da avaliação |
-| Cabeçalhos de segurança do site (CSP, HSTS etc.) | Dev | ⬜ | Depende de como o Lovable serve o site; verificar antes de mexer |
+| Limite de tentativas em consultas públicas e na IA | Dev | 🟡 | IA limitada (20/10 min, `limite-taxa.ts`); funções públicas do catálogo precisam de migração (ver `docs/conformidade-seguranca-lgpd.md`) |
+| Cabeçalhos de segurança do site (CSP, HSTS etc.) | Dev | 🟡 | HSTS, nosniff, Referrer-Policy e Permissions-Policy aplicados em `src/server.ts`; falta CSP (testar em Report-Only) e conferir após o deploy |
 | Ambiente de teste separado da produção (projeto Supabase de homologação) | Você + Dev | ⬜ | Hoje migrações novas vão direto à produção |
 | Teste de invasão externo | Você | ⬜ | Foco: isolamento e catálogo público |
 | Registro de migrações aplicadas em produção | Você + Dev | 🟡 | Tabela em `docs/operacao/migracoes.md` a preencher |

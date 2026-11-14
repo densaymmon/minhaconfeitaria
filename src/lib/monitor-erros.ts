@@ -24,6 +24,20 @@ export function ehRuido(mensagem: string, detalhe?: string | null) {
   return RUIDO.some((r) => r.test(mensagem) || (detalhe ? r.test(detalhe) : false));
 }
 
+/**
+ * Endereço seguro para o monitoramento: sem parâmetros, sem trecho após "#" e com os códigos de
+ * acompanhamento de pedido e de convite escondidos (quem tem o código acessa o pedido/convite).
+ */
+export function limparUrl(url: string): string {
+  try {
+    const u = new URL(url);
+    const caminho = u.pathname.replace(/^\/(p|pedido|convite)\/[^/]+/i, "/$1/:codigo");
+    return `${u.origin}${caminho}`;
+  } catch {
+    return "";
+  }
+}
+
 const enviados = new Set<string>();
 const LIMITE_POR_PAGINA = 15;
 
@@ -36,7 +50,7 @@ export function registrarErro(supabase: SupabaseClient, origem: OrigemErro, erro
     if (enviados.has(chave) || enviados.size >= LIMITE_POR_PAGINA) return;
     enviados.add(chave);
     void supabase.rpc("registrar_erro", {
-      p_origem: origem, p_mensagem: mensagem, p_detalhe: detalhe ?? "", p_url: window.location.href, p_agente: navigator.userAgent.slice(0, 300),
+      p_origem: origem, p_mensagem: mensagem, p_detalhe: detalhe ?? "", p_url: limparUrl(window.location.href), p_agente: navigator.userAgent.slice(0, 300),
     }).then(() => undefined, () => undefined);
   } catch {
     /* o monitor nunca pode causar outro erro */

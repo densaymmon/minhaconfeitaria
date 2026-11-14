@@ -23,6 +23,9 @@ Faça a correção em um PR com teste que reproduza o problema (de preferência 
 
 - Avise as confeitarias afetadas com linguagem simples: o que aconteceu, que dados, o que foi feito, o que elas devem fazer.
 - Verifique com um advogado se há obrigação de comunicar à ANPD e aos titulares dos dados e em que prazo.
+- Referência (confirmar com o advogado): a LGPD (art. 48) exige comunicar à ANPD e aos titulares incidentes que possam causar risco ou dano relevante; a regulamentação da ANPD (Resolução CD/ANPD nº 15/2024) fixa o prazo de **3 dias úteis** a partir do conhecimento do incidente. Comece a contar do momento em que você soube, e registre esse horário.
+- Quando a plataforma é **operadora** dos dados dos clientes de uma confeitaria, avise a confeitaria (controladora) logo, para que ela cumpra os prazos dela.
+- O aviso deve dizer: o que aconteceu, quais dados e quantas pessoas, riscos, o que já foi feito e como falar com você.
 
 ## 5. Aprender
 
