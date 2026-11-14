@@ -12,6 +12,8 @@ import {
   precoMinimo,
   capaDoProduto,
   linkCatalogo,
+  enderecoCardapioValido,
+  redirecionamentoCardapio,
   linkPedido,
   mensagemConfirmacaoPedido,
   mensagemPedidoParaLoja,
@@ -92,6 +94,24 @@ describe("utilitários do catálogo", () => {
 });
 
 describe("links curtos e mídias", () => {
+  it("compartilha o site próprio configurado", () => {
+    expect(linkCatalogo("https://minhaconfeitaria.app", "minhaloja", "https://site-da-loja.test")).toBe("https://site-da-loja.test");
+  });
+  it("campo vazio mantém o link interno", () => {
+    expect(linkCatalogo("https://minhaconfeitaria.app", "minhaloja", "")).toBe("https://minhaconfeitaria.app/minhaloja");
+  });
+  it("redireciona a página antiga só com endereço próprio válido", () => {
+    expect(redirecionamentoCardapio("https://site-da-loja.test")).toBe("https://site-da-loja.test");
+    expect(redirecionamentoCardapio("")).toBeNull();
+    expect(redirecionamentoCardapio(null)).toBeNull();
+    expect(redirecionamentoCardapio("javascript:alert(1)")).toBeNull();
+  });
+  it("mantém acompanhamento no sistema mesmo com cardápio externo", () => {
+    expect(linkPedido("https://minhaconfeitaria.app", { longo: "codigo" })).toBe("https://minhaconfeitaria.app/pedido/codigo");
+  });
+  it("rejeita endereços executáveis, incompletos e com credenciais", () => {
+    for (const valor of ["javascript:alert(1)", "http://site.app", "/site", "https://user:senha@site.app", "https://site.app/ espaço"]) expect(enderecoCardapioValido(valor)).toBeNull();
+  });
   it("monta o link do catálogo e do pedido", () => {
     expect(linkCatalogo("https://doce.app/", "casaldobolo")).toBe("https://doce.app/casaldobolo");
     expect(linkPedido("https://doce.app", { curto: "abcdefgh23", longo: "uuid" })).toBe("https://doce.app/p/abcdefgh23");

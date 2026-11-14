@@ -3,7 +3,7 @@ import { useQuery, useQueryClient } from "@tanstack/react-query";
 import { useState } from "react";
 import { toast } from "sonner";
 import { Copy, MessageCircle, Send, Trash2, UserPlus, UsersRound } from "lucide-react";
-import { supabase } from "@/integrations/supabase/client";
+import { supabase } from "@/lib/database-compat";
 import { meuPapelQ } from "@/lib/queries";
 import { DESCRICAO_PAPEL, NOME_PAPEL, mensagemEquipe, type Papel } from "@/lib/assinatura";
 import { origemPublica } from "@/lib/catalogo";

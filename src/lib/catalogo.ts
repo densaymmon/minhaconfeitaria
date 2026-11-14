@@ -338,9 +338,28 @@ export function origemPublica(origem?: string | null) {
   }
 }
 
-/** Link curto do catálogo: dominio/endereco. */
-export function linkCatalogo(origem: string, slug: string) {
+/** Endereço próprio válido, sem credenciais nem protocolos executáveis. */
+export function enderecoCardapioValido(endereco?: string | null): string | null {
+  const valor = endereco?.trim();
+  if (!valor || valor.length > 2048 || !/^https:\/\/[A-Za-z0-9][A-Za-z0-9.-]*(:[0-9]+)?([/?#][^\s]*)?$/.test(valor)) return null;
+  try {
+    const url = new URL(valor);
+    return url.protocol === "https:" && !url.username && !url.password ? valor : null;
+  } catch {
+    return null;
+  }
+}
+
+/** Link próprio quando configurado; em branco preserva o link curto. */
+export function linkCatalogo(origem: string, slug: string, enderecoProprio?: string | null) {
+  const externo = enderecoCardapioValido(enderecoProprio);
+  if (externo) return externo;
   return `${origem.replace(/\/+$/, "")}/${slug}`;
+}
+
+/** Página antiga do catálogo: redireciona quando a confeitaria configurou um site próprio válido. */
+export function redirecionamentoCardapio(endereco?: string | null) {
+  return enderecoCardapioValido(endereco);
 }
 
 /** Link curto de acompanhamento (código de 10 letras); o código longo continua funcionando. */

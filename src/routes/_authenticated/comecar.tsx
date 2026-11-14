@@ -22,7 +22,7 @@ export const Route = createFileRoute("/_authenticated/comecar")({
       context.queryClient.ensureQueryData(appQueries.confeitariaQ),
     ]);
   },
-  head: () => ({ meta: [{ title: "Primeiros passos — Doce Gestão" }] }),
+  head: () => ({ meta: [{ title: "Primeiros passos — Doce Gestão" }, { name: "description", content: "Cadastro inicial da confeitaria, Pix e catálogo." }, { property: "og:title", content: "Primeiros passos — Doce Gestão" }, { property: "og:description", content: "Configure sua confeitaria e seu catálogo." }, { property: "og:type", content: "website" }, { name: "twitter:card", content: "summary" }] }),
   component: Comecar,
 });
 
@@ -53,7 +53,7 @@ function Comecar() {
   const [produto, setProduto] = useState({ nome: "", preco: "", categoria: "" });
   const chave = normalizarChavePix(pix.chave, tipoChaveValido(pix.tipo));
   const slug = cat.slug || sugerirSlug(loja.nome);
-  const link = typeof window !== "undefined" && slugValido(slug) ? linkCatalogo(origemPublica(), slug) : "";
+  const link = typeof window !== "undefined" && slugValido(slug) ? linkCatalogo(origemPublica(), slug, confeitaria?.endereco_cardapio) : "";
 
   async function atualizarLoja(dados: TablesUpdate<"confeitarias">) {
     const { error } = await supabase.from("confeitarias").update(dados).eq("user_id", confeitaria?.user_id ?? user.id);

@@ -1,4 +1,5 @@
-import { createFileRoute, Link, useNavigate } from "@tanstack/react-router";
+import { createFileRoute, Link, redirect, useNavigate } from "@tanstack/react-router";
+import { enderecoCardapioQ } from "@/lib/endereco-cardapio";
 import { queryOptions, useQuery } from "@tanstack/react-query";
 import { useEffect, useMemo, useRef, useState } from "react";
 import { ArrowLeft, CakeSlice, Camera, Gift, Star, Minus, MessageCircle, PlayCircle, Plus, ShoppingBag, Sparkles, Store, Ticket, Truck, X } from "lucide-react";
@@ -53,10 +54,15 @@ export const Route = createFileRoute("/c/$slug")({
       { property: "og:title", content: "Catálogo — faça seu pedido" },
       { property: "og:description", content: "Veja os produtos, monte seu pedido e pague por Pix." },
       { property: "og:type", content: "website" },
+      { name: "twitter:card", content: "summary" },
     ],
   }),
   // Começa a buscar os produtos junto com o carregamento da página.
-  loader: ({ context, params }) => { void context.queryClient.prefetchQuery(catalogoQ(params.slug)); },
+  loader: async ({ context, params }) => {
+    const endereco = await context.queryClient.fetchQuery(enderecoCardapioQ(params.slug));
+    if (endereco) throw redirect({ href: endereco, replace: true });
+    void context.queryClient.prefetchQuery(catalogoQ(params.slug));
+  },
   component: CatalogoRota,
 });
 

@@ -10,38 +10,38 @@
 
 import { Route as rootRouteImport } from './routes/__root'
 import { Route as IndexRouteImport } from './routes/index'
+import { Route as SlugRouteImport } from './routes/$slug'
 import { Route as AuthenticatedRouteRouteImport } from './routes/_authenticated/route'
 import { Route as AuthRouteImport } from './routes/auth'
 import { Route as McpRouteImport } from './routes/mcp'
-import { Route as ResetPasswordRouteImport } from './routes/reset-password'
-import { Route as ConviteTokenRouteImport } from './routes/convite.$token'
 import { Route as PrivacidadeRouteImport } from './routes/privacidade'
+import { Route as ResetPasswordRouteImport } from './routes/reset-password'
 import { Route as TermosRouteImport } from './routes/termos'
-import { Route as CSlugRouteImport } from './routes/c.$slug'
-import { Route as SlugRouteImport } from './routes/$slug'
-import { Route as PCodigoRouteImport } from './routes/p.$codigo'
-import { Route as PedidoCodigoRouteImport } from './routes/pedido.$codigo'
 import { Route as Char91DotwellKnownChar93OauthProtectedResourceRouteImport } from './routes/[.well-known]/oauth-protected-resource'
+import { Route as AuthenticatedAgendaRouteImport } from './routes/_authenticated/agenda'
+import { Route as AuthenticatedCatalogoRouteImport } from './routes/_authenticated/catalogo'
+import { Route as AuthenticatedComecarRouteImport } from './routes/_authenticated/comecar'
 import { Route as AuthenticatedComprasRouteImport } from './routes/_authenticated/compras'
 import { Route as AuthenticatedConfiguracoesRouteImport } from './routes/_authenticated/configuracoes'
 import { Route as AuthenticatedContasPagarRouteImport } from './routes/_authenticated/contas-pagar'
 import { Route as AuthenticatedDespesasRouteImport } from './routes/_authenticated/despesas'
+import { Route as AuthenticatedEntregasRouteImport } from './routes/_authenticated/entregas'
+import { Route as AuthenticatedEquipeRouteImport } from './routes/_authenticated/equipe'
+import { Route as AuthenticatedEtiquetasRouteImport } from './routes/_authenticated/etiquetas'
 import { Route as AuthenticatedFinanceiroRouteImport } from './routes/_authenticated/financeiro'
+import { Route as AuthenticatedFluxoCaixaRouteImport } from './routes/_authenticated/fluxo-caixa'
+import { Route as AuthenticatedHistoricoRouteImport } from './routes/_authenticated/historico'
+import { Route as AuthenticatedListaComprasRouteImport } from './routes/_authenticated/lista-compras'
 import { Route as AuthenticatedMaisRouteImport } from './routes/_authenticated/mais'
 import { Route as AuthenticatedPainelRouteImport } from './routes/_authenticated/painel'
 import { Route as AuthenticatedPedidosRecorrentesRouteImport } from './routes/_authenticated/pedidos-recorrentes'
 import { Route as AuthenticatedProducaoRouteImport } from './routes/_authenticated/producao'
-import { Route as AuthenticatedHistoricoRouteImport } from './routes/_authenticated/historico'
-import { Route as AuthenticatedFluxoCaixaRouteImport } from './routes/_authenticated/fluxo-caixa'
-import { Route as AuthenticatedEtiquetasRouteImport } from './routes/_authenticated/etiquetas'
-import { Route as AuthenticatedEntregasRouteImport } from './routes/_authenticated/entregas'
-import { Route as AuthenticatedListaComprasRouteImport } from './routes/_authenticated/lista-compras'
-import { Route as AuthenticatedAgendaRouteImport } from './routes/_authenticated/agenda'
-import { Route as AuthenticatedEquipeRouteImport } from './routes/_authenticated/equipe'
-import { Route as AuthenticatedResumoMesRouteImport } from './routes/_authenticated/resumo-mes'
-import { Route as AuthenticatedCatalogoRouteImport } from './routes/_authenticated/catalogo'
-import { Route as AuthenticatedComecarRouteImport } from './routes/_authenticated/comecar'
 import { Route as AuthenticatedRelatoriosRouteImport } from './routes/_authenticated/relatorios'
+import { Route as AuthenticatedResumoMesRouteImport } from './routes/_authenticated/resumo-mes'
+import { Route as CSlugRouteImport } from './routes/c.$slug'
+import { Route as ConviteTokenRouteImport } from './routes/convite.$token'
+import { Route as PCodigoRouteImport } from './routes/p.$codigo'
+import { Route as PedidoCodigoRouteImport } from './routes/pedido.$codigo'
 import { Route as DotlovableOauthConsentRouteImport } from './routes/[.]lovable.oauth.consent'
 import { Route as AuthenticatedClientesIndexRouteImport } from './routes/_authenticated/clientes.index'
 import { Route as AuthenticatedClientesIdRouteImport } from './routes/_authenticated/clientes.$id'
@@ -53,6 +53,11 @@ import { Route as AuthenticatedProdutosIdRouteImport } from './routes/_authentic
 const IndexRoute = IndexRouteImport.update({
   id: '/',
   path: '/',
+  getParentRoute: () => rootRouteImport,
+} as any)
+const SlugRoute = SlugRouteImport.update({
+  id: '/$slug',
+  path: '/$slug',
   getParentRoute: () => rootRouteImport,
 } as any)
 const AuthenticatedRouteRoute = AuthenticatedRouteRouteImport.update({
@@ -69,44 +74,19 @@ const McpRoute = McpRouteImport.update({
   path: '/mcp',
   getParentRoute: () => rootRouteImport,
 } as any)
-const ResetPasswordRoute = ResetPasswordRouteImport.update({
-  id: '/reset-password',
-  path: '/reset-password',
-  getParentRoute: () => rootRouteImport,
-} as any)
-const ConviteTokenRoute = ConviteTokenRouteImport.update({
-  id: '/convite/$token',
-  path: '/convite/$token',
-  getParentRoute: () => rootRouteImport,
-} as any)
 const PrivacidadeRoute = PrivacidadeRouteImport.update({
   id: '/privacidade',
   path: '/privacidade',
   getParentRoute: () => rootRouteImport,
 } as any)
+const ResetPasswordRoute = ResetPasswordRouteImport.update({
+  id: '/reset-password',
+  path: '/reset-password',
+  getParentRoute: () => rootRouteImport,
+} as any)
 const TermosRoute = TermosRouteImport.update({
   id: '/termos',
   path: '/termos',
-  getParentRoute: () => rootRouteImport,
-} as any)
-const CSlugRoute = CSlugRouteImport.update({
-  id: '/c/$slug',
-  path: '/c/$slug',
-  getParentRoute: () => rootRouteImport,
-} as any)
-const PedidoCodigoRoute = PedidoCodigoRouteImport.update({
-  id: '/pedido/$codigo',
-  path: '/pedido/$codigo',
-  getParentRoute: () => rootRouteImport,
-} as any)
-const SlugRoute = SlugRouteImport.update({
-  id: '/$slug',
-  path: '/$slug',
-  getParentRoute: () => rootRouteImport,
-} as any)
-const PCodigoRoute = PCodigoRouteImport.update({
-  id: '/p/$codigo',
-  path: '/p/$codigo',
   getParentRoute: () => rootRouteImport,
 } as any)
 const Char91DotwellKnownChar93OauthProtectedResourceRoute =
@@ -115,6 +95,21 @@ const Char91DotwellKnownChar93OauthProtectedResourceRoute =
     path: '/.well-known/oauth-protected-resource',
     getParentRoute: () => rootRouteImport,
   } as any)
+const AuthenticatedAgendaRoute = AuthenticatedAgendaRouteImport.update({
+  id: '/agenda',
+  path: '/agenda',
+  getParentRoute: () => AuthenticatedRouteRoute,
+} as any)
+const AuthenticatedCatalogoRoute = AuthenticatedCatalogoRouteImport.update({
+  id: '/catalogo',
+  path: '/catalogo',
+  getParentRoute: () => AuthenticatedRouteRoute,
+} as any)
+const AuthenticatedComecarRoute = AuthenticatedComecarRouteImport.update({
+  id: '/comecar',
+  path: '/comecar',
+  getParentRoute: () => AuthenticatedRouteRoute,
+} as any)
 const AuthenticatedComprasRoute = AuthenticatedComprasRouteImport.update({
   id: '/compras',
   path: '/compras',
@@ -137,11 +132,42 @@ const AuthenticatedDespesasRoute = AuthenticatedDespesasRouteImport.update({
   path: '/despesas',
   getParentRoute: () => AuthenticatedRouteRoute,
 } as any)
+const AuthenticatedEntregasRoute = AuthenticatedEntregasRouteImport.update({
+  id: '/entregas',
+  path: '/entregas',
+  getParentRoute: () => AuthenticatedRouteRoute,
+} as any)
+const AuthenticatedEquipeRoute = AuthenticatedEquipeRouteImport.update({
+  id: '/equipe',
+  path: '/equipe',
+  getParentRoute: () => AuthenticatedRouteRoute,
+} as any)
+const AuthenticatedEtiquetasRoute = AuthenticatedEtiquetasRouteImport.update({
+  id: '/etiquetas',
+  path: '/etiquetas',
+  getParentRoute: () => AuthenticatedRouteRoute,
+} as any)
 const AuthenticatedFinanceiroRoute = AuthenticatedFinanceiroRouteImport.update({
   id: '/financeiro',
   path: '/financeiro',
   getParentRoute: () => AuthenticatedRouteRoute,
 } as any)
+const AuthenticatedFluxoCaixaRoute = AuthenticatedFluxoCaixaRouteImport.update({
+  id: '/fluxo-caixa',
+  path: '/fluxo-caixa',
+  getParentRoute: () => AuthenticatedRouteRoute,
+} as any)
+const AuthenticatedHistoricoRoute = AuthenticatedHistoricoRouteImport.update({
+  id: '/historico',
+  path: '/historico',
+  getParentRoute: () => AuthenticatedRouteRoute,
+} as any)
+const AuthenticatedListaComprasRoute =
+  AuthenticatedListaComprasRouteImport.update({
+    id: '/lista-compras',
+    path: '/lista-compras',
+    getParentRoute: () => AuthenticatedRouteRoute,
+  } as any)
 const AuthenticatedMaisRoute = AuthenticatedMaisRouteImport.update({
   id: '/mais',
   path: '/mais',
@@ -163,39 +189,9 @@ const AuthenticatedProducaoRoute = AuthenticatedProducaoRouteImport.update({
   path: '/producao',
   getParentRoute: () => AuthenticatedRouteRoute,
 } as any)
-const AuthenticatedHistoricoRoute = AuthenticatedHistoricoRouteImport.update({
-  id: '/historico',
-  path: '/historico',
-  getParentRoute: () => AuthenticatedRouteRoute,
-} as any)
-const AuthenticatedFluxoCaixaRoute = AuthenticatedFluxoCaixaRouteImport.update({
-  id: '/fluxo-caixa',
-  path: '/fluxo-caixa',
-  getParentRoute: () => AuthenticatedRouteRoute,
-} as any)
-const AuthenticatedEtiquetasRoute = AuthenticatedEtiquetasRouteImport.update({
-  id: '/etiquetas',
-  path: '/etiquetas',
-  getParentRoute: () => AuthenticatedRouteRoute,
-} as any)
-const AuthenticatedEntregasRoute = AuthenticatedEntregasRouteImport.update({
-  id: '/entregas',
-  path: '/entregas',
-  getParentRoute: () => AuthenticatedRouteRoute,
-} as any)
-const AuthenticatedListaComprasRoute = AuthenticatedListaComprasRouteImport.update({
-  id: '/lista-compras',
-  path: '/lista-compras',
-  getParentRoute: () => AuthenticatedRouteRoute,
-} as any)
-const AuthenticatedAgendaRoute = AuthenticatedAgendaRouteImport.update({
-  id: '/agenda',
-  path: '/agenda',
-  getParentRoute: () => AuthenticatedRouteRoute,
-} as any)
-const AuthenticatedEquipeRoute = AuthenticatedEquipeRouteImport.update({
-  id: '/equipe',
-  path: '/equipe',
+const AuthenticatedRelatoriosRoute = AuthenticatedRelatoriosRouteImport.update({
+  id: '/relatorios',
+  path: '/relatorios',
   getParentRoute: () => AuthenticatedRouteRoute,
 } as any)
 const AuthenticatedResumoMesRoute = AuthenticatedResumoMesRouteImport.update({
@@ -203,20 +199,25 @@ const AuthenticatedResumoMesRoute = AuthenticatedResumoMesRouteImport.update({
   path: '/resumo-mes',
   getParentRoute: () => AuthenticatedRouteRoute,
 } as any)
-const AuthenticatedCatalogoRoute = AuthenticatedCatalogoRouteImport.update({
-  id: '/catalogo',
-  path: '/catalogo',
-  getParentRoute: () => AuthenticatedRouteRoute,
+const CSlugRoute = CSlugRouteImport.update({
+  id: '/c/$slug',
+  path: '/c/$slug',
+  getParentRoute: () => rootRouteImport,
 } as any)
-const AuthenticatedComecarRoute = AuthenticatedComecarRouteImport.update({
-  id: '/comecar',
-  path: '/comecar',
-  getParentRoute: () => AuthenticatedRouteRoute,
+const ConviteTokenRoute = ConviteTokenRouteImport.update({
+  id: '/convite/$token',
+  path: '/convite/$token',
+  getParentRoute: () => rootRouteImport,
 } as any)
-const AuthenticatedRelatoriosRoute = AuthenticatedRelatoriosRouteImport.update({
-  id: '/relatorios',
-  path: '/relatorios',
-  getParentRoute: () => AuthenticatedRouteRoute,
+const PCodigoRoute = PCodigoRouteImport.update({
+  id: '/p/$codigo',
+  path: '/p/$codigo',
+  getParentRoute: () => rootRouteImport,
+} as any)
+const PedidoCodigoRoute = PedidoCodigoRouteImport.update({
+  id: '/pedido/$codigo',
+  path: '/pedido/$codigo',
+  getParentRoute: () => rootRouteImport,
 } as any)
 const DotlovableOauthConsentRoute = DotlovableOauthConsentRouteImport.update({
   id: '/.lovable/oauth/consent',
@@ -259,37 +260,37 @@ const AuthenticatedProdutosIdRoute = AuthenticatedProdutosIdRouteImport.update({
 
 export interface FileRoutesByFullPath {
   '/': typeof IndexRoute
+  '/$slug': typeof SlugRoute
   '/auth': typeof AuthRoute
   '/mcp': typeof McpRoute
-  '/reset-password': typeof ResetPasswordRoute
-  '/convite/$token': typeof ConviteTokenRoute
   '/privacidade': typeof PrivacidadeRoute
+  '/reset-password': typeof ResetPasswordRoute
   '/termos': typeof TermosRoute
-  '/c/$slug': typeof CSlugRoute
-  '/pedido/$codigo': typeof PedidoCodigoRoute
-  '/$slug': typeof SlugRoute
-  '/p/$codigo': typeof PCodigoRoute
   '/.well-known/oauth-protected-resource': typeof Char91DotwellKnownChar93OauthProtectedResourceRoute
+  '/agenda': typeof AuthenticatedAgendaRoute
+  '/catalogo': typeof AuthenticatedCatalogoRoute
+  '/comecar': typeof AuthenticatedComecarRoute
   '/compras': typeof AuthenticatedComprasRoute
   '/configuracoes': typeof AuthenticatedConfiguracoesRoute
   '/contas-pagar': typeof AuthenticatedContasPagarRoute
   '/despesas': typeof AuthenticatedDespesasRoute
+  '/entregas': typeof AuthenticatedEntregasRoute
+  '/equipe': typeof AuthenticatedEquipeRoute
+  '/etiquetas': typeof AuthenticatedEtiquetasRoute
   '/financeiro': typeof AuthenticatedFinanceiroRoute
+  '/fluxo-caixa': typeof AuthenticatedFluxoCaixaRoute
+  '/historico': typeof AuthenticatedHistoricoRoute
+  '/lista-compras': typeof AuthenticatedListaComprasRoute
   '/mais': typeof AuthenticatedMaisRoute
   '/painel': typeof AuthenticatedPainelRoute
   '/pedidos-recorrentes': typeof AuthenticatedPedidosRecorrentesRoute
   '/producao': typeof AuthenticatedProducaoRoute
-  '/historico': typeof AuthenticatedHistoricoRoute
-  '/fluxo-caixa': typeof AuthenticatedFluxoCaixaRoute
-  '/etiquetas': typeof AuthenticatedEtiquetasRoute
-  '/entregas': typeof AuthenticatedEntregasRoute
-  '/lista-compras': typeof AuthenticatedListaComprasRoute
-  '/agenda': typeof AuthenticatedAgendaRoute
-  '/equipe': typeof AuthenticatedEquipeRoute
-  '/resumo-mes': typeof AuthenticatedResumoMesRoute
-  '/catalogo': typeof AuthenticatedCatalogoRoute
-  '/comecar': typeof AuthenticatedComecarRoute
   '/relatorios': typeof AuthenticatedRelatoriosRoute
+  '/resumo-mes': typeof AuthenticatedResumoMesRoute
+  '/c/$slug': typeof CSlugRoute
+  '/convite/$token': typeof ConviteTokenRoute
+  '/p/$codigo': typeof PCodigoRoute
+  '/pedido/$codigo': typeof PedidoCodigoRoute
   '/.lovable/oauth/consent': typeof DotlovableOauthConsentRoute
   '/clientes/$id': typeof AuthenticatedClientesIdRoute
   '/pedidos/$id': typeof AuthenticatedPedidosIdRoute
@@ -300,37 +301,37 @@ export interface FileRoutesByFullPath {
 }
 export interface FileRoutesByTo {
   '/': typeof IndexRoute
+  '/$slug': typeof SlugRoute
   '/auth': typeof AuthRoute
   '/mcp': typeof McpRoute
-  '/reset-password': typeof ResetPasswordRoute
-  '/convite/$token': typeof ConviteTokenRoute
   '/privacidade': typeof PrivacidadeRoute
+  '/reset-password': typeof ResetPasswordRoute
   '/termos': typeof TermosRoute
-  '/c/$slug': typeof CSlugRoute
-  '/pedido/$codigo': typeof PedidoCodigoRoute
-  '/$slug': typeof SlugRoute
-  '/p/$codigo': typeof PCodigoRoute
   '/.well-known/oauth-protected-resource': typeof Char91DotwellKnownChar93OauthProtectedResourceRoute
+  '/agenda': typeof AuthenticatedAgendaRoute
+  '/catalogo': typeof AuthenticatedCatalogoRoute
+  '/comecar': typeof AuthenticatedComecarRoute
   '/compras': typeof AuthenticatedComprasRoute
   '/configuracoes': typeof AuthenticatedConfiguracoesRoute
   '/contas-pagar': typeof AuthenticatedContasPagarRoute
   '/despesas': typeof AuthenticatedDespesasRoute
+  '/entregas': typeof AuthenticatedEntregasRoute
+  '/equipe': typeof AuthenticatedEquipeRoute
+  '/etiquetas': typeof AuthenticatedEtiquetasRoute
   '/financeiro': typeof AuthenticatedFinanceiroRoute
+  '/fluxo-caixa': typeof AuthenticatedFluxoCaixaRoute
+  '/historico': typeof AuthenticatedHistoricoRoute
+  '/lista-compras': typeof AuthenticatedListaComprasRoute
   '/mais': typeof AuthenticatedMaisRoute
   '/painel': typeof AuthenticatedPainelRoute
   '/pedidos-recorrentes': typeof AuthenticatedPedidosRecorrentesRoute
   '/producao': typeof AuthenticatedProducaoRoute
-  '/historico': typeof AuthenticatedHistoricoRoute
-  '/fluxo-caixa': typeof AuthenticatedFluxoCaixaRoute
-  '/etiquetas': typeof AuthenticatedEtiquetasRoute
-  '/entregas': typeof AuthenticatedEntregasRoute
-  '/lista-compras': typeof AuthenticatedListaComprasRoute
-  '/agenda': typeof AuthenticatedAgendaRoute
-  '/equipe': typeof AuthenticatedEquipeRoute
-  '/resumo-mes': typeof AuthenticatedResumoMesRoute
-  '/catalogo': typeof AuthenticatedCatalogoRoute
-  '/comecar': typeof AuthenticatedComecarRoute
   '/relatorios': typeof AuthenticatedRelatoriosRoute
+  '/resumo-mes': typeof AuthenticatedResumoMesRoute
+  '/c/$slug': typeof CSlugRoute
+  '/convite/$token': typeof ConviteTokenRoute
+  '/p/$codigo': typeof PCodigoRoute
+  '/pedido/$codigo': typeof PedidoCodigoRoute
   '/.lovable/oauth/consent': typeof DotlovableOauthConsentRoute
   '/clientes/$id': typeof AuthenticatedClientesIdRoute
   '/pedidos/$id': typeof AuthenticatedPedidosIdRoute
@@ -343,37 +344,37 @@ export interface FileRoutesById {
   __root__: typeof rootRouteImport
   '/': typeof IndexRoute
   '/_authenticated': typeof AuthenticatedRouteRouteWithChildren
+  '/$slug': typeof SlugRoute
   '/auth': typeof AuthRoute
   '/mcp': typeof McpRoute
-  '/reset-password': typeof ResetPasswordRoute
-  '/convite/$token': typeof ConviteTokenRoute
   '/privacidade': typeof PrivacidadeRoute
+  '/reset-password': typeof ResetPasswordRoute
   '/termos': typeof TermosRoute
-  '/c/$slug': typeof CSlugRoute
-  '/pedido/$codigo': typeof PedidoCodigoRoute
-  '/$slug': typeof SlugRoute
-  '/p/$codigo': typeof PCodigoRoute
   '/.well-known/oauth-protected-resource': typeof Char91DotwellKnownChar93OauthProtectedResourceRoute
+  '/_authenticated/agenda': typeof AuthenticatedAgendaRoute
+  '/_authenticated/catalogo': typeof AuthenticatedCatalogoRoute
+  '/_authenticated/comecar': typeof AuthenticatedComecarRoute
   '/_authenticated/compras': typeof AuthenticatedComprasRoute
   '/_authenticated/configuracoes': typeof AuthenticatedConfiguracoesRoute
   '/_authenticated/contas-pagar': typeof AuthenticatedContasPagarRoute
   '/_authenticated/despesas': typeof AuthenticatedDespesasRoute
+  '/_authenticated/entregas': typeof AuthenticatedEntregasRoute
+  '/_authenticated/equipe': typeof AuthenticatedEquipeRoute
+  '/_authenticated/etiquetas': typeof AuthenticatedEtiquetasRoute
   '/_authenticated/financeiro': typeof AuthenticatedFinanceiroRoute
+  '/_authenticated/fluxo-caixa': typeof AuthenticatedFluxoCaixaRoute
+  '/_authenticated/historico': typeof AuthenticatedHistoricoRoute
+  '/_authenticated/lista-compras': typeof AuthenticatedListaComprasRoute
   '/_authenticated/mais': typeof AuthenticatedMaisRoute
   '/_authenticated/painel': typeof AuthenticatedPainelRoute
   '/_authenticated/pedidos-recorrentes': typeof AuthenticatedPedidosRecorrentesRoute
   '/_authenticated/producao': typeof AuthenticatedProducaoRoute
-  '/_authenticated/historico': typeof AuthenticatedHistoricoRoute
-  '/_authenticated/fluxo-caixa': typeof AuthenticatedFluxoCaixaRoute
-  '/_authenticated/etiquetas': typeof AuthenticatedEtiquetasRoute
-  '/_authenticated/entregas': typeof AuthenticatedEntregasRoute
-  '/_authenticated/lista-compras': typeof AuthenticatedListaComprasRoute
-  '/_authenticated/agenda': typeof AuthenticatedAgendaRoute
-  '/_authenticated/equipe': typeof AuthenticatedEquipeRoute
-  '/_authenticated/resumo-mes': typeof AuthenticatedResumoMesRoute
-  '/_authenticated/catalogo': typeof AuthenticatedCatalogoRoute
-  '/_authenticated/comecar': typeof AuthenticatedComecarRoute
   '/_authenticated/relatorios': typeof AuthenticatedRelatoriosRoute
+  '/_authenticated/resumo-mes': typeof AuthenticatedResumoMesRoute
+  '/c/$slug': typeof CSlugRoute
+  '/convite/$token': typeof ConviteTokenRoute
+  '/p/$codigo': typeof PCodigoRoute
+  '/pedido/$codigo': typeof PedidoCodigoRoute
   '/.lovable/oauth/consent': typeof DotlovableOauthConsentRoute
   '/_authenticated/clientes/$id': typeof AuthenticatedClientesIdRoute
   '/_authenticated/pedidos/$id': typeof AuthenticatedPedidosIdRoute
@@ -386,37 +387,37 @@ export interface FileRouteTypes {
   fileRoutesByFullPath: FileRoutesByFullPath
   fullPaths:
     | '/'
+    | '/$slug'
     | '/auth'
     | '/mcp'
-    | '/reset-password'
-    | '/convite/$token'
     | '/privacidade'
+    | '/reset-password'
     | '/termos'
-    | '/c/$slug'
-    | '/pedido/$codigo'
-    | '/$slug'
-    | '/p/$codigo'
     | '/.well-known/oauth-protected-resource'
+    | '/agenda'
+    | '/catalogo'
+    | '/comecar'
     | '/compras'
     | '/configuracoes'
     | '/contas-pagar'
     | '/despesas'
+    | '/entregas'
+    | '/equipe'
+    | '/etiquetas'
     | '/financeiro'
+    | '/fluxo-caixa'
+    | '/historico'
+    | '/lista-compras'
     | '/mais'
     | '/painel'
     | '/pedidos-recorrentes'
     | '/producao'
-    | '/historico'
-    | '/fluxo-caixa'
-    | '/etiquetas'
-    | '/entregas'
-    | '/lista-compras'
-    | '/agenda'
-    | '/equipe'
-    | '/resumo-mes'
-    | '/catalogo'
-    | '/comecar'
     | '/relatorios'
+    | '/resumo-mes'
+    | '/c/$slug'
+    | '/convite/$token'
+    | '/p/$codigo'
+    | '/pedido/$codigo'
     | '/.lovable/oauth/consent'
     | '/clientes/$id'
     | '/pedidos/$id'
@@ -427,37 +428,37 @@ export interface FileRouteTypes {
   fileRoutesByTo: FileRoutesByTo
   to:
     | '/'
+    | '/$slug'
     | '/auth'
     | '/mcp'
-    | '/reset-password'
-    | '/convite/$token'
     | '/privacidade'
+    | '/reset-password'
     | '/termos'
-    | '/c/$slug'
-    | '/pedido/$codigo'
-    | '/$slug'
-    | '/p/$codigo'
     | '/.well-known/oauth-protected-resource'
+    | '/agenda'
+    | '/catalogo'
+    | '/comecar'
     | '/compras'
     | '/configuracoes'
     | '/contas-pagar'
     | '/despesas'
+    | '/entregas'
+    | '/equipe'
+    | '/etiquetas'
     | '/financeiro'
+    | '/fluxo-caixa'
+    | '/historico'
+    | '/lista-compras'
     | '/mais'
     | '/painel'
     | '/pedidos-recorrentes'
     | '/producao'
-    | '/historico'
-    | '/fluxo-caixa'
-    | '/etiquetas'
-    | '/entregas'
-    | '/lista-compras'
-    | '/agenda'
-    | '/equipe'
-    | '/resumo-mes'
-    | '/catalogo'
-    | '/comecar'
     | '/relatorios'
+    | '/resumo-mes'
+    | '/c/$slug'
+    | '/convite/$token'
+    | '/p/$codigo'
+    | '/pedido/$codigo'
     | '/.lovable/oauth/consent'
     | '/clientes/$id'
     | '/pedidos/$id'
@@ -469,37 +470,37 @@ export interface FileRouteTypes {
     | '__root__'
     | '/'
     | '/_authenticated'
+    | '/$slug'
     | '/auth'
     | '/mcp'
-    | '/reset-password'
-    | '/convite/$token'
     | '/privacidade'
+    | '/reset-password'
     | '/termos'
-    | '/c/$slug'
-    | '/pedido/$codigo'
-    | '/$slug'
-    | '/p/$codigo'
     | '/.well-known/oauth-protected-resource'
+    | '/_authenticated/agenda'
+    | '/_authenticated/catalogo'
+    | '/_authenticated/comecar'
     | '/_authenticated/compras'
     | '/_authenticated/configuracoes'
     | '/_authenticated/contas-pagar'
     | '/_authenticated/despesas'
+    | '/_authenticated/entregas'
+    | '/_authenticated/equipe'
+    | '/_authenticated/etiquetas'
     | '/_authenticated/financeiro'
+    | '/_authenticated/fluxo-caixa'
+    | '/_authenticated/historico'
+    | '/_authenticated/lista-compras'
     | '/_authenticated/mais'
     | '/_authenticated/painel'
     | '/_authenticated/pedidos-recorrentes'
     | '/_authenticated/producao'
-    | '/_authenticated/historico'
-    | '/_authenticated/fluxo-caixa'
-    | '/_authenticated/etiquetas'
-    | '/_authenticated/entregas'
-    | '/_authenticated/lista-compras'
-    | '/_authenticated/agenda'
-    | '/_authenticated/equipe'
-    | '/_authenticated/resumo-mes'
-    | '/_authenticated/catalogo'
-    | '/_authenticated/comecar'
     | '/_authenticated/relatorios'
+    | '/_authenticated/resumo-mes'
+    | '/c/$slug'
+    | '/convite/$token'
+    | '/p/$codigo'
+    | '/pedido/$codigo'
     | '/.lovable/oauth/consent'
     | '/_authenticated/clientes/$id'
     | '/_authenticated/pedidos/$id'
@@ -512,17 +513,17 @@ export interface FileRouteTypes {
 export interface RootRouteChildren {
   IndexRoute: typeof IndexRoute
   AuthenticatedRouteRoute: typeof AuthenticatedRouteRouteWithChildren
+  SlugRoute: typeof SlugRoute
   AuthRoute: typeof AuthRoute
   McpRoute: typeof McpRoute
-  ResetPasswordRoute: typeof ResetPasswordRoute
-  ConviteTokenRoute: typeof ConviteTokenRoute
   PrivacidadeRoute: typeof PrivacidadeRoute
+  ResetPasswordRoute: typeof ResetPasswordRoute
   TermosRoute: typeof TermosRoute
-  CSlugRoute: typeof CSlugRoute
-  PedidoCodigoRoute: typeof PedidoCodigoRoute
-  SlugRoute: typeof SlugRoute
-  PCodigoRoute: typeof PCodigoRoute
   Char91DotwellKnownChar93OauthProtectedResourceRoute: typeof Char91DotwellKnownChar93OauthProtectedResourceRoute
+  CSlugRoute: typeof CSlugRoute
+  ConviteTokenRoute: typeof ConviteTokenRoute
+  PCodigoRoute: typeof PCodigoRoute
+  PedidoCodigoRoute: typeof PedidoCodigoRoute
   DotlovableOauthConsentRoute: typeof DotlovableOauthConsentRoute
 }
 
@@ -533,6 +534,13 @@ declare module '@tanstack/react-router' {
       path: '/'
       fullPath: '/'
       preLoaderRoute: typeof IndexRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/$slug': {
+      id: '/$slug'
+      path: '/$slug'
+      fullPath: '/$slug'
+      preLoaderRoute: typeof SlugRouteImport
       parentRoute: typeof rootRouteImport
     }
     '/_authenticated': {
@@ -556,25 +564,18 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof McpRouteImport
       parentRoute: typeof rootRouteImport
     }
-    '/reset-password': {
-      id: '/reset-password'
-      path: '/reset-password'
-      fullPath: '/reset-password'
-      preLoaderRoute: typeof ResetPasswordRouteImport
-      parentRoute: typeof rootRouteImport
-    }
-    '/convite/$token': {
-      id: '/convite/$token'
-      path: '/convite/$token'
-      fullPath: '/convite/$token'
-      preLoaderRoute: typeof ConviteTokenRouteImport
-      parentRoute: typeof rootRouteImport
-    }
     '/privacidade': {
       id: '/privacidade'
       path: '/privacidade'
       fullPath: '/privacidade'
       preLoaderRoute: typeof PrivacidadeRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/reset-password': {
+      id: '/reset-password'
+      path: '/reset-password'
+      fullPath: '/reset-password'
+      preLoaderRoute: typeof ResetPasswordRouteImport
       parentRoute: typeof rootRouteImport
     }
     '/termos': {
@@ -584,40 +585,33 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof TermosRouteImport
       parentRoute: typeof rootRouteImport
     }
-    '/c/$slug': {
-      id: '/c/$slug'
-      path: '/c/$slug'
-      fullPath: '/c/$slug'
-      preLoaderRoute: typeof CSlugRouteImport
-      parentRoute: typeof rootRouteImport
-    }
-    '/pedido/$codigo': {
-      id: '/pedido/$codigo'
-      path: '/pedido/$codigo'
-      fullPath: '/pedido/$codigo'
-      preLoaderRoute: typeof PedidoCodigoRouteImport
-      parentRoute: typeof rootRouteImport
-    }
-    '/$slug': {
-      id: '/$slug'
-      path: '/$slug'
-      fullPath: '/$slug'
-      preLoaderRoute: typeof SlugRouteImport
-      parentRoute: typeof rootRouteImport
-    }
-    '/p/$codigo': {
-      id: '/p/$codigo'
-      path: '/p/$codigo'
-      fullPath: '/p/$codigo'
-      preLoaderRoute: typeof PCodigoRouteImport
-      parentRoute: typeof rootRouteImport
-    }
     '/.well-known/oauth-protected-resource': {
       id: '/.well-known/oauth-protected-resource'
       path: '/.well-known/oauth-protected-resource'
       fullPath: '/.well-known/oauth-protected-resource'
       preLoaderRoute: typeof Char91DotwellKnownChar93OauthProtectedResourceRouteImport
       parentRoute: typeof rootRouteImport
+    }
+    '/_authenticated/agenda': {
+      id: '/_authenticated/agenda'
+      path: '/agenda'
+      fullPath: '/agenda'
+      preLoaderRoute: typeof AuthenticatedAgendaRouteImport
+      parentRoute: typeof AuthenticatedRouteRoute
+    }
+    '/_authenticated/catalogo': {
+      id: '/_authenticated/catalogo'
+      path: '/catalogo'
+      fullPath: '/catalogo'
+      preLoaderRoute: typeof AuthenticatedCatalogoRouteImport
+      parentRoute: typeof AuthenticatedRouteRoute
+    }
+    '/_authenticated/comecar': {
+      id: '/_authenticated/comecar'
+      path: '/comecar'
+      fullPath: '/comecar'
+      preLoaderRoute: typeof AuthenticatedComecarRouteImport
+      parentRoute: typeof AuthenticatedRouteRoute
     }
     '/_authenticated/compras': {
       id: '/_authenticated/compras'
@@ -647,11 +641,53 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof AuthenticatedDespesasRouteImport
       parentRoute: typeof AuthenticatedRouteRoute
     }
+    '/_authenticated/entregas': {
+      id: '/_authenticated/entregas'
+      path: '/entregas'
+      fullPath: '/entregas'
+      preLoaderRoute: typeof AuthenticatedEntregasRouteImport
+      parentRoute: typeof AuthenticatedRouteRoute
+    }
+    '/_authenticated/equipe': {
+      id: '/_authenticated/equipe'
+      path: '/equipe'
+      fullPath: '/equipe'
+      preLoaderRoute: typeof AuthenticatedEquipeRouteImport
+      parentRoute: typeof AuthenticatedRouteRoute
+    }
+    '/_authenticated/etiquetas': {
+      id: '/_authenticated/etiquetas'
+      path: '/etiquetas'
+      fullPath: '/etiquetas'
+      preLoaderRoute: typeof AuthenticatedEtiquetasRouteImport
+      parentRoute: typeof AuthenticatedRouteRoute
+    }
     '/_authenticated/financeiro': {
       id: '/_authenticated/financeiro'
       path: '/financeiro'
       fullPath: '/financeiro'
       preLoaderRoute: typeof AuthenticatedFinanceiroRouteImport
+      parentRoute: typeof AuthenticatedRouteRoute
+    }
+    '/_authenticated/fluxo-caixa': {
+      id: '/_authenticated/fluxo-caixa'
+      path: '/fluxo-caixa'
+      fullPath: '/fluxo-caixa'
+      preLoaderRoute: typeof AuthenticatedFluxoCaixaRouteImport
+      parentRoute: typeof AuthenticatedRouteRoute
+    }
+    '/_authenticated/historico': {
+      id: '/_authenticated/historico'
+      path: '/historico'
+      fullPath: '/historico'
+      preLoaderRoute: typeof AuthenticatedHistoricoRouteImport
+      parentRoute: typeof AuthenticatedRouteRoute
+    }
+    '/_authenticated/lista-compras': {
+      id: '/_authenticated/lista-compras'
+      path: '/lista-compras'
+      fullPath: '/lista-compras'
+      preLoaderRoute: typeof AuthenticatedListaComprasRouteImport
       parentRoute: typeof AuthenticatedRouteRoute
     }
     '/_authenticated/mais': {
@@ -682,53 +718,11 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof AuthenticatedProducaoRouteImport
       parentRoute: typeof AuthenticatedRouteRoute
     }
-    '/_authenticated/historico': {
-      id: '/_authenticated/historico'
-      path: '/historico'
-      fullPath: '/historico'
-      preLoaderRoute: typeof AuthenticatedHistoricoRouteImport
-      parentRoute: typeof AuthenticatedRouteRoute
-    }
-    '/_authenticated/fluxo-caixa': {
-      id: '/_authenticated/fluxo-caixa'
-      path: '/fluxo-caixa'
-      fullPath: '/fluxo-caixa'
-      preLoaderRoute: typeof AuthenticatedFluxoCaixaRouteImport
-      parentRoute: typeof AuthenticatedRouteRoute
-    }
-    '/_authenticated/etiquetas': {
-      id: '/_authenticated/etiquetas'
-      path: '/etiquetas'
-      fullPath: '/etiquetas'
-      preLoaderRoute: typeof AuthenticatedEtiquetasRouteImport
-      parentRoute: typeof AuthenticatedRouteRoute
-    }
-    '/_authenticated/entregas': {
-      id: '/_authenticated/entregas'
-      path: '/entregas'
-      fullPath: '/entregas'
-      preLoaderRoute: typeof AuthenticatedEntregasRouteImport
-      parentRoute: typeof AuthenticatedRouteRoute
-    }
-    '/_authenticated/lista-compras': {
-      id: '/_authenticated/lista-compras'
-      path: '/lista-compras'
-      fullPath: '/lista-compras'
-      preLoaderRoute: typeof AuthenticatedListaComprasRouteImport
-      parentRoute: typeof AuthenticatedRouteRoute
-    }
-    '/_authenticated/agenda': {
-      id: '/_authenticated/agenda'
-      path: '/agenda'
-      fullPath: '/agenda'
-      preLoaderRoute: typeof AuthenticatedAgendaRouteImport
-      parentRoute: typeof AuthenticatedRouteRoute
-    }
-    '/_authenticated/equipe': {
-      id: '/_authenticated/equipe'
-      path: '/equipe'
-      fullPath: '/equipe'
-      preLoaderRoute: typeof AuthenticatedEquipeRouteImport
+    '/_authenticated/relatorios': {
+      id: '/_authenticated/relatorios'
+      path: '/relatorios'
+      fullPath: '/relatorios'
+      preLoaderRoute: typeof AuthenticatedRelatoriosRouteImport
       parentRoute: typeof AuthenticatedRouteRoute
     }
     '/_authenticated/resumo-mes': {
@@ -738,26 +732,33 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof AuthenticatedResumoMesRouteImport
       parentRoute: typeof AuthenticatedRouteRoute
     }
-    '/_authenticated/catalogo': {
-      id: '/_authenticated/catalogo'
-      path: '/catalogo'
-      fullPath: '/catalogo'
-      preLoaderRoute: typeof AuthenticatedCatalogoRouteImport
-      parentRoute: typeof AuthenticatedRouteRoute
+    '/c/$slug': {
+      id: '/c/$slug'
+      path: '/c/$slug'
+      fullPath: '/c/$slug'
+      preLoaderRoute: typeof CSlugRouteImport
+      parentRoute: typeof rootRouteImport
     }
-    '/_authenticated/comecar': {
-      id: '/_authenticated/comecar'
-      path: '/comecar'
-      fullPath: '/comecar'
-      preLoaderRoute: typeof AuthenticatedComecarRouteImport
-      parentRoute: typeof AuthenticatedRouteRoute
+    '/convite/$token': {
+      id: '/convite/$token'
+      path: '/convite/$token'
+      fullPath: '/convite/$token'
+      preLoaderRoute: typeof ConviteTokenRouteImport
+      parentRoute: typeof rootRouteImport
     }
-    '/_authenticated/relatorios': {
-      id: '/_authenticated/relatorios'
-      path: '/relatorios'
-      fullPath: '/relatorios'
-      preLoaderRoute: typeof AuthenticatedRelatoriosRouteImport
-      parentRoute: typeof AuthenticatedRouteRoute
+    '/p/$codigo': {
+      id: '/p/$codigo'
+      path: '/p/$codigo'
+      fullPath: '/p/$codigo'
+      preLoaderRoute: typeof PCodigoRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/pedido/$codigo': {
+      id: '/pedido/$codigo'
+      path: '/pedido/$codigo'
+      fullPath: '/pedido/$codigo'
+      preLoaderRoute: typeof PedidoCodigoRouteImport
+      parentRoute: typeof rootRouteImport
     }
     '/.lovable/oauth/consent': {
       id: '/.lovable/oauth/consent'
@@ -812,26 +813,26 @@ declare module '@tanstack/react-router' {
 }
 
 interface AuthenticatedRouteRouteChildren {
+  AuthenticatedAgendaRoute: typeof AuthenticatedAgendaRoute
+  AuthenticatedCatalogoRoute: typeof AuthenticatedCatalogoRoute
+  AuthenticatedComecarRoute: typeof AuthenticatedComecarRoute
   AuthenticatedComprasRoute: typeof AuthenticatedComprasRoute
   AuthenticatedConfiguracoesRoute: typeof AuthenticatedConfiguracoesRoute
   AuthenticatedContasPagarRoute: typeof AuthenticatedContasPagarRoute
   AuthenticatedDespesasRoute: typeof AuthenticatedDespesasRoute
+  AuthenticatedEntregasRoute: typeof AuthenticatedEntregasRoute
+  AuthenticatedEquipeRoute: typeof AuthenticatedEquipeRoute
+  AuthenticatedEtiquetasRoute: typeof AuthenticatedEtiquetasRoute
   AuthenticatedFinanceiroRoute: typeof AuthenticatedFinanceiroRoute
+  AuthenticatedFluxoCaixaRoute: typeof AuthenticatedFluxoCaixaRoute
+  AuthenticatedHistoricoRoute: typeof AuthenticatedHistoricoRoute
+  AuthenticatedListaComprasRoute: typeof AuthenticatedListaComprasRoute
   AuthenticatedMaisRoute: typeof AuthenticatedMaisRoute
   AuthenticatedPainelRoute: typeof AuthenticatedPainelRoute
   AuthenticatedPedidosRecorrentesRoute: typeof AuthenticatedPedidosRecorrentesRoute
   AuthenticatedProducaoRoute: typeof AuthenticatedProducaoRoute
-  AuthenticatedHistoricoRoute: typeof AuthenticatedHistoricoRoute
-  AuthenticatedFluxoCaixaRoute: typeof AuthenticatedFluxoCaixaRoute
-  AuthenticatedEtiquetasRoute: typeof AuthenticatedEtiquetasRoute
-  AuthenticatedEntregasRoute: typeof AuthenticatedEntregasRoute
-  AuthenticatedListaComprasRoute: typeof AuthenticatedListaComprasRoute
-  AuthenticatedAgendaRoute: typeof AuthenticatedAgendaRoute
-  AuthenticatedEquipeRoute: typeof AuthenticatedEquipeRoute
-  AuthenticatedResumoMesRoute: typeof AuthenticatedResumoMesRoute
-  AuthenticatedCatalogoRoute: typeof AuthenticatedCatalogoRoute
-  AuthenticatedComecarRoute: typeof AuthenticatedComecarRoute
   AuthenticatedRelatoriosRoute: typeof AuthenticatedRelatoriosRoute
+  AuthenticatedResumoMesRoute: typeof AuthenticatedResumoMesRoute
   AuthenticatedClientesIdRoute: typeof AuthenticatedClientesIdRoute
   AuthenticatedPedidosIdRoute: typeof AuthenticatedPedidosIdRoute
   AuthenticatedProdutosIdRoute: typeof AuthenticatedProdutosIdRoute
@@ -841,26 +842,26 @@ interface AuthenticatedRouteRouteChildren {
 }
 
 const AuthenticatedRouteRouteChildren: AuthenticatedRouteRouteChildren = {
+  AuthenticatedAgendaRoute: AuthenticatedAgendaRoute,
+  AuthenticatedCatalogoRoute: AuthenticatedCatalogoRoute,
+  AuthenticatedComecarRoute: AuthenticatedComecarRoute,
   AuthenticatedComprasRoute: AuthenticatedComprasRoute,
   AuthenticatedConfiguracoesRoute: AuthenticatedConfiguracoesRoute,
   AuthenticatedContasPagarRoute: AuthenticatedContasPagarRoute,
   AuthenticatedDespesasRoute: AuthenticatedDespesasRoute,
+  AuthenticatedEntregasRoute: AuthenticatedEntregasRoute,
+  AuthenticatedEquipeRoute: AuthenticatedEquipeRoute,
+  AuthenticatedEtiquetasRoute: AuthenticatedEtiquetasRoute,
   AuthenticatedFinanceiroRoute: AuthenticatedFinanceiroRoute,
+  AuthenticatedFluxoCaixaRoute: AuthenticatedFluxoCaixaRoute,
+  AuthenticatedHistoricoRoute: AuthenticatedHistoricoRoute,
+  AuthenticatedListaComprasRoute: AuthenticatedListaComprasRoute,
   AuthenticatedMaisRoute: AuthenticatedMaisRoute,
   AuthenticatedPainelRoute: AuthenticatedPainelRoute,
   AuthenticatedPedidosRecorrentesRoute: AuthenticatedPedidosRecorrentesRoute,
   AuthenticatedProducaoRoute: AuthenticatedProducaoRoute,
-  AuthenticatedHistoricoRoute: AuthenticatedHistoricoRoute,
-  AuthenticatedFluxoCaixaRoute: AuthenticatedFluxoCaixaRoute,
-  AuthenticatedEtiquetasRoute: AuthenticatedEtiquetasRoute,
-  AuthenticatedEntregasRoute: AuthenticatedEntregasRoute,
-  AuthenticatedListaComprasRoute: AuthenticatedListaComprasRoute,
-  AuthenticatedAgendaRoute: AuthenticatedAgendaRoute,
-  AuthenticatedEquipeRoute: AuthenticatedEquipeRoute,
-  AuthenticatedResumoMesRoute: AuthenticatedResumoMesRoute,
-  AuthenticatedCatalogoRoute: AuthenticatedCatalogoRoute,
-  AuthenticatedComecarRoute: AuthenticatedComecarRoute,
   AuthenticatedRelatoriosRoute: AuthenticatedRelatoriosRoute,
+  AuthenticatedResumoMesRoute: AuthenticatedResumoMesRoute,
   AuthenticatedClientesIdRoute: AuthenticatedClientesIdRoute,
   AuthenticatedPedidosIdRoute: AuthenticatedPedidosIdRoute,
   AuthenticatedProdutosIdRoute: AuthenticatedProdutosIdRoute,
@@ -875,18 +876,18 @@ const AuthenticatedRouteRouteWithChildren =
 const rootRouteChildren: RootRouteChildren = {
   IndexRoute: IndexRoute,
   AuthenticatedRouteRoute: AuthenticatedRouteRouteWithChildren,
+  SlugRoute: SlugRoute,
   AuthRoute: AuthRoute,
   McpRoute: McpRoute,
-  ResetPasswordRoute: ResetPasswordRoute,
-  ConviteTokenRoute: ConviteTokenRoute,
   PrivacidadeRoute: PrivacidadeRoute,
+  ResetPasswordRoute: ResetPasswordRoute,
   TermosRoute: TermosRoute,
-  CSlugRoute: CSlugRoute,
-  PedidoCodigoRoute: PedidoCodigoRoute,
-  SlugRoute: SlugRoute,
-  PCodigoRoute: PCodigoRoute,
   Char91DotwellKnownChar93OauthProtectedResourceRoute:
     Char91DotwellKnownChar93OauthProtectedResourceRoute,
+  CSlugRoute: CSlugRoute,
+  ConviteTokenRoute: ConviteTokenRoute,
+  PCodigoRoute: PCodigoRoute,
+  PedidoCodigoRoute: PedidoCodigoRoute,
   DotlovableOauthConsentRoute: DotlovableOauthConsentRoute,
 }
 export const routeTree = rootRouteImport
