@@ -8,7 +8,7 @@ import { despesasQ,despesasRecorrentesQ,type Despesa } from '@/lib/queries';
 import { brl,dataBR,hojeISO,parseNum } from '@/lib/format';
 import { baixarCSV } from '@/lib/csv';
 import { CATEGORIAS_DESPESA,OPCOES_REPETICAO,datasMensais } from '@/lib/despesas-recorrentes';
-import { supabase } from '@/integrations/supabase/client';
+import { supabase } from '@/lib/database-compat';
 import { PageHeader,Field,NativeSelect,Empty } from '@/components/app/ui';
 import { DespesasFixas,useGerarDespesasRecorrentes } from '@/components/app/despesas-fixas';
 import { Input } from '@/components/ui/input';

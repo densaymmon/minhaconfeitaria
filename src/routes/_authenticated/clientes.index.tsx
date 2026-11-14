@@ -119,7 +119,7 @@ function Clientes() {
   const [diasSumido, setDiasSumido] = useState(45);
   const { data: loja } = useQuery(confeitariaQ);
   const sumidos = useMemo(() => clientesSumidos(clientes, pedidos, hojeISO(), diasSumido), [clientes, pedidos, diasSumido]);
-  const linkLoja = loja?.catalogo_ativo && loja.slug ? linkCatalogo(origemPublica(), loja.slug) : null;
+  const linkLoja = loja?.catalogo_ativo && loja.slug ? linkCatalogo(origemPublica(), loja.slug, loja.endereco_cardapio) : null;
 
   const stats = useMemo(() => {
     const m = new Map<string, { n: number; total: number }>();

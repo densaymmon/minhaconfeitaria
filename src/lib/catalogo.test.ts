@@ -12,6 +12,8 @@ import {
   precoMinimo,
   capaDoProduto,
   linkCatalogo,
+  enderecoCardapioValido,
+  redirecionamentoCardapio,
   linkPedido,
   mensagemConfirmacaoPedido,
   mensagemPedidoParaLoja,
@@ -92,6 +94,23 @@ describe("utilitários do catálogo", () => {
 });
 
 describe("links curtos e mídias", () => {
+  it("compartilha o site próprio configurado do Casal do Bolo", () => {
+    expect(linkCatalogo("https://minhaconfeitaria.app", "casaldobolo-catalogo", "https://ocasaldobolo.netlify.app")).toBe("https://ocasaldobolo.netlify.app");
+  });
+  it("campo vazio mantém o link interno", () => {
+    expect(linkCatalogo("https://minhaconfeitaria.app", "casaldobolo-catalogo", "")).toBe("https://minhaconfeitaria.app/casaldobolo-catalogo");
+  });
+  it("redireciona somente a confeitaria solicitada com endereço preenchido", () => {
+    expect(redirecionamentoCardapio("casaldobolo-catalogo", "https://ocasaldobolo.netlify.app")).toBe("https://ocasaldobolo.netlify.app");
+    expect(redirecionamentoCardapio("outra-confeitaria", "https://ocasaldobolo.netlify.app")).toBeNull();
+    expect(redirecionamentoCardapio("casaldobolo-catalogo", "")).toBeNull();
+  });
+  it("mantém acompanhamento no sistema mesmo com cardápio externo", () => {
+    expect(linkPedido("https://minhaconfeitaria.app", { longo: "codigo" })).toBe("https://minhaconfeitaria.app/pedido/codigo");
+  });
+  it("rejeita endereços executáveis, incompletos e com credenciais", () => {
+    for (const valor of ["javascript:alert(1)", "http://site.app", "/site", "https://user:senha@site.app", "https://site.app/ espaço"]) expect(enderecoCardapioValido(valor)).toBeNull();
+  });
   it("monta o link do catálogo e do pedido", () => {
     expect(linkCatalogo("https://doce.app/", "casaldobolo")).toBe("https://doce.app/casaldobolo");
     expect(linkPedido("https://doce.app", { curto: "abcdefgh23", longo: "uuid" })).toBe("https://doce.app/p/abcdefgh23");

@@ -1,7 +1,7 @@
 import type { MinhaAssinatura, Papel, Plano } from "./assinatura";
 import type { PlataformaPublica } from "./termos";
 import { queryOptions } from "@tanstack/react-query";
-import { supabase } from "@/integrations/supabase/client";
+import { supabase } from "@/lib/database-compat";
 import type { Tables } from "@/integrations/supabase/types";
 import { CONFIG_PADRAO, type Config } from "./calc";
 import { hojeISO } from "./format";
@@ -24,7 +24,8 @@ export type CompraItem = Tables<"compra_itens">;
 export type ContaPagar = Tables<"contas_pagar">;
 export type ContaPagarPagamento = Tables<"contas_pagar_pagamentos">;
 export type ContaPagarEstorno = Tables<"contas_pagar_estornos">;
-export type DespesaRecorrente = Tables<"despesas_recorrentes">;
+export type { DespesaRecorrente } from "@/lib/database-compat";
+import type { DespesaRecorrente } from "@/lib/database-compat";
 export type ProdutoPronto = Tables<"produtos_prontos">;
 export type MovimentoPronto = Tables<"produtos_prontos_movimentos">;
 
