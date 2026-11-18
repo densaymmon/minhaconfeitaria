@@ -205,7 +205,7 @@ function Produtos() {
                   <Button type="button" variant="outline" onClick={() => { setBuscaProduto(""); setCategoria(null); }}>Limpar filtros</Button>
                 </div>
               </Empty>
-            )) : (
+            ) : (
             <div className="space-y-2">
               {produtosFiltrados.map((p) => {
                 const c = custo.get(p.id) ?? 0;
