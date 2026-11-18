@@ -10,6 +10,7 @@ import { brl } from "@/lib/format";
 import { medidaLabel, medidasCompativeis, numeroIngrediente } from "@/lib/ingredient-cost";
 import { MEDIDAS_RENDIMENTO, MAX_ITENS_PREPARO, custoDoLote, custoPorPorcao, ehPreparo, preparoParaSalvar, type PreparoEditavel } from "@/lib/preparos";
 import { Field, NativeSelect } from "./ui";
+import { NOVO_INGREDIENTE, NovoInsumoDialog } from "./novo-insumo-dialog";
 import { Input } from "@/components/ui/input";
 import { Button } from "@/components/ui/button";
 
@@ -34,6 +35,8 @@ export function PreparoForm({ preparo, itens = [], insumos, onDone }: {
       : [{ insumo_id: "", quantidade: "", unidade: "g" }],
   }));
   const [salvando, setSalvando] = useState(false);
+  // Linha que recebe o ingrediente cadastrado na hora (-1 = nova linha no fim).
+  const [novoIngredienteLinha, setNovoIngredienteLinha] = useState<number | null>(null);
 
   const ingredientes = insumos.filter((i) => !ehPreparo(i));
   const mapIns = new Map<string, InsumoLite & { nome: string; tipo: string }>(
@@ -105,9 +108,10 @@ export function PreparoForm({ preparo, itens = [], insumos, onDone }: {
           return (
             <div key={i} className="space-y-1 rounded-lg bg-muted/50 p-2">
               <div className="grid grid-cols-[1fr_2.5rem] gap-1.5">
-                <NativeSelect aria-label="Ingrediente" value={l.insumo_id} onChange={(e) => { const v = e.target.value; alterarLinha(i, { insumo_id: v, unidade: unidadeDe(v) }); }}>
+                <NativeSelect aria-label="Ingrediente" value={l.insumo_id} onChange={(e) => { const v = e.target.value; if (v === NOVO_INGREDIENTE) return void setNovoIngredienteLinha(i); alterarLinha(i, { insumo_id: v, unidade: unidadeDe(v) }); }}>
                   <option value="">Escolha o ingrediente</option>
                   {ingredientes.filter((x) => x.ativo !== false || x.id === l.insumo_id).map((x) => <option key={x.id} value={x.id}>{x.nome}</option>)}
+                  <option value={NOVO_INGREDIENTE}>+ Cadastrar novo ingrediente</option>
                 </NativeSelect>
                 <Button type="button" variant="ghost" size="icon" className="h-11 w-10" aria-label="Remover ingrediente" onClick={() => setF((s) => ({ ...s, itens: s.itens.filter((_, j) => j !== i) }))}>
                   <Trash2 className="size-4" />
@@ -128,7 +132,25 @@ export function PreparoForm({ preparo, itens = [], insumos, onDone }: {
             <Plus className="size-4" /> Ingrediente
           </Button>
         )}
-        {ingredientes.length === 0 && <p className="text-xs text-muted-foreground">Cadastre primeiro os ingredientes (chocolate, creme de leite...) como insumos.</p>}
+        <Button type="button" variant="outline" size="sm" className="ml-2" onClick={() => setNovoIngredienteLinha(-1)}>
+          <Plus className="size-4" /> Novo ingrediente
+        </Button>
+        {ingredientes.length === 0 && <p className="text-xs text-muted-foreground">Nenhum ingrediente cadastrado ainda: use "Novo ingrediente" (chocolate, creme de leite...).</p>}
+        <NovoInsumoDialog
+          aberto={novoIngredienteLinha !== null}
+          onFechar={() => setNovoIngredienteLinha(null)}
+          onCriado={({ id, unidade_embalagem }) => {
+            const linha = { insumo_id: id, quantidade: "", unidade: unidade_embalagem };
+            setF((s) => {
+              // Linha vazia no fim (a do formulário novo) é reaproveitada.
+              if (novoIngredienteLinha === null || novoIngredienteLinha < 0) {
+                const vazia = s.itens.findIndex((l) => !l.insumo_id);
+                return { ...s, itens: vazia >= 0 ? s.itens.map((l, j) => (j === vazia ? linha : l)) : [...s.itens, linha] };
+              }
+              return { ...s, itens: s.itens.map((l, j) => (j === novoIngredienteLinha ? { ...l, insumo_id: id, unidade: unidade_embalagem } : l)) };
+            });
+          }}
+        />
       </div>
 
       <div className="rounded-xl border bg-card p-3 text-sm">
