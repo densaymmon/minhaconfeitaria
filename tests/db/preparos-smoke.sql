@@ -134,6 +134,30 @@ BEGIN
   INSERT INTO ids_a VALUES ('cob', cob), ('choc', choc);
 END $t$;
 
+-- Dona A como usuária logada (papel authenticated), igual ao app: salvar e recálculo pelo trigger -----
+-- (regressão da 0054: as funções de custo precisam ser executáveis pelo papel authenticated)
+SELECT pg_temp.entrar('a1111111-1111-4111-8111-111111111111');
+SET LOCAL ROLE authenticated;
+DO $t$
+DECLARE
+  cob uuid := (SELECT id FROM ids_a WHERE nome = 'cob');
+  choc uuid := (SELECT id FROM ids_a WHERE nome = 'choc');
+  calda uuid;
+  v numeric;
+BEGIN
+  calda := public.salvar_preparo('Calda de chocolate', 200, 'g', jsonb_build_array(
+    jsonb_build_object('insumo_id', choc, 'quantidade', 100, 'unidade', 'g')));
+  SELECT preco_embalagem INTO v FROM public.insumos WHERE id = calda;
+  IF v <> 8 THEN RAISE EXCEPTION 'TESTE_FALHOU: custo da calda (como authenticated) deveria ser 8, é %.', v; END IF;
+  -- Chocolate volta para R$ 40/kg: calda 4 e cobertura (400 g + creme) 16 + 4 = 20.
+  UPDATE public.insumos SET preco_embalagem = 40 WHERE id = choc;
+  SELECT preco_embalagem INTO v FROM public.insumos WHERE id = calda;
+  IF v <> 4 THEN RAISE EXCEPTION 'TESTE_FALHOU: recálculo pelo trigger (como authenticated) deu %.', v; END IF;
+  SELECT preco_embalagem INTO v FROM public.insumos WHERE id = cob;
+  IF v <> 20 THEN RAISE EXCEPTION 'TESTE_FALHOU: cobertura depois do recálculo deveria ser 20, é %.', v; END IF;
+END $t$;
+RESET ROLE;
+
 -- Dona B: não vê nem altera o preparo da A --------------------------------------------------------
 SELECT pg_temp.entrar('b2222222-2222-4222-8222-222222222222');
 SET LOCAL ROLE authenticated;
