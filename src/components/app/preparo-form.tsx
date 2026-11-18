@@ -19,17 +19,21 @@ import { Button } from "@/components/ui/button";
  * Depois ele aparece na lista de ingredientes das receitas e das variações; usar 100 g de um
  * preparo que rende 500 g soma 1/5 do custo dele.
  */
-export function PreparoForm({ preparo, itens = [], insumos, onDone }: {
+export function PreparoForm({ preparo: base, itens = [], insumos, onDone, duplicar = false }: {
   preparo?: Insumo;
   itens?: PreparoItem[];
   insumos: Insumo[];
   onDone?: () => void;
+  /** Começa com os dados de `preparo`, mas salva como um novo (nome com "(cópia)"). */
+  duplicar?: boolean;
 }) {
+  // Na cópia, o original só preenche o formulário: o que se salva é um item novo.
+  const preparo = duplicar ? undefined : base;
   const qc = useQueryClient();
   const [f, setF] = useState<PreparoEditavel>(() => ({
-    nome: preparo?.nome ?? "",
-    rendimento: preparo ? String(preparo.quantidade_embalagem ?? 1).replace(".", ",") : "",
-    unidade: preparo?.unidade_embalagem ?? preparo?.unidade ?? "g",
+    nome: base ? (duplicar ? `${base.nome} (cópia)`.slice(0, 120) : base.nome) : "",
+    rendimento: base ? String(base.quantidade_embalagem ?? 1).replace(".", ",") : "",
+    unidade: base?.unidade_embalagem ?? base?.unidade ?? "g",
     itens: itens.length
       ? itens.map((i) => ({ insumo_id: i.insumo_id, quantidade: String(i.quantidade).replace(".", ","), unidade: i.unidade }))
       : [{ insumo_id: "", quantidade: "", unidade: "g" }],
@@ -77,7 +81,7 @@ export function PreparoForm({ preparo, itens = [], insumos, onDone }: {
         qc.invalidateQueries({ queryKey: ["preparo-itens"] }),
         qc.invalidateQueries({ queryKey: ["produtos"] }),
       ]);
-      toast.success(preparo ? "Salvo. Os produtos que usam este recheio/cobertura já estão com o custo novo." : "Cadastrado. Agora ele aparece nos ingredientes das receitas dos produtos.");
+      toast.success(duplicar ? "Cópia criada. Ajuste os ingredientes e o rendimento se precisar." : preparo ? "Salvo. Os produtos que usam este recheio/cobertura já estão com o custo novo." : "Cadastrado. Agora ele aparece nos ingredientes das receitas dos produtos.");
       onDone?.();
     } catch (e) {
       toast.error((e as Error).message);
