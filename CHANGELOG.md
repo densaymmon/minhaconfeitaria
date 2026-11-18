@@ -5,6 +5,7 @@ Formato inspirado em [Keep a Changelog](https://keepachangelog.com/pt-BR/). As e
 ## [Não lançado]
 
 ### Corrigido
+- Excluir um produto que já foi produzido em pedidos dava "Este item já tem produção registrada...". Migração 0055: a trava aceita só a desvinculação feita pela exclusão do produto (os itens antigos mantêm nome, quantidades, preço e custo); as outras travas de item produzido continuam.
 - Salvar recheio/cobertura dava "permission denied for function _atualizar_custo_preparo" (o mesmo valia ao mudar o preço de um ingrediente usado num recheio). Migração 0054 libera as duas funções de custo para o usuário logado; o teste de banco agora também roda como usuário logado.
 
 ### Alterado
