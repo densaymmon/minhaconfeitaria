@@ -17,7 +17,7 @@ import {
 
 export { opcoesParaEdicao, opcoesParaSalvar, type GrupoEditavel } from "@/lib/opcoes-produto";
 
-type InsumoOpcao = { id: string; nome: string; ativo?: boolean | null; unidade?: string | null; unidade_embalagem?: string | null };
+type InsumoOpcao = { id: string; nome: string; tipo?: string | null; ativo?: boolean | null; unidade?: string | null; unidade_embalagem?: string | null };
 
 /** Custo calculado pelos ingredientes da opção (null = sem ingredientes; texto = erro de medida). */
 function custoCalculado(opcao: OpcaoEditavel, mapIns: Map<string, InsumoLite>): number | string | null {
@@ -117,7 +117,7 @@ export function EditorOpcoes({
                           <div className="grid grid-cols-[1fr_4.5rem_4.5rem_2.25rem] gap-1.5">
                             <select aria-label="Ingrediente" value={x.insumo_id} className="h-10 min-w-0 rounded-md border bg-background px-2 text-sm"
                               onChange={(e) => { const v = e.target.value; alterarIngredientes(gi, ii, (l) => l.map((y, j) => (j === xi ? { ...y, insumo_id: v, unidade: unidadeDe(v) } : y))); }}>
-                              {insumos.filter((y) => y.ativo !== false || y.id === x.insumo_id).map((y) => <option key={y.id} value={y.id}>{y.nome}</option>)}
+                              {insumos.filter((y) => y.ativo !== false || y.id === x.insumo_id).map((y) => <option key={y.id} value={y.id}>{y.nome}{y.tipo === "preparo" ? " (preparo)" : ""}</option>)}
                             </select>
                             <Input inputMode="decimal" aria-label="Quantidade do ingrediente" value={x.quantidade} placeholder="Qtd."
                               onChange={(e) => { const v = e.target.value; alterarIngredientes(gi, ii, (l) => l.map((y, j) => (j === xi ? { ...y, quantidade: v } : y))); }} className="h-10" />

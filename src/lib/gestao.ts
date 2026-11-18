@@ -179,9 +179,13 @@ export function etiquetasDoDia(
   insumos: InsumoEtiqueta[],
   dia: string,
   fabricacao: string,
+  /** Ingredientes dos preparos (recheios/coberturas): os alergênicos deles entram na etiqueta. */
+  preparoItens: { preparo_id: string; insumo_id: string }[] = [],
 ): Etiqueta[] {
   const porProduto = new Map(produtos.map((p) => [p.id, p]));
   const porInsumo = new Map(insumos.map((i) => [i.id, i]));
+  const doPreparo = (i: InsumoEtiqueta): InsumoEtiqueta[] =>
+    i.tipo === "preparo" ? preparoItens.filter((x) => x.preparo_id === i.id).flatMap((x) => porInsumo.get(x.insumo_id) ?? []) : [];
   const ingredientesDe = (p: ProdutoEtiqueta | undefined, visitados = new Set<string>()): InsumoEtiqueta[] => {
     if (!p || visitados.has(p.id)) return [];
     visitados.add(p.id);
@@ -196,7 +200,7 @@ export function etiquetasDoDia(
       const produto = item.produto_id ? porProduto.get(item.produto_id) : undefined;
       const ins = ingredientesDe(produto);
       const nomes = [...new Set(ins.map((i) => i.nome))];
-      const alergenos = [...new Set(ins.flatMap((i) => (i.alergenos ?? "").split(/[,;]/).map((a) => a.trim().toLowerCase()).filter(Boolean)))].sort();
+      const alergenos = [...new Set([...ins, ...ins.flatMap(doPreparo)].flatMap((i) => (i.alergenos ?? "").split(/[,;]/).map((a) => a.trim().toLowerCase()).filter(Boolean)))].sort();
       const validade = produto?.validade_dias ? somarDiasISO(fabricacao, Number(produto.validade_dias)) : null;
       const unidades = Math.max(1, Math.min(50, Math.ceil(n(item.quantidade))));
       for (let u = 0; u < unidades && etiquetas.length < 200; u++) {

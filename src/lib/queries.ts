@@ -25,7 +25,7 @@ export type ContaPagar = Tables<"contas_pagar">;
 export type ContaPagarPagamento = Tables<"contas_pagar_pagamentos">;
 export type ContaPagarEstorno = Tables<"contas_pagar_estornos">;
 export type { DespesaRecorrente } from "@/lib/database-compat";
-import type { DespesaRecorrente } from "@/lib/database-compat";
+import type { DespesaRecorrente, PreparoItem } from "@/lib/database-compat";
 export type ProdutoPronto = Tables<"produtos_prontos">;
 export type MovimentoPronto = Tables<"produtos_prontos_movimentos">;
 
@@ -88,6 +88,19 @@ export const despesasRecorrentesQ = queryOptions({
     const { data, error } = await supabase.from("despesas_recorrentes").select("*").order("created_at", { ascending: true });
     if (error) {
       if (semTabela(error, "despesas_recorrentes")) return null;
+      throw new Error(error.message);
+    }
+    return data ?? [];
+  },
+});
+
+/** Ingredientes dos preparos (recheios/coberturas). null antes da migração 0053: a tela esconde a função. */
+export const preparoItensQ = queryOptions({
+  queryKey: ["preparo-itens"],
+  queryFn: async (): Promise<PreparoItem[] | null> => {
+    const { data, error } = await supabase.from("preparo_itens").select("*").order("ordem", { ascending: true });
+    if (error) {
+      if (semTabela(error, "preparo_itens")) return null;
       throw new Error(error.message);
     }
     return data ?? [];

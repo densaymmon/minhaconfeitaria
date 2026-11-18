@@ -1,6 +1,6 @@
 import * as appQueries from "@/lib/queries";
 import { createFileRoute, Link, useNavigate } from "@tanstack/react-router";
-import { useQueryClient } from "@tanstack/react-query";
+import { useQuery, useQueryClient } from "@tanstack/react-query";
 import { useState } from "react";
 import { toast } from "sonner";
 import { AlertTriangle, Copy, Download, Eye, EyeOff, Plus, Trash2, Pencil, Archive, RotateCcw } from "lucide-react";
@@ -11,6 +11,8 @@ import { alertaMargem, margemReal } from "@/lib/calc";
 import { brl, hojeISO, pct, dataBR } from "@/lib/format";
 import { custoPorMedida, medidaLabel } from "@/lib/ingredient-cost";
 import { IngredientForm } from "@/components/app/ingredient-form";
+import { PreparoForm } from "@/components/app/preparo-form";
+import { custoPorPorcao, ehPreparo } from "@/lib/preparos";
 import { baixarCSV } from "@/lib/csv";
 import { Card, Empty, PageHeader } from "@/components/app/ui";
 import { Button } from "@/components/ui/button";
@@ -245,6 +247,9 @@ function Insumos({ insumos }: { insumos: Insumo[] }) {
   const qc = useQueryClient();
   const [editando, setEditando] = useState<string | null>(null);
   const [buscaInsumo, setBuscaInsumo] = useState("");
+  const [novoPreparo, setNovoPreparo] = useState(false);
+  // null antes da migração 0053: sem botão de preparo.
+  const { data: preparoItens } = useQuery(appQueries.preparoItensQ);
   const termoInsumo = buscaInsumo.trim().toLocaleLowerCase("pt-BR");
   const insumosFiltrados = insumos.filter((insumo) =>
     insumo.nome.toLocaleLowerCase("pt-BR").includes(termoInsumo)
@@ -283,6 +288,25 @@ function Insumos({ insumos }: { insumos: Insumo[] }) {
         <h2 className="mb-3 font-semibold">Novo insumo</h2>
         <IngredientForm />
       </Card>
+      {preparoItens && (
+        <Card className="mb-4">
+          {novoPreparo ? (
+            <>
+              <h2 className="mb-1 font-semibold">Novo preparo</h2>
+              <p className="mb-3 text-xs text-muted-foreground">Recheio, cobertura, calda... Cadastre a receita uma vez e use a quantidade que quiser em cada bolo.</p>
+              <PreparoForm insumos={insumos} onDone={() => setNovoPreparo(false)} />
+            </>
+          ) : (
+            <button type="button" onClick={() => setNovoPreparo(true)} className="flex w-full items-center gap-2 text-left">
+              <Plus className="size-4 shrink-0 text-primary" />
+              <span>
+                <span className="block font-semibold">Novo preparo (recheio, cobertura...)</span>
+                <span className="block text-xs text-muted-foreground">Ex.: cobertura que rende 500 g; no bolo você informa só os 100 g usados.</span>
+              </span>
+            </button>
+          )}
+        </Card>
+      )}
       {insumos.length === 0 ? (
         <Empty>Nenhum insumo cadastrado.</Empty>
       ) : (
@@ -307,18 +331,31 @@ function Insumos({ insumos }: { insumos: Insumo[] }) {
             <div className="space-y-2">
               {insumosFiltrados.map((i) => {
             const u = custoPorMedida(i);
+            const preparo = ehPreparo(i);
+            const porcao = preparo ? custoPorPorcao(Number(i.preco_embalagem ?? 0), Number(i.quantidade_embalagem ?? 1), i.unidade_embalagem ?? i.unidade) : null;
             return <Card key={i.id} className="p-3">
               <div className="flex items-center gap-2">
                 <div className="min-w-0 flex-1">
-                  <div className="break-words font-medium">{i.nome} {i.ativo === false && <span className="ml-1 rounded bg-muted px-2 py-0.5 text-xs font-normal text-muted-foreground">Inativo</span>}</div>
-                  <div className="text-xs text-muted-foreground">{brl(i.preco_embalagem ?? i.preco_unidade)} / {i.quantidade_embalagem ?? 1} {medidaLabel(i.unidade_embalagem ?? i.unidade)}</div>
-                  <div className="text-xs text-muted-foreground">Custo unitário: {brl(u.custo)} / {medidaLabel(u.unidade)}</div>
+                  <div className="break-words font-medium">{i.nome} {preparo && <span className="ml-1 rounded bg-primary/10 px-2 py-0.5 text-xs font-normal text-primary">Preparo</span>} {i.ativo === false && <span className="ml-1 rounded bg-muted px-2 py-0.5 text-xs font-normal text-muted-foreground">Inativo</span>}</div>
+                  {preparo ? (
+                    <>
+                      <div className="text-xs text-muted-foreground">Rende {Number(i.quantidade_embalagem ?? 1).toLocaleString("pt-BR")} {medidaLabel(i.unidade_embalagem ?? i.unidade)} · custo {brl(Number(i.preco_embalagem ?? 0))}</div>
+                      {porcao && <div className="text-xs text-muted-foreground">A cada {porcao.porcao}: {brl(porcao.custo)}</div>}
+                    </>
+                  ) : (
+                    <>
+                      <div className="text-xs text-muted-foreground">{brl(i.preco_embalagem ?? i.preco_unidade)} / {i.quantidade_embalagem ?? 1} {medidaLabel(i.unidade_embalagem ?? i.unidade)}</div>
+                      <div className="text-xs text-muted-foreground">Custo unitário: {brl(u.custo)} / {medidaLabel(u.unidade)}</div>
+                    </>
+                  )}
                 </div>
                 <Button size="icon" variant="ghost" onClick={() => setEditando(editando === i.id ? null : i.id)} aria-label={`Editar ${i.nome}`}><Pencil className="size-4" /></Button>
                 <Button size="icon" variant="ghost" onClick={() => alternarAtivo(i)} aria-label={`${i.ativo === false ? "Reativar" : "Inativar"} ${i.nome}`} title={i.ativo === false ? "Reativar insumo" : "Inativar insumo"}>{i.ativo === false ? <RotateCcw className="size-4" /> : <Archive className="size-4" />}</Button>
                 <Button size="icon" variant="ghost" onClick={() => excluir(i)} aria-label={`Excluir ${i.nome}`}><Trash2 className="size-4 text-destructive" /></Button>
               </div>
-              {editando === i.id && <div className="mt-3 border-t pt-3"><IngredientForm insumo={i} onDone={() => setEditando(null)} /></div>}
+              {editando === i.id && <div className="mt-3 border-t pt-3">{preparo
+                ? <PreparoForm preparo={i} itens={(preparoItens ?? []).filter((x) => x.preparo_id === i.id)} insumos={insumos} onDone={() => setEditando(null)} />
+                : <IngredientForm insumo={i} onDone={() => setEditando(null)} />}</div>}
             </Card>;
               })}
             </div>

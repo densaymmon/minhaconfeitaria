@@ -1,4 +1,5 @@
 import * as appQueries from "@/lib/queries";
+import { ehPreparo } from "@/lib/preparos";
 import { createFileRoute, Link } from "@tanstack/react-router";
 import { useQuery, useQueryClient, useSuspenseQuery } from "@tanstack/react-query";
 import { useEffect, useMemo, useRef, useState } from "react";
@@ -143,7 +144,9 @@ function valorExistenteEmCentavos(valor: string): string {
 
 export function Compras({ embedded = false, initialSection = "compras" }: { embedded?: boolean; initialSection?: "compras" | "gastos" | "integracao" | "estoque" }) {
   const [secao, setSecao] = useState<"compras" | "gastos" | "integracao" | "estoque">(initialSection);
-  const { data: insumos } = useSuspenseQuery(appQueries.insumosQ);
+  const { data: todosInsumos } = useSuspenseQuery(appQueries.insumosQ);
+  // Preparos (recheios/coberturas) não se compram nem têm estoque próprio.
+  const insumos = useMemo(() => todosInsumos.filter((i) => !ehPreparo(i)), [todosInsumos]);
   const { data: compras } = useSuspenseQuery(appQueries.comprasQ);
   const { data: itens } = useSuspenseQuery(appQueries.compraItensQ);
   const { data: contasPagar } = useSuspenseQuery(appQueries.contasPagarQ);

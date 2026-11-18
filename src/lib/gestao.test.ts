@@ -103,4 +103,17 @@ describe("etiquetas", () => {
     expect(e[2]?.ingredientes).toEqual(["Farinha de trigo", "Leite"]);
     expect(e[3]).toMatchObject({ descricao: "Avulso", validade: null, ingredientes: [] });
   });
+
+  it("alergênicos dos ingredientes de um preparo (cobertura) entram na etiqueta", () => {
+    const produtos = [{ id: "bolo", nome: "Bolo", validade_dias: null, receita_itens: [{ insumo_id: "farinha" }, { insumo_id: "cob" }] }];
+    const insumos = [
+      { id: "farinha", nome: "Farinha de trigo", alergenos: "Glúten" },
+      { id: "cob", nome: "Cobertura de chocolate", tipo: "preparo" },
+      { id: "choc", nome: "Chocolate", alergenos: "leite, soja" },
+    ];
+    const pedidos = [{ id: "p1", numero: 1, data_entrega: "2026-11-18", status: "recebido", clientes: null, pedido_itens: [{ produto_id: "bolo", descricao: "Bolo", quantidade: 1 }] }];
+    const e = etiquetasDoDia(pedidos, produtos, insumos, "2026-11-18", "2026-11-18", [{ preparo_id: "cob", insumo_id: "choc" }]);
+    expect(e[0]?.ingredientes).toEqual(["Farinha de trigo", "Cobertura de chocolate"]);
+    expect(e[0]?.alergenos).toEqual(["glúten", "leite", "soja"]);
+  });
 });
