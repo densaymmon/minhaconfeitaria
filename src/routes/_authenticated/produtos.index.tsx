@@ -290,6 +290,7 @@ function Preparos({ preparos, preparoItens, todosInsumos, produtos }: {
 }) {
   const qc = useQueryClient();
   const [editando, setEditando] = useState<string | null>(null);
+  const [duplicando, setDuplicando] = useState<string | null>(null);
   const usoEm = (id: string) => produtos.filter((p) => p.receita_itens.some((r) => r.insumo_id === id)).length;
 
   async function excluir(i: Insumo) {
@@ -329,13 +330,20 @@ function Preparos({ preparos, preparoItens, todosInsumos, produtos }: {
                 </div>
               </div>
               <div className="flex shrink-0 flex-col gap-2">
-                <Button type="button" variant="outline" size="icon" className="h-10 w-10" onClick={() => setEditando(editando === i.id ? null : i.id)} aria-label={`Editar ${i.nome}`}><Pencil className="size-4" /></Button>
+                <Button type="button" variant="outline" size="icon" className="h-10 w-10" onClick={() => { setDuplicando(null); setEditando(editando === i.id ? null : i.id); }} aria-label={`Editar ${i.nome}`}><Pencil className="size-4" /></Button>
+                <Button type="button" variant="outline" size="icon" className="h-10 w-10" onClick={() => { setEditando(null); setDuplicando(duplicando === i.id ? null : i.id); }} aria-label={`Duplicar ${i.nome}`} title="Duplicar"><Copy className="size-4" /></Button>
                 <Button type="button" variant="outline" size="icon" className="h-10 w-10" onClick={() => excluir(i)} aria-label={`Excluir ${i.nome}`}><Trash2 className="size-4 text-destructive" /></Button>
               </div>
             </div>
             {editando === i.id && (
               <div className="mt-3 border-t pt-3">
                 <PreparoForm preparo={i} itens={preparoItens.filter((x) => x.preparo_id === i.id)} insumos={todosInsumos} onDone={() => setEditando(null)} />
+              </div>
+            )}
+            {duplicando === i.id && (
+              <div className="mt-3 border-t pt-3">
+                <p className="mb-2 text-sm font-medium">Duplicar {i.nome}</p>
+                <PreparoForm duplicar preparo={i} itens={preparoItens.filter((x) => x.preparo_id === i.id)} insumos={todosInsumos} onDone={() => setDuplicando(null)} />
               </div>
             )}
           </Card>
