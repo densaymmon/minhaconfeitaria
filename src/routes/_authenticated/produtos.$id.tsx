@@ -128,7 +128,7 @@ function ProdutoForm() {
     if (erroReceita) return void toast.error(erroReceita);
     if (novaCategoria !== null && !normalizarCategoria(novaCategoria)) return void toast.error("Digite o nome da nova categoria ou escolha uma existente.");
     const categoriaFinal = novaCategoria !== null ? categoriaExistenteOuNova(novaCategoria, categorias) : f.categoria;
-    const opcoesValidadas = opcoesParaSalvar(opcoes);
+    const opcoesValidadas = opcoesParaSalvar(opcoes, mapIns);
     if (!opcoesValidadas.ok) return void toast.error(opcoesValidadas.erro);
     setSalvando(true);
     try {
@@ -358,6 +358,14 @@ function ProdutoForm() {
         </Card>
         </>}
 
+        <Card className="space-y-3">
+          <div>
+            <h2 className="text-lg font-semibold">Variações</h2>
+            <p className="text-xs text-muted-foreground">Cobertura, recheio, tamanho… sem criar outro produto. Valem nos pedidos e no catálogo.</p>
+          </div>
+          <EditorOpcoes grupos={opcoes} onChange={setOpcoes} precoBase={preco} custoBase={unit} insumos={temCustos ? insumos : []} mapIns={mapIns} mostrarCusto={temCustos} />
+        </Card>
+
         {!temCatalogo ? <RecursoBloqueado recurso="catalogo" compacto /> : (
         <Card className="space-y-3">
           <div className="flex items-center justify-between gap-3">
@@ -372,10 +380,6 @@ function ProdutoForm() {
           <div className="space-y-1.5">
             <span className="text-sm font-medium">Fotos e vídeos</span>
             <GaleriaMidias midias={midias} onChange={setMidias} desabilitado={salvando} />
-          </div>
-          <div className="space-y-1.5">
-            <span className="text-sm font-medium">Variações (tamanho, sabor, recheio…)</span>
-            <EditorOpcoes grupos={opcoes} onChange={setOpcoes} precoBase={preco} />
           </div>
           <Field label="Descrição para o cliente">
             <Textarea rows={2} maxLength={600} value={cat.descricao} onChange={(e) => setCat((c) => ({ ...c, descricao: e.target.value }))} placeholder="Ex.: Massa fofinha de cenoura com cobertura de chocolate. Serve 10 pessoas." />
