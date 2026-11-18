@@ -74,7 +74,7 @@ export function PreparoForm({ preparo, itens = [], insumos, onDone }: {
         qc.invalidateQueries({ queryKey: ["preparo-itens"] }),
         qc.invalidateQueries({ queryKey: ["produtos"] }),
       ]);
-      toast.success(preparo ? "Preparo salvo. As receitas que usam ele já estão com o custo novo." : "Preparo cadastrado. Agora ele aparece nos ingredientes das receitas.");
+      toast.success(preparo ? "Salvo. Os produtos que usam este recheio/cobertura já estão com o custo novo." : "Cadastrado. Agora ele aparece nos ingredientes das receitas dos produtos.");
       onDone?.();
     } catch (e) {
       toast.error((e as Error).message);
@@ -85,7 +85,7 @@ export function PreparoForm({ preparo, itens = [], insumos, onDone }: {
 
   return (
     <div className="space-y-3">
-      <Field label="Nome do preparo">
+      <Field label="Nome">
         <Input value={f.nome} maxLength={120} onChange={(e) => setF((s) => ({ ...s, nome: e.target.value }))} className="h-11" placeholder="Ex.: Cobertura de chocolate" />
       </Field>
       <Field label="A receita rende" hint="Quanto sai pronto, para o sistema dividir o custo.">
@@ -141,7 +141,7 @@ export function PreparoForm({ preparo, itens = [], insumos, onDone }: {
       </div>
 
       <div className="flex gap-2">
-        <Button type="button" className="h-11 flex-1" disabled={salvando} onClick={salvar}><Save className="size-4" /> {salvando ? "Salvando..." : "Salvar preparo"}</Button>
+        <Button type="button" className="h-11 flex-1" disabled={salvando} onClick={salvar}><Save className="size-4" /> {salvando ? "Salvando..." : "Salvar"}</Button>
         {onDone && <Button type="button" variant="outline" className="h-11" onClick={onDone}>Cancelar</Button>}
       </div>
     </div>
