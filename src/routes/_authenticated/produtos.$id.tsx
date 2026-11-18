@@ -286,7 +286,7 @@ function ProdutoForm() {
           <h2 className="text-lg font-semibold">Ingredientes e embalagens</h2>
           {insumos.length === 0 && (
             <p className="text-sm text-muted-foreground">
-              Nenhum ingrediente cadastrado ainda. Use "Novo ingrediente" logo abaixo.
+              Nenhum ingrediente cadastrado ainda. Use "Cadastrar ingrediente" logo abaixo.
             </p>
           )}
           {itens.map((it, i) => {
@@ -318,10 +318,10 @@ function ProdutoForm() {
             );
           })}
           <Button size="sm" variant="outline" disabled={insumos.every((x) => x.ativo === false)} onClick={() => { const disponivel = insumos.find((x) => x.ativo !== false); if (disponivel) setItens((s) => [...s, { insumo_id: disponivel.id, quantidade: "", unidade_receita: disponivel.unidade_embalagem ?? disponivel.unidade ?? "un" }]); }}>
-            <Plus className="size-4" /> Insumo
+            <Plus className="size-4" /> Adicionar
           </Button>
           <Button size="sm" variant="outline" className="ml-2" onClick={() => setNovoIngredienteLinha(-1)}>
-            <Plus className="size-4" /> Novo ingrediente
+            <Plus className="size-4" /> Cadastrar ingrediente
           </Button>
           <NovoInsumoDialog
             aberto={novoIngredienteLinha !== null}

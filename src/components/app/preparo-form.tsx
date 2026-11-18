@@ -129,13 +129,13 @@ export function PreparoForm({ preparo, itens = [], insumos, onDone }: {
         })}
         {f.itens.length < MAX_ITENS_PREPARO && (
           <Button type="button" variant="outline" size="sm" onClick={() => setF((s) => ({ ...s, itens: [...s.itens, { insumo_id: "", quantidade: "", unidade: "g" }] }))}>
-            <Plus className="size-4" /> Ingrediente
+            <Plus className="size-4" /> Adicionar
           </Button>
         )}
         <Button type="button" variant="outline" size="sm" className="ml-2" onClick={() => setNovoIngredienteLinha(-1)}>
-          <Plus className="size-4" /> Novo ingrediente
+          <Plus className="size-4" /> Cadastrar ingrediente
         </Button>
-        {ingredientes.length === 0 && <p className="text-xs text-muted-foreground">Nenhum ingrediente cadastrado ainda: use "Novo ingrediente" (chocolate, creme de leite...).</p>}
+        {ingredientes.length === 0 && <p className="text-xs text-muted-foreground">Nenhum ingrediente cadastrado ainda: use "Cadastrar ingrediente" (chocolate, creme de leite...).</p>}
         <NovoInsumoDialog
           aberto={novoIngredienteLinha !== null}
           onFechar={() => setNovoIngredienteLinha(null)}
