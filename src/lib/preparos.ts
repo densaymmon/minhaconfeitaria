@@ -5,6 +5,8 @@ import { custoItemReceita, type InsumoLite } from "./calc";
 import { medida, numeroIngrediente } from "./ingredient-cost";
 
 export const TIPO_PREPARO = "preparo";
+/** Como os preparos aparecem para a confeitaria: categoria própria na aba Produtos. */
+export const CATEGORIA_PREPAROS = "Recheios e coberturas";
 export const MEDIDAS_RENDIMENTO = ["g", "kg", "ml", "L", "un"] as const;
 export const MAX_ITENS_PREPARO = 50;
 
@@ -35,8 +37,8 @@ export function custoPorPorcao(custoLote: number, rendimento: number, unidade: s
 export function preparoParaSalvar(p: PreparoEditavel, insumos: Map<string, InsumoLite & { nome?: string; tipo?: string | null }>):
   { ok: true; valor: PreparoParaSalvar } | { ok: false; erro: string } {
   const nome = p.nome.trim();
-  if (!nome) return { ok: false, erro: "Dê um nome ao preparo (ex.: Cobertura de chocolate)." };
-  if (nome.length > 120) return { ok: false, erro: "O nome do preparo é longo demais." };
+  if (!nome) return { ok: false, erro: "Dê um nome (ex.: Cobertura de chocolate)." };
+  if (nome.length > 120) return { ok: false, erro: "O nome é longo demais." };
   const rendimento = numeroIngrediente(p.rendimento);
   if (!Number.isFinite(rendimento) || rendimento <= 0) return { ok: false, erro: "Informe quanto a receita rende (ex.: 500 g)." };
   if (!(MEDIDAS_RENDIMENTO as readonly string[]).includes(p.unidade)) return { ok: false, erro: "Escolha a medida do rendimento." };
@@ -47,7 +49,7 @@ export function preparoParaSalvar(p: PreparoEditavel, insumos: Map<string, Insum
   for (const l of linhas) {
     const ins = insumos.get(l.insumo_id);
     const nomeIns = ins?.nome ?? "ingrediente";
-    if (ehPreparo(ins)) return { ok: false, erro: `"${nomeIns}" já é um preparo; use os ingredientes dele.` };
+    if (ehPreparo(ins)) return { ok: false, erro: `"${nomeIns}" já é um recheio/cobertura; use os ingredientes dele.` };
     const quantidade = numeroIngrediente(l.quantidade);
     if (!Number.isFinite(quantidade) || quantidade <= 0) return { ok: false, erro: `Informe a quantidade de "${nomeIns}".` };
     itens.push({ insumo_id: l.insumo_id, quantidade, unidade: l.unidade });

@@ -12,13 +12,14 @@ import { brl, hojeISO, pct, dataBR } from "@/lib/format";
 import { custoPorMedida, medidaLabel } from "@/lib/ingredient-cost";
 import { IngredientForm } from "@/components/app/ingredient-form";
 import { PreparoForm } from "@/components/app/preparo-form";
-import { custoPorPorcao, ehPreparo } from "@/lib/preparos";
+import { CATEGORIA_PREPAROS, custoPorPorcao, ehPreparo } from "@/lib/preparos";
 import { baixarCSV } from "@/lib/csv";
 import { Card, Empty, PageHeader } from "@/components/app/ui";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import type { Insumo } from "@/lib/queries";
+import type { PreparoItem } from "@/lib/database-compat";
 
 export const Route = createFileRoute("/_authenticated/produtos/")({
  loader: async ({ context }) => { await Promise.all([context.queryClient.ensureQueryData(appQueries.produtosQ),context.queryClient.ensureQueryData(appQueries.insumosQ)]); },
@@ -38,8 +39,16 @@ export const Route = createFileRoute("/_authenticated/produtos/")({
   component: Produtos,
 });
 
+/** Valor do filtro "Recheios e coberturas" (não colide com o nome de uma categoria de produto). */
+const FILTRO_PREPAROS = "__preparos__";
+
 function Produtos() {
-  const { produtos, insumos, custo } = useCustos();
+  const { produtos, insumos: todosInsumos, custo } = useCustos();
+  // Preparos (recheios/coberturas) ficam aqui na aba Produtos; a aba Insumos mostra só os comprados.
+  const { data: preparoItens } = useQuery(appQueries.preparoItensQ);
+  const insumos = todosInsumos.filter((i) => !ehPreparo(i));
+  const preparos = preparoItens ? todosInsumos.filter(ehPreparo) : [];
+  const [novoPreparo, setNovoPreparo] = useState(false);
   const navigate = useNavigate();
   const [buscaProduto, setBuscaProduto] = useState("");
   const [soAbaixoDaMargem, setSoAbaixoDaMargem] = useState(false);
@@ -51,7 +60,10 @@ function Produtos() {
   const totalOcultos = produtos.filter((p) => p.oculto).length;
   const visiveis = mostrarOcultos ? produtos : produtos.filter((p) => !p.oculto);
   const contagemCategorias = contarPorCategoria(visiveis);
-  const categoriaAtiva = categoria && contagemCategorias.some((c) => daCategoria({ categoria: c.categoria }, categoria)) ? categoria : null;
+  const categoriaAtiva = categoria === FILTRO_PREPAROS
+    ? (preparos.length ? FILTRO_PREPAROS : null)
+    : categoria && contagemCategorias.some((c) => daCategoria({ categoria: c.categoria }, categoria)) ? categoria : null;
+  const soPreparos = categoriaAtiva === FILTRO_PREPAROS;
   async function alternarOculto(id: string, nome: string, oculto: boolean) {
     const { error } = await supabase.from("produtos").update({ oculto: !oculto }).eq("id", id);
     if (error) return void toast.error(error.message);
@@ -61,7 +73,9 @@ function Produtos() {
   const alertas = new Map(produtos.map((p) => [p.id, alertaMargem(custo.get(p.id) ?? 0, Number(p.preco_venda), Number(p.margem_desejada))]));
   const abaixoDaMargem = produtos.filter((p) => p.ativo && alertas.get(p.id)?.abaixoDaMargem).length;
   const termoProduto = buscaProduto.trim().toLocaleLowerCase("pt-BR");
-  const produtosFiltrados = visiveis.filter((p) => daCategoria(p, categoriaAtiva) &&
+  const preparosFiltrados = preparos.filter((i) => !termoProduto || i.nome.toLocaleLowerCase("pt-BR").includes(termoProduto) || CATEGORIA_PREPAROS.toLocaleLowerCase("pt-BR").includes(termoProduto));
+  const mostrarPreparos = Boolean(preparoItens) && !(soAbaixoDaMargem && abaixoDaMargem > 0) && (categoriaAtiva === null || soPreparos);
+  const produtosFiltrados = soPreparos ? [] : visiveis.filter((p) => daCategoria(p, categoriaAtiva) &&
     (!(soAbaixoDaMargem && abaixoDaMargem > 0) || (p.ativo && alertas.get(p.id)?.abaixoDaMargem)) && (!termoProduto ||
     p.nome.toLocaleLowerCase("pt-BR").includes(termoProduto) ||
     (p.categoria ?? "").toLocaleLowerCase("pt-BR").includes(termoProduto))
@@ -98,6 +112,19 @@ function Produtos() {
               <span>Exportar CSV</span>
             </Button>
           </div>
+          {preparoItens && (
+            novoPreparo ? (
+              <Card className="mb-3">
+                <h2 className="mb-1 font-semibold">Novo recheio ou cobertura</h2>
+                <p className="mb-3 text-xs text-muted-foreground">Cadastre a receita uma vez (ingredientes e quanto rende). Depois, na receita de cada bolo, informe só a quantidade usada.</p>
+                <PreparoForm insumos={todosInsumos} onDone={() => setNovoPreparo(false)} />
+              </Card>
+            ) : (
+              <Button type="button" variant="outline" className="mb-3 h-11 w-full" onClick={() => setNovoPreparo(true)}>
+                <Plus className="size-4" /> Novo recheio ou cobertura
+              </Button>
+            )
+          )}
           {abaixoDaMargem > 0 && (
             <button
               type="button"
@@ -122,13 +149,21 @@ function Produtos() {
               />
             </div>
           )}
-          {contagemCategorias.length > 1 && (
+          {contagemCategorias.length + (preparos.length ? 1 : 0) > 1 && (
             <div className="-mx-1 mb-3 flex gap-2 overflow-x-auto px-1 pb-1" role="group" aria-label="Filtrar por categoria">
-              {[{ categoria: null as string | null, total: visiveis.length, rotulo: "Todas" }, ...contagemCategorias.map((c) => ({ ...c, rotulo: c.categoria }))].map((c) => {
-                const ativa = c.categoria === null ? categoriaAtiva === null : categoriaAtiva !== null && daCategoria({ categoria: c.categoria }, categoriaAtiva);
+              {[
+                { categoria: null as string | null, total: visiveis.length + preparos.length, rotulo: "Todas" },
+                ...contagemCategorias.map((c) => ({ ...c, rotulo: c.categoria })),
+                ...(preparos.length ? [{ categoria: FILTRO_PREPAROS as string | null, total: preparos.length, rotulo: CATEGORIA_PREPAROS }] : []),
+              ].map((c) => {
+                const ativa = c.categoria === null
+                  ? categoriaAtiva === null
+                  : c.categoria === FILTRO_PREPAROS
+                    ? soPreparos
+                    : categoriaAtiva !== null && !soPreparos && daCategoria({ categoria: c.categoria }, categoriaAtiva);
                 return (
                   <button
-                    key={c.rotulo}
+                    key={c.categoria ?? "__todas__"}
                     type="button"
                     aria-pressed={ativa}
                     onClick={() => setCategoria(c.categoria)}
@@ -151,7 +186,7 @@ function Produtos() {
               {mostrarOcultos ? "Esconder ocultos" : `Mostrar ocultos (${totalOcultos})`}
             </button>
           )}
-          {produtos.length === 0 ? (
+          {!soPreparos && (produtos.length === 0 ? (
             <Empty>
               <div className="mx-auto max-w-sm space-y-3">
                 <p className="font-medium text-foreground">Seu catálogo começa aqui</p>
@@ -162,7 +197,7 @@ function Produtos() {
               </div>
             </Empty>
           ) : (
-            produtosFiltrados.length === 0 ? (
+            produtosFiltrados.length === 0 ? (mostrarPreparos && preparosFiltrados.length > 0 ? null :
               <Empty>
                 <div className="space-y-2">
                   <p className="font-medium text-foreground">Nenhum produto encontrado</p>
@@ -170,7 +205,7 @@ function Produtos() {
                   <Button type="button" variant="outline" onClick={() => { setBuscaProduto(""); setCategoria(null); }}>Limpar filtros</Button>
                 </div>
               </Empty>
-            ) : (
+            )) : (
             <div className="space-y-2">
               {produtosFiltrados.map((p) => {
                 const c = custo.get(p.id) ?? 0;
@@ -233,6 +268,9 @@ function Produtos() {
               })}
             </div>
             )
+          ))}
+          {mostrarPreparos && (preparosFiltrados.length > 0 || soPreparos) && (
+            <Preparos preparos={preparosFiltrados} preparoItens={preparoItens ?? []} todosInsumos={todosInsumos} produtos={produtos} />
           )}
         </TabsContent>
         <TabsContent value="insumos">
@@ -243,13 +281,74 @@ function Produtos() {
   );
 }
 
+/** Recheios e coberturas (preparos): receitas de base usadas nas receitas dos produtos. */
+function Preparos({ preparos, preparoItens, todosInsumos, produtos }: {
+  preparos: Insumo[];
+  preparoItens: PreparoItem[];
+  todosInsumos: Insumo[];
+  produtos: { id: string; receita_itens: { insumo_id: string }[] }[];
+}) {
+  const qc = useQueryClient();
+  const [editando, setEditando] = useState<string | null>(null);
+  const usoEm = (id: string) => produtos.filter((p) => p.receita_itens.some((r) => r.insumo_id === id)).length;
+
+  async function excluir(i: Insumo) {
+    if (!confirm(`Excluir ${i.nome}? Só é possível se ele não estiver na receita de nenhum produto.`)) return;
+    const { error } = await supabase.rpc("excluir_insumo_se_sem_receita", { p_insumo_id: i.id });
+    if (error) {
+      toast.error(error.message.includes("INSUMO_USADO_EM_RECEITA")
+        ? `${i.nome} está na receita de algum produto. Tire-o das receitas antes de excluir.`
+        : `Não foi possível excluir: ${error.message}`);
+      return;
+    }
+    await Promise.all([qc.invalidateQueries({ queryKey: ["insumos"] }), qc.invalidateQueries({ queryKey: ["preparo-itens"] })]);
+    toast.success(`${i.nome} excluído.`);
+  }
+
+  return (
+    <div className="mt-5 space-y-2">
+      <h2 className="text-sm font-semibold text-muted-foreground">{CATEGORIA_PREPAROS}</h2>
+      {preparos.length === 0 && <Empty>Nenhum recheio ou cobertura cadastrado. Toque em "Novo recheio ou cobertura".</Empty>}
+      {preparos.map((i) => {
+        const lote = Number(i.preco_embalagem ?? 0);
+        const porcao = custoPorPorcao(lote, Number(i.quantidade_embalagem ?? 1), i.unidade_embalagem ?? i.unidade);
+        const usos = usoEm(i.id);
+        const qtdIngredientes = preparoItens.filter((x) => x.preparo_id === i.id).length;
+        return (
+          <Card key={i.id} className="p-3.5">
+            <div className="flex items-start gap-2">
+              <div className="min-w-0 flex-1">
+                <div className="break-words font-semibold">{i.nome}</div>
+                <div className="text-xs text-muted-foreground">
+                  {CATEGORIA_PREPAROS} · rende {Number(i.quantidade_embalagem ?? 1).toLocaleString("pt-BR")} {medidaLabel(i.unidade_embalagem ?? i.unidade)} · {qtdIngredientes} ingrediente(s)
+                </div>
+                <div className="mt-2 grid grid-cols-3 text-xs">
+                  <div><div className="text-muted-foreground">Custo total</div>{brl(lote)}</div>
+                  <div><div className="text-muted-foreground">{porcao ? `A cada ${porcao.porcao}` : "Porção"}</div>{porcao ? brl(porcao.custo) : "—"}</div>
+                  <div><div className="text-muted-foreground">Usado em</div>{usos} produto(s)</div>
+                </div>
+              </div>
+              <div className="flex shrink-0 flex-col gap-2">
+                <Button type="button" variant="outline" size="icon" className="h-10 w-10" onClick={() => setEditando(editando === i.id ? null : i.id)} aria-label={`Editar ${i.nome}`}><Pencil className="size-4" /></Button>
+                <Button type="button" variant="outline" size="icon" className="h-10 w-10" onClick={() => excluir(i)} aria-label={`Excluir ${i.nome}`}><Trash2 className="size-4 text-destructive" /></Button>
+              </div>
+            </div>
+            {editando === i.id && (
+              <div className="mt-3 border-t pt-3">
+                <PreparoForm preparo={i} itens={preparoItens.filter((x) => x.preparo_id === i.id)} insumos={todosInsumos} onDone={() => setEditando(null)} />
+              </div>
+            )}
+          </Card>
+        );
+      })}
+    </div>
+  );
+}
+
 function Insumos({ insumos }: { insumos: Insumo[] }) {
   const qc = useQueryClient();
   const [editando, setEditando] = useState<string | null>(null);
   const [buscaInsumo, setBuscaInsumo] = useState("");
-  const [novoPreparo, setNovoPreparo] = useState(false);
-  // null antes da migração 0053: sem botão de preparo.
-  const { data: preparoItens } = useQuery(appQueries.preparoItensQ);
   const termoInsumo = buscaInsumo.trim().toLocaleLowerCase("pt-BR");
   const insumosFiltrados = insumos.filter((insumo) =>
     insumo.nome.toLocaleLowerCase("pt-BR").includes(termoInsumo)
@@ -288,25 +387,6 @@ function Insumos({ insumos }: { insumos: Insumo[] }) {
         <h2 className="mb-3 font-semibold">Novo insumo</h2>
         <IngredientForm />
       </Card>
-      {preparoItens && (
-        <Card className="mb-4">
-          {novoPreparo ? (
-            <>
-              <h2 className="mb-1 font-semibold">Novo preparo</h2>
-              <p className="mb-3 text-xs text-muted-foreground">Recheio, cobertura, calda... Cadastre a receita uma vez e use a quantidade que quiser em cada bolo.</p>
-              <PreparoForm insumos={insumos} onDone={() => setNovoPreparo(false)} />
-            </>
-          ) : (
-            <button type="button" onClick={() => setNovoPreparo(true)} className="flex w-full items-center gap-2 text-left">
-              <Plus className="size-4 shrink-0 text-primary" />
-              <span>
-                <span className="block font-semibold">Novo preparo (recheio, cobertura...)</span>
-                <span className="block text-xs text-muted-foreground">Ex.: cobertura que rende 500 g; no bolo você informa só os 100 g usados.</span>
-              </span>
-            </button>
-          )}
-        </Card>
-      )}
       {insumos.length === 0 ? (
         <Empty>Nenhum insumo cadastrado.</Empty>
       ) : (
@@ -331,31 +411,18 @@ function Insumos({ insumos }: { insumos: Insumo[] }) {
             <div className="space-y-2">
               {insumosFiltrados.map((i) => {
             const u = custoPorMedida(i);
-            const preparo = ehPreparo(i);
-            const porcao = preparo ? custoPorPorcao(Number(i.preco_embalagem ?? 0), Number(i.quantidade_embalagem ?? 1), i.unidade_embalagem ?? i.unidade) : null;
             return <Card key={i.id} className="p-3">
               <div className="flex items-center gap-2">
                 <div className="min-w-0 flex-1">
-                  <div className="break-words font-medium">{i.nome} {preparo && <span className="ml-1 rounded bg-primary/10 px-2 py-0.5 text-xs font-normal text-primary">Preparo</span>} {i.ativo === false && <span className="ml-1 rounded bg-muted px-2 py-0.5 text-xs font-normal text-muted-foreground">Inativo</span>}</div>
-                  {preparo ? (
-                    <>
-                      <div className="text-xs text-muted-foreground">Rende {Number(i.quantidade_embalagem ?? 1).toLocaleString("pt-BR")} {medidaLabel(i.unidade_embalagem ?? i.unidade)} · custo {brl(Number(i.preco_embalagem ?? 0))}</div>
-                      {porcao && <div className="text-xs text-muted-foreground">A cada {porcao.porcao}: {brl(porcao.custo)}</div>}
-                    </>
-                  ) : (
-                    <>
-                      <div className="text-xs text-muted-foreground">{brl(i.preco_embalagem ?? i.preco_unidade)} / {i.quantidade_embalagem ?? 1} {medidaLabel(i.unidade_embalagem ?? i.unidade)}</div>
-                      <div className="text-xs text-muted-foreground">Custo unitário: {brl(u.custo)} / {medidaLabel(u.unidade)}</div>
-                    </>
-                  )}
+                  <div className="break-words font-medium">{i.nome} {i.ativo === false && <span className="ml-1 rounded bg-muted px-2 py-0.5 text-xs font-normal text-muted-foreground">Inativo</span>}</div>
+                  <div className="text-xs text-muted-foreground">{brl(i.preco_embalagem ?? i.preco_unidade)} / {i.quantidade_embalagem ?? 1} {medidaLabel(i.unidade_embalagem ?? i.unidade)}</div>
+                  <div className="text-xs text-muted-foreground">Custo unitário: {brl(u.custo)} / {medidaLabel(u.unidade)}</div>
                 </div>
                 <Button size="icon" variant="ghost" onClick={() => setEditando(editando === i.id ? null : i.id)} aria-label={`Editar ${i.nome}`}><Pencil className="size-4" /></Button>
                 <Button size="icon" variant="ghost" onClick={() => alternarAtivo(i)} aria-label={`${i.ativo === false ? "Reativar" : "Inativar"} ${i.nome}`} title={i.ativo === false ? "Reativar insumo" : "Inativar insumo"}>{i.ativo === false ? <RotateCcw className="size-4" /> : <Archive className="size-4" />}</Button>
                 <Button size="icon" variant="ghost" onClick={() => excluir(i)} aria-label={`Excluir ${i.nome}`}><Trash2 className="size-4 text-destructive" /></Button>
               </div>
-              {editando === i.id && <div className="mt-3 border-t pt-3">{preparo
-                ? <PreparoForm preparo={i} itens={(preparoItens ?? []).filter((x) => x.preparo_id === i.id)} insumos={insumos} onDone={() => setEditando(null)} />
-                : <IngredientForm insumo={i} onDone={() => setEditando(null)} />}</div>}
+              {editando === i.id && <div className="mt-3 border-t pt-3"><IngredientForm insumo={i} onDone={() => setEditando(null)} /></div>}
             </Card>;
               })}
             </div>

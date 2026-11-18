@@ -117,7 +117,7 @@ export function EditorOpcoes({
                           <div className="grid grid-cols-[1fr_4.5rem_4.5rem_2.25rem] gap-1.5">
                             <select aria-label="Ingrediente" value={x.insumo_id} className="h-10 min-w-0 rounded-md border bg-background px-2 text-sm"
                               onChange={(e) => { const v = e.target.value; alterarIngredientes(gi, ii, (l) => l.map((y, j) => (j === xi ? { ...y, insumo_id: v, unidade: unidadeDe(v) } : y))); }}>
-                              {insumos.filter((y) => y.ativo !== false || y.id === x.insumo_id).map((y) => <option key={y.id} value={y.id}>{y.nome}{y.tipo === "preparo" ? " (preparo)" : ""}</option>)}
+                              {insumos.filter((y) => y.ativo !== false || y.id === x.insumo_id).map((y) => <option key={y.id} value={y.id}>{y.nome}{y.tipo === "preparo" ? " (recheio/cobertura)" : ""}</option>)}
                             </select>
                             <Input inputMode="decimal" aria-label="Quantidade do ingrediente" value={x.quantidade} placeholder="Qtd."
                               onChange={(e) => { const v = e.target.value; alterarIngredientes(gi, ii, (l) => l.map((y, j) => (j === xi ? { ...y, quantidade: v } : y))); }} className="h-10" />
