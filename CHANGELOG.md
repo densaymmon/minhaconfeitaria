@@ -8,6 +8,7 @@ Formato inspirado em [Keep a Changelog](https://keepachangelog.com/pt-BR/). As e
 - Salvar recheio/cobertura dava "permission denied for function _atualizar_custo_preparo" (o mesmo valia ao mudar o preço de um ingrediente usado num recheio). Migração 0054 libera as duas funções de custo para o usuário logado; o teste de banco agora também roda como usuário logado.
 
 ### Alterado
+- Cadastro do produto: saíram as seções "Variações" e "Quantidade e período de venda" (a pedido). Variações, limite por dia e período de venda já gravados continuam valendo e são preservados ao salvar; a "Validade (dias)" das etiquetas foi para o cartão do modo de preparo.
 - Recheios e coberturas (preparos) saíram da aba Insumos e foram para a aba Produtos: botão "Novo recheio ou cobertura", categoria própria no filtro e cartões com custo total, custo a cada 100 g e em quantos produtos são usados.
 - Relatórios: um único resultado em todo o sistema. "Lucro total estimado" e "Resultado dos pedidos entregues" viraram "Resultado do período" (todos os pedidos não cancelados do período, menos as despesas), igual ao Financeiro e ao Resumo do mês; a rentabilidade por produto passa a usar os mesmos pedidos. Regra em `resultadoDoPeriodo` (`src/lib/saude-financeira.ts`).
 

@@ -8,7 +8,7 @@ import { toast } from "sonner";
 import { Plus, Trash2 } from "lucide-react";
 import { apagarArquivosMidia, enviarMidiaProduto } from "@/lib/foto-catalogo";
 import { GaleriaMidias, midiaSalva, type MidiaEditavel } from "@/components/app/galeria-midias";
-import { EditorOpcoes, opcoesParaEdicao, opcoesParaSalvar, type GrupoEditavel } from "@/components/app/editor-opcoes";
+import { opcoesParaEdicao, opcoesParaSalvar, type GrupoEditavel } from "@/components/app/editor-opcoes";
 import type { MidiaCatalogo } from "@/lib/catalogo";
 import { supabase } from "@/integrations/supabase/client";
 import { useCustos } from "@/lib/hooks";
@@ -91,7 +91,8 @@ function ProdutoForm() {
   const { data: midiasSalvas } = useSuspenseQuery(appQueries.midiasProdutoQ(id));
   const [midias, setMidias] = useState<MidiaEditavel[]>(() => (duplicar ? [] : midiasSalvas.map((m) => midiaSalva(m.tipo, m.url))));
   const [progresso, setProgresso] = useState<string | null>(null);
-  const [opcoes, setOpcoes] = useState<GrupoEditavel[]>(() => opcoesParaEdicao(p?.opcoes));
+  // Variações não aparecem mais no cadastro, mas as existentes são preservadas ao salvar.
+  const [opcoes] = useState<GrupoEditavel[]>(() => opcoesParaEdicao(p?.opcoes));
   // Vendas: limite por dia, janela de venda (sazonal) e itens do kit.
   const [venda, setVenda] = useState(() => ({
     limite_dia: p?.limite_dia == null ? "" : String(p.limite_dia),
@@ -373,14 +374,6 @@ function ProdutoForm() {
         </Card>
         </>}
 
-        <Card className="space-y-3">
-          <div>
-            <h2 className="text-lg font-semibold">Variações</h2>
-            <p className="text-xs text-muted-foreground">Cobertura, recheio, tamanho… sem criar outro produto. Valem nos pedidos e no catálogo.</p>
-          </div>
-          <EditorOpcoes grupos={opcoes} onChange={setOpcoes} precoBase={preco} custoBase={unit} insumos={temCustos ? insumos : []} mapIns={mapIns} mostrarCusto={temCustos} />
-        </Card>
-
         {!temCatalogo ? <RecursoBloqueado recurso="catalogo" compacto /> : (
         <Card className="space-y-3">
           <div className="flex items-center justify-between gap-3">
@@ -427,21 +420,9 @@ function ProdutoForm() {
         </Card>
 
         <Card className="space-y-3">
-          <h2 className="text-lg font-semibold">Quantidade e período de venda</h2>
-          <Field label="Limite por dia de entrega (unidades)" hint="Em branco = sem limite. Conta pedidos de todas as origens; ao esgotar, o catálogo não aceita mais para aquele dia.">
-            <Input inputMode="numeric" value={venda.limite_dia} onChange={(e) => setVenda((s) => ({ ...s, limite_dia: e.target.value }))} className="h-11" placeholder="Sem limite" />
-          </Field>
-          <div className="grid grid-cols-2 gap-3">
-            <Field label="Vender a partir de"><Input type="date" value={venda.venda_de} onChange={(e) => setVenda((s) => ({ ...s, venda_de: e.target.value }))} className="h-11" /></Field>
-            <Field label="Vender até"><Input type="date" value={venda.venda_ate} onChange={(e) => setVenda((s) => ({ ...s, venda_ate: e.target.value }))} className="h-11" /></Field>
-          </div>
           <Field label="Validade (dias)" hint="Sai nas etiquetas: data de fabricação + validade. Em branco = não imprime validade.">
             <Input inputMode="numeric" value={venda.validade} onChange={(e) => setVenda((s) => ({ ...s, validade: e.target.value }))} className="h-11" placeholder="Ex.: 3" />
           </Field>
-          <p className="text-xs text-muted-foreground">Para produtos de época (Páscoa, Natal, Dia das Mães): fora desse período o produto some do catálogo sozinho. Em branco = sempre à venda.</p>
-        </Card>
-
-        <Card>
           <Field label="Modo de preparo / anotações">
             <Textarea rows={3} value={f.modo_preparo} onChange={(e) => set("modo_preparo", e.target.value)} />
           </Field>
