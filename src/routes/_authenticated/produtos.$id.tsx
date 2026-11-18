@@ -13,7 +13,8 @@ import type { MidiaCatalogo } from "@/lib/catalogo";
 import { supabase } from "@/integrations/supabase/client";
 import { useCustos } from "@/lib/hooks";
 import { alertaMargem, custoReceita, custoItemReceita, margemReal, precoSugerido } from "@/lib/calc";
-import { CATEGORIAS, brl, parseNum, pct, dataBR } from "@/lib/format";
+import { brl, parseNum, pct, dataBR } from "@/lib/format";
+import { CATEGORIA_MAX, categoriaExistenteOuNova, categoriasDisponiveis, normalizarCategoria } from "@/lib/categorias-produto";
 import { Card, Field, NativeSelect, PageHeader, Row } from "@/components/app/ui";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -64,7 +65,13 @@ function ProdutoForm() {
     margem_desejada: String(p?.margem_desejada ?? "100"),
     modo_preparo: p?.modo_preparo ?? "",
     ativo: p?.ativo ?? true,
+    oculto: duplicar ? false : (p?.oculto ?? false),
   }));
+  // Categorias: escolher uma existente ou criar uma nova na hora.
+  const categorias = categoriasDisponiveis(produtos, [f.categoria]);
+  const [novaCategoria, setNovaCategoria] = useState<string | null>(null);
+  // "Ocultar" só aparece depois que a coluna existe no banco (migração 0052).
+  const suportaOculto = produtos.length === 0 || produtos.some((x) => "oculto" in x);
   const [itens, setItens] = useState(() => p?.receita_itens.map((i) => ({ insumo_id: i.insumo_id, quantidade: String(i.quantidade_utilizada ?? i.quantidade), unidade_receita: i.unidade_receita ?? mapIns.get(i.insumo_id)?.unidade ?? "un" })) ?? []);
   const [salvando, setSalvando] = useState(false);
   const [duplicando, setDuplicando] = useState(duplicar);
@@ -119,13 +126,15 @@ function ProdutoForm() {
   async function salvar() {
     if (!f.nome.trim()) return void toast.error("Informe o nome do produto.");
     if (erroReceita) return void toast.error(erroReceita);
+    if (novaCategoria !== null && !normalizarCategoria(novaCategoria)) return void toast.error("Digite o nome da nova categoria ou escolha uma existente.");
+    const categoriaFinal = novaCategoria !== null ? categoriaExistenteOuNova(novaCategoria, categorias) : f.categoria;
     const opcoesValidadas = opcoesParaSalvar(opcoes);
     if (!opcoesValidadas.ok) return void toast.error(opcoesValidadas.erro);
     setSalvando(true);
     try {
       const payload = {
         nome: f.nome.trim(),
-        categoria: f.categoria,
+        categoria: categoriaFinal,
         ...prodNum,
         preco_venda: preco,
         margem_desejada: parseNum(f.margem_desejada),
@@ -137,6 +146,10 @@ function ProdutoForm() {
         ...(p && !duplicando ? { registro_id: p.id } : {}),
       });
       if (error) throw error;
+      if (suportaOculto && f.oculto !== (duplicando ? false : (p?.oculto ?? false))) {
+        const { error: erroOculto } = await supabase.from("produtos").update({ oculto: f.oculto }).eq("id", produtoId);
+        if (erroOculto) toast.warning(`Produto salvo, mas não deu para ${f.oculto ? "ocultar" : "mostrar"}: ${erroOculto.message}`);
+      }
       // Campos do catálogo ficam fora da RPC de receita; uma falha aqui não desfaz o produto salvo.
       try {
         const antecedencia = Math.round(parseNum(cat.antecedencia_dias));
@@ -214,10 +227,29 @@ function ProdutoForm() {
             <Input value={f.nome} onChange={(e) => set("nome", e.target.value)} className="h-11" placeholder="Ex.: Bolo de cenoura com chocolate" />
           </Field>
           <div className="grid grid-cols-1 gap-3 sm:grid-cols-2">
-            <Field label="Categoria">
-              <NativeSelect value={f.categoria} onChange={(e) => set("categoria", e.target.value)}>
-                {CATEGORIAS.map((c) => <option key={c}>{c}</option>)}
-              </NativeSelect>
+            <Field label="Categoria" hint={novaCategoria !== null ? "Ela passa a aparecer no filtro de produtos" : undefined}>
+              {novaCategoria === null ? (
+                <NativeSelect
+                  value={f.categoria}
+                  onChange={(e) => (e.target.value === "__nova__" ? setNovaCategoria("") : set("categoria", e.target.value))}
+                >
+                  {categorias.map((c) => <option key={c} value={c}>{c}</option>)}
+                  <option value="__nova__">+ Criar nova categoria…</option>
+                </NativeSelect>
+              ) : (
+                <div className="flex gap-2">
+                  <Input
+                    autoFocus
+                    value={novaCategoria}
+                    maxLength={CATEGORIA_MAX}
+                    onChange={(e) => setNovaCategoria(e.target.value)}
+                    className="h-11"
+                    placeholder="Nome da nova categoria"
+                    aria-label="Nome da nova categoria"
+                  />
+                  <Button type="button" variant="outline" className="h-11" onClick={() => setNovaCategoria(null)}>Cancelar</Button>
+                </div>
+              )}
             </Field>
             <Field label="Rendimento (unid.)" hint="Quantas unidades a receita rende">
               <Input inputMode="decimal" value={f.rendimento} onChange={(e) => set("rendimento", e.target.value)} className="h-11" />
@@ -227,6 +259,15 @@ function ProdutoForm() {
             <span className="text-sm font-medium">Produto ativo (aparece nos pedidos)</span>
             <Switch checked={f.ativo} onCheckedChange={(v) => set("ativo", v)} />
           </label>
+          {suportaOculto && (
+            <label className="flex items-center justify-between gap-3">
+              <span className="text-sm">
+                <span className="font-medium">Ocultar da lista de produtos</span>
+                <span className="block text-xs text-muted-foreground">Some de "Produtos e receitas"; use "Mostrar ocultos" para ver de novo.</span>
+              </span>
+              <Switch checked={f.oculto} onCheckedChange={(v) => set("oculto", v)} />
+            </label>
+          )}
         </Card>
 
         {!temCustos ? <>
