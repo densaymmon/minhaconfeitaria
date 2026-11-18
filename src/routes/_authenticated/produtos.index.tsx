@@ -3,7 +3,8 @@ import { createFileRoute, Link, useNavigate } from "@tanstack/react-router";
 import { useQueryClient } from "@tanstack/react-query";
 import { useState } from "react";
 import { toast } from "sonner";
-import { AlertTriangle, Copy, Download, Plus, Trash2, Pencil, Archive, RotateCcw } from "lucide-react";
+import { AlertTriangle, Copy, Download, Eye, EyeOff, Plus, Trash2, Pencil, Archive, RotateCcw } from "lucide-react";
+import { contarPorCategoria, daCategoria } from "@/lib/categorias-produto";
 import { supabase } from "@/integrations/supabase/client";
 import { useCustos } from "@/lib/hooks";
 import { alertaMargem, margemReal } from "@/lib/calc";
@@ -40,10 +41,25 @@ function Produtos() {
   const navigate = useNavigate();
   const [buscaProduto, setBuscaProduto] = useState("");
   const [soAbaixoDaMargem, setSoAbaixoDaMargem] = useState(false);
+  const [categoria, setCategoria] = useState<string | null>(null);
+  const [mostrarOcultos, setMostrarOcultos] = useState(false);
+  const qc = useQueryClient();
+  // "oculto" só existe depois da migração 0052; antes disso o botão não aparece.
+  const suportaOculto = produtos.some((p) => "oculto" in p);
+  const totalOcultos = produtos.filter((p) => p.oculto).length;
+  const visiveis = mostrarOcultos ? produtos : produtos.filter((p) => !p.oculto);
+  const contagemCategorias = contarPorCategoria(visiveis);
+  const categoriaAtiva = categoria && contagemCategorias.some((c) => daCategoria({ categoria: c.categoria }, categoria)) ? categoria : null;
+  async function alternarOculto(id: string, nome: string, oculto: boolean) {
+    const { error } = await supabase.from("produtos").update({ oculto: !oculto }).eq("id", id);
+    if (error) return void toast.error(error.message);
+    await qc.invalidateQueries({ queryKey: ["produtos"] });
+    toast.success(oculto ? `${nome} voltou para a lista.` : `${nome} foi ocultado. Toque em "Mostrar ocultos" para ver.`);
+  }
   const alertas = new Map(produtos.map((p) => [p.id, alertaMargem(custo.get(p.id) ?? 0, Number(p.preco_venda), Number(p.margem_desejada))]));
   const abaixoDaMargem = produtos.filter((p) => p.ativo && alertas.get(p.id)?.abaixoDaMargem).length;
   const termoProduto = buscaProduto.trim().toLocaleLowerCase("pt-BR");
-  const produtosFiltrados = produtos.filter((p) =>
+  const produtosFiltrados = visiveis.filter((p) => daCategoria(p, categoriaAtiva) &&
     (!(soAbaixoDaMargem && abaixoDaMargem > 0) || (p.ativo && alertas.get(p.id)?.abaixoDaMargem)) && (!termoProduto ||
     p.nome.toLocaleLowerCase("pt-BR").includes(termoProduto) ||
     (p.categoria ?? "").toLocaleLowerCase("pt-BR").includes(termoProduto))
@@ -53,7 +69,7 @@ function Produtos() {
       <PageHeader title="Produtos e receitas" back="/mais" />
       <Tabs defaultValue="produtos">
         <TabsList className="mb-4 grid w-full grid-cols-2">
-          <TabsTrigger value="produtos">Produtos ({produtos.length})</TabsTrigger>
+          <TabsTrigger value="produtos">Produtos ({produtos.length - (mostrarOcultos ? 0 : totalOcultos)})</TabsTrigger>
           <TabsTrigger value="insumos">Insumos ({insumos.length})</TabsTrigger>
         </TabsList>
         <TabsContent value="produtos">
@@ -104,6 +120,35 @@ function Produtos() {
               />
             </div>
           )}
+          {contagemCategorias.length > 1 && (
+            <div className="-mx-1 mb-3 flex gap-2 overflow-x-auto px-1 pb-1" role="group" aria-label="Filtrar por categoria">
+              {[{ categoria: null as string | null, total: visiveis.length, rotulo: "Todas" }, ...contagemCategorias.map((c) => ({ ...c, rotulo: c.categoria }))].map((c) => {
+                const ativa = c.categoria === null ? categoriaAtiva === null : categoriaAtiva !== null && daCategoria({ categoria: c.categoria }, categoriaAtiva);
+                return (
+                  <button
+                    key={c.rotulo}
+                    type="button"
+                    aria-pressed={ativa}
+                    onClick={() => setCategoria(c.categoria)}
+                    className={`shrink-0 whitespace-nowrap rounded-full border px-3 py-1.5 text-sm transition-colors ${ativa ? "border-primary bg-primary text-primary-foreground" : "bg-background text-foreground hover:bg-muted"}`}
+                  >
+                    {c.rotulo} <span className={ativa ? "opacity-80" : "text-muted-foreground"}>{c.total}</span>
+                  </button>
+                );
+              })}
+            </div>
+          )}
+          {suportaOculto && totalOcultos > 0 && (
+            <button
+              type="button"
+              onClick={() => setMostrarOcultos((v) => !v)}
+              aria-pressed={mostrarOcultos}
+              className="mb-3 flex items-center gap-1.5 text-sm text-muted-foreground underline-offset-2 hover:underline"
+            >
+              {mostrarOcultos ? <EyeOff className="size-4" /> : <Eye className="size-4" />}
+              {mostrarOcultos ? "Esconder ocultos" : `Mostrar ocultos (${totalOcultos})`}
+            </button>
+          )}
           {produtos.length === 0 ? (
             <Empty>
               <div className="mx-auto max-w-sm space-y-3">
@@ -120,7 +165,7 @@ function Produtos() {
                 <div className="space-y-2">
                   <p className="font-medium text-foreground">Nenhum produto encontrado</p>
                   <p>Tente outro nome ou categoria.</p>
-                  <Button type="button" variant="outline" onClick={() => setBuscaProduto("")}>Limpar busca</Button>
+                  <Button type="button" variant="outline" onClick={() => { setBuscaProduto(""); setCategoria(null); }}>Limpar filtros</Button>
                 </div>
               </Empty>
             ) : (
@@ -131,13 +176,13 @@ function Produtos() {
                 const lucro = preco - c;
                 const alerta = alertas.get(p.id);
                 return (
-                  <Card key={p.id} className={`p-3.5 ${p.ativo ? "" : "opacity-60"}`}>
+                  <Card key={p.id} className={`p-3.5 ${p.ativo && !p.oculto ? "" : "opacity-60"}`}>
                     <div className="flex items-start gap-2">
                       <Link to="/produtos/$id" params={{ id: p.id }} search={{ duplicar: false }} className="min-w-0 flex-1">
                         <div className="flex justify-between gap-2">
                           <div className="min-w-0">
                             <div className="truncate font-semibold">{p.nome}</div>
-                            <div className="text-xs text-muted-foreground">{p.categoria}{!p.ativo && " · inativo"}{p.ativo && p.no_catalogo && " · no catálogo"}</div>
+                            <div className="text-xs text-muted-foreground">{p.categoria}{p.oculto && " · oculto"}{!p.ativo && " · inativo"}{p.ativo && p.no_catalogo && " · no catálogo"}</div>
                             {p.custo_alterado_em && <div className="mt-1 text-xs text-warning-foreground">Custo atualizado em {dataBR(p.custo_alterado_em)}</div>}
                           </div>
                           <div className="text-right font-semibold">{brl(preco)}</div>
@@ -154,6 +199,7 @@ function Produtos() {
                           <div className="mt-2 rounded-lg bg-warning/15 px-2 py-1 text-xs text-warning-foreground">Abaixo da margem desejada ({pct(Number(p.margem_desejada))}). Sugerido: {brl(alerta.sugerido)}</div>
                         )}
                       </Link>
+                      <div className="flex shrink-0 flex-col gap-2">
                       <Button
                         type="button"
                         variant="outline"
@@ -165,6 +211,20 @@ function Produtos() {
                       >
                         <Copy className="size-4" />
                       </Button>
+                      {suportaOculto && (
+                        <Button
+                          type="button"
+                          variant="outline"
+                          size="icon"
+                          className="h-10 w-10 shrink-0"
+                          aria-label={`${p.oculto ? "Mostrar" : "Ocultar"} ${p.nome}`}
+                          title={p.oculto ? "Mostrar na lista" : "Ocultar da lista"}
+                          onClick={() => alternarOculto(p.id, p.nome, Boolean(p.oculto))}
+                        >
+                          {p.oculto ? <Eye className="size-4" /> : <EyeOff className="size-4" />}
+                        </Button>
+                      )}
+                      </div>
                     </div>
                   </Card>
                 );
