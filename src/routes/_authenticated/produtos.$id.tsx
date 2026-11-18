@@ -22,6 +22,7 @@ import { Textarea } from "@/components/ui/textarea";
 import { medidasCompativeis, medidaLabel, numeroIngrediente, custoPorMedida } from "@/lib/ingredient-cost";
 import { Switch } from "@/components/ui/switch";
 import { RecursoBloqueado, useRecurso } from "@/components/app/plano";
+import { NOVO_INGREDIENTE, NovoInsumoDialog } from "@/components/app/novo-insumo-dialog";
 
 export const Route = createFileRoute("/_authenticated/produtos/$id")({
  validateSearch: (search: Record<string, unknown>) => ({ duplicar: lerDuplicar(search["duplicar"]) }),
@@ -74,6 +75,8 @@ function ProdutoForm() {
   const suportaOculto = produtos.length === 0 || produtos.some((x) => "oculto" in x);
   const [itens, setItens] = useState(() => p?.receita_itens.map((i) => ({ insumo_id: i.insumo_id, quantidade: String(i.quantidade_utilizada ?? i.quantidade), unidade_receita: i.unidade_receita ?? mapIns.get(i.insumo_id)?.unidade ?? "un" })) ?? []);
   const [salvando, setSalvando] = useState(false);
+  // Linha da receita que recebe o ingrediente cadastrado na hora (-1 = nova linha no fim).
+  const [novoIngredienteLinha, setNovoIngredienteLinha] = useState<number | null>(null);
   const [duplicando, setDuplicando] = useState(duplicar);
   const { user } = Route.useRouteContext();
   // Fotos ficam na pasta da confeitaria (a mesma para toda a equipe).
@@ -283,7 +286,7 @@ function ProdutoForm() {
           <h2 className="text-lg font-semibold">Ingredientes e embalagens</h2>
           {insumos.length === 0 && (
             <p className="text-sm text-muted-foreground">
-              Cadastre os insumos primeiro na aba <Link to="/produtos" className="text-primary">Insumos</Link>.
+              Nenhum ingrediente cadastrado ainda. Use "Novo ingrediente" logo abaixo.
             </p>
           )}
           {itens.map((it, i) => {
@@ -296,8 +299,9 @@ function ProdutoForm() {
                 <div className="flex gap-2">
                   <NativeSelect aria-label="Ingrediente da receita" value={it.insumo_id} onChange={(e) => {
                     const id = e.target.value;
+                    if (id === NOVO_INGREDIENTE) return void setNovoIngredienteLinha(i);
                     setItens((s) => s.map((x, j) => j === i ? { ...x, insumo_id: id, unidade_receita: mapIns.get(id)?.unidade_embalagem ?? mapIns.get(id)?.unidade ?? "un" } : x));
-                  }}>{insumos.filter((x) => x.ativo !== false || x.id === it.insumo_id).map((x) => <option key={x.id} value={x.id}>{x.nome}{x.tipo === "preparo" ? " (recheio/cobertura)" : ""}{x.ativo === false ? " (inativo — histórico)" : ""}</option>)}</NativeSelect>
+                  }}>{insumos.filter((x) => x.ativo !== false || x.id === it.insumo_id).map((x) => <option key={x.id} value={x.id}>{x.nome}{x.tipo === "preparo" ? " (recheio/cobertura)" : ""}{x.ativo === false ? " (inativo — histórico)" : ""}</option>)}<option value={NOVO_INGREDIENTE}>+ Cadastrar novo ingrediente</option></NativeSelect>
                   <Button size="icon" variant="ghost" className="h-11 w-11 shrink-0" onClick={() => setItens((s) => s.filter((_, j) => j !== i))} aria-label={`Remover ingrediente ${ins?.nome ?? ""}`}><Trash2 className="size-4 text-destructive" /></Button>
                 </div>
                 <Field label="Quantidade utilizada na receita">
@@ -316,6 +320,17 @@ function ProdutoForm() {
           <Button size="sm" variant="outline" disabled={insumos.every((x) => x.ativo === false)} onClick={() => { const disponivel = insumos.find((x) => x.ativo !== false); if (disponivel) setItens((s) => [...s, { insumo_id: disponivel.id, quantidade: "", unidade_receita: disponivel.unidade_embalagem ?? disponivel.unidade ?? "un" }]); }}>
             <Plus className="size-4" /> Insumo
           </Button>
+          <Button size="sm" variant="outline" className="ml-2" onClick={() => setNovoIngredienteLinha(-1)}>
+            <Plus className="size-4" /> Novo ingrediente
+          </Button>
+          <NovoInsumoDialog
+            aberto={novoIngredienteLinha !== null}
+            onFechar={() => setNovoIngredienteLinha(null)}
+            onCriado={({ id: novoId, unidade_embalagem }) => {
+              const linha = { insumo_id: novoId, quantidade: "", unidade_receita: unidade_embalagem };
+              setItens((s) => (novoIngredienteLinha === null || novoIngredienteLinha < 0 ? [...s, linha] : s.map((x, j) => (j === novoIngredienteLinha ? { ...x, insumo_id: novoId, unidade_receita: unidade_embalagem } : x))));
+            }}
+          />
           {erroReceita && <p role="alert" className="text-sm text-destructive">{erroReceita}</p>}
         </Card>
 

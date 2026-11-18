@@ -3,6 +3,7 @@ import { ChevronDown, ChevronUp, Plus, Trash2 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { brl, parseNum } from "@/lib/format";
+import { NOVO_INGREDIENTE, NovoInsumoDialog } from "./novo-insumo-dialog";
 import type { InsumoLite } from "@/lib/calc";
 import { medidaLabel, medidasCompativeis, numeroIngrediente } from "@/lib/ingredient-cost";
 import {
@@ -55,6 +56,8 @@ export function EditorOpcoes({
   mostrarCusto?: boolean;
 }) {
   const [aberta, setAberta] = useState<string | null>(null);
+  // Opção (grupo, opção, linha) que recebe o ingrediente cadastrado na hora; linha -1 = nova.
+  const [novoIngrediente, setNovoIngrediente] = useState<{ gi: number; ii: number; xi: number } | null>(null);
   const alterarGrupo = (gi: number, novo: Partial<GrupoEditavel>) => onChange(grupos.map((g, i) => (i === gi ? { ...g, ...novo } : g)));
   const alterarItem = (gi: number, ii: number, novo: Partial<OpcaoEditavel>) =>
     alterarGrupo(gi, { itens: (grupos[gi]?.itens ?? []).map((it, i) => (i === ii ? { ...it, ...novo } : it)) });
@@ -116,8 +119,9 @@ export function EditorOpcoes({
                         <div key={xi} className="space-y-1">
                           <div className="grid grid-cols-[1fr_4.5rem_4.5rem_2.25rem] gap-1.5">
                             <select aria-label="Ingrediente" value={x.insumo_id} className="h-10 min-w-0 rounded-md border bg-background px-2 text-sm"
-                              onChange={(e) => { const v = e.target.value; alterarIngredientes(gi, ii, (l) => l.map((y, j) => (j === xi ? { ...y, insumo_id: v, unidade: unidadeDe(v) } : y))); }}>
+                              onChange={(e) => { const v = e.target.value; if (v === NOVO_INGREDIENTE) return void setNovoIngrediente({ gi, ii, xi }); alterarIngredientes(gi, ii, (l) => l.map((y, j) => (j === xi ? { ...y, insumo_id: v, unidade: unidadeDe(v) } : y))); }}>
                               {insumos.filter((y) => y.ativo !== false || y.id === x.insumo_id).map((y) => <option key={y.id} value={y.id}>{y.nome}{y.tipo === "preparo" ? " (recheio/cobertura)" : ""}</option>)}
+                              <option value={NOVO_INGREDIENTE}>+ Cadastrar novo ingrediente</option>
                             </select>
                             <Input inputMode="decimal" aria-label="Quantidade do ingrediente" value={x.quantidade} placeholder="Qtd."
                               onChange={(e) => { const v = e.target.value; alterarIngredientes(gi, ii, (l) => l.map((y, j) => (j === xi ? { ...y, quantidade: v } : y))); }} className="h-10" />
@@ -134,15 +138,20 @@ export function EditorOpcoes({
                         </div>
                       );
                     })}
-                    {disponiveis.length === 0 ? (
-                      <p className="text-xs text-muted-foreground">Cadastre os insumos na aba Insumos para calcular o custo.</p>
-                    ) : (it.ingredientes ?? []).length < MAX_INGREDIENTES_OPCAO && (
-                      <Button type="button" variant="outline" size="sm" onClick={() => {
-                        const primeiro = disponiveis[0];
-                        if (primeiro) alterarIngredientes(gi, ii, (l) => [...l, { insumo_id: primeiro.id, quantidade: "", unidade: unidadeDe(primeiro.id) }]);
-                      }}>
-                        <Plus className="size-4" /> Ingrediente
-                      </Button>
+                    {(it.ingredientes ?? []).length < MAX_INGREDIENTES_OPCAO && (
+                      <div className="flex flex-wrap gap-2">
+                        {disponiveis.length > 0 && (
+                          <Button type="button" variant="outline" size="sm" onClick={() => {
+                            const primeiro = disponiveis[0];
+                            if (primeiro) alterarIngredientes(gi, ii, (l) => [...l, { insumo_id: primeiro.id, quantidade: "", unidade: unidadeDe(primeiro.id) }]);
+                          }}>
+                            <Plus className="size-4" /> Ingrediente
+                          </Button>
+                        )}
+                        <Button type="button" variant="outline" size="sm" onClick={() => setNovoIngrediente({ gi, ii, xi: -1 })}>
+                          <Plus className="size-4" /> Novo ingrediente
+                        </Button>
+                      </div>
                     )}
                     {typeof calculado === "number" && <p className="text-xs font-medium">Custo da opção: {brl(calculado)} por unidade</p>}
                   </div>
@@ -172,6 +181,17 @@ export function EditorOpcoes({
           <Plus className="size-4" /> Grupo de opções
         </Button>
       )}
+      <NovoInsumoDialog
+        aberto={novoIngrediente !== null}
+        onFechar={() => setNovoIngrediente(null)}
+        onCriado={({ id, unidade_embalagem }) => {
+          if (!novoIngrediente) return;
+          const { gi, ii, xi } = novoIngrediente;
+          alterarIngredientes(gi, ii, (l) => (xi < 0
+            ? [...l, { insumo_id: id, quantidade: "", unidade: unidade_embalagem }]
+            : l.map((y, j) => (j === xi ? { ...y, insumo_id: id, unidade: unidade_embalagem } : y))));
+        }}
+      />
       <p className="text-xs text-muted-foreground">
         Escolhe-se uma opção de cada grupo, no pedido ou no catálogo. "+ Preço" soma ao preço de venda (use negativo para opções mais baratas, ex.: P = -5).
         {mostrarCusto && " \"+ Custo\" soma ao custo da receita; com ingredientes, é calculado sozinho."}
