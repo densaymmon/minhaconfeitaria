@@ -17,6 +17,7 @@ import { alterarPedido, otimista } from "@/lib/cache-pedidos";
 import { useCustos, usePedidosCalc } from "@/lib/hooks";
 import { avisoProntoWhatsApp, confirmacaoWhatsApp, precisaConfirmar } from "@/lib/whatsapp-pedido";
 import { alertaMargem, totaisPedido } from "@/lib/calc";
+import { aplicarEscolha, escolhaDaDescricao, escolhaPadrao, lerGrupos, type Escolha } from "@/lib/opcoes-produto";
 import { FORMAS, brl, dataBR, hojeISO, num, parseNum, statusLabel } from "@/lib/format";
 import { Card, Field, NativeSelect, PagamentoBadge, PageHeader, Row } from "@/components/app/ui";
 import { Button } from "@/components/ui/button";
@@ -54,6 +55,8 @@ type Item = {
   usar_estoque?: boolean;
   /** Quanto deste item já veio do estoque pronto (só leitura). */
   quantidade_do_estoque?: number;
+  /** Variações escolhidas (ex.: { Cobertura: "Ganache" }); só existe na tela, vira a descrição do item. */
+  escolha?: Escolha | undefined;
 };
 
 function PedidoForm() {
@@ -65,7 +68,7 @@ function PedidoForm() {
   const { data: pedidos } = useSuspenseQuery(pedidosHistoricoQ);
   const { data: clientes } = useSuspenseQuery(clientesQ);
   const { data: config } = useSuspenseQuery(configQ);
-  const { produtos, custo } = useCustos();
+  const { produtos, custo, mapIns } = useCustos();
   const existente = novo ? undefined : pedidos.find((p) => p.id === id);
   const pedidosCalc = usePedidosCalc("historico");
   const existenteCalc = existente ? pedidosCalc.find((x) => x.id === existente.id) : undefined;
@@ -308,14 +311,25 @@ function PedidoForm() {
 
   function escolherProduto(i: number, pid: string) {
     const p = produtos.find((x) => x.id === pid);
-    if (!p) return setItem(i, { produto_id: null, usar_estoque: false });
+    if (!p) return setItem(i, { produto_id: null, usar_estoque: false, escolha: undefined });
+    const grupos = lerGrupos(p.opcoes);
+    if (grupos.length) return aplicarVariacao(i, p.id, escolhaPadrao(grupos), { usar_estoque: false });
     setItem(i, {
       usar_estoque: false,
       produto_id: p.id,
       descricao: p.nome,
       preco_unitario: String(p.preco_venda),
       custo_unitario: +(custo.get(p.id) ?? 0).toFixed(4),
+      escolha: undefined,
     });
+  }
+
+  /** Recalcula preço, custo e descrição do item com as variações escolhidas (cobertura, tamanho...). */
+  function aplicarVariacao(i: number, produtoId: string, escolha: Escolha, extra: Partial<Item> = {}) {
+    const p = produtos.find((x) => x.id === produtoId);
+    if (!p) return;
+    const r = aplicarEscolha({ nome: p.nome, preco: Number(p.preco_venda), custo: custo.get(p.id) ?? 0 }, lerGrupos(p.opcoes), escolha, mapIns);
+    setItem(i, { ...extra, produto_id: p.id, escolha, descricao: r.descricao, preco_unitario: String(r.preco), custo_unitario: r.custo });
   }
 
   const t = totaisPedido(
@@ -819,6 +833,34 @@ function PedidoForm() {
                   <Trash2 className="size-4 text-destructive" />
                 </Button>
               </div>
+              {(() => {
+                const produto = it.produto_id ? produtos.find((x) => x.id === it.produto_id) : undefined;
+                const grupos = produto ? lerGrupos(produto.opcoes) : [];
+                if (!produto || grupos.length === 0) return null;
+                const escolha = it.escolha ?? escolhaDaDescricao(produto.nome, grupos, it.descricao) ?? {};
+                return grupos.map((g) => (
+                  <div key={g.grupo} className="space-y-1">
+                    <div className="text-xs font-medium text-muted-foreground">{g.grupo}</div>
+                    <div className="flex flex-wrap gap-1.5" role="group" aria-label={g.grupo}>
+                      {g.itens.map((op) => {
+                        const ativa = escolha[g.grupo] === op.nome;
+                        return (
+                          <button
+                            key={op.nome}
+                            type="button"
+                            disabled={temProducaoRegistrada}
+                            aria-pressed={ativa}
+                            onClick={() => aplicarVariacao(i, produto.id, { ...escolha, [g.grupo]: op.nome })}
+                            className={`rounded-full border px-3 py-1.5 text-sm disabled:opacity-60 ${ativa ? "border-primary bg-primary text-primary-foreground" : "bg-card"}`}
+                          >
+                            {op.nome}{op.preco !== 0 && <span className={ativa ? "opacity-80" : "text-muted-foreground"}> {op.preco > 0 ? "+" : "−"}{brl(Math.abs(op.preco))}</span>}
+                          </button>
+                        );
+                      })}
+                    </div>
+                  </div>
+                ));
+              })()}
               <Input placeholder="Descrição / personalização" value={it.descricao} disabled={temProducaoRegistrada} onChange={(e) => setItem(i, { descricao: e.target.value })} className="h-11 bg-card" />
               <div className="grid grid-cols-3 gap-2">
                 <Field label="Qtd.">
