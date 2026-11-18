@@ -1,6 +1,6 @@
 import * as appQueries from "@/lib/queries";
 import { createFileRoute } from "@tanstack/react-router";
-import { useSuspenseQuery } from "@tanstack/react-query";
+import { useQuery, useSuspenseQuery } from "@tanstack/react-query";
 import { useMemo, useState } from "react";
 import { Printer, Tag } from "lucide-react";
 import { usePedidosCalc } from "@/lib/hooks";
@@ -30,13 +30,14 @@ function EtiquetasPage() {
   const pedidos = usePedidosCalc();
   const { data: produtos } = useSuspenseQuery(appQueries.produtosQ);
   const { data: insumos } = useSuspenseQuery(appQueries.insumosQ);
+  const { data: preparoItens } = useQuery(appQueries.preparoItensQ);
   const { data: confeitaria } = useSuspenseQuery(appQueries.confeitariaQ);
   const hoje = hojeISO();
   const [dia, setDia] = useState(somarDiasISO(hoje, 1));
   const [fabricacao, setFabricacao] = useState(hoje);
   const [mostrarIngredientes, setMostrarIngredientes] = useState(true);
   const [mostrarCliente, setMostrarCliente] = useState(true);
-  const etiquetas = useMemo(() => etiquetasDoDia(pedidos, produtos, insumos, dia, fabricacao), [pedidos, produtos, insumos, dia, fabricacao]);
+  const etiquetas = useMemo(() => etiquetasDoDia(pedidos, produtos, insumos, dia, fabricacao, preparoItens ?? []), [pedidos, produtos, insumos, dia, fabricacao, preparoItens]);
   const loja = confeitaria?.nome ?? "";
 
   return (
