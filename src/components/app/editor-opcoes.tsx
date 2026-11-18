@@ -145,11 +145,11 @@ export function EditorOpcoes({
                             const primeiro = disponiveis[0];
                             if (primeiro) alterarIngredientes(gi, ii, (l) => [...l, { insumo_id: primeiro.id, quantidade: "", unidade: unidadeDe(primeiro.id) }]);
                           }}>
-                            <Plus className="size-4" /> Ingrediente
+                            <Plus className="size-4" /> Adicionar
                           </Button>
                         )}
                         <Button type="button" variant="outline" size="sm" onClick={() => setNovoIngrediente({ gi, ii, xi: -1 })}>
-                          <Plus className="size-4" /> Novo ingrediente
+                          <Plus className="size-4" /> Cadastrar ingrediente
                         </Button>
                       </div>
                     )}
