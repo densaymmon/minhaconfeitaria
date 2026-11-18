@@ -55,10 +55,10 @@ export function lerGrupos(valor: unknown): GrupoSalvo[] {
   return valor.flatMap((g) => {
     if (!g || typeof g !== "object" || !Array.isArray(g.itens)) return [];
     const itens = (g.itens as Record<string, unknown>[]).flatMap((i) => {
-      const nome = String(i?.nome ?? "").trim();
+      const nome = String(i?.["nome"] ?? "").trim();
       if (!nome) return [];
-      const ingredientes = lerIngredientes(i?.ingredientes);
-      return [{ nome, preco: Number(i?.preco) || 0, custo: Number(i?.custo) || 0, ...(ingredientes.length ? { ingredientes } : {}) }];
+      const ingredientes = lerIngredientes(i?.["ingredientes"]);
+      return [{ nome, preco: Number(i?.["preco"]) || 0, custo: Number(i?.["custo"]) || 0, ...(ingredientes.length ? { ingredientes } : {}) }];
     });
     const grupo = String(g.grupo ?? "").trim();
     return grupo && itens.length ? [{ grupo, itens }] : [];

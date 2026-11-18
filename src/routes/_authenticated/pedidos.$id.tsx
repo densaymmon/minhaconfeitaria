@@ -56,7 +56,7 @@ type Item = {
   /** Quanto deste item já veio do estoque pronto (só leitura). */
   quantidade_do_estoque?: number;
   /** Variações escolhidas (ex.: { Cobertura: "Ganache" }); só existe na tela, vira a descrição do item. */
-  escolha?: Escolha;
+  escolha?: Escolha | undefined;
 };
 
 function PedidoForm() {
