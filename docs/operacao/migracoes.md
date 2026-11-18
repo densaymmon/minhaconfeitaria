@@ -39,6 +39,7 @@ Mantenha esta tabela atualizada a cada aplicação. Ela é a lista que falta hoj
 
 | Migração | Aplicada em | Por quem | Conferência feita |
 |---|---|---|---|
+| 0054 permissões das funções de custo dos preparos | 18/11/2026 | Claude Code | `authenticated` executa `_custo_preparo` e `_atualizar_custo_preparo`, anon não; simulação como usuária logada (salvar recheio + recálculo pelo trigger) feita e desfeita; 0 preparos gravados |
 | 0053 preparos (recheios e coberturas) | 18/11/2026 | Claude Code (arquivo inteiro, numa transação) | `preparo_itens` com RLS e 5 políticas, anon sem acesso, 2 funções de produção trocadas (`/*0053*/`); antes e depois: 33 insumos, 163 itens de receita, 643 movimentos de estoque, soma dos custos unitários 236,3038 |
 | 0052 produtos ocultos | 17/11/2026 | Claude Code (arquivo inteiro, numa transação) | coluna `produtos.oculto` criada; 15 produtos antes e depois, 0 ocultos |
 | 0050 despesas fixas mensais automáticas | 14/11/2026 | Claude Code (arquivo inteiro, numa transação) | tabela com RLS e 6 políticas, `despesas.recorrente_id` criada, anon sem acesso; `despesas` tinha 0 linhas antes e depois |
