@@ -193,7 +193,7 @@ function Layout() {
         <nav aria-label="Navegação inferior" className="fixed inset-x-0 bottom-0 z-40 border-t bg-card/95 backdrop-blur lg:hidden print:hidden" style={{ paddingBottom: "env(safe-area-inset-bottom)" }}>
           <div className="mx-auto grid max-w-2xl grid-cols-5">
             {nav.map(({ to, label, icon: Icon }) => (
-              <Link key={to} to={to} className="flex min-h-14 flex-col items-center justify-center gap-0.5 px-1 py-2 text-[11px] font-medium text-muted-foreground transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring" activeProps={{ className: "flex min-h-14 flex-col items-center justify-center gap-0.5 px-1 py-2 text-[11px] font-semibold text-primary focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring" }}>
+              <Link key={to} to={to} className="flex min-h-14 flex-col items-center justify-center gap-0.5 px-1 py-2 text-xs font-medium text-muted-foreground transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring" activeProps={{ className: "flex min-h-14 flex-col items-center justify-center gap-0.5 px-1 py-2 text-xs font-semibold text-primary focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring" }}>
                 <span className="relative">
                   <Icon className="size-5" />
                   {to === "/pedidos" && novosCatalogo > 0 && <ContadorNovos total={novosCatalogo} className="absolute -right-2.5 -top-1.5" />}
@@ -201,7 +201,7 @@ function Layout() {
                 {label}
               </Link>
             ))}
-            <button type="button" onClick={() => setMaisAberto(true)} aria-label="Abrir menu Mais" aria-expanded={maisAberto} className={`flex min-h-14 flex-col items-center justify-center gap-0.5 px-1 py-2 text-[11px] font-medium focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring ${maisAberto ? "text-primary" : "text-muted-foreground"}`}>
+            <button type="button" onClick={() => setMaisAberto(true)} aria-label="Abrir menu Mais" aria-expanded={maisAberto} className={`flex min-h-14 flex-col items-center justify-center gap-0.5 px-1 py-2 text-xs font-medium focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring ${maisAberto ? "text-primary" : "text-muted-foreground"}`}>
               <Menu className="size-5" />
               Mais
             </button>

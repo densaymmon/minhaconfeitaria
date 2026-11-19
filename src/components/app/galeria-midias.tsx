@@ -62,8 +62,8 @@ export function GaleriaMidias({ midias, onChange, desabilitado }: { midias: Midi
               ? <img src={m.previa} alt={`Foto ${i + 1}`} className="size-full object-cover" />
               : <video src={m.previa} muted playsInline preload="metadata" className="size-full object-cover" />}
             {m.tipo === "video" && <PlayCircle className="pointer-events-none absolute left-1/2 top-1/2 size-8 -translate-x-1/2 -translate-y-1/2 text-white drop-shadow" />}
-            {m.chave === capa && <span className="absolute left-1 top-1 rounded-full bg-primary px-2 py-0.5 text-[10px] font-bold text-primary-foreground">Capa</span>}
-            {m.arquivo && <span className="absolute bottom-1 left-1 rounded-full bg-background/90 px-2 py-0.5 text-[10px] font-medium">Novo</span>}
+            {m.chave === capa && <span className="absolute left-1 top-1 rounded-full bg-primary px-2 py-0.5 text-xs font-bold text-primary-foreground">Capa</span>}
+            {m.arquivo && <span className="absolute bottom-1 left-1 rounded-full bg-background/90 px-2 py-0.5 text-xs font-medium">Novo</span>}
             <button type="button" disabled={desabilitado} onClick={() => onChange(midias.filter((x) => x.chave !== m.chave))} aria-label={`Remover ${m.tipo === "video" ? "vídeo" : "foto"} ${i + 1}`}
               className="absolute right-1 top-1 grid size-7 place-items-center rounded-full bg-background/90 text-foreground shadow">
               <X className="size-4" />

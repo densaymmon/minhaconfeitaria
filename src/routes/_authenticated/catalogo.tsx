@@ -17,6 +17,7 @@ import { Input } from "@/components/ui/input";
 import { Switch } from "@/components/ui/switch";
 import { Textarea } from "@/components/ui/textarea";
 import { cn } from "@/lib/utils";
+import { confirmar } from "@/lib/confirmar";
 
 export const Route = createFileRoute("/_authenticated/catalogo")({
   loader: async ({ context }) => {
@@ -398,7 +399,7 @@ function CuponsCard() {
   }
 
   async function excluir(id: string, codigo: string) {
-    if (!window.confirm(`Excluir o cupom ${codigo}? Pedidos que já usaram continuam com o desconto.`)) return;
+    if (!(await confirmar({ titulo: `Excluir o cupom ${codigo}?`, mensagem: "Pedidos que já usaram continuam com o desconto.", acao: "Excluir", destrutivo: true }))) return;
     const { error } = await supabase.from("cupons").delete().eq("id", id);
     if (error) return void toast.error(`Não foi possível excluir: ${error.message}`);
     await qc.invalidateQueries({ queryKey: ["cupons"] });

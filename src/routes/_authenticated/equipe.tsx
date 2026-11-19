@@ -12,6 +12,7 @@ import { Card, Field, PageHeader } from "@/components/app/ui";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { cn } from "@/lib/utils";
+import { confirmar } from "@/lib/confirmar";
 
 export const Route = createFileRoute("/_authenticated/equipe")({
   loader: ({ context }) => context.queryClient.ensureQueryData(meuPapelQ),
@@ -68,7 +69,7 @@ function EquipePage() {
   }
 
   async function alterar(id: string, novo: PapelEquipe | null, nome: string) {
-    if (novo === null && !window.confirm(`Remover ${nome} da equipe? A pessoa perde o acesso na hora.`)) return;
+    if (novo === null && !(await confirmar({ titulo: `Remover ${nome} da equipe?`, mensagem: "A pessoa perde o acesso na hora.", acao: "Remover", destrutivo: true }))) return;
     const { error } = await supabase.rpc("alterar_membro", { p_id: id, p_papel: novo });
     if (error) return void toast.error(mensagemEquipe(error.message));
     await atualizar();
@@ -82,7 +83,7 @@ function EquipePage() {
   }
 
   async function sairDaEquipe() {
-    if (!window.confirm(`Sair da equipe${meuPapel?.confeitaria ? ` de ${meuPapel.confeitaria}` : ""}? Você perde o acesso aos dados da confeitaria.`)) return;
+    if (!(await confirmar({ titulo: `Sair da equipe${meuPapel?.confeitaria ? ` de ${meuPapel.confeitaria}` : ""}?`, mensagem: "Você perde o acesso aos dados da confeitaria.", acao: "Sair da equipe", destrutivo: true }))) return;
     const { error } = await supabase.rpc("sair_da_equipe");
     if (error) return void toast.error(mensagemEquipe(error.message));
     qc.clear();

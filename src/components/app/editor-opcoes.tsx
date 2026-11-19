@@ -81,7 +81,7 @@ export function EditorOpcoes({
               <Trash2 className="size-4 text-destructive" />
             </Button>
           </div>
-          <div className={`grid ${colunas} gap-1.5 text-[11px] text-muted-foreground`}>
+          <div className={`grid ${colunas} gap-1.5 text-xs text-muted-foreground`}>
             <span>Opção</span><span>+ Preço R$</span>{mostrarCusto && <span>+ Custo R$</span>}<span />
           </div>
           {g.itens.map((it, ii) => {
@@ -110,7 +110,7 @@ export function EditorOpcoes({
                 {typeof calculado === "string" && <p className="text-xs text-destructive">{calculado}</p>}
                 {mostrarCusto && aberta === chave && (
                   <div className="space-y-2 rounded-lg bg-muted/50 p-2.5">
-                    <p className="text-[11px] text-muted-foreground">O que esta opção acrescenta em <b>uma unidade</b> do produto (ex.: 200 g de chocolate e 100 g de creme de leite). O custo usa o preço atual dos insumos.</p>
+                    <p className="text-xs text-muted-foreground">O que esta opção acrescenta em <b>uma unidade</b> do produto (ex.: 200 g de chocolate e 100 g de creme de leite). O custo usa o preço atual dos insumos.</p>
                     {(it.ingredientes ?? []).map((x, xi) => {
                       const ins = mapIns.get(x.insumo_id);
                       let custoLinha: number | null = null;
@@ -134,7 +134,7 @@ export function EditorOpcoes({
                               <Trash2 className="size-4" />
                             </Button>
                           </div>
-                          {custoLinha !== null && <p className="text-right text-[11px] text-muted-foreground">{brl(custoLinha)}</p>}
+                          {custoLinha !== null && <p className="text-right text-xs text-muted-foreground">{brl(custoLinha)}</p>}
                         </div>
                       );
                     })}

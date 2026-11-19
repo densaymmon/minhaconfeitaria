@@ -13,6 +13,7 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle } from "@/components/ui/dialog";
 import { cn } from "@/lib/utils";
+import { confirmar } from "@/lib/confirmar";
 
 const tituloPedido = (p: PedidoCalc) => `Pedido #${p.numero} · ${p.clientes?.nome ?? "Sem cliente"}`;
 
@@ -55,8 +56,8 @@ export function DialogStatusPedido({ pedido, onClose, onEntregue }: {
     }
   }
 
-  function cancelar() {
-    if (!confirm(`Cancelar o pedido #${pedido.numero}? O pedido será mantido no histórico.`)) return;
+  async function cancelar() {
+    if (!(await confirmar({ titulo: `Cancelar o pedido #${pedido.numero}?`, mensagem: "O pedido será mantido no histórico.", acao: "Cancelar pedido", destrutivo: true }))) return;
     void gravar("cancelado", `Pedido #${pedido.numero} cancelado. O histórico foi preservado.`);
   }
 

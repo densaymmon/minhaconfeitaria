@@ -9,6 +9,8 @@ const TELAS_DO_MENU_ANTERIOR = [
   "/agenda", "/entregas", "/lista-compras", "/etiquetas", "/produtos", "/catalogo",
   "/financeiro", "/resumo-mes", "/fluxo-caixa", "/historico", "/configuracoes", "/equipe",
 ];
+/** Telas que antes só abriam por links dentro de outras telas e agora também estão no menu. */
+const TELAS_NOVAS_NO_MENU = ["/pedidos-recorrentes", "/despesas", "/contas-pagar", "/relatorios"];
 const SECOES_DE_COMPRAS_ANTERIORES = ["compras", "gastos", "integracao", "estoque"];
 
 function destinos(papel: "dono" | "gerente" | "producao") {
@@ -22,7 +24,7 @@ function destinos(papel: "dono" | "gerente" | "producao") {
 describe("menu Mais agrupado", () => {
   it("a dona continua vendo todas as telas do menu anterior", () => {
     const { telas, secoes } = destinos("dono");
-    expect([...telas].sort()).toEqual([...TELAS_DO_MENU_ANTERIOR].sort());
+    expect([...telas].sort()).toEqual([...TELAS_DO_MENU_ANTERIOR, ...TELAS_NOVAS_NO_MENU].sort());
     expect([...secoes].sort()).toEqual([...SECOES_DE_COMPRAS_ANTERIORES].sort());
   });
 

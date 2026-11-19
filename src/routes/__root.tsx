@@ -19,6 +19,7 @@ import type { SupabaseClient } from "@supabase/supabase-js";
 
 let sessaoAtiva = false;
 import { Toaster } from "@/components/ui/sonner";
+import { Confirmacao } from "@/components/app/confirmar";
 
 function NotFoundComponent() {
   return (
@@ -156,6 +157,7 @@ function RootComponent() {
     <QueryClientProvider client={queryClient}>
       <Outlet />
       <Toaster position="top-center" richColors />
+      <Confirmacao />
     </QueryClientProvider>
   );
 }

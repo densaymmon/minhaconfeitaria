@@ -81,7 +81,7 @@ export function PrimeirosPassos() {
           <p className="flex items-center gap-2 font-semibold"><Rocket className="size-4 text-primary" /> Primeiros passos · {p.feitos}/{p.total}</p>
           <p className="mt-0.5 text-xs text-muted-foreground">Complete para deixar a confeitaria pronta para vender.</p>
         </div>
-        <Button type="button" size="icon" variant="ghost" className="size-8" aria-label="Esconder primeiros passos" onClick={dispensar}><X className="size-4" /></Button>
+        <Button type="button" size="icon" variant="ghost" aria-label="Esconder primeiros passos" onClick={dispensar}><X className="size-4" /></Button>
       </div>
       <div className="mt-3 h-2 overflow-hidden rounded-full bg-muted"><div className="h-full rounded-full bg-primary" style={{ width: `${Math.round((p.feitos / p.total) * 100)}%` }} /></div>
       <ul className="mt-3 space-y-1">

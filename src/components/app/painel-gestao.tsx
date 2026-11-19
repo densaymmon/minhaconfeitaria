@@ -60,7 +60,7 @@ export function MetaDoMes({ vendido }: { vendido: number }) {
           <p className="flex items-center gap-2 text-sm font-semibold"><Target className="size-4 text-primary" /> Meta do mês: {brl(meta)}</p>
           <p className="mt-0.5 text-xs text-muted-foreground">Vendido {brl(vendido)} ({p.pct}%) · pela data de entrega</p>
         </div>
-        {podeEditar && <Button type="button" size="icon" variant="ghost" className="size-8" aria-label="Alterar meta" onClick={() => { setValor(String(meta)); setEditando(true); }}><Pencil className="size-4" /></Button>}
+        {podeEditar && <Button type="button" size="icon" variant="ghost" aria-label="Alterar meta" onClick={() => { setValor(String(meta)); setEditando(true); }}><Pencil className="size-4" /></Button>}
       </div>
       <div className="mt-3 h-3 overflow-hidden rounded-full bg-muted"><div className={cn("h-full rounded-full", p.batida ? "bg-success" : "bg-primary")} style={{ width: `${Math.min(100, p.pct)}%` }} /></div>
       <p className="mt-2 text-sm">

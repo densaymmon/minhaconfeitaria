@@ -30,8 +30,8 @@ function AgendaPage() {
   const { data: confeitaria } = useSuspenseQuery(appQueries.confeitariaQ);
   const hoje = hojeISO();
   const [base, setBase] = useState(hoje);
-  const dias = semanaDe(base);
-  const semana = useMemo(() => agendaDaSemana(pedidos, dias, confeitaria?.limite_pedidos_dia ?? null), [pedidos, dias.join(), confeitaria?.limite_pedidos_dia]);
+  const dias = useMemo(() => semanaDe(base), [base]);
+  const semana = useMemo(() => agendaDaSemana(pedidos, dias, confeitaria?.limite_pedidos_dia ?? null), [pedidos, dias, confeitaria?.limite_pedidos_dia]);
   const maior = Math.max(1, ...semana.map((d) => d.itens));
   const totalPedidos = semana.reduce((s, d) => s + d.pedidos.length, 0);
   const primeiro = dias[0] ?? base, ultimo = dias[6] ?? base;
@@ -52,7 +52,7 @@ function AgendaPage() {
             <Card key={d.dia} className={cn("p-3", ehHoje && "ring-1 ring-primary/40", d.dia < hoje && "opacity-70")}>
               <div className="flex items-center gap-3">
                 <div className={cn("grid w-14 shrink-0 place-items-center rounded-xl py-1.5 text-center", ehHoje ? "bg-primary text-primary-foreground" : "bg-muted")}>
-                  <span className="text-[11px] font-medium">{NOMES[i]}</span>
+                  <span className="text-xs font-medium">{NOMES[i]}</span>
                   <span className="font-display text-lg font-bold tabular-nums">{d.dia.slice(8, 10)}</span>
                 </div>
                 <div className="min-w-0 flex-1">

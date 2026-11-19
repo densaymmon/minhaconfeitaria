@@ -11,6 +11,7 @@ import { brl, dataBR } from "@/lib/format";
 import { Card, Empty, PagamentoBadge, PageHeader, Stat, StatusBadge } from "@/components/app/ui";
 import { Button } from "@/components/ui/button";
 import { ClienteDialog } from "./clientes.index";
+import { confirmar } from "@/lib/confirmar";
 
 export const Route = createFileRoute("/_authenticated/clientes/$id")({
  loader: async ({ context }) => { await Promise.all([context.queryClient.ensureQueryData(appQueries.clientesQ),context.queryClient.ensureQueryData(appQueries.pedidosHistoricoQ),context.queryClient.ensureQueryData(appQueries.configQ)]); },
@@ -47,7 +48,7 @@ function ClienteDetalhe() {
   const tel = c.telefone?.replace(/\D/g, "").replace(/^55/, "");
 
   async function excluir() {
-    if (!confirm(`Excluir ${c?.nome}? Os pedidos serão mantidos sem cliente.`)) return;
+    if (!(await confirmar({ titulo: `Excluir ${c?.nome}?`, mensagem: "Os pedidos serão mantidos sem cliente.", acao: "Excluir", destrutivo: true }))) return;
     const { error } = await supabase.from("clientes").delete().eq("id", id);
     if (error) return void toast.error(error.message);
     await qc.invalidateQueries({ queryKey: ["clientes"] });

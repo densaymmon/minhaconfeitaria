@@ -136,7 +136,7 @@ function Comecar() {
         {PASSOS.map((nome, i) => (
           <li key={nome} className="text-center">
             <div className={cn("h-1.5 rounded-full", i <= passo ? "bg-primary" : "bg-muted")} />
-            <span className={cn("mt-1 block text-[11px]", i === passo ? "font-semibold text-foreground" : "text-muted-foreground")}>{nome}</span>
+            <span className={cn("mt-1 block text-xs", i === passo ? "font-semibold text-foreground" : "text-muted-foreground")}>{nome}</span>
             {i === passo && <span className="sr-only">(etapa atual)</span>}
           </li>
         ))}

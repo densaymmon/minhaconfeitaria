@@ -20,6 +20,7 @@ import { Input } from "@/components/ui/input";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import type { Insumo } from "@/lib/queries";
 import type { PreparoItem } from "@/lib/database-compat";
+import { confirmar } from "@/lib/confirmar";
 
 export const Route = createFileRoute("/_authenticated/produtos/")({
  loader: async ({ context }) => { await Promise.all([context.queryClient.ensureQueryData(appQueries.produtosQ),context.queryClient.ensureQueryData(appQueries.insumosQ)]); },
@@ -294,7 +295,7 @@ function Preparos({ preparos, preparoItens, todosInsumos, produtos }: {
   const usoEm = (id: string) => produtos.filter((p) => p.receita_itens.some((r) => r.insumo_id === id)).length;
 
   async function excluir(i: Insumo) {
-    if (!confirm(`Excluir ${i.nome}? Só é possível se ele não estiver na receita de nenhum produto.`)) return;
+    if (!(await confirmar({ titulo: `Excluir ${i.nome}?`, mensagem: "Só é possível se ele não estiver na receita de nenhum produto.", acao: "Excluir", destrutivo: true }))) return;
     const { error } = await supabase.rpc("excluir_insumo_se_sem_receita", { p_insumo_id: i.id });
     if (error) {
       toast.error(error.message.includes("INSUMO_USADO_EM_RECEITA")
@@ -330,9 +331,9 @@ function Preparos({ preparos, preparoItens, todosInsumos, produtos }: {
                 </div>
               </div>
               <div className="flex shrink-0 flex-col gap-2">
-                <Button type="button" variant="outline" size="icon" className="h-10 w-10" onClick={() => { setDuplicando(null); setEditando(editando === i.id ? null : i.id); }} aria-label={`Editar ${i.nome}`}><Pencil className="size-4" /></Button>
-                <Button type="button" variant="outline" size="icon" className="h-10 w-10" onClick={() => { setEditando(null); setDuplicando(duplicando === i.id ? null : i.id); }} aria-label={`Duplicar ${i.nome}`} title="Duplicar"><Copy className="size-4" /></Button>
-                <Button type="button" variant="outline" size="icon" className="h-10 w-10" onClick={() => excluir(i)} aria-label={`Excluir ${i.nome}`}><Trash2 className="size-4 text-destructive" /></Button>
+                <Button type="button" variant="outline" size="icon" onClick={() => { setDuplicando(null); setEditando(editando === i.id ? null : i.id); }} aria-label={`Editar ${i.nome}`}><Pencil className="size-4" /></Button>
+                <Button type="button" variant="outline" size="icon" onClick={() => { setEditando(null); setDuplicando(duplicando === i.id ? null : i.id); }} aria-label={`Duplicar ${i.nome}`} title="Duplicar"><Copy className="size-4" /></Button>
+                <Button type="button" variant="outline" size="icon" onClick={() => excluir(i)} aria-label={`Excluir ${i.nome}`}><Trash2 className="size-4 text-destructive" /></Button>
               </div>
             </div>
             {editando === i.id && (
@@ -365,7 +366,7 @@ function Insumos({ insumos }: { insumos: Insumo[] }) {
   async function alternarAtivo(i: Insumo) {
     const ativo = i.ativo !== false;
     const acao = ativo ? "inativar" : "reativar";
-    if (!confirm(`${ativo ? "Inativar" : "Reativar"} ${i.nome}? ${ativo ? "Ele deixará de aparecer em novos cadastros, mas o histórico será preservado." : "Ele voltará a aparecer nos novos cadastros."}`)) return;
+    if (!(await confirmar({ titulo: `${ativo ? "Inativar" : "Reativar"} ${i.nome}?`, mensagem: ativo ? "Ele deixará de aparecer em novos cadastros, mas o histórico será preservado." : "Ele voltará a aparecer nos novos cadastros.", acao: ativo ? "Inativar" : "Reativar" }))) return;
     const { error } = await supabase.from("insumos").update({ ativo: !ativo }).eq("id", i.id);
     if (error) return void toast.error(`Não foi possível ${acao} o insumo: ${error.message}`);
     await qc.invalidateQueries({ queryKey: ["insumos"] });
@@ -373,7 +374,7 @@ function Insumos({ insumos }: { insumos: Insumo[] }) {
   }
 
   async function excluir(i: Insumo) {
-    if (!confirm(`Excluir ${i.nome}? Essa ação removerá também os registros de estoque e os itens de compras vinculados a esse insumo. Só será permitido excluir se ele não estiver sendo usado em nenhuma receita.`)) return;
+    if (!(await confirmar({ titulo: `Excluir ${i.nome}?`, mensagem: "Essa ação removerá também os registros de estoque e os itens de compras vinculados a esse insumo. Só será permitido excluir se ele não estiver sendo usado em nenhuma receita.", acao: "Excluir", destrutivo: true }))) return;
     const { error } = await supabase.rpc("excluir_insumo_se_sem_receita", { p_insumo_id: i.id });
     if (error) {
       if (error.message.includes("INSUMO_USADO_EM_RECEITA")) {

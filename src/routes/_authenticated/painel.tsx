@@ -222,7 +222,7 @@ function Painel() {
               <Link key={p.id} to="/pedidos/$id" params={{ id: p.id }} className="group block rounded-2xl focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring">
                 <Card className="flex items-center gap-3 border border-border/70 p-3 transition-colors group-hover:border-primary/40 group-hover:bg-muted/30 sm:gap-4 sm:p-4">
                   <div className="flex w-[4.25rem] shrink-0 flex-col items-center justify-center rounded-xl bg-muted/60 px-2 py-2.5 text-center">
-                    <div className="text-[11px] font-medium capitalize text-muted-foreground">{dataCurta(p.data_entrega).split(",")[0]}</div>
+                    <div className="text-xs font-medium capitalize text-muted-foreground">{dataCurta(p.data_entrega).split(",")[0]}</div>
                     <div className="font-display text-lg font-bold tabular-nums">{p.data_entrega.slice(8, 10)}/{p.data_entrega.slice(5, 7)}</div>
                   </div>
                   <div className="min-w-0 flex-1">

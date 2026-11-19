@@ -129,7 +129,7 @@ function Pedidos() {
       }));
     });
     return () => { ativo = false; };
-  }, []);
+  }, [clientes]);
   const search = Route.useSearch();
   const navigate = useNavigate();
   const [busca, setBusca] = useState("");
