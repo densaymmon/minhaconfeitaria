@@ -11,7 +11,8 @@
 --   * a prévia do cupom não consulta o telefone. A regra da primeira compra continua valendo e é
 --     conferida em criar_pedido_catalogo, ao fechar o pedido.
 -- O desconto de fidelidade continua sendo aplicado automaticamente pelo servidor no pedido premiado.
--- Idempotente.
+-- Aplicada em produção em 19/11/2026 (cópia das versões anteriores em
+-- docs/audits/2026-11-19-backup-antes-0057.sql). Idempotente.
 BEGIN;
 
 CREATE OR REPLACE FUNCTION public.validar_cupom_catalogo(p_slug text, p_codigo text, p_subtotal numeric, p_telefone text)
