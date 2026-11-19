@@ -10,7 +10,8 @@
 -- E as políticas de fotos do catálogo (storage) no repositório ainda usavam auth.uid(), enquanto o
 -- banco publicado já usa _tenant() (pasta da confeitaria; membros da equipe enviam fotos nela).
 -- Aqui ficam as versões finais (iguais às do banco montado pelas migrações 0001–0055).
--- Idempotente: pode ser aplicada mais de uma vez.
+-- Aplicada em produção em 19/11/2026 (cópia das versões anteriores em
+-- docs/audits/2026-11-19-backup-antes-0056.sql). Idempotente: pode ser aplicada mais de uma vez.
 BEGIN;
 
 CREATE OR REPLACE FUNCTION public.registrar_recebimento_pedido(p_pedido_id uuid, p_valor numeric, p_data_pagamento date, p_forma_pagamento text, p_observacoes text DEFAULT NULL::text)
