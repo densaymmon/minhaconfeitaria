@@ -24,6 +24,7 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Textarea } from "@/components/ui/textarea";
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/ui/dialog";
+import { confirmar } from "@/lib/confirmar";
 
 export const Route = createFileRoute("/_authenticated/pedidos/$id")({
  loader: async ({ context }) => { await Promise.all([context.queryClient.ensureQueryData(appQueries.pedidosHistoricoQ),context.queryClient.ensureQueryData(appQueries.configQ),context.queryClient.ensureQueryData(appQueries.clientesQ),context.queryClient.ensureQueryData(appQueries.produtosQ),context.queryClient.ensureQueryData(appQueries.insumosQ),context.queryClient.ensureQueryData(appQueries.pedidoPagamentosQ),context.queryClient.ensureQueryData(appQueries.confeitariaQ)]); },
@@ -353,8 +354,8 @@ function PedidoForm() {
   const valorPagoEfetivo = f.saldo_quitado ? t.venda : Math.min(Math.max(0, parseNum(f.valor_entrada)), t.venda);
   const saldoPendente = f.saldo_quitado ? 0 : Math.max(0, t.venda - valorPagoEfetivo);
 
-  function aplicarRascunho(draft: OrderDraft) {
-    if (itens.length && !confirm("Substituir os itens atuais pelo rascunho da mensagem?")) return;
+  async function aplicarRascunho(draft: OrderDraft) {
+    if (itens.length && !(await confirmar({ titulo: "Substituir os itens atuais?", mensagem: "Os itens do pedido serão trocados pelos do rascunho da mensagem.", acao: "Substituir" }))) return;
     setItens(draft.itens.map(item => {
       const product = produtos.find(p => p.id === item.produto_id);
       return {
@@ -580,7 +581,7 @@ function PedidoForm() {
   }
 
   async function cancelarPedido() {
-    if (!existente || !confirm(`Cancelar o pedido #${existente.numero}? O pedido será mantido no histórico.`)) return;
+    if (!existente || !(await confirmar({ titulo: `Cancelar o pedido #${existente.numero}?`, mensagem: "O pedido será mantido no histórico.", acao: "Cancelar pedido", destrutivo: true }))) return;
     try {
       await otimista<Pedido>(qc, (lista) => alterarPedido(lista, existente.id, { status: "cancelado" }), async () => {
         const { error } = await supabase.from("pedidos").update({ status: "cancelado" }).eq("id", existente.id);
@@ -596,7 +597,7 @@ function PedidoForm() {
   }
 
   async function excluir() {
-    if (!existente || !confirm(`Excluir o pedido #${existente.numero}?`)) return;
+    if (!existente || !(await confirmar({ titulo: `Excluir o pedido #${existente.numero}?`, mensagem: "Esta ação não pode ser desfeita.", acao: "Excluir", destrutivo: true }))) return;
     try {
       await otimista<Pedido>(qc, (lista) => lista?.filter((p) => p.id !== existente.id), async () => {
         const { error } = await supabase.from("pedidos").delete().eq("id", existente.id);
@@ -982,15 +983,15 @@ function PedidoForm() {
               <div className="rounded-xl border bg-muted/40 p-3">
                 <div className="grid grid-cols-3 gap-2">
                   <div className="min-w-0">
-                    <p className="text-[11px] leading-4 text-muted-foreground">Total do pedido</p>
+                    <p className="text-xs leading-4 text-muted-foreground">Total do pedido</p>
                     <p className="mt-1 break-words text-sm font-bold tabular-nums sm:text-base">{brl(t.venda)}</p>
                   </div>
                   <div className="min-w-0">
-                    <p className="text-[11px] leading-4 text-muted-foreground">Já recebido</p>
+                    <p className="text-xs leading-4 text-muted-foreground">Já recebido</p>
                     <p className="mt-1 break-words text-sm font-bold tabular-nums text-success sm:text-base">{brl(valorPagoEfetivo)}</p>
                   </div>
                   <div className="min-w-0">
-                    <p className="text-[11px] leading-4 text-muted-foreground">Em aberto</p>
+                    <p className="text-xs leading-4 text-muted-foreground">Em aberto</p>
                     <p className="mt-1 break-words text-sm font-bold tabular-nums sm:text-base">{brl(saldoPendente)}</p>
                   </div>
                 </div>

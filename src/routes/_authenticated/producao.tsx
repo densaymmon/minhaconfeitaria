@@ -1,7 +1,7 @@
 import * as appQueries from "@/lib/queries";
 import { origemPublica } from "@/lib/catalogo";
 import { createFileRoute, Link } from "@tanstack/react-router";
-import { useMemo, useState } from "react";
+import { useEffect, useMemo, useState } from "react";
 import { alterarItem, alterarPedido, criarFila, otimista } from "@/lib/cache-pedidos";
 import type { Pedido } from "@/lib/queries";
 import { toast } from "sonner";
@@ -20,6 +20,7 @@ import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/u
 import { cn } from "@/lib/utils";
 import { baixarCSV } from "@/lib/csv";
 import { EstoquePronto } from "@/components/app/estoque-pronto";
+import { confirmar } from "@/lib/confirmar";
 
 export const Route = createFileRoute("/_authenticated/producao")({
   loader: async ({ context }) => {
@@ -63,6 +64,8 @@ function prazoDoPedido(p: PedidoCalc) {
   return new Date(`${p.data_entrega}T${horario}:00`);
 }
 
+const DESCARTAR_EDICAO = { titulo: "Descartar as alterações não salvas?", acao: "Descartar", cancelar: "Continuar editando", destrutivo: true };
+
 function estaAtrasado(p: PedidoCalc, agora: Date) {
   if (!STATUS_ATIVOS.includes(p.status)) return false;
   return prazoDoPedido(p).getTime() < agora.getTime();
@@ -87,7 +90,12 @@ function Producao() {
   });
   const opcoesMensagem = { loja: confeitaria?.nome?.trim() || "nossa confeitaria", pix: config.pix_chave, pixTipo: config.pix_tipo, cidade: confeitaria?.cidade ?? null, enderecoRetirada: confeitaria?.endereco_retirada ?? null, origem: origemPublica() };
   const hoje = hojeISO();
-  const agora = new Date();
+  // Relógio da tela: atualiza a cada minuto para os atrasos aparecerem sem recalcular as listas a cada renderização.
+  const [agora, setAgora] = useState(() => new Date());
+  useEffect(() => {
+    const id = window.setInterval(() => setAgora(new Date()), 60_000);
+    return () => window.clearInterval(id);
+  }, []);
   const [busca, setBusca] = useState("");
   const [filtro, setFiltro] = useState<Filtro>("fila");
   const [visualizacao, setVisualizacao] = useState<Visualizacao>("pedidos");
@@ -403,8 +411,8 @@ function Producao() {
         </div>
       } />
 
-      <Dialog open={!!pedidoAberto} onOpenChange={(open) => {
-        if (!open && editandoPedido && !confirm("Descartar as alterações não salvas?")) return;
+      <Dialog open={!!pedidoAberto} onOpenChange={async (open) => {
+        if (!open && editandoPedido && !(await confirmar(DESCARTAR_EDICAO))) return;
         if (!open) { setPedidoAberto(null); setRascunho(null); setEditandoPedido(false); }
       }}>
         <DialogContent className="max-h-[90dvh] max-w-2xl overflow-y-auto">
@@ -449,7 +457,7 @@ function Producao() {
                 <label className="block space-y-1 text-sm"><span className="font-medium">Observações e personalizações</span><Textarea rows={3} value={rascunho.observacoes} onChange={(e) => setRascunho({ ...rascunho, observacoes: e.target.value })} placeholder="Detalhes do pedido..." /></label>
                 <div className="rounded-lg bg-muted/50 p-3 text-right"><span className="text-sm text-muted-foreground">Total estimado: </span><span className="font-bold">{brl(rascunho.itens.reduce((total, item) => total + parseNum(item.quantidade) * parseNum(item.preco_unitario), 0) + parseNum(rascunho.taxa_entrega) - parseNum(rascunho.desconto))}</span></div>
                 <div className="flex flex-col-reverse gap-2 sm:flex-row sm:justify-end">
-                  <Button type="button" variant="outline" disabled={salvandoEdicao} onClick={() => { if (confirm("Descartar as alterações não salvas?")) abrirPedido(pedidoAberto); }}>Cancelar edição</Button>
+                  <Button type="button" variant="outline" disabled={salvandoEdicao} onClick={async () => { if (await confirmar(DESCARTAR_EDICAO)) abrirPedido(pedidoAberto); }}>Cancelar edição</Button>
                   <Button type="button" disabled={salvandoEdicao} onClick={() => void salvarEdicaoPedido()}>{salvandoEdicao ? "Salvando..." : "Salvar alterações"}</Button>
                 </div>
               </div>}
@@ -741,10 +749,10 @@ function Producao() {
                               </div>
                               {itemAtivo && (
                                 <div className="flex shrink-0 gap-1">
-                                  <Button size="icon" variant="outline" className="size-9" onClick={() => ajustar(i.id, f - 1, q)} disabled={f <= 0} aria-label={`Diminuir quantidade produzida de ${i.descricao}`}>
+                                  <Button size="icon" variant="outline" onClick={() => ajustar(i.id, f - 1, q)} disabled={f <= 0} aria-label={`Diminuir quantidade produzida de ${i.descricao}`}>
                                     <Minus className="size-4" />
                                   </Button>
-                                  <Button size="icon" variant="outline" className="size-9" onClick={() => ajustar(i.id, f + 1, q)} disabled={f >= q} aria-label={`Aumentar quantidade produzida de ${i.descricao}`}>
+                                  <Button size="icon" variant="outline" onClick={() => ajustar(i.id, f + 1, q)} disabled={f >= q} aria-label={`Aumentar quantidade produzida de ${i.descricao}`}>
                                     <Plus className="size-4" />
                                   </Button>
                                 </div>

@@ -10,6 +10,7 @@ import { useCustos } from "@/lib/hooks";
 import { hojeISO } from "@/lib/format";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
+import { confirmar } from "@/lib/confirmar";
 
 export const Route = createFileRoute("/_authenticated/pedidos-recorrentes")({
   loader: async ({ context }) => {
@@ -220,7 +221,7 @@ function PedidosRecorrentes() {
     const mensagem = todasDoCliente
       ? `Excluir todas as recorrências de ${cliente?.nome ?? "este cliente"}? As entregas pendentes serão canceladas. Pedidos confirmados, pagamentos e histórico serão preservados.`
       : `Excluir a recorrência de ${cliente?.nome ?? "este cliente"}, iniciada em ${dataBR(alvo.data_inicio)}? As entregas pendentes serão canceladas. Pedidos confirmados, pagamentos e histórico serão preservados.`;
-    if (!window.confirm(mensagem)) return;
+    if (!(await confirmar({ titulo: todasDoCliente ? "Excluir todas as recorrências?" : "Excluir esta recorrência?", mensagem, acao: "Excluir", destrutivo: true }))) return;
     setSalvando(true);
     // A exclusão é validada no banco para preservar pedidos confirmados e verificar o proprietário.
     // eslint-disable-next-line @typescript-eslint/no-explicit-any -- RPC nova ainda não consta nos tipos gerados.

@@ -1,4 +1,4 @@
-import { BookOpen, CalendarDays, ChartNoAxesCombined, History, Package, Settings, ShoppingBasket, ShoppingCart, Store, Tag, TrendingUp, Truck, UsersRound, Wallet } from "lucide-react";
+import { BookOpen, CalendarClock, CalendarDays, ChartNoAxesCombined, FileBarChart, History, Package, Receipt, Repeat, Settings, ShoppingBasket, ShoppingCart, Store, Tag, TrendingUp, Truck, UsersRound, Wallet } from "lucide-react";
 import { paginaPermitidaAoPapel, type Papel } from "./assinatura";
 
 /**
@@ -19,10 +19,14 @@ export const linksMais = [
   { to: "/agenda", label: "Agenda da semana", icon: CalendarDays, grupo: "dia" },
   { to: "/entregas", label: "Entregas do dia", icon: Truck, grupo: "dia" },
   { to: "/etiquetas", label: "Etiquetas", icon: Tag, grupo: "dia" },
+  { to: "/pedidos-recorrentes", label: "Pedidos recorrentes", icon: Repeat, grupo: "dia" },
   { to: "/produtos", label: "Produtos e receitas", icon: BookOpen, grupo: "produtos" },
   { to: "/catalogo", label: "Catálogo online", icon: Store, grupo: "produtos" },
   { to: "/lista-compras", label: "Lista de compras", icon: ShoppingBasket, grupo: "produtos" },
   { to: "/financeiro", label: "Financeiro", icon: Wallet, grupo: "financeiro" },
+  { to: "/despesas", label: "Despesas", icon: Receipt, grupo: "financeiro" },
+  { to: "/contas-pagar", label: "Contas a pagar", icon: CalendarClock, grupo: "financeiro" },
+  { to: "/relatorios", label: "Relatórios", icon: FileBarChart, grupo: "financeiro" },
   { to: "/resumo-mes", label: "Resumo do mês", icon: ChartNoAxesCombined, grupo: "financeiro" },
   { to: "/fluxo-caixa", label: "Fluxo de caixa", icon: TrendingUp, grupo: "financeiro" },
   { to: "/historico", label: "Histórico", icon: History, grupo: "conta" },

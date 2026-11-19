@@ -20,6 +20,7 @@ import { IngredientForm } from "@/components/app/ingredient-form";
 import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle } from "@/components/ui/dialog";
 import { PurchaseDocumentReview } from "@/components/app/purchase-document-review";
 import { readPurchaseDocumentLocally } from "@/lib/purchase-document-ocr";
+import { confirmar } from "@/lib/confirmar";
 
 export const Route = createFileRoute("/_authenticated/compras")({
   validateSearch: (search: Record<string, unknown>) => ({
@@ -425,7 +426,7 @@ export function Compras({ embedded = false, initialSection = "compras" }: { embe
 
   async function cancelarCompra(compra: { id: string; cancelada_em: string | null }) {
     if (compra.cancelada_em) return;
-    if (!confirm("Cancelar esta compra? O registro será mantido no histórico e, se ela movimentou o estoque, será lançado um estorno.")) return;
+    if (!(await confirmar({ titulo: "Cancelar esta compra?", mensagem: "O registro será mantido no histórico e, se ela movimentou o estoque, será lançado um estorno.", acao: "Cancelar compra", destrutivo: true }))) return;
     if (!eventoCancelarRef.current || eventoCancelarRef.current.compraId !== compra.id) {
       eventoCancelarRef.current = { compraId: compra.id, id: crypto.randomUUID() };
     }
@@ -588,9 +589,11 @@ export function Compras({ embedded = false, initialSection = "compras" }: { embe
         return assinaturaItensExistentes === assinaturaItensNovos;
       });
 
-      if (compraPossivelmenteDuplicada && !window.confirm(
-        `Atenção: já existe uma compra com a mesma data, local, total e itens (registro de ${dataBR(compraPossivelmenteDuplicada.data_compra)}). Deseja registrar outra compra mesmo assim?`,
-      )) return;
+      if (compraPossivelmenteDuplicada && !(await confirmar({
+        titulo: "Esta compra parece repetida",
+        mensagem: `Já existe uma compra com a mesma data, local, total e itens (registro de ${dataBR(compraPossivelmenteDuplicada.data_compra)}). Deseja registrar outra compra mesmo assim?`,
+        acao: "Registrar mesmo assim",
+      }))) return;
     }
 
     setBusy(true);

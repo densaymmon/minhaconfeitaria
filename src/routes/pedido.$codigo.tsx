@@ -154,7 +154,7 @@ export function AcompanharPedido({ codigo }: { codigo: string }) {
               <span className={cn("grid size-8 place-items-center rounded-full text-xs font-semibold", i <= etapa ? "bg-primary text-primary-foreground" : "bg-muted text-muted-foreground")} aria-hidden="true">
                 {i < etapa ? <Check className="size-4" /> : i + 1}
               </span>
-              <span className={cn("text-[11px] leading-tight", i === etapa ? "font-semibold text-foreground" : "text-muted-foreground")}>{e.label}</span>
+              <span className={cn("text-xs leading-tight", i === etapa ? "font-semibold text-foreground" : "text-muted-foreground")}>{e.label}</span>
               {i === etapa && <span className="sr-only">(etapa atual)</span>}
             </li>
           ))}

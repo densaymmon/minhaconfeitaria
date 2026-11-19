@@ -104,7 +104,7 @@ export function NotificacoesCard() {
               <li key={a.id} className="flex items-center gap-2 px-3 py-2 text-sm">
                 <Smartphone className="size-4 shrink-0 text-muted-foreground" />
                 <span className="min-w-0 flex-1 truncate">{a.aparelho ?? "Aparelho"}{a.endpoint === endpointAtual ? " · este" : ""}</span>
-                <Button type="button" variant="ghost" size="icon" className="size-8" aria-label={`Remover ${a.aparelho ?? "aparelho"}`} onClick={() => void remover(a.id)}><Trash2 className="size-4" /></Button>
+                <Button type="button" variant="ghost" size="icon" aria-label={`Remover ${a.aparelho ?? "aparelho"}`} onClick={() => void remover(a.id)}><Trash2 className="size-4" /></Button>
               </li>
             ))}
           </ul>

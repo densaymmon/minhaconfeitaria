@@ -20,6 +20,7 @@ import { Empty, Field, PageHeader, Stat } from "@/components/app/ui";
 import { Input } from "@/components/ui/input";
 import { Textarea } from "@/components/ui/textarea";
 import { Button } from "@/components/ui/button";
+import { confirmar } from "@/lib/confirmar";
 
 export const Route = createFileRoute("/_authenticated/contas-pagar")({
   loader: async ({ context }) => {
@@ -191,7 +192,7 @@ export function ContasPagar({ embedded = false, viewOnly = false }: { embedded?:
     // Confirma possíveis duplicidades apenas para uma nova conta única. Parcelamentos
     // têm vencimentos/valores próprios e não devem ser confundidos com lançamentos repetidos.
     if (!id && !(f.forma_pagamento === "credito" && Number(numeroParcelas) > 1)) {
-      const normalizar = (valor: string | null | undefined) => (valor ?? "").trim().replace(/\\s+/g, " ").toLocaleLowerCase("pt-BR");
+      const normalizar = (valor: string | null | undefined) => (valor ?? "").trim().replace(/\s+/g, " ").toLocaleLowerCase("pt-BR");
       const descricaoNormalizada = normalizar(f.descricao);
       const fornecedorNormalizado = normalizar(f.fornecedor);
       const valorCentavos = Math.round(valor * 100);
@@ -205,7 +206,7 @@ export function ContasPagar({ embedded = false, viewOnly = false }: { embedded?:
         Math.round(Number(conta.valor) * 100) === valorCentavos &&
         (conta.compra_id ?? null) === (f.compra_id || null)
       );
-      if (duplicada && !window.confirm(`Atenção: já existe uma conta com a mesma descrição, fornecedor, datas e valor (${brl(Number(duplicada.valor))}, vencimento ${dataBR(duplicada.data_vencimento)}). Deseja registrar outra mesmo assim?`)) return;
+      if (duplicada && !(await confirmar({ titulo: "Esta conta parece repetida", mensagem: `Já existe uma conta com a mesma descrição, fornecedor, datas e valor (${brl(Number(duplicada.valor))}, vencimento ${dataBR(duplicada.data_vencimento)}). Deseja registrar outra mesmo assim?`, acao: "Registrar mesmo assim" }))) return;
     }
 
     const payload = {
@@ -385,7 +386,7 @@ export function ContasPagar({ embedded = false, viewOnly = false }: { embedded?:
       toast.error("Só é possível excluir contas canceladas sem nenhum pagamento ou estorno registrado.");
       return;
     }
-    if (!confirm(`Excluir definitivamente a conta cancelada "${conta.descricao}" de ${brl(conta.valor)}? Esta ação remove a conta da lista operacional, mas mantém o registro original e guarda um comprovante de auditoria.`)) return;
+    if (!(await confirmar({ titulo: `Excluir definitivamente a conta cancelada "${conta.descricao}" de ${brl(conta.valor)}?`, mensagem: "Esta ação remove a conta da lista operacional, mas mantém o registro original e guarda um comprovante de auditoria.", acao: "Excluir", destrutivo: true }))) return;
     const operacaoIdExclusao = exclusoesRef.current[conta.id] ?? crypto.randomUUID();
     exclusoesRef.current[conta.id] = operacaoIdExclusao;
     setBusy(true);

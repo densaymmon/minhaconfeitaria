@@ -62,7 +62,7 @@ export function Stat({
     <Card className="p-3.5">
       <div className="text-xs font-medium text-muted-foreground">{label}</div>
       <div className={cn("mt-1 text-lg font-bold tabular-nums", tones[tone])}>{value}</div>
-      {hint && <div className="text-[11px] text-muted-foreground">{hint}</div>}
+      {hint && <div className="text-xs text-muted-foreground">{hint}</div>}
     </Card>
   );
 }

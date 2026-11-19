@@ -236,7 +236,7 @@ function Loja({ slug, catalogo }: { slug: string; catalogo: Catalogo }) {
                 <li key={p.id} className="flex gap-3 rounded-2xl bg-card p-3 shadow-soft">
                   <button type="button" onClick={() => setDetalhe(p)} aria-label={`Ver fotos e detalhes de ${p.nome}`} className="relative size-24 shrink-0 overflow-hidden rounded-xl bg-muted sm:size-28">
                     <Capa produto={p} />
-                    {midiasDoProduto(p).length > 1 && <span className="absolute bottom-1 right-1 rounded-full bg-background/90 px-1.5 text-[10px] font-semibold">+{midiasDoProduto(p).length - 1}</span>}
+                    {midiasDoProduto(p).length > 1 && <span className="absolute bottom-1 right-1 rounded-full bg-background/90 px-1.5 text-xs font-semibold">+{midiasDoProduto(p).length - 1}</span>}
                   </button>
                   <div className="flex min-w-0 flex-1 flex-col">
                     <button type="button" onClick={() => setDetalhe(p)} className="text-left"><h2 className="font-semibold leading-snug">{p.nome}</h2></button>
@@ -415,9 +415,9 @@ function DetalheProduto({ produto, carrinho, onClose, onChange }: { produto: Pro
 function Stepper({ nome, quantidade, onChange }: { nome: string; quantidade: number; onChange: (delta: number) => void }) {
   return (
     <div className="flex items-center gap-1 rounded-full border bg-background">
-      <Button type="button" size="icon" variant="ghost" className="size-9 rounded-full" onClick={() => onChange(-1)} aria-label={`Diminuir ${nome}`}><Minus className="size-4" /></Button>
+      <Button type="button" size="icon" variant="ghost" className="rounded-full" onClick={() => onChange(-1)} aria-label={`Diminuir ${nome}`}><Minus className="size-4" /></Button>
       <span className="w-6 text-center text-sm font-semibold tabular-nums" aria-live="polite">{quantidade}</span>
-      <Button type="button" size="icon" variant="ghost" className="size-9 rounded-full" onClick={() => onChange(1)} aria-label={`Aumentar ${nome}`}><Plus className="size-4" /></Button>
+      <Button type="button" size="icon" variant="ghost" className="rounded-full" onClick={() => onChange(1)} aria-label={`Aumentar ${nome}`}><Plus className="size-4" /></Button>
     </div>
   );
 }

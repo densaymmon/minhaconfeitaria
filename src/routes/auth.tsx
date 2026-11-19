@@ -154,16 +154,16 @@ function AuthPage() {
           </Button>
           <div className="flex justify-between text-sm">
             {modo !== "entrar" ? (
-              <Button variant="link" type="button" onClick={() => setModo("entrar")}>
+              <Button variant="link" type="button" className="min-h-11" onClick={() => setModo("entrar")}>
                 Voltar para entrar
               </Button>
             ) : (
               <>
-                <Button variant="link" type="button" onClick={() => setModo("esqueci")}>
+                <Button variant="link" type="button" className="min-h-11" onClick={() => setModo("esqueci")}>
                   Esqueci a senha
                 </Button>
                 {!cadastroFechado && (
-                  <Button variant="link" type="button" onClick={() => setModo("criar")}>
+                  <Button variant="link" type="button" className="min-h-11" onClick={() => setModo("criar")}>
                     Criar conta
                   </Button>
                 )}
@@ -177,7 +177,7 @@ function AuthPage() {
           )}
         </form>
         <p className="mt-8 text-center text-xs text-muted-foreground">
-          <Link to="/termos" className="hover:underline">Termos de uso</Link> · <Link to="/privacidade" className="hover:underline">Privacidade</Link>
+          <Link to="/termos" className="inline-flex min-h-11 items-center px-2 hover:underline">Termos de uso</Link> · <Link to="/privacidade" className="inline-flex min-h-11 items-center px-2 hover:underline">Privacidade</Link>
         </p>
       </div>
     </div>

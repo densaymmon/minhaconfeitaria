@@ -9,6 +9,7 @@ import { diaDaRegra, encerrarRegra, proximoLancamento, regraEncerrada } from "@/
 import { Card } from "@/components/app/ui";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
+import { confirmar } from "@/lib/confirmar";
 
 /**
  * Lança as despesas fixas vencidas (aluguel, internet...). Roda uma vez por abertura da tela e só
@@ -59,7 +60,7 @@ export function DespesasFixas() {
 
   async function encerrar(regra: NonNullable<typeof regras>[number]) {
     if (busy) return;
-    if (!confirm(`Encerrar a despesa fixa "${regra.descricao}"? Os lançamentos já feitos continuam; nada novo será lançado.`)) return;
+    if (!(await confirmar({ titulo: `Encerrar a despesa fixa "${regra.descricao}"?`, mensagem: "Os lançamentos já feitos continuam; nada novo será lançado.", acao: "Encerrar", destrutivo: true }))) return;
     const acao = encerrarRegra(regra, hoje);
     setBusy(true);
     const { error } = acao.acao === "excluir"

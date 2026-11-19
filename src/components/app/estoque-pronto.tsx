@@ -14,6 +14,7 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle } from "@/components/ui/dialog";
 import { cn } from "@/lib/utils";
+import { confirmar as pedirConfirmacao } from "@/lib/confirmar";
 
 type Acao = { tipo: "produzir" } | { tipo: "descartar"; produtoId: string } | null;
 
@@ -114,7 +115,7 @@ export function EstoquePronto() {
   }
 
   async function desfazer(m: MovimentoPronto) {
-    if (!confirm(`Desfazer a produção de ${num(Number(m.quantidade_delta), 3)} × ${m.produto_nome}? Os insumos voltam ao estoque.`)) return;
+    if (!(await pedirConfirmacao({ titulo: `Desfazer a produção de ${num(Number(m.quantidade_delta), 3)} × ${m.produto_nome}?`, mensagem: "Os insumos voltam ao estoque.", acao: "Desfazer", destrutivo: true }))) return;
     try {
       const { error } = await supabase.rpc("desfazer_producao_estoque", { p_evento_id: crypto.randomUUID(), p_producao_evento_id: m.evento_id });
       if (error) throw new Error(error.message);
@@ -164,7 +165,7 @@ export function EstoquePronto() {
                   <div className="text-2xl font-bold tabular-nums">{num(i.quantidade, 3)}</div>
                   <div className="text-xs text-muted-foreground">unidade(s)</div>
                 </div>
-                <Button size="icon" variant="outline" className="size-9" onClick={() => abrir({ tipo: "descartar", produtoId: i.id })} aria-label={`Descartar ${i.nome} do estoque pronto`}>
+                <Button size="icon" variant="outline" onClick={() => abrir({ tipo: "descartar", produtoId: i.id })} aria-label={`Descartar ${i.nome} do estoque pronto`}>
                   <Trash2 className="size-4" />
                 </Button>
               </div>

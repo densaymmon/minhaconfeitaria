@@ -23,6 +23,7 @@ import { medidasCompativeis, medidaLabel, numeroIngrediente, custoPorMedida } fr
 import { Switch } from "@/components/ui/switch";
 import { RecursoBloqueado, useRecurso } from "@/components/app/plano";
 import { NOVO_INGREDIENTE, NovoInsumoDialog } from "@/components/app/novo-insumo-dialog";
+import { confirmar } from "@/lib/confirmar";
 
 export const Route = createFileRoute("/_authenticated/produtos/$id")({
  validateSearch: (search: Record<string, unknown>) => ({ duplicar: lerDuplicar(search["duplicar"]) }),
@@ -214,7 +215,7 @@ function ProdutoForm() {
   }
 
   async function excluir() {
-    if (!p || !confirm(`Excluir ${p.nome}? Pedidos antigos continuam com o nome do item.`)) return;
+    if (!p || !(await confirmar({ titulo: `Excluir ${p.nome}?`, mensagem: "Pedidos antigos continuam com o nome do item.", acao: "Excluir", destrutivo: true }))) return;
     const { error } = await supabase.from("produtos").delete().eq("id", p.id);
     if (error) return void toast.error(error.message);
     await qc.invalidateQueries({ queryKey: ["produtos"] });
