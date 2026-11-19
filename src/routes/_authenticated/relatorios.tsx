@@ -175,9 +175,10 @@ function RelatoriosConteudo({ initialSearch, embedded = false }: { initialSearch
     : 0;
   // Compras são mostradas como movimento/compromisso financeiro, sem subtraí-las
   // novamente do resultado: os insumos consumidos já devem compor o custo dos produtos vendidos.
-  const comprasNoPeriodo = intervaloValido
-    ? compras.filter((c) => !c.cancelada_em && c.data_compra >= inicio && c.data_compra <= fim)
-    : [];
+  const comprasNoPeriodo = useMemo(
+    () => (intervaloValido ? compras.filter((c) => !c.cancelada_em && c.data_compra >= inicio && c.data_compra <= fim) : []),
+    [intervaloValido, compras, inicio, fim],
+  );
   const totalComprasInsumos = comprasNoPeriodo.reduce((s, c) => s + Math.max(0, Number(c.total) || 0), 0);
   // Normaliza quantidades antes de somar: 1 kg + 200 g = 1,2 kg,
   // e 1 L + 200 ml = 1,2 L. Nunca soma valores de unidades diferentes diretamente.
