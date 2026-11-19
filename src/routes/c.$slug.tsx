@@ -36,7 +36,6 @@ import {
   proximaDataDisponivel,
   somarDias,
   taxaDeEntrega,
-  descontoFidelidade,
   metaDoCatalogo,
   previaDoCatalogo,
   excessoNoLimite,
@@ -591,17 +590,9 @@ function Finalizar({ slug, catalogo, carrinho, setCarrinho, voltar, limparCarrin
   const base = resumoCarrinho(carrinho, catalogo.produtos, { entrega: false, taxaEntrega: 0, hoje: catalogo.hoje });
   const ag = useAgenda(catalogo, base.dataMinima, 90);
   const subtotal = base.subtotal;
-  // Fidelidade (consultada pelo WhatsApp): o cupom tem prioridade, como no servidor.
-  const [fidelidade, setFidelidade] = useState<{ ganha_agora: boolean; faltam: number } | null>(null);
-  useEffect(() => {
-    if (!catalogo.fidelidade || !telefoneValido(cliente.telefone)) { setFidelidade(null); return; }
-    const id = window.setTimeout(() => {
-      void supabase.rpc("progresso_fidelidade", { p_slug: slug, p_telefone: cliente.telefone }).then(({ data }) => setFidelidade((data as { ganha_agora: boolean; faltam: number } | null) ?? null));
-    }, 500);
-    return () => window.clearTimeout(id);
-  }, [catalogo.fidelidade, cliente.telefone, slug]);
-  const premiado = !cupom && Boolean(fidelidade?.ganha_agora);
-  const desconto = cupom ? Math.min(cupom.desconto, subtotal) : premiado ? descontoFidelidade(subtotal, catalogo.fidelidade) : 0;
+  // Fidelidade: o servidor aplica o desconto no pedido premiado. Por privacidade, o catálogo não
+  // consulta o histórico de um telefone (0057); o progresso aparece no acompanhamento do pedido.
+  const desconto = cupom ? Math.min(cupom.desconto, subtotal) : 0;
   const total = Math.round((subtotal - desconto + ag.taxa) * 100) / 100;
   const sinal = sinalDoPedido(total, catalogo);
   const faltaMinimo = Math.max(0, catalogo.pedido_minimo - subtotal);
@@ -715,19 +706,19 @@ function Finalizar({ slug, catalogo, carrinho, setCarrinho, voltar, limparCarrin
 
         <section className="rounded-2xl bg-card p-4 shadow-soft">
           <div className="flex justify-between py-1 text-sm"><span className="text-muted-foreground">Produtos</span><span className="tabular-nums">{brl(subtotal)}</span></div>
-          {desconto > 0 && <div className="flex justify-between py-1 text-sm text-success"><span>{cupom ? `Desconto (${cupom.codigo})` : "Desconto fidelidade"}</span><span className="tabular-nums">−{brl(desconto)}</span></div>}
+          {desconto > 0 && <div className="flex justify-between py-1 text-sm text-success"><span>{`Desconto (${cupom?.codigo ?? ""})`}</span><span className="tabular-nums">−{brl(desconto)}</span></div>}
           {ag.agenda.tipo === "entrega" && <div className="flex justify-between py-1 text-sm"><span className="text-muted-foreground">Entrega</span><span className="tabular-nums">{ag.taxaEscolhida ? brl(ag.taxa) : "escolha o bairro"}</span></div>}
           <div className="mt-1 flex justify-between border-t pt-2 font-semibold"><span>Total</span><span className="tabular-nums">{brl(total)}</span></div>
           {sinal > 0 && <div className="mt-2 flex justify-between rounded-xl bg-primary/5 p-2 text-sm"><span>Sinal para confirmar ({Number(catalogo.sinal_percentual)}%)</span><span className="font-semibold tabular-nums">{brl(sinal)}</span></div>}
           <p className="mt-2 text-xs text-muted-foreground">{sinal > 0 ? "O pedido é confirmado com o pagamento do sinal por Pix; o restante você paga até a entrega." : "Pagamento por Pix: a chave aparece assim que você enviar o pedido."}</p>
         </section>
 
-        {catalogo.fidelidade && fidelidade && (
-          <p className={cn("flex items-center gap-2 rounded-xl p-3 text-sm", premiado ? "bg-success/10 text-success" : "bg-muted text-muted-foreground")}>
+        {catalogo.fidelidade && (
+          <p className="flex items-center gap-2 rounded-xl bg-muted p-3 text-sm text-muted-foreground">
             <Gift className="size-4 shrink-0" />
-            {fidelidade.ganha_agora
-              ? cupom ? "Você ganhou o desconto de fidelidade, mas o cupom substitui ele neste pedido." : "Parabéns! Este pedido ganhou o desconto de fidelidade."
-              : `Faltam ${fidelidade.faltam} pedido(s) para você ganhar o desconto de fidelidade.`}
+            {cupom
+              ? "O cupom substitui o desconto de fidelidade neste pedido."
+              : `${textoFidelidade(catalogo.fidelidade)} Se este pedido for o premiado, o desconto entra sozinho e aparece no acompanhamento.`}
           </p>
         )}
         {excesso.length > 0 && (

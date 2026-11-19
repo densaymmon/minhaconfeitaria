@@ -120,8 +120,9 @@ BEGIN
   IF NOT (r->>'ok')::boolean OR (r->>'desconto')::numeric <> 10 THEN RAISE EXCEPTION 'TESTE_FALHOU: prévia do cupom: %', r; END IF;
   r := public.validar_cupom_catalogo('doces-a', 'PROMO10', 30, '19988880003');
   IF (r->>'ok')::boolean OR r->>'mensagem' NOT LIKE '%a partir de R$ 40,00%' THEN RAISE EXCEPTION 'TESTE_FALHOU: mínimo do cupom: %', r; END IF;
+  -- 0057: a prévia não revela se o telefone já comprou (a primeira compra é conferida ao fechar o pedido).
   r := public.validar_cupom_catalogo('doces-a', 'PROMO10', 100, '19999990001');
-  IF (r->>'ok')::boolean OR r->>'mensagem' NOT LIKE '%primeira compra%' THEN RAISE EXCEPTION 'TESTE_FALHOU: primeira compra: %', r; END IF;
+  IF NOT (r->>'ok')::boolean THEN RAISE EXCEPTION 'TESTE_FALHOU: prévia do cupom revelou cliente antigo: %', r; END IF;
   r := public.validar_cupom_catalogo('doces-a', 'VENCIDO', 100, '19988880003');
   IF (r->>'ok')::boolean THEN RAISE EXCEPTION 'TESTE_FALHOU: cupom vencido aceito.'; END IF;
   r := public.validar_cupom_catalogo('doces-a', 'NAOEXISTE', 100, '19988880003');

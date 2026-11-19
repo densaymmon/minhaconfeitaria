@@ -114,16 +114,30 @@ BEGIN
   p := pg_temp.pedido_por_codigo(r->>'codigo');
   IF p.desconto <> 0 OR p.fidelidade THEN RAISE EXCEPTION 'TESTE_FALHOU: fidelidade antes da hora: %', to_jsonb(p); END IF;
   IF p.sinal_valor <> 60 THEN RAISE EXCEPTION 'TESTE_FALHOU: sinal = %', p.sinal_valor; END IF;
-  IF (public.progresso_fidelidade('doces-a', '(19) 99999-0001')->>'ganha_agora')::boolean IS NOT TRUE THEN
-    RAISE EXCEPTION 'TESTE_FALHOU: progresso da fidelidade: %', public.progresso_fidelidade('doces-a', '19999990001');
+  -- 0057: o progresso só aparece para quem tem o código do pedido; consulta por telefone não é pública.
+  IF (public.fidelidade_pedido(r->>'codigo')->>'proximo_premiado')::boolean IS NOT TRUE THEN
+    RAISE EXCEPTION 'TESTE_FALHOU: progresso da fidelidade: %', public.fidelidade_pedido(r->>'codigo');
   END IF;
+  IF public.fidelidade_pedido(p.codigo_curto) IS DISTINCT FROM public.fidelidade_pedido(r->>'codigo') THEN
+    RAISE EXCEPTION 'TESTE_FALHOU: código curto e UUID deveriam dar o mesmo progresso.';
+  END IF;
+  IF public.fidelidade_pedido('naoexiste12') IS NOT NULL OR public.fidelidade_pedido('19999990001') IS NOT NULL THEN
+    RAISE EXCEPTION 'TESTE_FALHOU: progresso sem código válido de pedido.';
+  END IF;
+  BEGIN
+    PERFORM public.progresso_fidelidade('doces-a', '19999990001');
+    RAISE EXCEPTION 'TESTE_FALHOU: visitante consultou a fidelidade por telefone.';
+  EXCEPTION WHEN insufficient_privilege THEN NULL;
+  END;
   r := public.criar_pedido_catalogo('doces-a', gen_random_uuid(), '{"nome":"Ana","telefone":"19999990001"}',
     jsonb_build_object('tipo', 'retirada', 'data', dia + 3), jsonb_build_array(jsonb_build_object('produto_id', kit, 'quantidade', 1)));
   p := pg_temp.pedido_por_codigo(r->>'codigo');
   IF NOT p.fidelidade OR p.desconto <> 6 OR p.observacoes NOT LIKE '%Fidelidade: desconto de R$ 6,00%' THEN
     RAISE EXCEPTION 'TESTE_FALHOU: fidelidade no 3º pedido: % %', p.desconto, p.observacoes;
   END IF;
-  IF (public.progresso_fidelidade('doces-a', '19999990001')->>'faltam')::int <> 1 THEN RAISE EXCEPTION 'TESTE_FALHOU: faltam.'; END IF;
+  IF (public.fidelidade_pedido(r->>'codigo')->>'faltam')::int <> 1 OR (public.fidelidade_pedido(r->>'codigo')->>'este_pedido_premiado')::boolean IS NOT TRUE THEN
+    RAISE EXCEPTION 'TESTE_FALHOU: faltam / pedido premiado: %', public.fidelidade_pedido(r->>'codigo');
+  END IF;
 
   -- Avaliação: só depois da entrega.
   BEGIN

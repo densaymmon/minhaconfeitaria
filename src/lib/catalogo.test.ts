@@ -1,5 +1,6 @@
 import { describe, expect, it } from "vitest";
 import {
+  textoProgressoFidelidade,
   metaDoCatalogo,
   previaDoCatalogo,
   type Catalogo,
@@ -319,5 +320,21 @@ describe("prévia do link do catálogo", () => {
     const meta = metaDoCatalogo(previa);
     expect(meta).toContainEqual({ property: "og:image", content: "https://cdn.exemplo/bolo.jpg" });
     expect(meta).toContainEqual({ name: "twitter:card", content: "summary_large_image" });
+  });
+});
+
+describe("progresso da fidelidade no acompanhamento", () => {
+  const base = { a_cada: 5, tipo: "percentual" as const, valor: 10, este_pedido_premiado: false, proximo_premiado: false, faltam: 3 };
+  it("mostra quantos pedidos faltam, no singular e no plural", () => {
+    expect(textoProgressoFidelidade(base)).toBe("Faltam 3 pedidos para você ganhar o desconto de fidelidade.");
+    expect(textoProgressoFidelidade({ ...base, faltam: 1 })).toBe("Faltam 1 pedido para você ganhar o desconto de fidelidade.");
+  });
+  it("avisa quando este pedido ou o próximo é o premiado", () => {
+    expect(textoProgressoFidelidade({ ...base, este_pedido_premiado: true })).toMatch(/^Este pedido ganhou/);
+    expect(textoProgressoFidelidade({ ...base, proximo_premiado: true, faltam: 0 })).toBe("Seu próximo pedido ganha o desconto de fidelidade.");
+  });
+  it("não mostra nada sem fidelidade ou em pedido cancelado", () => {
+    expect(textoProgressoFidelidade(null)).toBeNull();
+    expect(textoProgressoFidelidade(base, true)).toBeNull();
   });
 });

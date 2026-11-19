@@ -548,6 +548,25 @@ export function textoFidelidade(f: Fidelidade) {
   return `A cada ${f.a_cada} pedidos, o próximo ganha ${premio} de desconto.`;
 }
 
+/** Progresso da fidelidade de um pedido, devolvido por `fidelidade_pedido` (só com o código do pedido). */
+export type ProgressoFidelidade = {
+  a_cada: number;
+  tipo: "percentual" | "valor";
+  valor: number;
+  este_pedido_premiado: boolean;
+  proximo_premiado: boolean;
+  faltam: number;
+};
+
+/** Frase da página de acompanhamento sobre a fidelidade (null quando não há o que mostrar). */
+export function textoProgressoFidelidade(f: ProgressoFidelidade | null | undefined, cancelado = false): string | null {
+  if (!f || cancelado) return null;
+  if (f.este_pedido_premiado) return "Este pedido ganhou o desconto de fidelidade. Obrigado pela preferência!";
+  if (f.proximo_premiado) return "Seu próximo pedido ganha o desconto de fidelidade.";
+  const faltam = Math.max(1, Math.round(Number(f.faltam) || 0));
+  return `Faltam ${faltam} ${faltam === 1 ? "pedido" : "pedidos"} para você ganhar o desconto de fidelidade.`;
+}
+
 /** "Inclui: 2× Bolo de pote, 10× Brigadeiro". */
 export function textoComponentes(c: ProdutoCatalogo["componentes"]) {
   if (!c?.length) return null;

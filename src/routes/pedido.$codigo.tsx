@@ -2,13 +2,13 @@ import { createFileRoute, Link } from "@tanstack/react-router";
 import { useQuery, useQueryClient } from "@tanstack/react-query";
 import { useState } from "react";
 import { toast } from "sonner";
-import { CakeSlice, Check, Copy, MessageCircle, Star } from "lucide-react";
+import { CakeSlice, Check, Copy, Gift, MessageCircle, Star } from "lucide-react";
 import { supabase } from "@/integrations/supabase/client";
 import { pixCopiaECola, tipoChaveValido } from "@/lib/pix";
 import { Button } from "@/components/ui/button";
 import { brl, dataLonga } from "@/lib/format";
 import { cn } from "@/lib/utils";
-import { ETAPAS_PEDIDO, etapaAtual, linkWhatsApp, origemPublica, mensagemPedidoParaLoja, type PedidoAcompanhamento } from "@/lib/catalogo";
+import { ETAPAS_PEDIDO, etapaAtual, linkWhatsApp, origemPublica, mensagemPedidoParaLoja, textoProgressoFidelidade, type PedidoAcompanhamento, type ProgressoFidelidade } from "@/lib/catalogo";
 
 export const Route = createFileRoute("/pedido/$codigo")({
   ssr: false,
@@ -161,6 +161,8 @@ export function AcompanharPedido({ codigo }: { codigo: string }) {
         </ol>
       )}
 
+      {!cancelado && <FidelidadeDoPedido codigo={codigo} />}
+
       {!cancelado && aguardandoOrcamento && (
         <section className="mt-4 rounded-2xl border border-primary/30 bg-primary/5 p-4">
           <h2 className="font-semibold">Aguardando orçamento</h2>
@@ -278,4 +280,25 @@ export function AcompanharPedido({ codigo }: { codigo: string }) {
 
 function Pagina({ children }: { children: React.ReactNode }) {
   return <div className="min-h-screen bg-background"><main className="mx-auto max-w-lg px-4">{children}</main></div>;
+}
+
+/** Progresso da fidelidade: só com o código do pedido (o catálogo não consulta por telefone, 0057). */
+function FidelidadeDoPedido({ codigo }: { codigo: string }) {
+  const { data } = useQuery({
+    queryKey: ["fidelidade-pedido", codigo],
+    queryFn: async () => {
+      // eslint-disable-next-line @typescript-eslint/no-explicit-any -- função nova (0057) ainda fora dos tipos gerados.
+      const { data, error } = await (supabase as any).rpc("fidelidade_pedido", { p_codigo: codigo });
+      if (error) return null;
+      return (data as ProgressoFidelidade | null) ?? null;
+    },
+    staleTime: 5 * 60_000,
+  });
+  const texto = textoProgressoFidelidade(data);
+  if (!texto) return null;
+  return (
+    <p className={cn("mt-4 flex items-center gap-2 rounded-2xl p-3 text-sm", data?.este_pedido_premiado ? "bg-success/10 text-success" : "bg-card text-muted-foreground shadow-soft")}>
+      <Gift className="size-4 shrink-0" aria-hidden="true" /> {texto}
+    </p>
+  );
 }
