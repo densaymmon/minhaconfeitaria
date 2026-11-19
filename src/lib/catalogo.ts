@@ -376,6 +376,41 @@ export function midiasDoProduto(p: ProdutoCatalogo): MidiaCatalogo[] {
   return p.imagem_url ? [{ tipo: "imagem", url: p.imagem_url }] : [];
 }
 
+export type PreviaCatalogo = { titulo: string; descricao: string; imagem: string | null; imagemGrande: boolean };
+
+const DESCRICAO_PADRAO_CATALOGO = "Veja os produtos, monte seu pedido e pague por Pix.";
+
+/** Prévia do link do catálogo (WhatsApp, Instagram, Facebook): nome, slogan e uma foto. */
+export function previaDoCatalogo(catalogo: Catalogo | null | undefined): PreviaCatalogo {
+  const nome = catalogo?.nome?.trim();
+  if (!nome) return { titulo: "Catálogo — faça seu pedido", descricao: DESCRICAO_PADRAO_CATALOGO, imagem: null, imagemGrande: false };
+  const slogan = catalogo?.slogan?.trim();
+  const ehHttps = (url: string | null | undefined): url is string => Boolean(url && /^https:\/\//i.test(url));
+  // Foto de produto rende um cartão grande; sem foto, a logo aparece como miniatura.
+  const foto = (catalogo?.produtos ?? []).map(capaDoProduto).find((m) => m?.tipo === "imagem" && ehHttps(m.url))?.url ?? null;
+  const logoUrl = catalogo?.logo_url;
+  const logo = ehHttps(logoUrl) ? logoUrl : null;
+  return {
+    titulo: `${nome} — faça seu pedido`,
+    descricao: slogan ? `${slogan} · ${DESCRICAO_PADRAO_CATALOGO}` : DESCRICAO_PADRAO_CATALOGO,
+    imagem: foto ?? logo,
+    imagemGrande: Boolean(foto),
+  };
+}
+
+/** Metadados da página do catálogo a partir da prévia. */
+export function metaDoCatalogo(previa: PreviaCatalogo) {
+  return [
+    { title: previa.titulo },
+    { name: "description", content: previa.descricao },
+    { property: "og:title", content: previa.titulo },
+    { property: "og:description", content: previa.descricao },
+    { property: "og:type", content: "website" },
+    ...(previa.imagem ? [{ property: "og:image", content: previa.imagem }, { name: "twitter:image", content: previa.imagem }] : []),
+    { name: "twitter:card", content: previa.imagemGrande ? "summary_large_image" : "summary" },
+  ];
+}
+
 /** Capa do card: primeira foto; se só houver vídeo, o próprio vídeo. */
 export function capaDoProduto(p: ProdutoCatalogo): MidiaCatalogo | null {
   const midias = midiasDoProduto(p);

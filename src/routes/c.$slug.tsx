@@ -1,6 +1,6 @@
 import { createFileRoute, Link, redirect, useNavigate } from "@tanstack/react-router";
 import { enderecoCardapioQ } from "@/lib/endereco-cardapio";
-import { queryOptions, useQuery } from "@tanstack/react-query";
+import { queryOptions, useQuery, type QueryClient } from "@tanstack/react-query";
 import { useEffect, useMemo, useRef, useState } from "react";
 import { ArrowLeft, CakeSlice, Camera, Gift, Star, Minus, MessageCircle, PlayCircle, Plus, ShoppingBag, Sparkles, Store, Ticket, Truck, X } from "lucide-react";
 import { Dialog, DialogContent, DialogDescription, DialogTitle } from "@/components/ui/dialog";
@@ -37,6 +37,8 @@ import {
   somarDias,
   taxaDeEntrega,
   descontoFidelidade,
+  metaDoCatalogo,
+  previaDoCatalogo,
   excessoNoLimite,
   sinalDoPedido,
   textoComponentes,
@@ -46,25 +48,35 @@ import { enviarFotoEncomenda } from "@/lib/foto-catalogo";
 import { avisarPedidoNovo } from "@/lib/push.functions";
 
 export const Route = createFileRoute("/c/$slug")({
-  ssr: false,
-  head: () => ({
-    meta: [
-      { title: "Catálogo — faça seu pedido" },
-      { name: "description", content: "Veja os produtos, monte seu pedido e pague por Pix." },
-      { property: "og:title", content: "Catálogo — faça seu pedido" },
-      { property: "og:description", content: "Veja os produtos, monte seu pedido e pague por Pix." },
-      { property: "og:type", content: "website" },
-      { name: "twitter:card", content: "summary" },
-    ],
-  }),
-  // Começa a buscar os produtos junto com o carregamento da página.
-  loader: async ({ context, params }) => {
-    const endereco = await context.queryClient.fetchQuery(enderecoCardapioQ(params.slug));
-    if (endereco) throw redirect({ href: endereco, replace: true });
-    void context.queryClient.prefetchQuery(catalogoQ(params.slug));
-  },
+  // "data-only": o servidor roda só o loader, para a prévia do link (WhatsApp, Instagram)
+  // já sair com o nome e a foto da confeitaria; a página continua sendo montada no navegador.
+  ssr: "data-only",
+  head: ({ loaderData }) => ({ meta: metaDoCatalogo(loaderData?.previa ?? previaDoCatalogo(null)) }),
+  loader: carregarCatalogo,
   component: CatalogoRota,
 });
+
+/** Tempo máximo que o servidor espera o catálogo para montar a prévia do link. */
+const ESPERA_PREVIA_MS = 1500;
+
+/**
+ * Loader compartilhado entre /c/<endereço> e /<endereço>: redireciona para o endereço próprio do
+ * cardápio quando houver e, no servidor, busca o catálogo só para a prévia do link.
+ * Nunca falha por causa da prévia: sem resposta a tempo, sai a prévia genérica.
+ */
+export async function carregarCatalogo({ context, params }: { context: { queryClient: QueryClient }; params: { slug: string } }) {
+  const endereco = await context.queryClient.fetchQuery(enderecoCardapioQ(params.slug));
+  if (endereco) throw redirect({ href: endereco, replace: true });
+  if (typeof window !== "undefined") {
+    void context.queryClient.prefetchQuery(catalogoQ(params.slug));
+    return { previa: previaDoCatalogo(context.queryClient.getQueryData(catalogoQ(params.slug).queryKey)) };
+  }
+  const catalogo = await Promise.race([
+    context.queryClient.fetchQuery(catalogoQ(params.slug)).catch(() => null),
+    new Promise<null>((resolve) => setTimeout(() => resolve(null), ESPERA_PREVIA_MS)),
+  ]);
+  return { previa: previaDoCatalogo(catalogo) };
+}
 
 /** Consulta do catálogo público (compartilhada entre /c/<endereço> e /<endereço>). */
 export const catalogoQ = (slug: string) => queryOptions({
