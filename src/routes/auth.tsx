@@ -9,7 +9,7 @@ import { CakeSlice } from "lucide-react";
 import { supabase } from "@/integrations/supabase/client";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
-import bakeryImage from "@/assets/confeitaria.jpg";
+import { FaixaFotos } from "@/components/app/fotos-confeitaria";
 import { oauthReturnPath } from "@/lib/oauth-return-path";
 import { Field } from "@/components/app/ui";
 
@@ -106,7 +106,7 @@ function AuthPage() {
           <h1 className="text-3xl font-semibold">Doce Gestão</h1>
           <p className="mt-1 text-sm opacity-80">O caderno digital da sua confeitaria</p>
         </div>
-        <img src={bakeryImage} width={1152} height={576} alt="Bolo caseiro, pão italiano e baguetes artesanais" className="mb-6 w-full rounded-lg" />
+        <FaixaFotos className="mb-6" />
         <form onSubmit={enviar} className="space-y-4">
           <h2 className="text-xl font-semibold">
             {modo === "entrar" ? "Entrar" : modo === "criar" ? "Criar conta da confeitaria" : "Recuperar senha"}

@@ -111,6 +111,32 @@ export function precoTexto(v: number | null | undefined) {
   return new Intl.NumberFormat("pt-BR", { style: "currency", currency: "BRL" }).format(v);
 }
 
+export type ItemDoPlano = { chave: string; texto: string; detalhe: string | null; incluido: boolean; novo: boolean };
+
+/** Limite maior que o do plano anterior (null = ilimitado). */
+function limiteMaior(atual: number | null, anterior: number | null) {
+  if (anterior == null) return false;
+  return atual == null || atual > anterior;
+}
+
+/**
+ * Itens do cartão de um plano na página de vendas: o que inclui, o que não inclui e,
+ * comparando com o plano anterior (mais barato), o que ele traz a mais (`novo`).
+ */
+export function itensDoPlano(plano: Plano, anterior: Plano | null): ItemDoPlano[] {
+  const pedidos = plano.limite_pedidos_mes;
+  const produtos = plano.limite_produtos;
+  return [
+    { chave: "base", texto: "Pedidos, clientes, produção e Pix", detalhe: null, incluido: true, novo: false },
+    { chave: "pedidos", texto: pedidos ? `Até ${pedidos} pedidos por mês` : "Pedidos ilimitados", detalhe: null, incluido: true, novo: limiteMaior(pedidos, anterior?.limite_pedidos_mes ?? null) },
+    { chave: "produtos", texto: produtos ? `Até ${produtos} produtos` : "Produtos ilimitados", detalhe: null, incluido: true, novo: limiteMaior(produtos, anterior?.limite_produtos ?? null) },
+    ...RECURSOS.map((r) => {
+      const incluido = plano.recursos.includes(r.id);
+      return { chave: r.id, texto: r.nome, detalhe: r.descricao, incluido, novo: incluido && anterior != null && !anterior.recursos.includes(r.id) };
+    }),
+  ];
+}
+
 /** Endereço do painel de administração (site separado). */
 export const URL_PAINEL_ADMIN = "https://densaymmon.github.io/minhaconfeitaria/";
 

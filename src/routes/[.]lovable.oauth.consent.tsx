@@ -8,9 +8,9 @@ export const Route = createFileRoute('/.lovable/oauth/consent')({
   ssr: false,
   validateSearch: (s: Record<string, unknown>) => ({ authorization_id: typeof s['authorization_id'] === 'string' ? s['authorization_id'] : '' }),
   head: () => ({ meta: [
-    { title: 'Autorizar agente — Confeitaria Maestro' },
+    { title: 'Autorizar agente — Doce Gestão' },
     { name: 'description', content: 'Autorize ou recuse o acesso de um agente aos dados da sua confeitaria.' },
-    { property: 'og:title', content: 'Autorizar agente — Confeitaria Maestro' },
+    { property: 'og:title', content: 'Autorizar agente — Doce Gestão' },
     { property: 'og:description', content: 'Acesso protegido de agentes aos dados da confeitaria.' },
     { property: 'og:type', content: 'website' }, { name: 'twitter:card', content: 'summary' },
   ] }),
@@ -51,7 +51,7 @@ function Consent() {
   return <main className="mx-auto max-w-md px-5 py-16">
     <ShieldCheck className="mb-5 size-10 text-primary" />
     <h1 className="text-2xl font-semibold">Autorizar {details.client.name || 'agente'}</h1>
-    <p className="mt-4 text-muted-foreground">Este agente poderá consultar seus clientes, pedidos, receitas e despesas na Confeitaria Maestro. Não poderá alterar ou excluir registros.</p>
+    <p className="mt-4 text-muted-foreground">Este agente poderá consultar seus clientes, pedidos, receitas e despesas no Doce Gestão. Não poderá alterar ou excluir registros.</p>
     <p className="mt-3 text-sm text-muted-foreground">Autorize somente agentes em que você confia.</p>
     {error && <p role="alert" className="mt-4 text-destructive">{error}</p>}
     <div className="mt-8 flex flex-wrap gap-3"><Button disabled={busy} onClick={() => decide(true)}>Autorizar acesso</Button><Button variant="outline" disabled={busy} onClick={() => decide(false)}>Recusar</Button></div>

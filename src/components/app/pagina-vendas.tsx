@@ -1,9 +1,9 @@
 import { Link } from "@tanstack/react-router";
 import { useQuery } from "@tanstack/react-query";
-import { BookOpen, CakeSlice, Calculator, Check, ChefHat, ClipboardList, MessageCircle, QrCode, ShoppingBag, Smartphone, Wallet } from "lucide-react";
-import bakeryImage from "@/assets/confeitaria.jpg";
+import { BookOpen, CakeSlice, Calculator, Check, Minus, ChefHat, ClipboardList, MessageCircle, QrCode, ShoppingBag, Smartphone, Wallet } from "lucide-react";
+import { MosaicoFotos } from "@/components/app/fotos-confeitaria";
 import { planosQ, plataformaPublicaQ } from "@/lib/queries";
-import { RECURSOS, precoTexto } from "@/lib/assinatura";
+import { itensDoPlano, precoTexto } from "@/lib/assinatura";
 import { linkWhatsApp } from "@/lib/catalogo";
 import { NOME_PLATAFORMA } from "@/lib/termos";
 import { Button } from "@/components/ui/button";
@@ -89,7 +89,7 @@ export function PaginaVendas() {
             {cadastroAberto && <p className="mt-3 text-xs text-muted-foreground">Sem cartão de crédito. Cancele quando quiser.</p>}
           </div>
           <div className="relative">
-            <img src={bakeryImage} width={1152} height={576} alt="Bolos e pães artesanais sobre a mesa" className="w-full rounded-3xl object-cover shadow-soft" />
+            <MosaicoFotos />
             <div className="absolute -bottom-5 left-4 right-4 flex items-center gap-3 rounded-2xl border bg-card p-3 shadow-soft sm:left-auto sm:right-6 sm:w-72">
               <span className="grid size-10 shrink-0 place-items-center rounded-xl bg-success/15 text-success"><Smartphone className="size-5" /></span>
               <span className="text-sm"><b>Novo pedido pelo catálogo!</b><span className="block text-xs text-muted-foreground">Bolo de cenoura (G) · Pix R$ 89,90</span></span>
@@ -149,6 +149,7 @@ export function PaginaVendas() {
               <div className="mt-8 grid gap-4 md:grid-cols-3">
                 {planos.map((p, i) => {
                   const destaque = i === planos.length - 1;
+                  const anterior = i > 0 ? (planos[i - 1] ?? null) : null;
                   return (
                     <div key={p.id} className={cn("flex flex-col rounded-3xl border bg-card p-6 shadow-soft", destaque && "border-primary ring-2 ring-primary/30")}>
                       {destaque && <span className="mb-2 self-start rounded-full bg-primary px-3 py-1 text-xs font-semibold text-primary-foreground">Mais completo</span>}
@@ -158,12 +159,20 @@ export function PaginaVendas() {
                       {p.preco_anual != null && p.preco_anual < p.preco_mensal * 12 && (
                         <p className="text-xs text-success">ou {precoTexto(p.preco_anual)} por ano (economize {precoTexto(p.preco_mensal * 12 - p.preco_anual)})</p>
                       )}
-                      <ul className="mt-5 flex-1 space-y-2 text-sm">
-                        <li className="flex gap-2"><Check className="mt-0.5 size-4 shrink-0 text-success" /> Pedidos, clientes, produção e Pix</li>
-                        <li className="flex gap-2"><Check className="mt-0.5 size-4 shrink-0 text-success" /> {p.limite_pedidos_mes ? `Até ${p.limite_pedidos_mes} pedidos por mês` : "Pedidos ilimitados"}</li>
-                        <li className="flex gap-2"><Check className="mt-0.5 size-4 shrink-0 text-success" /> {p.limite_produtos ? `Até ${p.limite_produtos} produtos` : "Produtos ilimitados"}</li>
-                        {RECURSOS.filter((r) => p.recursos.includes(r.id)).map((r) => (
-                          <li key={r.id} className="flex gap-2"><Check className="mt-0.5 size-4 shrink-0 text-success" /> {r.nome}</li>
+                      {anterior && <p className="mt-5 text-sm font-semibold">Tudo do {anterior.nome}, e mais:</p>}
+                      <ul className={cn("flex-1 space-y-2.5 text-sm", anterior ? "mt-2" : "mt-5")}>
+                        {itensDoPlano(p, anterior).map((item) => (
+                          <li key={item.chave} className={cn("flex gap-2", !item.incluido && "text-muted-foreground")}>
+                            {item.incluido
+                              ? <Check aria-hidden className={cn("mt-0.5 size-4 shrink-0", item.novo ? "text-primary" : "text-success")} />
+                              : <Minus aria-hidden className="mt-0.5 size-4 shrink-0 opacity-60" />}
+                            <span>
+                              {!item.incluido && <span className="sr-only">Não inclui: </span>}
+                              <span className={cn(item.novo && "font-semibold", !item.incluido && "line-through decoration-muted-foreground/50")}>{item.texto}</span>
+                              {item.novo && <span className="ml-1.5 rounded-full bg-primary/10 px-1.5 py-0.5 text-xs font-semibold text-primary">a mais</span>}
+                              {item.novo && item.detalhe && <span className="mt-0.5 block text-xs text-muted-foreground">{item.detalhe}</span>}
+                            </span>
+                          </li>
                         ))}
                       </ul>
                       <Chamada className="mt-6 w-full" texto={destaque ? `Testar grátis por ${diasTeste} dias` : "Começar agora"} />
