@@ -1,5 +1,5 @@
 import { describe, expect, it } from "vitest";
-import { avisoAssinatura, diasEntre, mensagemPlano, planoComRecurso, podeUsarRecurso, recursoDaPagina, temRecurso, type MinhaAssinatura, type Plano } from "./assinatura";
+import { avisoAssinatura, diasEntre, itensDoPlano, mensagemPlano, planoComRecurso, podeUsarRecurso, recursoDaPagina, temRecurso, type MinhaAssinatura, type Plano } from "./assinatura";
 
 const base: MinhaAssinatura = {
   plano: { id: "essencial", nome: "Essencial", recursos: [], limite_pedidos_mes: 60, limite_produtos: 30, preco_mensal: 29.9, preco_anual: 299 },
@@ -67,5 +67,28 @@ describe("avisos da assinatura", () => {
     expect(diasEntre("2026-10-28", "2026-11-04")).toBe(7);
     expect(diasEntre("2026-12-31", "2027-01-01")).toBe(1);
     expect(mensagemPlano("Não foi possível salvar: PLANO: o plano Essencial permite até 30 produtos.")).toBe("o plano Essencial permite até 30 produtos.");
+  });
+});
+
+describe("itens do plano na página de vendas", () => {
+  const plano = (id: string, recursos: string[], pedidos: number | null, produtos: number | null): Plano =>
+    ({ id, nome: id, descricao: null, preco_mensal: 10, preco_anual: null, limite_pedidos_mes: pedidos, limite_produtos: produtos, recursos, ordem: 0, ativo: true });
+  const essencial = plano("Essencial", ["custos"], 60, 30);
+  const completo = plano("Completo", ["custos", "catalogo", "ia"], null, 30);
+
+  it("o primeiro plano não marca nada como novo e lista o que não inclui", () => {
+    const itens = itensDoPlano(essencial, null);
+    expect(itens.filter((i) => i.novo)).toEqual([]);
+    expect(itens.find((i) => i.chave === "custos")).toMatchObject({ incluido: true });
+    expect(itens.find((i) => i.chave === "catalogo")).toMatchObject({ incluido: false, novo: false });
+    expect(itens.find((i) => i.chave === "pedidos")?.texto).toBe("Até 60 pedidos por mês");
+  });
+
+  it("marca como novo o que o plano traz a mais que o anterior", () => {
+    const itens = itensDoPlano(completo, essencial);
+    expect(itens.filter((i) => i.novo).map((i) => i.chave)).toEqual(["pedidos", "catalogo", "ia"]);
+    expect(itens.find((i) => i.chave === "pedidos")?.texto).toBe("Pedidos ilimitados");
+    expect(itens.find((i) => i.chave === "produtos")).toMatchObject({ texto: "Até 30 produtos", novo: false });
+    expect(itens.find((i) => i.chave === "estoque")).toMatchObject({ incluido: false, novo: false });
   });
 });
