@@ -1,5 +1,8 @@
 import { describe, expect, it } from "vitest";
 import {
+  metaDoCatalogo,
+  previaDoCatalogo,
+  type Catalogo,
   miniaturaDaFoto,
   URL_SISTEMA,
   origemPublica,
@@ -290,5 +293,31 @@ describe("miniatura das fotos", () => {
     expect(miniaturaDaFoto("https://x/catalogo/u/p-1-abc-g.jpg?v=2")).toBe("https://x/catalogo/u/p-1-abc-p.jpg?v=2");
     expect(miniaturaDaFoto("https://x/catalogo/u/p-1-abc.jpg")).toBe("https://x/catalogo/u/p-1-abc.jpg");
     expect(miniaturaDaFoto("https://x/catalogo/u/video-g.jpg.mp4")).toBe("https://x/catalogo/u/video-g.jpg.mp4");
+  });
+});
+
+describe("prévia do link do catálogo", () => {
+  const base = { nome: "Doce da Ana", slogan: "Bolos caseiros", logo_url: "https://cdn.exemplo/logo.png", produtos: [] } as unknown as Catalogo;
+
+  it("sem catálogo, usa título e descrição genéricos, sem imagem", () => {
+    expect(previaDoCatalogo(null)).toEqual({ titulo: "Catálogo — faça seu pedido", descricao: "Veja os produtos, monte seu pedido e pague por Pix.", imagem: null, imagemGrande: false });
+  });
+
+  it("usa o nome e o slogan da confeitaria e a logo quando não há foto de produto", () => {
+    expect(previaDoCatalogo(base)).toEqual({ titulo: "Doce da Ana — faça seu pedido", descricao: "Bolos caseiros · Veja os produtos, monte seu pedido e pague por Pix.", imagem: "https://cdn.exemplo/logo.png", imagemGrande: false });
+  });
+
+  it("prefere a primeira foto de produto (cartão grande) e ignora vídeos e endereços sem https", () => {
+    const catalogo = { ...base, produtos: [
+      { nome: "Vídeo", imagem_url: null, midias: [{ tipo: "video", url: "https://cdn.exemplo/v.mp4" }] },
+      { nome: "Sem https", imagem_url: "http://cdn.exemplo/a.jpg" },
+      { nome: "Bolo", imagem_url: "https://cdn.exemplo/bolo.jpg" },
+    ] } as unknown as Catalogo;
+    const previa = previaDoCatalogo(catalogo);
+    expect(previa.imagem).toBe("https://cdn.exemplo/bolo.jpg");
+    expect(previa.imagemGrande).toBe(true);
+    const meta = metaDoCatalogo(previa);
+    expect(meta).toContainEqual({ property: "og:image", content: "https://cdn.exemplo/bolo.jpg" });
+    expect(meta).toContainEqual({ name: "twitter:card", content: "summary_large_image" });
   });
 });
