@@ -122,3 +122,94 @@ export function possibleDuplicate(doc: PurchaseDocument, purchases: { id: string
   const sum = doc.linhas.filter((l) => !l.ignorar).reduce((s, l) => s + (l.total ?? 0), 0);
   return purchases.find((p) => !p.cancelada_em && doc.fornecedor.trim() && normalize(p.local_compra ?? "") === normalize(doc.fornecedor) && p.data_compra === doc.data && Math.abs(Number(p.total) - sum) < 0.005);
 }
+// ---------------------------------------------------------------------------------------------
+// Vínculo dos itens do documento com os insumos cadastrados
+
+const PALAVRAS_VAZIAS = new Set(["de", "da", "do", "das", "dos", "e", "com", "ao", "a", "o", "em", "para", "p", "c", "tipo", "un", "und", "unid", "kg", "g", "gr", "grs", "l", "lt", "ml", "cx", "pct", "pc", "fd", "dz", "bd", "sc", "x"]);
+
+/** Palavras que identificam um produto: sem acentos, números, medidas e palavras vazias; singular. */
+export function palavrasDoNome(nome: string): string[] {
+  return normalize(nome)
+    .split(/[^a-z0-9]+/)
+    .filter((p) => p && !/\d/.test(p) && !PALAVRAS_VAZIAS.has(p))
+    .map((p) => (p.length > 3 && p.endsWith("s") ? p.slice(0, -1) : p));
+}
+
+/**
+ * Insumo cujo nome aparece por inteiro na descrição do documento (todas as palavras), com unidade
+ * compatível. Só sugere quando há um único candidato mais específico; na dúvida, não sugere.
+ */
+export function sugerirInsumo(nome: string, unidade: string, ingredients: IngredientMatch[]): IngredientMatch | null {
+  if (!unidade) return null;
+  const doDocumento = new Set(palavrasDoNome(nome));
+  const candidatos = ingredients
+    .map((i) => ({ i, palavras: palavrasDoNome(i.nome) }))
+    .filter(({ i, palavras }) => palavras.length > 0 && palavras.every((p) => doDocumento.has(p))
+      && medidasCompativeis(i.unidade_embalagem ?? i.unidade ?? "").includes(unidade));
+  if (!candidatos.length) return null;
+  const maior = Math.max(...candidatos.map((c) => c.palavras.length));
+  const melhores = candidatos.filter((c) => c.palavras.length === maior);
+  return melhores.length === 1 ? melhores[0]?.i ?? null : null;
+}
+
+export const chaveDaDescricao = (nome: string) => normalize(nome).slice(0, 120);
+
+/**
+ * Preenche os vínculos que faltam: primeiro com os que a confeitaria já confirmou antes para a
+ * mesma descrição (memória), depois por semelhança de nome, sempre com unidade compatível.
+ * Sugestões por nome ficam marcadas como dúvida para conferência.
+ */
+export function sugerirVinculos(doc: PurchaseDocument, ingredients: IngredientMatch[], memoria: Record<string, string> = {}): PurchaseDocument {
+  const compativel = (id: string, unidade: string) => {
+    const i = ingredients.find((x) => x.id === id);
+    return i && unidade && medidasCompativeis(i.unidade_embalagem ?? i.unidade ?? "").includes(unidade) ? i : null;
+  };
+  return {
+    ...doc,
+    linhas: doc.linhas.map((linha) => {
+      if (linha.insumoId || !linha.nome.trim()) return linha;
+      const lembrado = memoria[chaveDaDescricao(linha.nome)];
+      if (lembrado && compativel(lembrado, linha.unidade)) return { ...linha, insumoId: lembrado };
+      const sugerido = sugerirInsumo(linha.nome, linha.unidade, ingredients);
+      if (!sugerido) return linha;
+      return { ...linha, insumoId: sugerido.id, duvidas: [...linha.duvidas, `Vínculo sugerido pelo nome: “${sugerido.nome}”. Confira.`] };
+    }),
+  };
+}
+
+const CHAVE_MEMORIA = (confeitaria: string) => `docegestao:vinculos-compra:${confeitaria}`;
+const MAXIMO_MEMORIA = 500;
+
+/** Vínculos descrição → insumo já confirmados nesta confeitaria (guardados neste aparelho). */
+export function carregarMemoriaVinculos(confeitaria: string | null | undefined): Record<string, string> {
+  if (!confeitaria) return {};
+  try {
+    const bruto = JSON.parse(localStorage.getItem(CHAVE_MEMORIA(confeitaria)) ?? "{}") as unknown;
+    if (!bruto || typeof bruto !== "object" || Array.isArray(bruto)) return {};
+    return Object.fromEntries(Object.entries(bruto).filter((e): e is [string, string] => typeof e[1] === "string"));
+  } catch {
+    return {};
+  }
+}
+
+/** Junta os vínculos novos à memória (os mais recentes ficam; limite de 500 descrições). */
+export function lembrarVinculos(memoria: Record<string, string>, pares: Array<{ nome: string; insumoId: string }>): Record<string, string> {
+  const novo = { ...memoria };
+  for (const { nome, insumoId } of pares) {
+    const chave = chaveDaDescricao(nome);
+    if (!chave || !insumoId || insumoId === "__novo__") continue;
+    delete novo[chave];
+    novo[chave] = insumoId;
+  }
+  const entradas = Object.entries(novo);
+  return Object.fromEntries(entradas.slice(Math.max(0, entradas.length - MAXIMO_MEMORIA)));
+}
+
+export function salvarMemoriaVinculos(confeitaria: string | null | undefined, memoria: Record<string, string>) {
+  if (!confeitaria) return;
+  try {
+    localStorage.setItem(CHAVE_MEMORIA(confeitaria), JSON.stringify(memoria));
+  } catch {
+    /* Sem armazenamento no aparelho: a memória é só uma conveniência. */
+  }
+}
