@@ -1,4 +1,5 @@
 import { normalizeInvoice, type IngredientMatch, type InvoiceExtraction, type PurchaseDocument } from "./purchase-document";
+import { lerDocumento, linhasDaPagina, textoDaLinha, type LinhaPdf } from "./leitura-documento";
 
 type OcrWorker = {
   recognize(input: unknown): Promise<{ data: { text: string } }>;
@@ -47,93 +48,17 @@ function loadScript(src: string, available: () => boolean): Promise<void> {
   });
 }
 
-function parseNumber(value: string): number | null {
-  const s = value.trim().replace(/R\$\s*/i, "").replace(/\s/g, "");
-  if (!s) return null;
-  const normalized = s.includes(",") ? s.replace(/\./g, "").replace(",", ".") : s;
-  const number = Number(normalized);
-  return Number.isFinite(number) && number >= 0 ? number : null;
+/** Lê o texto (de PDF ou OCR) com as regras de leitura-documento.ts. */
+export function parseOcrText(text: string, linhasPdf?: LinhaPdf[]): InvoiceExtraction {
+  return lerDocumento(text, linhasPdf);
 }
 
-function extractDate(text: string): string | null {
-  const iso = text.match(/\b(20\d{2})-(\d{2})-(\d{2})\b/);
-  if (iso) return iso[0];
-  const br = text.match(/\b(\d{2})[/. -](\d{2})[/. -](20\d{2})\b/);
-  if (!br) return null;
-  const [, day, month, year] = br;
-  const candidate = `${year}-${month}-${day}`;
-  const date = new Date(`${candidate}T12:00:00Z`);
-  return Number.isFinite(date.getTime()) && date.toISOString().slice(0, 10) === candidate ? candidate : null;
+/** Texto de uma página de PDF, uma linha por altura (ver linhasDaPagina). */
+export function textoDaPagina(items: Array<{ str?: string; transform?: number[]; width?: number }>): string {
+  return linhasDaPagina(items).map(textoDaLinha).join("\n");
 }
 
-export function parseOcrText(text: string): InvoiceExtraction {
-  const lines = text.split(/\r?\n/).map((line) => line.replace(/\s+/g, " ").trim()).filter(Boolean).slice(0, 500);
-  const fullText = lines.join("\n");
-  const supplier = lines.find((line) => /TENDA ATACADO/i.test(line))?.match(/TENDA ATACADO(?:\s+SA)?/i)?.[0]
-    ?? lines.find((line) => line.length >= 3 && line.length <= 100 && !/\b(CNPJ|CPF|DANFE|CUPOM FISCAL|NOTA FISCAL|DOCUMENTO AUXILIAR|CONSUMIDOR|RUA|AVENIDA|CEP|HORTOLANDIA|SUMAR[EÉ])\b/i.test(line) && !/\d{2}[/.]\d{2}[/.]\d{4}/.test(line)) ?? null;
-  const date = extractDate(fullText);
-  const totalMatches = [...fullText.matchAll(/(?:VALOR\s+TOTAL|TOTAL\s+A\s+PAGAR|TOTAL\s+GERAL|TOTAL\s+DA\s+NOTA|TOTAL\s+R\$)[^\d]{0,30}(\d{1,7}(?:\.\d{3})*,\d{2})/gi)];
-  const total = totalMatches.length ? parseNumber(totalMatches[totalMatches.length - 1]?.[1] ?? "") : null;
-  const discountMatch = fullText.match(/(?:DESCONTO|VLR\.?\s*DESC\.?)[^\d]{0,20}(\d{1,7}(?:\.\d{3})*,\d{2})/i);
-  const expenseMatch = fullText.match(/(?:FRETE|VALOR\s+DO\s+FRETE)[^\d]{0,20}(\d{1,7}(?:\.\d{3})*,\d{2})/i);
-
-  const items: InvoiceExtraction["itens"] = [];
-  for (const line of lines) {
-    // NF-e DANFE product table: stop at product total, not the trailing tax values.
-    const nfeRow = line.match(/^\s*(\d{3,8})\s+(.+?)\s+\d{8}\s+\d{3}\s+\d{4}\s+([A-Z*0-9]+)\s+(\d+(?:[,.]\d+)?)\s+(\d{1,7}(?:\.\d{3})*,\d{2})\s+(\d{1,7}(?:\.\d{3})*,\d{2})\s+(\d{1,7}(?:\.\d{3})*,\d{2})\b/i);
-    if (nfeRow) {
-      const [, code, description, rawUnit, rawQty, rawPrice, rawDiscount, rawTotal] = nfeRow;
-      const unitToken = (rawUnit ?? "").toUpperCase();
-      const quantity = parseNumber(rawQty ?? "");
-      const unitPrice = parseNumber(rawPrice ?? "");
-      const discount = parseNumber(rawDiscount ?? "");
-      const itemTotal = parseNumber(rawTotal ?? "");
-      const unit = /KG/.test(unitToken) ? "kg" : /LT|L001L/.test(unitToken) ? "L" : /ML/.test(unitToken) ? "ml" : /UN|PT|PC/.test(unitToken) ? "un" : null;
-      if (description && itemTotal !== null) {
-        items.push({ descricao: description.trim().slice(0, 120), codigo: code ?? null, quantidade: quantity, unidade: unit,
-          valor_unitario: unitPrice, valor_total: itemTotal, desconto: discount, duvidas: ["Item extraído da tabela NF-e; confira o insumo correspondente e a unidade antes de confirmar."] });
-        continue;
-      }
-    }
-    if (/\b(CNPJ|CPF|TOTAL|SUBTOTAL|DESCONTO|TROCO|DINHEIRO|CR[EÉ]DITO|D[EÉ]BITO|PIX|CART[AÃ]O|FRETE|EMISS[AÃ]O|CONSULTA|CHAVE|PROTOCOLO|OPERADOR|CAIXA)\b/i.test(line)) continue;
-    const values = [...line.matchAll(/(?:R\$\s*)?\b(\d{1,7}(?:\.\d{3})*,\d{2})\b/g)];
-    if (!values.length) continue;
-    const last = values[values.length - 1];
-    const totalItem = parseNumber(last?.[1] ?? "");
-    if (totalItem === null) continue;
-    const prefix = line.slice(0, last?.index ?? line.length).trim().replace(/[|*•]+$/g, "").trim();
-    const qtyMatch = prefix.match(/(?:^|\s)(\d+(?:[,.]\d+)?)\s*(kg|g|un|und|unid|unidade|l|lt|ml|pc|pct)?\s*(?:x|×)?\s*(\d{1,7}(?:\.\d{3})*,\d{2})?\s*$/i);
-    let description = prefix;
-    let quantity: number | null = null;
-    let unit: string | null = null;
-    let unitPrice: number | null = null;
-    if (qtyMatch?.index !== undefined) {
-      description = prefix.slice(0, qtyMatch.index).trim();
-      quantity = parseNumber(qtyMatch[1] ?? "");
-      unit = qtyMatch[2] ?? null;
-      unitPrice = parseNumber(qtyMatch[3] ?? "");
-    } else if (values.length >= 2) {
-      const previous = values[values.length - 2];
-      unitPrice = parseNumber(previous?.[1] ?? "");
-      description = line.slice(0, previous?.index ?? 0).trim();
-    }
-    description = description.replace(/^[\d\s.)-]+/, "").replace(/[|*•]+$/g, "").trim();
-    if (!description || description.length < 2) continue;
-    const u = unit?.toLowerCase();
-    const normalizedUnit = u ? ({ kg: "kg", g: "g", un: "un", und: "un", unid: "un", unidade: "un", l: "L", lt: "L", ml: "ml", pc: "un", pct: null } as Record<string, string | null>)[u] ?? null : null;
-    items.push({ descricao: description.slice(0, 120), codigo: null, quantidade: quantity, unidade: normalizedUnit,
-      valor_unitario: unitPrice, valor_total: totalItem, desconto: null, duvidas: ["Item extraído por OCR heurístico; confira descrição, quantidade, unidade e valores."] });
-  }
-
-  const duvidas = ["Leitura local por OCR: os campos extraídos são sugestões e precisam ser conferidos antes de registrar a compra."];
-  if (!supplier) duvidas.push("Fornecedor não identificado com segurança.");
-  if (!date) duvidas.push("Data não identificada; informe a data correta.");
-  if (total === null) duvidas.push("Total do documento não identificado; confira o comprovante.");
-  if (!items.length) duvidas.push("Não foi possível separar os itens automaticamente. Cadastre-os manualmente na conferência.");
-  return { fornecedor: supplier, data: date, documento: null, chave: null, desconto: parseNumber(discountMatch?.[1] ?? ""), despesas: parseNumber(expenseMatch?.[1] ?? ""), total, duvidas, itens: items.slice(0, 100) };
-}
-
-async function getPdfText(bytes: Uint8Array): Promise<{ text: string; pages: PdfPage[] }> {
+async function getPdfText(bytes: Uint8Array): Promise<{ text: string; pages: PdfPage[]; linhas: LinhaPdf[] }> {
   await loadScript(PDFJS_URL, () => Boolean(window.pdfjsLib));
   const pdf = window.pdfjsLib;
   if (!pdf) throw new Error("O leitor de PDF não ficou disponível.");
@@ -142,27 +67,16 @@ async function getPdfText(bytes: Uint8Array): Promise<{ text: string; pages: Pdf
   if (doc.numPages > MAX_PDF_PAGES) throw new Error(`Por segurança, a leitura aceita PDFs de até ${MAX_PDF_PAGES} páginas. Divida o arquivo e tente novamente.`);
   const pages: PdfPage[] = [];
   const texts: string[] = [];
+  const linhas: LinhaPdf[] = [];
   for (let pageNumber = 1; pageNumber <= doc.numPages; pageNumber++) {
     const page = await doc.getPage(pageNumber);
     pages.push(page);
     const content = await page.getTextContent();
-    // Preserve PDF table rows using each text fragment's baseline, instead of flattening
-    // the entire page into one line (which hides every product row from the parser).
-    const fragments = content.items
-      .map((item) => ({ text: (item.str ?? "").trim(), x: item.transform?.[4] ?? 0, y: item.transform?.[5] ?? 0 }))
-      .filter((item) => item.text);
-    fragments.sort((a, b) => b.y - a.y || a.x - b.x);
-    const rows: Array<{ y: number; fragments: typeof fragments }> = [];
-    for (const fragment of fragments) {
-      let row = rows.find((candidate) => Math.abs(candidate.y - fragment.y) <= 2.5);
-      if (!row) { row = { y: fragment.y, fragments: [] }; rows.push(row); }
-      row.fragments.push(fragment);
-    }
-    texts.push(rows.sort((a, b) => b.y - a.y)
-      .map((row) => row.fragments.sort((a, b) => a.x - b.x).map((item) => item.text).join(" "))
-      .join("\n"));
+    const daPagina = linhasDaPagina(content.items);
+    linhas.push(...daPagina);
+    texts.push(daPagina.map(textoDaLinha).join("\n"));
   }
-  return { text: texts.join("\n"), pages };
+  return { text: texts.join("\n"), pages, linhas };
 }
 
 async function recognizeImage(input: unknown): Promise<string> {
@@ -181,9 +95,13 @@ async function recognizeImage(input: unknown): Promise<string> {
 export async function readPurchaseDocumentLocally(file: File, ingredients: IngredientMatch[]): Promise<PurchaseDocument> {
   const mime = file.type || (file.name.toLowerCase().endsWith(".pdf") ? "application/pdf" : "");
   let text = "";
+  let linhasPdf: LinhaPdf[] | undefined;
   if (mime === "application/pdf") {
-    const { text: pdfText, pages } = await getPdfText(new Uint8Array(await file.arrayBuffer()));
-    if (pdfText.replace(/\s/g, "").length >= 80) text = pdfText;
+    const { text: pdfText, pages, linhas } = await getPdfText(new Uint8Array(await file.arrayBuffer()));
+    if (pdfText.replace(/\s/g, "").length >= 80) {
+      text = pdfText;
+      linhasPdf = linhas;
+    }
     else {
       await loadScript(TESSERACT_URL, () => Boolean(window.Tesseract));
       const tesseract = window.Tesseract;
@@ -212,5 +130,5 @@ export async function readPurchaseDocumentLocally(file: File, ingredients: Ingre
     text = await recognizeImage(file);
   }
   if (text.trim().length < 10) throw new Error("Não foi possível ler texto suficiente. Tente uma foto mais nítida, com boa iluminação e o documento inteiro visível.");
-  return normalizeInvoice(parseOcrText(text), ingredients);
+  return normalizeInvoice(parseOcrText(text, linhasPdf), ingredients);
 }

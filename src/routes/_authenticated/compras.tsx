@@ -15,7 +15,7 @@ import {
   AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent,
   AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle,
 } from "@/components/ui/alert-dialog";
-import { DOCUMENT_ACCEPT, parseInvoiceXml, possibleDuplicate, reviewDocument, validateDocumentFile, type PurchaseDocument } from "@/lib/purchase-document";
+import { DOCUMENT_ACCEPT, carregarMemoriaVinculos, lembrarVinculos, parseInvoiceXml, possibleDuplicate, reviewDocument, salvarMemoriaVinculos, sugerirVinculos, validateDocumentFile, type PurchaseDocument } from "@/lib/purchase-document";
 import { IngredientForm } from "@/components/app/ingredient-form";
 import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle } from "@/components/ui/dialog";
 import { PurchaseDocumentReview } from "@/components/app/purchase-document-review";
@@ -66,6 +66,8 @@ export function Compras({ embedded = false, initialSection = "compras" }: { embe
   const { data: todosInsumos } = useSuspenseQuery(appQueries.insumosQ);
   // Preparos (recheios/coberturas) não se compram nem têm estoque próprio.
   const insumos = useMemo(() => todosInsumos.filter((i) => !ehPreparo(i)), [todosInsumos]);
+  // Os insumos são todos da mesma confeitaria (RLS): o dono deles identifica a memória de vínculos.
+  const confeitariaDosInsumos = todosInsumos[0]?.user_id ?? null;
   const { data: compras } = useSuspenseQuery(appQueries.comprasQ);
   const { data: itens } = useSuspenseQuery(appQueries.compraItensQ);
   const { data: contasPagar } = useSuspenseQuery(appQueries.contasPagarQ);
@@ -786,7 +788,7 @@ export function Compras({ embedded = false, initialSection = "compras" }: { embe
 
       <section className="mb-6 rounded-xl border p-4">
         <div className="mb-2 flex items-center gap-2"><FileUp className="size-5" /><h2 className="text-lg font-semibold">Importar compra por documento</h2></div>
-        <p className="mb-3 text-sm text-muted-foreground">Envie XML, PDF ou foto do cupom/recibo fiscal. A leitura de PDF e fotos é feita localmente no navegador, sem enviar seu documento para uma IA paga ou consumir créditos do Lovable. A compra só é registrada quando você salvar o formulário após a conferência.</p>
+        <p className="mb-3 text-sm text-muted-foreground">Envie XML, PDF (DANFE, NFC-e ou cupom) ou foto do cupom/recibo fiscal. A leitura é feita no próprio navegador, sem enviar o documento para uma IA paga. Embalagens são convertidas para a medida real (ex.: 24 × 395 g = 9.480 g) e os itens são ligados aos seus insumos quando o nome bate; os vínculos que você confirmar são lembrados nas próximas compras. Nada é registrado antes de você conferir e salvar.</p>
         <label className="flex min-h-12 cursor-pointer items-center justify-center gap-2 rounded-lg border border-dashed p-3 text-sm font-medium hover:bg-muted/50">
           <FileText className="size-4" />{processandoDocumento ? "Lendo documento..." : arquivoDocumento || "Selecionar XML, PDF ou foto"}
           <input aria-label="Documento da compra" type="file" accept={DOCUMENT_ACCEPT} className="sr-only" disabled={processandoDocumento || busy || confirmandoDocumento || !!documentoCompra} onChange={async (event) => {
@@ -794,11 +796,9 @@ export function Compras({ embedded = false, initialSection = "compras" }: { embe
             setErroDocumento(""); setDocumentoCompra(null); setProcessandoDocumento(true); setArquivoDocumento(arquivo.name); setAcknowledgedReview(false);
             try {
               const mime = validateDocumentFile(arquivo);
-              if (mime === "application/xml") {
-                setDocumentoCompra(parseInvoiceXml(await arquivo.text(), insumos));
-              } else {
-                setDocumentoCompra(await readPurchaseDocumentLocally(arquivo, insumos));
-              }
+              const lido = mime === "application/xml" ? parseInvoiceXml(await arquivo.text(), insumos) : await readPurchaseDocumentLocally(arquivo, insumos);
+              // Vínculos já confirmados antes (neste aparelho) e sugestões por nome, para conferência.
+              setDocumentoCompra(sugerirVinculos(lido, insumos, carregarMemoriaVinculos(confeitariaDosInsumos)));
               toast.success("Documento lido. Confira e corrija os campos antes de continuar.");
             } catch (erro) {
               setErroDocumento(erro instanceof Error ? erro.message : "Não foi possível ler este documento.");
@@ -833,6 +833,8 @@ export function Compras({ embedded = false, initialSection = "compras" }: { embe
                 if (item.quantidade === null || item.total === null) throw new Error(`Revise quantidade e valor do item "${item.nome}".`);
                 return { insumo_id: insumoId, quantidade: String(item.quantidade), unidade: item.unidade, preco: String(Math.round(item.total * 100)) };
               });
+              salvarMemoriaVinculos(confeitariaDosInsumos, lembrarVinculos(carregarMemoriaVinculos(confeitariaDosInsumos),
+                documentoCompra.linhas.filter((item) => !item.ignorar).map((item) => ({ nome: item.nome, insumoId: item.insumoId === "__novo__" ? idsNovos[item.id] ?? "" : item.insumoId }))));
               await qc.invalidateQueries({ queryKey: ["insumos"] });
               await qc.refetchQueries({ queryKey: ["insumos"] });
               setData(documentoCompra.data);

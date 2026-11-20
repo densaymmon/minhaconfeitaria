@@ -1,6 +1,6 @@
 import { describe, expect, it } from "vitest";
 import { parseOcrText } from "./purchase-document-ocr";
-import { DOCUMENT_MAX_BYTES, normalizeInvoice, parseInvoiceXml, possibleDuplicate, reviewDocument, safeIngredientMatch, validateDocumentFile, validateVisualBytes, type InvoiceExtraction } from "./purchase-document";
+import { DOCUMENT_MAX_BYTES, lembrarVinculos, normalizeInvoice, palavrasDoNome, sugerirInsumo, sugerirVinculos, parseInvoiceXml, possibleDuplicate, reviewDocument, safeIngredientMatch, validateDocumentFile, validateVisualBytes, type InvoiceExtraction } from "./purchase-document";
 
 const ingredients = [{ id: "sugar", nome: "Açúcar", unidade: "kg" }];
 const input: InvoiceExtraction = { fornecedor: "Loja", data: "2026-10-17", documento: "123", chave: null, total: 18, desconto: 2, despesas: null, duvidas: [], itens: [{ descricao: "Açúcar", codigo: null, quantidade: 2, unidade: "kg", valor_unitario: 10, valor_total: 18, desconto: 2, duvidas: [] }] };
@@ -77,5 +77,56 @@ describe("documentos de compra", () => {
   it("rejeita XML inválido ou sem produtos", () => {
     expect(() => parseInvoiceXml("<nfe>", ingredients)).toThrow("válido");
     expect(() => parseInvoiceXml("<nfe/>", ingredients)).toThrow("produtos");
+  });
+});
+describe("vínculo dos itens com os insumos", () => {
+  const cadastro = [
+    { id: "condensado", nome: "Leite condensado", unidade: "g", unidade_embalagem: "g" },
+    { id: "leite", nome: "Leite integral", unidade: "L", unidade_embalagem: "L" },
+    { id: "choc", nome: "Chocolate ao leite", unidade: "kg", unidade_embalagem: "kg" },
+    { id: "granulado", nome: "Chocolate granulado", unidade: "kg", unidade_embalagem: "kg" },
+    { id: "ovos", nome: "Ovos", unidade: "un" },
+  ];
+
+  it("separa as palavras que identificam o produto", () => {
+    expect(palavrasDoNome("LEITE CONDENSADO INTEGRAL 395G")).toEqual(["leite", "condensado", "integral"]);
+    expect(palavrasDoNome("Ovos brancos cx 30 un")).toEqual(["ovo", "branco"]);
+  });
+
+  it("sugere o insumo cujo nome aparece inteiro na descrição e tem unidade compatível", () => {
+    expect(sugerirInsumo("LEITE CONDENSADO INTEGRAL 395G", "g", cadastro)?.id).toBe("condensado");
+    expect(sugerirInsumo("LEITE INTEGRAL 1L", "L", cadastro)?.id).toBe("leite");
+    expect(sugerirInsumo("CHOCOLATE AO LEITE BARRA", "kg", cadastro)?.id).toBe("choc");
+    expect(sugerirInsumo("OVOS BRANCOS GRANDES", "un", cadastro)?.id).toBe("ovos");
+  });
+
+  it("não sugere com unidade incompatível, sem unidade ou com empate", () => {
+    expect(sugerirInsumo("LEITE CONDENSADO 395G", "L", cadastro)).toBeNull();
+    expect(sugerirInsumo("LEITE CONDENSADO 395G", "", cadastro)).toBeNull();
+    expect(sugerirInsumo("CHOCOLATE GRANULADO AO LEITE", "kg", cadastro)).toBeNull();
+    expect(sugerirInsumo("QUEIJO MUSSARELA", "kg", cadastro)).toBeNull();
+  });
+
+  it("usa primeiro o vínculo lembrado e marca a sugestão por nome para conferência", () => {
+    const doc = normalizeInvoice({ ...input, itens: [
+      { descricao: "CHOCOLATE GRANULADO AO LEITE", codigo: null, quantidade: 1, unidade: "kg", valor_unitario: null, valor_total: 30, desconto: null, duvidas: [] },
+      { descricao: "LEITE INTEGRAL 1L", codigo: null, quantidade: 6, unidade: "L", valor_unitario: null, valor_total: 29.34, desconto: null, duvidas: [] },
+    ] }, cadastro);
+    const memoria = lembrarVinculos({}, [{ nome: "Chocolate granulado ao leite", insumoId: "granulado" }]);
+    const sugerido = sugerirVinculos(doc, cadastro, memoria);
+    expect(sugerido.linhas.map((l) => l.insumoId)).toEqual(["granulado", "leite"]);
+    expect(sugerido.linhas[0]?.duvidas.some((d) => d.includes("sugerido"))).toBe(false);
+    expect(sugerido.linhas[1]?.duvidas.some((d) => d.includes("Leite integral"))).toBe(true);
+    // Vínculo lembrado com unidade que não bate é ignorado.
+    expect(sugerirVinculos(doc, cadastro, { "chocolate granulado ao leite": "leite" }).linhas[0]?.insumoId).toBe("");
+  });
+
+  it("guarda até 500 vínculos, os mais recentes, sem novos cadastros pendentes", () => {
+    let memoria: Record<string, string> = {};
+    for (let i = 0; i < 510; i++) memoria = lembrarVinculos(memoria, [{ nome: `Produto ${i}`, insumoId: `i${i}` }]);
+    expect(Object.keys(memoria)).toHaveLength(500);
+    expect(memoria["produto 509"]).toBe("i509");
+    expect(memoria["produto 0"]).toBeUndefined();
+    expect(lembrarVinculos({}, [{ nome: "Novo", insumoId: "__novo__" }])).toEqual({});
   });
 });
