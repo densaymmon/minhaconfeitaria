@@ -6,7 +6,20 @@ sozinho. Em português, pensado para usar no celular.
 
 **Demonstração:** https://minhaconfeitaria.lovable.app
 
-> Prints e vídeo da demonstração: _em breve_.
+![Página inicial do Doce Gestão](docs/prints/00-inicio.jpg)
+
+<table>
+  <tr>
+    <td><img src="docs/prints/01-painel.jpg" alt="Painel do dia: entregas, produção e resumo financeiro"><br><sub><b>Painel do dia</b>: entregas, o que produzir e resumo do mês</sub></td>
+    <td><img src="docs/prints/02-pedidos.jpg" alt="Lista de pedidos com status de pagamento e entrega"><br><sub><b>Pedidos</b>: status de pagamento e de entrega</sub></td>
+  </tr>
+  <tr>
+    <td><img src="docs/prints/03-produtos-custos.jpg" alt="Produtos com custo unitário, lucro e margem"><br><sub><b>Produtos e receitas</b>: custo, lucro e margem de cada item</sub></td>
+    <td><img src="docs/prints/04-producao.jpg" alt="Fila de produção por pedido"><br><sub><b>Produção</b>: fila do dia com progresso por pedido</sub></td>
+  </tr>
+</table>
+
+<sub>Telas de uma conta real, com nomes de clientes, contatos e valores trocados por dados fictícios.</sub>
 
 ---
 
